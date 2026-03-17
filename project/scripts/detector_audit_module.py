@@ -160,11 +160,6 @@ def build_symbol_df(symbol_entry: Dict[str, Any]) -> pd.DataFrame:
                 direction="backward",
             ).reset_index(drop=True)
 
-    # --- rv_96: required by TrendExhaustionDetector ---
-    if "rv_96" not in perp.columns:
-        log_ret = np.log(perp["close"] / perp["close"].shift(1))
-        perp["rv_96"] = log_ret.rolling(96, min_periods=12).std()
-
     perp["symbol"] = symbol_entry["symbol"]
     return perp.reset_index(drop=True)
 

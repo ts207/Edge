@@ -93,3 +93,87 @@ def test_classify_stable():
 def test_classify_uncovered():
     from project.scripts.detector_audit_module import _classify
     assert _classify(precision=0.0, recall=0.0, expected_windows=0) == "uncovered"
+
+
+def test_count_hits_basic():
+    from project.scripts.detector_audit_module import _count_hits
+    base = pd.Timestamp("2023-01-01 12:00:00", tz="UTC")
+    event_times = pd.to_datetime(pd.Series([
+        base,                              # inside window 1
+        base + pd.Timedelta("1h"),         # inside window 1
+        base + pd.Timedelta("10h"),        # outside both windows
+    ]), utc=True)
+    windows = [
+        (base - pd.Timedelta("30min"), base + pd.Timedelta("2h")),   # window 1
+        (base + pd.Timedelta("20h"), base + pd.Timedelta("22h")),     # window 2 — no hits
+    ]
+    in_window, windows_hit = _count_hits(event_times, windows)
+    assert in_window == 2       # 2 events inside window 1
+    assert windows_hit == 1     # only window 1 was hit
+
+
+def test_build_truth_windows_filters():
+    from project.scripts.detector_audit_module import _build_truth_windows
+    segments = [
+        {
+            "symbol": "BTCUSDT",
+            "start_ts": "2023-01-01T00:00:00+00:00",
+            "end_ts": "2023-01-01T01:00:00+00:00",
+            "expected_event_types": ["VOL_SPIKE"],
+        },
+        {
+            "symbol": "ETHUSDT",  # wrong symbol
+            "start_ts": "2023-01-02T00:00:00+00:00",
+            "end_ts": "2023-01-02T01:00:00+00:00",
+            "expected_event_types": ["VOL_SPIKE"],
+        },
+        {
+            "symbol": "BTCUSDT",
+            "start_ts": "2023-01-03T00:00:00+00:00",
+            "end_ts": "2023-01-03T01:00:00+00:00",
+            "expected_event_types": ["FUNDING_FLIP"],  # wrong event type
+        },
+    ]
+    tolerance = pd.Timedelta("30min")
+    windows = _build_truth_windows(segments, "VOL_SPIKE", "BTCUSDT", tolerance)
+    assert len(windows) == 1   # only first segment matches
+    start, end = windows[0]
+    assert start == pd.Timestamp("2023-01-01T00:00:00+00:00") - tolerance
+    assert end == pd.Timestamp("2023-01-01T01:00:00+00:00") + tolerance
+
+
+def test_enrich_df_computes_range_columns():
+    from project.scripts.detector_audit_module import _enrich_df
+    import numpy as np
+    n = 200
+    ts = pd.date_range("2023-01-01", periods=n, freq="5min", tz="UTC")
+    close = pd.Series(30000.0 + np.arange(n, dtype=float), name="close")
+    df = pd.DataFrame({
+        "timestamp": ts,
+        "open": close,
+        "high": close * 1.001,
+        "low": close * 0.999,
+        "close": close,
+    })
+    result = _enrich_df(df)
+    assert "rv_96" in result.columns
+    assert "range_96" in result.columns
+    assert "range_med_2880" in result.columns
+    # must not mutate original
+    assert "rv_96" not in df.columns
+
+
+def test_enrich_df_does_not_overwrite_existing():
+    from project.scripts.detector_audit_module import _enrich_df
+    import numpy as np
+    n = 200
+    ts = pd.date_range("2023-01-01", periods=n, freq="5min", tz="UTC")
+    close = pd.Series(30000.0 + np.arange(n, dtype=float), name="close")
+    df = pd.DataFrame({
+        "timestamp": ts,
+        "close": close,
+        "open": close, "high": close * 1.001, "low": close * 0.999,
+        "rv_96": 99.0,   # sentinel value
+    })
+    result = _enrich_df(df)
+    assert (result["rv_96"] == 99.0).all()   # must not overwrite
