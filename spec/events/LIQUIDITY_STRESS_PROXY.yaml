@@ -1,0 +1,14 @@
+version: 1
+kind: event
+event_type: LIQUIDITY_STRESS_PROXY
+active: true
+status: validated
+description: Low-fidelity liquidity stress detection using indirect OHLCV proxies, specifically quote-volume collapse and bar-range expansion relative to rolling medians.
+reports_dir: liquidity_shock
+events_file: liquidity_shock_events.parquet
+signal_column: liquidity_stress_proxy_event
+parameters:
+  depth_collapse_th: 0.5
+  spread_spike_th: 3.0
+  median_window: 288
+canonical_family: LIQUIDITY_DISLOCATION

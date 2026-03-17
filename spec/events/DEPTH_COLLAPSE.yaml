@@ -1,0 +1,11 @@
+event_type: DEPTH_COLLAPSE
+reports_dir: liquidity_dislocation
+events_file: liquidity_dislocation_events.parquet
+signal_column: depth_collapse_event
+parameters:
+  lookback_window: 288
+  z_threshold: 3.0
+  cooldown_bars: 12
+  merge_gap_bars: 0
+  min_volume_quantile: 0.2
+canonical_family: LIQUIDITY_DISLOCATION

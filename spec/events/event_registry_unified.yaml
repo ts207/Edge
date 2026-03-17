@@ -1,0 +1,1571 @@
+version: 1
+kind: event_unified_registry
+metadata:
+  status: authoritative
+  legacy_sources:
+    event_defaults: spec/events/_defaults.yaml
+    event_family_defaults: spec/events/_families.yaml
+    event_specs_dir: spec/events
+    canonical_event_registry: spec/events/canonical_event_registry.yaml
+    template_registry: spec/templates/event_template_registry.yaml
+  notes: Single event-centric schema for phase1+phase2 composition. Legacy specs retained
+    for compatibility and drift checks.
+defaults:
+  parameters:
+    merge_gap_bars: 1
+    cooldown_bars: 0
+    anchor_rule: max_intensity
+    min_occurrences: 0
+  templates:
+  - mean_reversion
+  - continuation
+  - trend_continuation
+  - pullback_entry
+  horizons:
+  - 5m
+  - 15m
+  - 60m
+  conditioning_cols:
+  - vol_regime
+  - carry_state
+  - funding_bps
+  - ms_trend_state
+  - ms_spread_state
+  - severity_bucket
+  max_candidates_per_run: 1000
+families:
+  EXECUTION_FRICTION:
+    parameters: {}
+    templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+  FORCED_FLOW_AND_EXHAUSTION:
+    parameters: {}
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+  INFORMATION_DESYNC:
+    parameters: {}
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+  LIQUIDITY_DISLOCATION:
+    parameters: {}
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+  POSITIONING_EXTREMES:
+    parameters: {}
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+  REGIME_TRANSITION:
+    parameters: {}
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+  STATISTICAL_DISLOCATION:
+    parameters: {}
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+  TEMPORAL_STRUCTURE:
+    parameters: {}
+    templates:
+    - mean_reversion
+    - continuation
+  TREND_STRUCTURE:
+    parameters: {}
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+  VOLATILITY_TRANSITION:
+    parameters: {}
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+events:
+  ABSORPTION_EVENT:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: absorption_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  BAND_BREAK:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: statistical_dislocation
+    events_file: statistical_dislocation_events.parquet
+    signal_column: band_break_event
+    parameters:
+      lookback_window: 288
+      band_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  BASIS_DISLOC:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: basis_dislocation
+    events_file: basis_dislocation_events.parquet
+    signal_column: basis_dislocation_event
+    parameters:
+      z_threshold: 3.0
+      lookback_window: 288
+      cooldown_bars: 12
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  BETA_SPIKE_EVENT:
+    canonical_family: REGIME_TRANSITION
+    reports_dir: regime_transition
+    events_file: regime_transition_events.parquet
+    signal_column: beta_spike_event
+    parameters:
+      regime_window: 288
+      transition_z_threshold: 2.5
+      cooldown_bars: 48
+      merge_gap_bars: 0
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
+  BREAKOUT_TRIGGER:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: breakout_trigger_event
+    parameters:
+      vol_lookback_window: 288
+      compression_quantile: 0.1
+      expansion_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  CHOP_TO_TREND_SHIFT:
+    canonical_family: REGIME_TRANSITION
+    reports_dir: regime_transition
+    events_file: regime_transition_events.parquet
+    signal_column: chop_to_trend_shift_event
+    parameters:
+      regime_window: 288
+      transition_z_threshold: 2.5
+      cooldown_bars: 48
+      merge_gap_bars: 0
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
+  CLIMAX_VOLUME_BAR:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    reports_dir: forced_flow_and_exhaustion
+    events_file: forced_flow_and_exhaustion_events.parquet
+    signal_column: climax_volume_bar_event
+    parameters:
+      liquidation_spike_z_threshold: 3.0
+      cascade_window_bars: 12
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  COPULA_PAIRS_TRADING:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: copula_pairs
+    events_file: copula_pairs_events.parquet
+    signal_column: copula_pairs_trading_event
+    parameters:
+      alpha1: 0.05
+      alpha2: 0.95
+      lookback_window: 288
+      cooldown_bars: 12
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  CORRELATION_BREAKDOWN_EVENT:
+    canonical_family: REGIME_TRANSITION
+    reports_dir: regime_transition
+    events_file: regime_transition_events.parquet
+    signal_column: correlation_breakdown_event
+    parameters:
+      regime_window: 288
+      transition_z_threshold: 2.5
+      cooldown_bars: 48
+      merge_gap_bars: 0
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
+  CROSS_VENUE_DESYNC:
+    canonical_family: INFORMATION_DESYNC
+    reports_dir: cross_venue_desync
+    events_file: cross_venue_desync_events.parquet
+    signal_column: cross_venue_desync_event
+    parameters:
+      window_end: 32
+      anchor_mode: basis_shock
+      anchor_quantile: 0.99
+      revert_z: 0.5
+      basis_lookback: 96
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 600
+  DELEVERAGING_WAVE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: positioning_extremes
+    events_file: positioning_extremes_events.parquet
+    signal_column: deleveraging_wave_event
+    parameters:
+      funding_extreme_quantile: 0.99
+      oi_change_z_threshold: 3.0
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 500
+  DEPTH_COLLAPSE:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: depth_collapse_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  FAILED_CONTINUATION:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    reports_dir: forced_flow_and_exhaustion
+    events_file: forced_flow_and_exhaustion_events.parquet
+    signal_column: failed_continuation_event
+    parameters:
+      liquidation_spike_z_threshold: 3.0
+      cascade_window_bars: 12
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  FALSE_BREAKOUT:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: false_breakout_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  FEE_REGIME_CHANGE_EVENT:
+    canonical_family: EXECUTION_FRICTION
+    reports_dir: execution_friction
+    events_file: execution_friction_events.parquet
+    signal_column: fee_regime_change_event
+    parameters:
+      spread_z_threshold: 3.0
+      slippage_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  FND_DISLOC:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: funding_dislocation
+    events_file: funding_dislocation_events.parquet
+    signal_column: funding_dislocation_event
+    parameters:
+      threshold_bps: 2.0
+      cooldown_bars: 12
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  FORCED_FLOW_EXHAUSTION:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    reports_dir: directional_exhaustion_after_forced_flow
+    events_file: directional_exhaustion_after_forced_flow_events.parquet
+    signal_column: forced_flow_exhaustion_event
+    parameters:
+      window_end: 32
+      anchor_mode: taker_imbalance
+      anchor_quantile: 0.99
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  FUNDING_EXTREME_ONSET:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: funding_events
+    events_file: funding_episode_events.parquet
+    signal_column: funding_extreme_onset_event
+    parameters:
+      funding_pct_window: 2880
+      extreme_pct: 95.0
+      accel_pct: 95.0
+      accel_lookback: 32
+      persistence_pct: 85.0
+      persistence_bars: 12
+      normalization_pct: 50.0
+      normalization_lookback: 96
+      min_event_spacing: 96
+      event_lookahead: 96
+      liquidation_abs_return: 0.03
+      drawdown_abs_return: 0.03
+      vol_burst_quantile: 0.9
+      htf_window: 384
+      htf_lookback: 96
+      pre_window: 96
+      post_window: 96
+      baseline_samples_per_event: 3
+      baseline_seed: 7
+      vol_auc_horizon: 8
+      liq_auc_horizon: 96
+      phase_tolerance_bars: 16
+      crossover_confirm_bars: 4
+      auc_bootstrap_iters: 2000
+      accel_quantile: 0.995
+      accel_persistence_intervals: 2
+      accel_near_zero_cutoff: 5
+      persistence_norm_horizon: 96
+      interaction_min_rows_per_year: 150
+      min_hazard_events: 50
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 500
+  FUNDING_FLIP:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: positioning_extremes
+    events_file: positioning_extremes_events.parquet
+    signal_column: funding_flip_event
+    parameters:
+      funding_extreme_quantile: 0.99
+      oi_change_z_threshold: 3.0
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 500
+  FUNDING_NORMALIZATION_TRIGGER:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: funding_events
+    events_file: funding_episode_events.parquet
+    signal_column: funding_normalization_event
+    parameters:
+      funding_pct_window: 2880
+      extreme_pct: 95.0
+      accel_pct: 95.0
+      accel_lookback: 32
+      persistence_pct: 85.0
+      persistence_bars: 12
+      normalization_pct: 50.0
+      normalization_lookback: 96
+      min_event_spacing: 96
+      event_lookahead: 96
+      liquidation_abs_return: 0.03
+      drawdown_abs_return: 0.03
+      vol_burst_quantile: 0.9
+      htf_window: 384
+      htf_lookback: 96
+      pre_window: 96
+      post_window: 96
+      baseline_samples_per_event: 3
+      baseline_seed: 7
+      vol_auc_horizon: 8
+      liq_auc_horizon: 96
+      phase_tolerance_bars: 16
+      crossover_confirm_bars: 4
+      auc_bootstrap_iters: 2000
+      accel_quantile: 0.995
+      accel_persistence_intervals: 2
+      accel_near_zero_cutoff: 5
+      persistence_norm_horizon: 96
+      interaction_min_rows_per_year: 150
+      min_hazard_events: 50
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  FUNDING_PERSISTENCE_TRIGGER:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: funding_events
+    events_file: funding_episode_events.parquet
+    signal_column: funding_persistence_event
+    parameters:
+      funding_pct_window: 2880
+      extreme_pct: 95.0
+      accel_pct: 95.0
+      accel_lookback: 32
+      persistence_pct: 85.0
+      persistence_bars: 12
+      normalization_pct: 50.0
+      normalization_lookback: 96
+      min_event_spacing: 96
+      event_lookahead: 96
+      liquidation_abs_return: 0.03
+      drawdown_abs_return: 0.03
+      vol_burst_quantile: 0.9
+      htf_window: 384
+      htf_lookback: 96
+      pre_window: 96
+      post_window: 96
+      baseline_samples_per_event: 3
+      baseline_seed: 7
+      vol_auc_horizon: 8
+      liq_auc_horizon: 96
+      phase_tolerance_bars: 16
+      crossover_confirm_bars: 4
+      auc_bootstrap_iters: 2000
+      accel_quantile: 0.995
+      accel_persistence_intervals: 2
+      accel_near_zero_cutoff: 5
+      persistence_norm_horizon: 96
+      interaction_min_rows_per_year: 150
+      min_hazard_events: 50
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 500
+  FUNDING_TIMESTAMP_EVENT:
+    canonical_family: TEMPORAL_STRUCTURE
+    reports_dir: temporal_structure
+    events_file: temporal_structure_events.parquet
+    signal_column: funding_timestamp_event
+    parameters:
+      event_spacing_bars: 288
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  GAP_OVERSHOOT:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: statistical_dislocation
+    events_file: statistical_dislocation_events.parquet
+    signal_column: gap_overshoot_event
+    parameters:
+      lookback_window: 288
+      band_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  INDEX_COMPONENT_DIVERGENCE:
+    canonical_family: INFORMATION_DESYNC
+    reports_dir: information_desync
+    events_file: information_desync_events.parquet
+    signal_column: index_component_divergence_event
+    parameters:
+      desync_z_threshold: 3.0
+      lead_lag_window: 60
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 500
+  LEAD_LAG_BREAK:
+    canonical_family: INFORMATION_DESYNC
+    reports_dir: information_desync
+    events_file: information_desync_events.parquet
+    signal_column: lead_lag_break_event
+    parameters:
+      desync_z_threshold: 3.0
+      lead_lag_window: 60
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 500
+  LIQUIDATION_CASCADE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: liquidation_cascade
+    events_file: liquidation_cascade_events.parquet
+    signal_column: liquidation_cascade_event
+    parameters:
+      liq_multiplier: 3.0
+      median_window: 288
+      liq_vol_th: 100000.0
+      oi_drop_th: -500000.0
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 300
+  LIQUIDITY_GAP_PRINT:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: liquidity_gap_print_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  LIQUIDITY_SHOCK:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_shock
+    events_file: liquidity_shock_events.parquet
+    signal_column: liquidity_shock_event
+    parameters:
+      depth_collapse_th: 0.5
+      spread_spike_th: 3.0
+      median_window: 288
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  LIQUIDITY_VACUUM:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_vacuum
+    events_file: liquidity_vacuum_events.parquet
+    signal_column: liquidity_vacuum_event
+    parameters:
+      profile: lenient
+      min_events_calibration: 1
+      shock_quantiles: 0.5,0.6,0.7
+      volume_window: 24
+      range_window: 24
+      vol_ratio_floor: 0.95
+      range_multiplier: 1.05
+      min_vacuum_bars: 1
+      merge_gap_bars: 2
+      cooldown_bars: 12
+      anchor_rule: max_intensity
+      min_occurrences: 3
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - continuation
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    conditioning_cols: []
+    max_candidates_per_run: 1000
+  MOMENTUM_DIVERGENCE_TRIGGER:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    reports_dir: forced_flow_and_exhaustion
+    events_file: forced_flow_and_exhaustion_events.parquet
+    signal_column: momentum_divergence_trigger_event
+    parameters:
+      liquidation_spike_z_threshold: 3.0
+      cascade_window_bars: 12
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  OI_FLUSH:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: oi_shocks
+    events_file: oi_shock_events.parquet
+    signal_column: oi_flush_event
+    parameters:
+      oi_window: 96
+      spike_z_th: 2.5
+      flush_pct_th: -0.005
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 500
+  OI_SPIKE_NEGATIVE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: oi_shocks
+    events_file: oi_shock_events.parquet
+    signal_column: oi_spike_neg_event
+    parameters:
+      oi_window: 96
+      spike_z_th: 2.5
+      flush_pct_th: -0.005
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 250
+  OI_SPIKE_POSITIVE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: oi_shocks
+    events_file: oi_shock_events.parquet
+    signal_column: oi_spike_pos_event
+    parameters:
+      oi_window: 96
+      spike_z_th: 2.5
+      flush_pct_th: -0.005
+    templates: &id001
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons: &id002
+    - 60m
+    max_candidates_per_run: 250
+  ORDERFLOW_IMBALANCE_SHOCK:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: orderflow_imbalance_shock_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  OVERSHOOT_AFTER_SHOCK:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: statistical_dislocation
+    events_file: statistical_dislocation_events.parquet
+    signal_column: overshoot_after_shock_event
+    parameters:
+      lookback_window: 288
+      band_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  PULLBACK_PIVOT:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: pullback_pivot_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  RANGE_BREAKOUT:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: range_breakout_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  RANGE_COMPRESSION_END:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: range_compression_end_event
+    parameters:
+      vol_lookback_window: 288
+      compression_quantile: 0.1
+      expansion_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  SCHEDULED_NEWS_WINDOW_EVENT:
+    canonical_family: TEMPORAL_STRUCTURE
+    reports_dir: temporal_structure
+    events_file: temporal_structure_events.parquet
+    signal_column: scheduled_news_window_event
+    parameters:
+      event_spacing_bars: 288
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  SESSION_CLOSE_EVENT:
+    canonical_family: TEMPORAL_STRUCTURE
+    reports_dir: temporal_structure
+    events_file: temporal_structure_events.parquet
+    signal_column: session_close_event
+    parameters:
+      event_spacing_bars: 288
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  SESSION_OPEN_EVENT:
+    canonical_family: TEMPORAL_STRUCTURE
+    reports_dir: temporal_structure
+    events_file: temporal_structure_events.parquet
+    signal_column: session_open_event
+    parameters:
+      event_spacing_bars: 288
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  SLIPPAGE_SPIKE_EVENT:
+    canonical_family: EXECUTION_FRICTION
+    reports_dir: execution_friction
+    events_file: execution_friction_events.parquet
+    signal_column: slippage_spike_event
+    parameters:
+      spread_z_threshold: 3.0
+      slippage_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  SPOT_PERP_BASIS_SHOCK:
+    canonical_family: INFORMATION_DESYNC
+    reports_dir: information_desync
+    events_file: information_desync_events.parquet
+    signal_column: spot_perp_basis_shock_event
+    parameters:
+      desync_z_threshold: 3.0
+      lead_lag_window: 60
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 500
+  SPREAD_BLOWOUT:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: spread_blowout_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  SPREAD_REGIME_WIDENING_EVENT:
+    canonical_family: EXECUTION_FRICTION
+    reports_dir: execution_friction
+    events_file: execution_friction_events.parquet
+    signal_column: spread_regime_widening_event
+    parameters:
+      spread_z_threshold: 3.0
+      slippage_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 15m
+    max_candidates_per_run: 300
+  SUPPORT_RESISTANCE_BREAK:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: support_resistance_break_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  SWEEP_STOPRUN:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: sweep_stoprun_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  TREND_ACCELERATION:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: trend_acceleration_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  TREND_DECELERATION:
+    canonical_family: TREND_STRUCTURE
+    reports_dir: trend_structure
+    events_file: trend_structure_events.parquet
+    signal_column: trend_deceleration_event
+    parameters:
+      trend_window: 288
+      breakout_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  TREND_EXHAUSTION_TRIGGER:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    reports_dir: forced_flow_and_exhaustion
+    events_file: forced_flow_and_exhaustion_events.parquet
+    signal_column: trend_exhaustion_trigger_event
+    parameters:
+      liquidation_spike_z_threshold: 3.0
+      cascade_window_bars: 12
+      cooldown_bars: 24
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  TREND_TO_CHOP_SHIFT:
+    canonical_family: REGIME_TRANSITION
+    reports_dir: regime_transition
+    events_file: regime_transition_events.parquet
+    signal_column: trend_to_chop_shift_event
+    parameters:
+      regime_window: 288
+      transition_z_threshold: 2.5
+      cooldown_bars: 48
+      merge_gap_bars: 0
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
+  VOL_CLUSTER_SHIFT:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: vol_cluster_shift_event
+    parameters:
+      vol_lookback_window: 288
+      compression_quantile: 0.1
+      expansion_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  VOL_REGIME_SHIFT_EVENT:
+    canonical_family: REGIME_TRANSITION
+    reports_dir: regime_transition
+    events_file: regime_transition_events.parquet
+    signal_column: vol_regime_shift_event
+    parameters:
+      regime_window: 288
+      transition_z_threshold: 2.5
+      cooldown_bars: 48
+      merge_gap_bars: 0
+    templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
+  VOL_RELAXATION_START:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: vol_relaxation_start_event
+    parameters:
+      vol_lookback_window: 288
+      compression_quantile: 0.1
+      expansion_z_threshold: 2.5
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  VOL_SHOCK:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: vol_shock_relaxation
+    events_file: vol_shock_relaxation_events.parquet
+    signal_column: vol_shock_relaxation_event
+    parameters:
+      m_controls: 5
+      bootstrap_iters: 1000
+      phase_tolerance_bars: 16
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  VOL_SPIKE:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: vol_spike_event
+    parameters:
+      merge_gap_bars: 1
+      cooldown_bars: 6
+      anchor_rule: first
+      min_occurrences: 5
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  ZSCORE_STRETCH:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: statistical_dislocation
+    events_file: statistical_dislocation_events.parquet
+    signal_column: zscore_stretch_event
+    parameters:
+      lookback_window: 288
+      band_z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 350
+  OI_VOL_DIVERGENCE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: oi_shocks
+    events_file: oi_shock_events.parquet
+    signal_column: oi_vol_divergence_event
+    parameters:
+      oi_window: 96
+      spike_z_th: 2.5
+      flush_pct_th: -0.005
+      vol_window: 96
+      vol_low_quantile: 0.3
+      oi_z_th: 2.0
+      cooldown_bars: 12
+    templates: *id001
+    horizons: *id002
+    max_candidates_per_run: 250
+  OI_VOL_COMPRESSION_BUILDUP:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: oi_shocks
+    events_file: oi_shock_events.parquet
+    signal_column: oi_vol_compression_buildup_event
+    parameters:
+      oi_window: 96
+      spike_z_th: 2.5
+      flush_pct_th: -0.005
+      vol_window: 288
+      vol_low_quantile: 0.2
+      oi_drift_z_th: 1.5
+      cooldown_bars: 24
+    templates: *id001
+    horizons: *id002
+    max_candidates_per_run: 250
+  FUNDING_EXTREME_STAGNATION:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: funding_dislocation
+    events_file: funding_dislocation_events.parquet
+    signal_column: funding_extreme_stagnation_event
+    parameters:
+      threshold_bps: 2.0
+      cooldown_bars: 24
+      stagnation_window: 96
+      stagnation_ret_abs_th: 0.005
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - tail_risk_avoid
+    - convexity_capture
+    horizons:
+    - 60m
+    - 240m
+    max_candidates_per_run: 250
+  FUNDING_EXTREME_BREAKOUT:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: funding_dislocation
+    events_file: funding_dislocation_events.parquet
+    signal_column: funding_extreme_breakout_event
+    parameters:
+      threshold_bps: 2.0
+      cooldown_bars: 24
+      breakout_window: 96
+      breakout_ret_abs_th: 0.01
+    templates:
+    - continuation
+    - convexity_capture
+    - tail_risk_avoid
+    - only_if_funding
+    horizons:
+    - 60m
+    - 240m
+    max_candidates_per_run: 250
+  LIQUIDATION_EXHAUSTION_REVERSAL:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: forced_flow_and_exhaustion
+    events_file: forced_flow_and_exhaustion_events.parquet
+    signal_column: liquidation_exhaustion_reversal_event
+    parameters:
+      liq_multiplier: 3.0
+      median_window: 288
+      liq_vol_th: 100000.0
+      oi_drop_th: -500000.0
+      rebound_lookahead_bars: 12
+      rebound_ret_th: 0.01
+      cooldown_bars: 24
+    templates:
+    - exhaustion_reversal
+    - mean_reversion
+    - tail_risk_avoid
+    - convexity_capture
+    horizons:
+    - 60m
+    - 240m
+    max_candidates_per_run: 300
+  BASIS_SNAPBACK:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: basis_dislocation
+    events_file: basis_dislocation_events.parquet
+    signal_column: basis_snapback_event
+    parameters:
+      z_threshold: 3.0
+      lookback_window: 288
+      cooldown_bars: 12
+      snapback_window: 24
+      snapback_z_th: 0.75
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 300
+  DEPTH_RECOVERY_EVENT:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: depth_recovery_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+      recovery_lookback: 24
+      recovery_spread_q: 0.8
+      prior_spread_q: 0.9
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 400
+  IMBALANCE_ABSORPTION_REVERSAL:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: liquidity_dislocation
+    events_file: liquidity_dislocation_events.parquet
+    signal_column: imbalance_absorption_reversal_event
+    parameters:
+      lookback_window: 288
+      z_threshold: 3.0
+      cooldown_bars: 12
+      merge_gap_bars: 0
+      min_volume_quantile: 0.2
+      reversal_lookahead: 3
+      ret_q: 0.9
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 450
+  CROSS_VENUE_CATCHUP:
+    canonical_family: STATISTICAL_DISLOCATION
+    reports_dir: cross_venue_desync
+    events_file: cross_venue_desync_events.parquet
+    signal_column: cross_venue_catchup_event
+    parameters:
+      window_end: 32
+      anchor_mode: basis_shock
+      anchor_quantile: 0.99
+      revert_z: 0.5
+      basis_lookback: 96
+      catchup_window: 12
+      catchup_abs_z_th: 1.0
+      cooldown_bars: 12
+    templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 300
+  VOL_COMPRESSION_BREAKOUT:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: volatility_transition
+    events_file: volatility_transition_events.parquet
+    signal_column: vol_compression_breakout_event
+    parameters:
+      vol_lookback_window: 288
+      compression_quantile: 0.1
+      expansion_z_threshold: 2.5
+      cooldown_bars: 24
+      merge_gap_bars: 0
+      comp_ratio_th: 0.75
+      breakout_window: 96
+    templates:
+    - continuation
+    - convexity_capture
+    - tail_risk_avoid
+    horizons:
+    - 15m
+    - 60m
+    max_candidates_per_run: 500
+  SEQ_LIQ_CASCADE_THEN_EXHAUST:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_liq_cascade_then_exhaust_event
+    parameters:
+      max_gap_bars: 24
+      cooldown_bars: 12
+  SEQ_FND_EXTREME_THEN_BREAKOUT:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_fnd_extreme_then_breakout_event
+    parameters:
+      max_gap_bars: 96
+      cooldown_bars: 24
+  SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_oi_spikepos_then_vol_spike_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24
+  SEQ_VOL_COMP_THEN_BREAKOUT:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_vol_comp_then_breakout_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24
+  SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_liq_vacuum_then_depth_recovery_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24

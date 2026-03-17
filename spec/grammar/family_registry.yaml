@@ -1,0 +1,65 @@
+version: 1
+kind: family_registry
+event_families:
+  LIQUIDITY_DISLOCATION:
+    description: "Discrete shocks to order book depth and spread."
+    searchable: true
+    allowed_templates: [mean_reversion, stop_run_repair, overshoot_repair, continuation]
+  VOLATILITY_TRANSITION:
+    description: "Shifts in realized volatility and range compression."
+    searchable: true
+    allowed_templates: [mean_reversion, continuation, trend_continuation, volatility_expansion_follow, pullback_entry]
+  POSITIONING_EXTREMES:
+    description: "Extreme funding rates and open interest flushes."
+    searchable: true
+    allowed_templates: [reversal_or_squeeze, mean_reversion, continuation, exhaustion_reversal, convexity_capture]
+  FORCED_FLOW_AND_EXHAUSTION:
+    description: "Exhaustion of trend momentum and climax volume."
+    searchable: true
+    allowed_templates: [mean_reversion, exhaustion_reversal, momentum_fade, range_reversion]
+  TREND_STRUCTURE:
+    description: "Breakouts and trend accelerations."
+    searchable: true
+    allowed_templates: [breakout_followthrough, false_breakout_reversal, pullback_entry, trend_continuation]
+  STATISTICAL_DISLOCATION:
+    description: "Mean reversion from statistical z-score extremes."
+    searchable: true
+    allowed_templates: [mean_reversion, overshoot_repair]
+  REGIME_TRANSITION:
+    description: "Long-term shifts in market regime."
+    searchable: true
+    allowed_templates: [continuation, mean_reversion]
+  INFORMATION_DESYNC:
+    description: "Arbitrage opportunities from cross-venue desync."
+    searchable: true
+    allowed_templates: [desync_repair, convergence, basis_repair]
+  TEMPORAL_STRUCTURE:
+    description: "Time-based market structures (Open/Close)."
+    searchable: true
+    allowed_templates: [mean_reversion, continuation]
+
+state_families:
+  LIQUIDITY_DISLOCATION:
+    description: "Persistent states of low liquidity or high friction."
+    searchable: true
+  VOLATILITY_TRANSITION:
+    description: "High/Low volatility regimes and post-shock states."
+    searchable: true
+  POSITIONING_EXTREMES:
+    description: "Crowded trades and deleveraging regimes."
+    searchable: true
+  TREND_STRUCTURE:
+    description: "Trending vs Choppy regimes."
+    searchable: true
+  STATISTICAL_DISLOCATION:
+    description: "Stretched or overshot market conditions."
+    searchable: true
+  REGIME_TRANSITION:
+    description: "Broad risk-on/risk-off regimes."
+    searchable: true
+  EXECUTION_FRICTION:
+    description: "Slippage and friction regimes."
+    searchable: true
+  TEMPORAL_STRUCTURE:
+    description: "Time-of-day or session-based states."
+    searchable: true

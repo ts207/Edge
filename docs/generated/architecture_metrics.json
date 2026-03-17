@@ -1,0 +1,61 @@
+{
+  "snapshot_date": "2026-03-12",
+  "notes": [
+    "Baselines marked inferred come from the recorded migration plan and prior repo analysis during Phases 1-6.",
+    "Current counts are computed from the working tree."
+  ],
+  "metrics": {
+    "project_python_files": {
+      "before": 686,
+      "after": 607,
+      "inferred_before": true,
+      "unit": "files"
+    },
+    "project.research.compat_importers": {
+      "before": 13,
+      "after": 0,
+      "inferred_before": true,
+      "unit": "files"
+    },
+    "project.strategy_dsl_importers": {
+      "before": 43,
+      "after": 0,
+      "inferred_before": true,
+      "unit": "files"
+    },
+    "project.strategy_templates_importers": {
+      "before": 11,
+      "after": 0,
+      "inferred_before": true,
+      "unit": "files"
+    },
+    "research_pipeline_wrappers_with_helper_logic": {
+      "before": 2,
+      "after": 0,
+      "inferred_before": true,
+      "unit": "wrappers"
+    },
+    "run_all_coordinator_lines": {
+      "before": 794,
+      "after": 349,
+      "inferred_before": true,
+      "unit": "lines"
+    },
+    "run_all_helper_module_lines_total": {
+      "before": 0,
+      "after": 445,
+      "inferred_before": false,
+      "unit": "lines"
+    },
+    "oversized_modules_over_800_lines": {
+      "before": 0,
+      "after": 0,
+      "inferred_before": false,
+      "unit": "files"
+    }
+  },
+  "current_transitional_surfaces": {
+    "project.strategy_dsl": 0,
+    "project.strategy_templates": 0
+  }
+}

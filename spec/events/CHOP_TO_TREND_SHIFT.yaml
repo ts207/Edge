@@ -1,0 +1,10 @@
+event_type: CHOP_TO_TREND_SHIFT
+reports_dir: regime_transition
+events_file: regime_transition_events.parquet
+signal_column: chop_to_trend_shift_event
+parameters:
+  regime_window: 288
+  transition_z_threshold: 2.5
+  cooldown_bars: 48
+  merge_gap_bars: 0
+canonical_family: REGIME_TRANSITION

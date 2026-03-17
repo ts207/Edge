@@ -1,0 +1,10 @@
+event_type: FALSE_BREAKOUT
+reports_dir: trend_structure
+events_file: trend_structure_events.parquet
+signal_column: false_breakout_event
+parameters:
+  trend_window: 288
+  breakout_z_threshold: 2.5
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: TREND_STRUCTURE

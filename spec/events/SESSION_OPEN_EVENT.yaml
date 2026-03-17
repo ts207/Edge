@@ -1,0 +1,9 @@
+event_type: SESSION_OPEN_EVENT
+reports_dir: temporal_structure
+events_file: temporal_structure_events.parquet
+signal_column: session_open_event
+parameters:
+  event_spacing_bars: 288
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: TEMPORAL_STRUCTURE

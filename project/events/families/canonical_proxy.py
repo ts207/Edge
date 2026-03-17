@@ -1,0 +1,152 @@
+from __future__ import annotations
+
+from typing import Any
+
+import numpy as np
+import pandas as pd
+
+from project.events.detectors.registry import register_detector
+from project.events.detectors.threshold import ThresholdDetector
+from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
+from project.events.sparsify import sparsify_mask
+from project.events.thresholding import rolling_quantile_threshold, rolling_mean_std_zscore
+from project.events.event_aliases import resolve_event_alias
+from project.research.analyzers import run_analyzer_suite
+
+
+class _CanonicalProxyBase(ThresholdDetector):
+    required_columns = ('timestamp', 'close', 'high', 'low')
+    timeframe_minutes = 5
+    default_severity = 'moderate'
+    min_spacing = 6
+
+    def compute_severity(self, idx: int, intensity: float, features: dict[str, pd.Series], **params: Any) -> str:
+        del idx, features, params
+        if intensity >= 4.0: return 'extreme'
+        if intensity >= 2.5: return 'major'
+        return 'moderate'
+
+    def compute_metadata(self, idx: int, features: dict[str, pd.Series], **params: Any) -> dict[str, Any]:
+        del idx, features, params
+        return {
+            'family': 'canonical_proxy',
+            'source_event_type': self.source_event_type,
+            'evidence_tier': 'proxy',
+        }
+
+
+class PriceVolImbalanceProxyDetector(_CanonicalProxyBase):
+    event_type = 'PRICE_VOL_IMBALANCE_PROXY'
+    source_event_type = 'ORDERFLOW_IMBALANCE_SHOCK'
+
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        close = pd.to_numeric(df['close'], errors='coerce').astype(float)
+        rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
+        ret_abs = close.pct_change(1).abs()
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('rv_window', 288)))
+        ret_q = rolling_quantile_threshold(ret_abs, quantile=float(params.get('ret_quantile', 0.99)), window=int(params.get('ret_window', 288)))
+        rv_q = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('rv_window', 288)))
+        return {'signal': ret_abs / ret_q.replace(0.0, np.nan), 'ret_abs': ret_abs, 'rv_z': rv_z, 'rv_q': rv_q}
+
+    def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['ret_abs'] >= rolling_quantile_threshold(features['ret_abs'], quantile=float(params.get('ret_quantile', 0.99)), window=int(params.get('ret_window', 288)))).fillna(False)
+                & (features['rv_z'] >= features['rv_q']).fillna(False)).fillna(False)
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return (features['signal'].fillna(0.0) + (features['rv_z'] / features['rv_q'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+
+
+class WickReversalProxyDetector(_CanonicalProxyBase):
+    event_type = 'WICK_REVERSAL_PROXY'
+    source_event_type = 'SWEEP_STOPRUN'
+
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        close = pd.to_numeric(df['close'], errors='coerce').replace(0.0, np.nan).astype(float)
+        high = pd.to_numeric(df['high'], errors='coerce').astype(float)
+        low = pd.to_numeric(df['low'], errors='coerce').astype(float)
+        open_proxy = close.shift(1).fillna(close)
+        wick_up = high - np.maximum(open_proxy, close)
+        wick_down = np.minimum(open_proxy, close) - low
+        wick = ((wick_up + wick_down) / close).abs().astype(float)
+        wick_q = rolling_quantile_threshold(wick, quantile=float(params.get('wick_quantile', 0.97)), window=int(params.get('window', 288)))
+        ret_abs = close.pct_change(1).abs()
+        ret_q = rolling_quantile_threshold(ret_abs, quantile=float(params.get('ret_quantile', 0.9)), window=int(params.get('window', 288)))
+        return {'wick': wick, 'wick_q': wick_q, 'ret_abs': ret_abs, 'ret_q': ret_q}
+
+    def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['wick'] >= features['wick_q']).fillna(False) & (features['ret_abs'] >= features['ret_q']).fillna(False)).fillna(False)
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['wick'] / features['wick_q'].replace(0.0, np.nan)).fillna(0.0) + (features['ret_abs'] / features['ret_q'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+
+
+class AbsorptionProxyDetector(_CanonicalProxyBase):
+    event_type = 'ABSORPTION_PROXY'
+    source_event_type = 'ABSORPTION_EVENT'
+
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        close = pd.to_numeric(df['close'], errors='coerce').astype(float)
+        spread = pd.to_numeric(df.get('spread_zscore'), errors='coerce').astype(float)
+        rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
+        ret_abs = close.pct_change(1).abs()
+        ret_low = rolling_quantile_threshold(ret_abs, quantile=float(params.get('ret_quantile', 0.35)), window=int(params.get('window', 288)))
+        spread_hi = rolling_quantile_threshold(spread, quantile=float(params.get('spread_quantile', 0.8)), window=int(params.get('window', 288)))
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('window', 288)))
+        rv_hi = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('window', 288)))
+        return {'ret_abs': ret_abs, 'ret_low': ret_low, 'spread': spread, 'spread_hi': spread_hi, 'rv_z': rv_z, 'rv_hi': rv_hi}
+
+    def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['ret_abs'] <= features['ret_low']).fillna(False) & (features['spread'] >= features['spread_hi']).fillna(False) & (features['rv_z'] >= features['rv_hi']).fillna(False)).fillna(False)
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['spread'] / features['spread_hi'].replace(0.0, np.nan)).fillna(0.0) + (features['rv_z'] / features['rv_hi'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+
+
+class DepthStressProxyDetector(_CanonicalProxyBase):
+    event_type = 'DEPTH_STRESS_PROXY'
+    source_event_type = 'DEPTH_COLLAPSE'
+
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        spread = pd.to_numeric(df.get('spread_zscore'), errors='coerce').astype(float)
+        rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
+        spread_q = rolling_quantile_threshold(spread, quantile=float(params.get('spread_quantile', 0.9)), window=int(params.get('window', 288)))
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('window', 288)))
+        rv_q = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('window', 288)))
+        return {'spread': spread, 'spread_q': spread_q, 'rv_z': rv_z, 'rv_q': rv_q}
+
+    def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['spread'] >= features['spread_q']).fillna(False) & (features['rv_z'] >= features['rv_q']).fillna(False)).fillna(False)
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        return ((features['spread'] / features['spread_q'].replace(0.0, np.nan)).fillna(0.0) + (features['rv_z'] / features['rv_q'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+
+
+_DETECTORS = {
+    'PRICE_VOL_IMBALANCE_PROXY': PriceVolImbalanceProxyDetector,
+    'WICK_REVERSAL_PROXY': WickReversalProxyDetector,
+    'ABSORPTION_PROXY': AbsorptionProxyDetector,
+    'DEPTH_STRESS_PROXY': DepthStressProxyDetector,
+    # Canonical alias names — same detector classes
+    'ORDERFLOW_IMBALANCE_SHOCK': PriceVolImbalanceProxyDetector,
+    'SWEEP_STOPRUN': WickReversalProxyDetector,
+    'ABSORPTION_EVENT': AbsorptionProxyDetector,
+    'DEPTH_COLLAPSE': DepthStressProxyDetector,
+}
+
+for et, cls in _DETECTORS.items():
+    register_detector(et, cls)
+
+def detect_canonical_proxy_family(df: pd.DataFrame, symbol: str, event_type: str, **params: Any) -> pd.DataFrame:
+    canonical = resolve_event_alias(event_type)
+    detector_cls = _DETECTORS.get(canonical)
+    if detector_cls is None:
+        raise ValueError(f'Unsupported canonical proxy event type: {event_type}')
+    return detector_cls().detect(df, symbol=symbol, **params)
+
+
+
+def analyze_canonical_proxy_family(df: pd.DataFrame, symbol: str, event_type: str, **params: Any) -> tuple[pd.DataFrame, dict[str, Any]]:
+    events = detect_canonical_proxy_family(df, symbol, event_type, **params)
+    market = df[['timestamp', 'close']].copy() if not df.empty and 'close' in df.columns else None
+    analyzer_results = run_analyzer_suite(events, market=market) if not events.empty else {}
+    return events, analyzer_results

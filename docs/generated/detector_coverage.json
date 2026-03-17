@@ -1,0 +1,1037 @@
+{
+  "detectors": [
+    {
+      "class_name": "AbsorptionProxyDetector",
+      "event_type": "ABSORPTION_EVENT",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "AbsorptionProxyDetector",
+      "event_type": "ABSORPTION_PROXY",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "BandBreakDetector",
+      "event_type": "BAND_BREAK",
+      "family": "statistical",
+      "maturity_tier": "standard",
+      "module": "project.events.families.statistical",
+      "path": "project/events/families/statistical.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "BasisDislocationDetector",
+      "event_type": "BASIS_DISLOC",
+      "family": "basis",
+      "maturity_tier": "production",
+      "module": "project.events.families.basis",
+      "path": "project/events/families/basis.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close_perp",
+        "close_spot"
+      ]
+    },
+    {
+      "class_name": "BetaSpikeDetector",
+      "event_type": "BETA_SPIKE_EVENT",
+      "family": "regime",
+      "maturity_tier": "standard",
+      "module": "project.events.families.regime",
+      "path": "project/events/families/regime.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "BreakoutTriggerDetector",
+      "event_type": "BREAKOUT_TRIGGER",
+      "family": "volatility",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "range_96",
+        "range_med_2880"
+      ]
+    },
+    {
+      "class_name": "ChopToTrendDetector",
+      "event_type": "CHOP_TO_TREND_SHIFT",
+      "family": "regime",
+      "maturity_tier": "standard",
+      "module": "project.events.families.regime",
+      "path": "project/events/families/regime.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "ClimaxVolumeDetector",
+      "event_type": "CLIMAX_VOLUME_BAR",
+      "family": "exhaustion",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "volume"
+      ]
+    },
+    {
+      "class_name": "CopulaPairsTradingDetector",
+      "event_type": "COPULA_PAIRS_TRADING",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "CorrelationBreakdownDetector",
+      "event_type": "CORRELATION_BREAKDOWN_EVENT",
+      "family": "regime",
+      "maturity_tier": "standard",
+      "module": "project.events.families.regime",
+      "path": "project/events/families/regime.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "spread_zscore"
+      ]
+    },
+    {
+      "class_name": "CrossVenueDesyncDetector",
+      "event_type": "CROSS_VENUE_DESYNC",
+      "family": "basis",
+      "maturity_tier": "standard",
+      "module": "project.events.families.basis",
+      "path": "project/events/families/basis.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close_perp",
+        "close_spot"
+      ]
+    },
+    {
+      "class_name": "DeleveragingWaveDetector",
+      "event_type": "DELEVERAGING_WAVE",
+      "family": "oi",
+      "maturity_tier": "standard",
+      "module": "project.events.families.oi",
+      "path": "project/events/families/oi.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "oi_delta_1h",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "DepthStressProxyDetector",
+      "event_type": "DEPTH_COLLAPSE",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "DepthStressProxyDetector",
+      "event_type": "DEPTH_STRESS_PROXY",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "FailedContinuationDetector",
+      "event_type": "FAILED_CONTINUATION",
+      "family": "exhaustion",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "FalseBreakoutDetector",
+      "event_type": "FALSE_BREAKOUT",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "FeeRegimeChangeDetector",
+      "event_type": "FEE_REGIME_CHANGE_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "FlowExhaustionDetector",
+      "event_type": "FLOW_EXHAUSTION_PROXY",
+      "family": "exhaustion",
+      "maturity_tier": "proxy",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "rv_96",
+        "oi_delta_1h",
+        "liquidation_notional"
+      ]
+    },
+    {
+      "class_name": "FndDislocDetector",
+      "event_type": "FND_DISLOC",
+      "family": "basis",
+      "maturity_tier": "production",
+      "module": "project.events.families.basis",
+      "path": "project/events/families/basis.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close_perp",
+        "close_spot"
+      ]
+    },
+    {
+      "class_name": "FlowExhaustionDetector",
+      "event_type": "FORCED_FLOW_EXHAUSTION",
+      "family": "exhaustion",
+      "maturity_tier": "proxy",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "rv_96",
+        "oi_delta_1h",
+        "liquidation_notional"
+      ]
+    },
+    {
+      "class_name": "FundingExtremeOnsetDetector",
+      "event_type": "FUNDING_EXTREME_ONSET",
+      "family": "funding",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.funding",
+      "path": "project/events/detectors/funding.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "funding_abs_pct",
+        "funding_abs"
+      ]
+    },
+    {
+      "class_name": "FundingFlipDetector",
+      "event_type": "FUNDING_FLIP",
+      "family": "funding",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.funding",
+      "path": "project/events/detectors/funding.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "funding_rate_scaled"
+      ]
+    },
+    {
+      "class_name": "FundingNormalizationDetector",
+      "event_type": "FUNDING_NORMALIZATION_TRIGGER",
+      "family": "funding",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.funding",
+      "path": "project/events/detectors/funding.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "funding_abs_pct",
+        "funding_abs"
+      ]
+    },
+    {
+      "class_name": "FundingPersistenceDetector",
+      "event_type": "FUNDING_PERSISTENCE_TRIGGER",
+      "family": "funding",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.funding",
+      "path": "project/events/detectors/funding.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "funding_abs_pct",
+        "funding_abs"
+      ]
+    },
+    {
+      "class_name": "FundingTimestampDetector",
+      "event_type": "FUNDING_TIMESTAMP_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "GapOvershootDetector",
+      "event_type": "GAP_OVERSHOOT",
+      "family": "statistical",
+      "maturity_tier": "standard",
+      "module": "project.events.families.statistical",
+      "path": "project/events/families/statistical.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "IndexComponentDivergenceDetector",
+      "event_type": "INDEX_COMPONENT_DIVERGENCE",
+      "family": "desync",
+      "maturity_tier": "standard",
+      "module": "project.events.families.desync",
+      "path": "project/events/families/desync.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "LeadLagBreakDetector",
+      "event_type": "LEAD_LAG_BREAK",
+      "family": "desync",
+      "maturity_tier": "standard",
+      "module": "project.events.families.desync",
+      "path": "project/events/families/desync.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "LiquidationCascadeDetector",
+      "event_type": "LIQUIDATION_CASCADE",
+      "family": "liquidation",
+      "maturity_tier": "specialized",
+      "module": "project.events.families.liquidation",
+      "path": "project/events/families/liquidation.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "liquidation_notional",
+        "oi_delta_1h",
+        "oi_notional",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "LiquidityGapDetector",
+      "event_type": "LIQUIDITY_GAP_PRINT",
+      "family": "liquidity",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "LiquidityStressDetector",
+      "event_type": "LIQUIDITY_SHOCK",
+      "family": "liquidity",
+      "maturity_tier": "production",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "DirectLiquidityStressDetector",
+      "event_type": "LIQUIDITY_STRESS_DIRECT",
+      "family": "liquidity",
+      "maturity_tier": "production",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "depth_usd",
+        "spread_bps"
+      ]
+    },
+    {
+      "class_name": "ProxyLiquidityStressDetector",
+      "event_type": "LIQUIDITY_STRESS_PROXY",
+      "family": "liquidity",
+      "maturity_tier": "proxy",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "quote_volume"
+      ]
+    },
+    {
+      "class_name": "LiquidityVacuumDetector",
+      "event_type": "LIQUIDITY_VACUUM",
+      "family": "liquidity",
+      "maturity_tier": "specialized",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low",
+        "volume"
+      ]
+    },
+    {
+      "class_name": "MomentumDivergenceDetector",
+      "event_type": "MOMENTUM_DIVERGENCE_TRIGGER",
+      "family": "exhaustion",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "OIFlushDetector",
+      "event_type": "OI_FLUSH",
+      "family": "oi",
+      "maturity_tier": "standard",
+      "module": "project.events.families.oi",
+      "path": "project/events/families/oi.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "oi_notional",
+        "close"
+      ]
+    },
+    {
+      "class_name": "OISpikeNegativeDetector",
+      "event_type": "OI_SPIKE_NEGATIVE",
+      "family": "oi",
+      "maturity_tier": "standard",
+      "module": "project.events.families.oi",
+      "path": "project/events/families/oi.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "oi_notional",
+        "close"
+      ]
+    },
+    {
+      "class_name": "OISpikePositiveDetector",
+      "event_type": "OI_SPIKE_POSITIVE",
+      "family": "oi",
+      "maturity_tier": "standard",
+      "module": "project.events.families.oi",
+      "path": "project/events/families/oi.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "oi_notional",
+        "close"
+      ]
+    },
+    {
+      "class_name": "PriceVolImbalanceProxyDetector",
+      "event_type": "ORDERFLOW_IMBALANCE_SHOCK",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "OvershootDetector",
+      "event_type": "OVERSHOOT_AFTER_SHOCK",
+      "family": "statistical",
+      "maturity_tier": "standard",
+      "module": "project.events.families.statistical",
+      "path": "project/events/families/statistical.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "PostDeleveragingReboundDetector",
+      "event_type": "POST_DELEVERAGING_REBOUND",
+      "family": "exhaustion",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "oi_delta_1h",
+        "liquidation_notional"
+      ]
+    },
+    {
+      "class_name": "PriceVolImbalanceProxyDetector",
+      "event_type": "PRICE_VOL_IMBALANCE_PROXY",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "PullbackPivotDetector",
+      "event_type": "PULLBACK_PIVOT",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "RangeBreakoutDetector",
+      "event_type": "RANGE_BREAKOUT",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "RangeCompressionDetector",
+      "event_type": "RANGE_COMPRESSION_END",
+      "family": "volatility",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "range_96",
+        "range_med_2880"
+      ]
+    },
+    {
+      "class_name": "ScheduledNewsDetector",
+      "event_type": "SCHEDULED_NEWS_WINDOW_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "SessionCloseDetector",
+      "event_type": "SESSION_CLOSE_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "SessionOpenDetector",
+      "event_type": "SESSION_OPEN_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "SlippageSpikeDetector",
+      "event_type": "SLIPPAGE_SPIKE_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "SpotPerpBasisShockDetector",
+      "event_type": "SPOT_PERP_BASIS_SHOCK",
+      "family": "basis",
+      "maturity_tier": "production",
+      "module": "project.events.families.basis",
+      "path": "project/events/families/basis.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close_perp",
+        "close_spot"
+      ]
+    },
+    {
+      "class_name": "SpreadBlowoutDetector",
+      "event_type": "SPREAD_BLOWOUT",
+      "family": "liquidity",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.liquidity",
+      "path": "project/events/detectors/liquidity.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "spread_zscore"
+      ]
+    },
+    {
+      "class_name": "SpreadRegimeWideningDetector",
+      "event_type": "SPREAD_REGIME_WIDENING_EVENT",
+      "family": "temporal",
+      "maturity_tier": "standard",
+      "module": "project.events.families.temporal",
+      "path": "project/events/families/temporal.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
+    },
+    {
+      "class_name": "SREventDetector",
+      "event_type": "SUPPORT_RESISTANCE_BREAK",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "WickReversalProxyDetector",
+      "event_type": "SWEEP_STOPRUN",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "TrendAccelerationDetector",
+      "event_type": "TREND_ACCELERATION",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "TrendDecelerationDetector",
+      "event_type": "TREND_DECELERATION",
+      "family": "trend",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.trend",
+      "path": "project/events/detectors/trend.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
+      "class_name": "TrendExhaustionDetector",
+      "event_type": "TREND_EXHAUSTION_TRIGGER",
+      "family": "exhaustion",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.exhaustion",
+      "path": "project/events/detectors/exhaustion.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "TrendToChopDetector",
+      "event_type": "TREND_TO_CHOP_SHIFT",
+      "family": "regime",
+      "maturity_tier": "standard",
+      "module": "project.events.families.regime",
+      "path": "project/events/families/regime.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "VolClusterShiftDetector",
+      "event_type": "VOL_CLUSTER_SHIFT",
+      "family": "volatility",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "range_96",
+        "range_med_2880"
+      ]
+    },
+    {
+      "class_name": "VolRegimeShiftDetector",
+      "event_type": "VOL_REGIME_SHIFT_EVENT",
+      "family": "regime",
+      "maturity_tier": "standard",
+      "module": "project.events.families.regime",
+      "path": "project/events/families/regime.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "rv_96"
+      ]
+    },
+    {
+      "class_name": "VolRelaxationDetector",
+      "event_type": "VOL_RELAXATION_START",
+      "family": "volatility",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "range_96",
+        "range_med_2880"
+      ]
+    },
+    {
+      "class_name": "VolShockRelaxationDetector",
+      "event_type": "VOL_SHOCK",
+      "family": "volatility",
+      "maturity_tier": "specialized",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "VolSpikeDetector",
+      "event_type": "VOL_SPIKE",
+      "family": "volatility",
+      "maturity_tier": "production",
+      "module": "project.events.detectors.volatility",
+      "path": "project/events/detectors/volatility.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "range_96",
+        "range_med_2880"
+      ]
+    },
+    {
+      "class_name": "WickReversalProxyDetector",
+      "event_type": "WICK_REVERSAL_PROXY",
+      "family": "canonical_proxy",
+      "maturity_tier": "proxy",
+      "module": "project.events.families.canonical_proxy",
+      "path": "project/events/families/canonical_proxy.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "high",
+        "low"
+      ]
+    },
+    {
+      "class_name": "ZScoreStretchDetector",
+      "event_type": "ZSCORE_STRETCH",
+      "family": "statistical",
+      "maturity_tier": "standard",
+      "module": "project.events.families.statistical",
+      "path": "project/events/families/statistical.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: BASIS_SNAPBACK",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: CROSS_VENUE_CATCHUP",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: DEPTH_RECOVERY_EVENT",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: FUNDING_EXTREME_BREAKOUT",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: FUNDING_EXTREME_STAGNATION",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: IMBALANCE_ABSORPTION_REVERSAL",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: LIQUIDATION_EXHAUSTION_REVERSAL",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: OI_VOL_COMPRESSION_BUILDUP",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: OI_VOL_DIVERGENCE",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: SEQ_FND_EXTREME_THEN_BREAKOUT",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: SEQ_LIQ_CASCADE_THEN_EXHAUST",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: SEQ_VOL_COMP_THEN_BREAKOUT",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: VOL_COMPRESSION_BREAKOUT",
+      "path": "project/events/detectors/legacy_aliases.py",
+      "severity": "warning"
+    }
+  ],
+  "summary": {
+    "active_event_count": 65,
+    "error_count": 0,
+    "issue_count": 15,
+    "maturity_counts": {
+      "production": 6,
+      "proxy": 11,
+      "specialized": 3,
+      "standard": 45
+    },
+    "registered_detector_entry_count": 81,
+    "registered_event_count": 65,
+    "schema_version": "detector_coverage_audit_v2",
+    "status": "passed",
+    "warning_count": 15
+  }
+}

@@ -1,0 +1,9 @@
+event_type: BASIS_DISLOC
+reports_dir: basis_dislocation
+events_file: basis_dislocation_events.parquet
+signal_column: basis_dislocation_event
+parameters:
+  z_threshold: 3.0
+  lookback_window: 288
+  cooldown_bars: 12
+canonical_family: STATISTICAL_DISLOCATION

@@ -1,0 +1,48 @@
+version: 1
+kind: search_space
+notes:
+  - Intended for synthetic full-spec runs that are followed by detector truth validation, not just candidate export or promotion review.
+  - Event misses in this search surface should be interpreted against the synthetic truth map before treating them as ordinary edge failures.
+
+triggers:
+  events:
+    - CROSS_VENUE_DESYNC
+    - BASIS_DISLOC
+    - SPOT_PERP_BASIS_SHOCK
+    - FND_DISLOC
+    - FUNDING_FLIP
+    - TREND_ACCELERATION
+    - TREND_EXHAUSTION_TRIGGER
+    - MOMENTUM_DIVERGENCE_TRIGGER
+    - FALSE_BREAKOUT
+    - BREAKOUT_TRIGGER
+    - FAILED_CONTINUATION
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - SPREAD_REGIME_WIDENING_EVENT
+    - DELEVERAGING_WAVE
+    - POST_DELEVERAGING_REBOUND
+    - CLIMAX_VOLUME_BAR
+
+contexts: {}
+
+templates:
+  - mean_reversion
+  - continuation
+  - exhaustion_reversal
+  - overshoot_repair
+
+horizons:
+  - 5m
+  - 15m
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+cost_profiles:
+  - standard

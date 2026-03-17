@@ -1,0 +1,613 @@
+from __future__ import annotations
+from project.core.config import get_data_root
+
+import argparse
+import logging
+import math
+import re
+import sys
+from pathlib import Path
+from typing import Optional, Sequence
+
+import numpy as np
+import pandas as pd
+
+from project.core.validation import ts_ns_utc
+from project.core.feature_schema import feature_dataset_dir_name, normalize_feature_schema_version
+from project.core.timeframes import bars_dataset_name, funding_dataset_name, normalize_timeframe, timeframe_to_minutes
+from project.features.microstructure import (
+    calculate_amihud_illiquidity,
+    calculate_imbalance,
+    calculate_kyle_lambda,
+    calculate_roll_spread_bps,
+    calculate_vpin_score,
+)
+from project.io.utils import (
+    ensure_dir,
+    read_parquet,
+    write_parquet,
+    choose_partition_dir,
+    list_parquet_files,
+    run_scoped_lake_path,
+)
+from project.specs.manifest import finalize_manifest, start_manifest
+
+_FUNDING_MAX_STALENESS_H = 8
+_OI_MAX_STALENESS_H = 4
+_ZSCORE_WINDOW = 96
+_BASE_WINDOW_MINUTES = 5  # legacy 5m semantic baseline, converted to active timeframe via _duration_to_bars
+_WARMUP_COL_PATTERN = re.compile(r"_\d+$")
+
+
+def _rolling_percentile(series: pd.Series, window: int = 96) -> pd.Series:
+    # Use pandas native rolling rank for significant performance speedup
+    return series.rolling(window=window, min_periods=min(window, 8)).rank(pct=True) * 100.0
+
+
+def _duration_to_bars(*, minutes: int, timeframe: str, min_bars: int = 1) -> int:
+    tf = normalize_timeframe(timeframe)
+    tf_minutes = timeframe_to_minutes(tf)
+    return max(min_bars, int(math.ceil(minutes / tf_minutes)))
+
+
+def _revision_lag_minutes(n: int, timeframe: str = "5m") -> int:
+    """Return lag in minutes for n bars of the active timeframe."""
+    tf_minutes = timeframe_to_minutes(normalize_timeframe(timeframe))
+    return n * tf_minutes
+
+
+def _safe_logret_1(close: pd.Series) -> pd.Series:
+    """Log return vs prior bar. NaN when either close <= 0."""
+    prev = close.shift(1)
+    valid = (close > 0) & (prev > 0)
+    out = pd.Series(np.nan, index=close.index)
+    out.loc[valid] = np.log(close.loc[valid] / prev.loc[valid])
+    return out
+
+
+def _load_spot_close_reference(
+    symbol: str,
+    run_id: str,
+    data_root: Path,
+    timeframe: str = "5m",
+) -> pd.DataFrame:
+    bars_dataset = bars_dataset_name(timeframe)
+    # Use consistent lake path logic
+    candidates = [
+        run_scoped_lake_path(data_root, run_id, "cleaned", "spot", symbol, bars_dataset),
+        data_root / "lake" / "cleaned" / "spot" / symbol / bars_dataset,
+    ]
+    path_dir = choose_partition_dir(candidates)
+    if path_dir:
+        try:
+            files = list_parquet_files(path_dir)
+            if files:
+                df = read_parquet(files)
+                if "timestamp" in df.columns and "close" in df.columns:
+                    return df[["timestamp", "close"]].rename(columns={"close": "spot_close"})
+        except Exception:
+            pass
+    return pd.DataFrame(columns=["timestamp", "spot_close"])
+
+
+def _add_basis_features(
+    frame: pd.DataFrame,
+    symbol: str,
+    run_id: str,
+    market: str,
+    data_root: Path,
+    timeframe: str = "5m",
+) -> pd.DataFrame:
+    out = frame.copy()
+    out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
+    spot = _load_spot_close_reference(symbol, run_id, data_root, timeframe=timeframe)
+
+    if not spot.empty and "timestamp" in spot.columns and "spot_close" in spot.columns:
+        spot = spot.copy()
+        spot["timestamp"] = pd.to_datetime(spot["timestamp"], utc=True)
+        # Exact timestamp merge only — no asof
+        merged = out.merge(spot[["timestamp", "spot_close"]], on="timestamp", how="left")
+        out["spot_close"] = merged["spot_close"].values
+        has_spot = merged["spot_close"].notna()
+        out["basis_spot_coverage"] = float(has_spot.sum()) / max(len(out), 1)
+        valid = has_spot & (merged["spot_close"] > 0) & (merged["close"] > 0)
+        out["basis_bps"] = np.nan
+        out.loc[valid.values, "basis_bps"] = (
+            (merged.loc[valid, "close"] / merged.loc[valid, "spot_close"] - 1.0) * 10_000.0
+        ).values
+    else:
+        out["basis_bps"] = np.nan
+        out["basis_spot_coverage"] = 0.0
+        out["spot_close"] = np.nan
+
+    zscore_window = _duration_to_bars(
+        minutes=_ZSCORE_WINDOW * _BASE_WINDOW_MINUTES,
+        timeframe=timeframe,
+        min_bars=2,
+    )
+    roll_mean = out["basis_bps"].rolling(zscore_window, min_periods=2).mean()
+    roll_std = out["basis_bps"].rolling(zscore_window, min_periods=2).std()
+    out["basis_zscore"] = (out["basis_bps"] - roll_mean) / roll_std.replace(0.0, np.nan)
+
+    if "spread_bps" in out.columns:
+        sm = out["spread_bps"].rolling(zscore_window, min_periods=2).mean()
+        ss = out["spread_bps"].rolling(zscore_window, min_periods=2).std()
+        out["spread_zscore"] = (out["spread_bps"] - sm) / ss.replace(0.0, np.nan)
+    else:
+        out["spread_zscore"] = np.nan
+
+    return out
+
+
+def _merge_funding_rates(
+    bars: pd.DataFrame,
+    funding: pd.DataFrame,
+    symbol: str,
+    timeframe: str = "5m",
+) -> pd.DataFrame:
+    if funding.empty or "timestamp" not in funding.columns:
+        out = bars.copy()
+        if "funding_rate_scaled" not in out.columns:
+            out["funding_rate_scaled"] = np.nan
+        return out
+
+    funding = funding.copy()
+    funding["timestamp"] = ts_ns_utc(
+        pd.to_datetime(funding["timestamp"], utc=True, errors="coerce")
+    )
+    if funding["timestamp"].duplicated().any():
+        funding = funding.drop_duplicates(subset=["timestamp"], keep="last")
+    funding = funding.sort_values("timestamp").reset_index(drop=True)
+
+    if "funding_rate_scaled" not in funding.columns and "funding_rate" in funding.columns:
+        funding["funding_rate_scaled"] = funding["funding_rate"].astype(float)
+
+    bars_out = bars.copy()
+    bars_out["timestamp"] = ts_ns_utc(
+        pd.to_datetime(bars_out["timestamp"], utc=True, errors="coerce")
+    )
+    bars_out = bars_out.sort_values("timestamp").reset_index(drop=True)
+
+    if "funding_rate_scaled" in funding.columns:
+        merged = pd.merge_asof(
+            bars_out,
+            funding[["timestamp", "funding_rate_scaled"]],
+            on="timestamp",
+            direction="backward",
+        )
+
+        staleness_bars = _duration_to_bars(
+            minutes=_FUNDING_MAX_STALENESS_H * 60,
+            timeframe=timeframe,
+        )
+        staleness_limit_ns = int(
+            pd.Timedelta(
+                minutes=staleness_bars * timeframe_to_minutes(normalize_timeframe(timeframe))
+            ).value
+        )
+        funding_ts_ns = funding["timestamp"].values.astype(np.int64)
+        bar_ts_ns = merged["timestamp"].values.astype(np.int64)
+        idx = np.searchsorted(funding_ts_ns, bar_ts_ns, side="right") - 1
+        valid = idx >= 0
+        stale = np.ones(len(merged), dtype=bool)
+        if valid.any():
+            src_ts = np.where(valid, funding_ts_ns[np.maximum(0, idx)], np.iinfo(np.int64).min)
+            stale = (~valid) | ((bar_ts_ns - src_ts) > staleness_limit_ns)
+        merged.loc[stale, "funding_rate_scaled"] = np.nan
+        return merged
+    else:
+        if "funding_rate_scaled" not in bars_out.columns:
+            bars_out["funding_rate_scaled"] = np.nan
+        return bars_out
+
+
+def _merge_optional_oi_liquidation(
+    bars: pd.DataFrame,
+    symbol: str,
+    market: str,
+    run_id: str,
+    data_root: Path,
+    timeframe: str = "5m",
+) -> pd.DataFrame:
+    out = bars.copy()
+    out["timestamp"] = ts_ns_utc(pd.to_datetime(out["timestamp"], utc=True, errors="coerce"))
+
+    # Use consistent lake paths
+    oi_dataset = "open_interest"
+    liq_dataset = "liquidations"
+    
+    oi_paths = [
+        run_scoped_lake_path(data_root, run_id, "raw", "binance", market, symbol, oi_dataset),
+        data_root / "lake" / "raw" / "binance" / market / symbol / oi_dataset,
+    ]
+    liq_paths = [
+        run_scoped_lake_path(data_root, run_id, "raw", "binance", market, symbol, liq_dataset),
+        data_root / "lake" / "raw" / "binance" / market / symbol / liq_dataset,
+        run_scoped_lake_path(data_root, run_id, "raw", "binance", market, symbol, "liquidation_snapshot"),
+        data_root / "lake" / "raw" / "binance" / market / symbol / "liquidation_snapshot",
+    ]
+
+    # Open interest
+    oi_period = "5m"
+    oi_paths = [
+        run_scoped_lake_path(data_root, run_id, "raw", "binance", market, symbol, oi_dataset, oi_period),
+        data_root / "lake" / "raw" / "binance" / market / symbol / oi_dataset / oi_period,
+        run_scoped_lake_path(data_root, run_id, "raw", "binance", market, symbol, oi_dataset),
+        data_root / "lake" / "raw" / "binance" / market / symbol / oi_dataset,
+    ]
+    oi_dir = choose_partition_dir(oi_paths)
+    oi = read_parquet(list_parquet_files(oi_dir)) if oi_dir else pd.DataFrame()
+
+    out["oi_notional"] = np.nan
+    if not oi.empty and ("timestamp" in oi.columns or "time" in oi.columns):
+        oi = oi.copy()
+        oi_ts_col = "timestamp" if "timestamp" in oi.columns else "time"
+        oi["timestamp"] = ts_ns_utc(pd.to_datetime(oi[oi_ts_col], utc=True, errors="coerce"))
+        if oi["timestamp"].duplicated().any():
+            oi = oi.drop_duplicates(subset=["timestamp"], keep="last")
+        oi = oi.sort_values("timestamp").reset_index(drop=True)
+
+        oi_val_col = next(
+            (c for c in ["sum_open_interest", "open_interest", "oi"] if c in oi.columns),
+            None,
+        )
+        if oi_val_col is None:
+            oi = pd.DataFrame()
+
+        if not oi.empty:
+            merged_oi = pd.merge_asof(
+                out, oi[["timestamp", oi_val_col]], on="timestamp", direction="backward"
+            )
+            oi_ts_ns = oi["timestamp"].values.astype(np.int64)
+            bar_ts_ns = merged_oi["timestamp"].values.astype(np.int64)
+            idx = np.searchsorted(oi_ts_ns, bar_ts_ns, side="right") - 1
+            valid = idx >= 0
+            stale_bars = _duration_to_bars(
+                minutes=_OI_MAX_STALENESS_H * 60,
+                timeframe=timeframe,
+            )
+            stale_limit_ns = int(
+                pd.Timedelta(
+                    minutes=stale_bars * timeframe_to_minutes(normalize_timeframe(timeframe))
+                ).value
+            )
+            stale = np.ones(len(merged_oi), dtype=bool)
+            if valid.any():
+                src_ts = np.where(valid, oi_ts_ns[np.maximum(0, idx)], np.iinfo(np.int64).min)
+                stale = (~valid) | ((bar_ts_ns - src_ts) > stale_limit_ns)
+            out["oi_notional"] = merged_oi[oi_val_col].values.astype(float)
+            out.loc[stale, "oi_notional"] = np.nan
+
+    # Liquidations
+    liq_dir = choose_partition_dir(liq_paths)
+    liq = read_parquet(list_parquet_files(liq_dir)) if liq_dir else pd.DataFrame()
+
+    out["liquidation_notional"] = 0.0
+    out["liquidation_count"] = 0.0
+
+    if not liq.empty and ("timestamp" in liq.columns or "time" in liq.columns):
+        # standard liq columns: notional, notional_usd or amount * price
+        liq_ts_col = "timestamp" if "timestamp" in liq.columns else "time"
+        liq_notional_col = "notional"
+        if "notional" not in liq.columns:
+            if "notional_usd" in liq.columns: liq_notional_col = "notional_usd"
+            elif "amount" in liq.columns: liq_notional_col = "amount"
+
+        liq = liq.copy()
+        liq["timestamp"] = ts_ns_utc(pd.to_datetime(liq[liq_ts_col], utc=True, errors="coerce"))
+        bar_ts_ns = out["timestamp"].values.astype(np.int64)
+        liq_ts_ns = liq["timestamp"].values.astype(np.int64)
+        bar_width_ns = int(
+            pd.Timedelta(minutes=timeframe_to_minutes(normalize_timeframe(timeframe))).value
+        )
+
+        idx = np.searchsorted(bar_ts_ns, liq_ts_ns, side="right") - 1
+        in_window = (idx >= 0) & (idx < len(out))
+        # Ensure it falls WITHIN the bar (from bar_start to bar_start + width)
+        in_window[in_window] &= liq_ts_ns[in_window] < (bar_ts_ns[idx[in_window]] + bar_width_ns)
+
+        if in_window.any():
+            liq_notional = np.zeros(len(out))
+            liq_count = np.zeros(len(out))
+            liq_vals = pd.to_numeric(liq[liq_notional_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+            np.add.at(liq_notional, idx[in_window], liq_vals[in_window])
+            np.add.at(liq_count, idx[in_window], 1)
+            out["liquidation_notional"] = liq_notional
+            out["liquidation_count"] = liq_count
+
+    return out
+
+
+def _ensure_feature_contract_columns(frame: pd.DataFrame, *, timeframe: str) -> pd.DataFrame:
+    out = frame.copy()
+    volume = pd.to_numeric(out.get("volume", pd.Series(np.nan, index=out.index)), errors="coerce")
+    close = pd.to_numeric(out.get("close", pd.Series(np.nan, index=out.index)), errors="coerce")
+
+    if "quote_volume" not in out.columns:
+        out["quote_volume"] = volume * close
+    else:
+        quote_volume = pd.to_numeric(out["quote_volume"], errors="coerce")
+        out["quote_volume"] = quote_volume.where(quote_volume.notna(), volume * close)
+
+    if "taker_base_volume" not in out.columns:
+        out["taker_base_volume"] = (volume / 2.0).fillna(0.0)
+    else:
+        out["taker_base_volume"] = pd.to_numeric(out["taker_base_volume"], errors="coerce").fillna(0.0)
+
+    funding_scaled = pd.to_numeric(
+        out.get("funding_rate_scaled", pd.Series(np.nan, index=out.index)), errors="coerce"
+    )
+    out["funding_rate_scaled"] = funding_scaled
+    if "funding_rate" not in out.columns:
+        out["funding_rate"] = funding_scaled
+    else:
+        funding_rate = pd.to_numeric(out["funding_rate"], errors="coerce")
+        out["funding_rate"] = funding_rate.where(funding_rate.notna(), funding_scaled)
+
+    if "funding_rate_realized" not in out.columns:
+        out["funding_rate_realized"] = 0.0
+    else:
+        out["funding_rate_realized"] = pd.to_numeric(out["funding_rate_realized"], errors="coerce").fillna(0.0)
+
+    if "is_gap" not in out.columns:
+        out["is_gap"] = False
+    out["is_gap"] = out["is_gap"].astype(bool)
+
+    if "cross_exchange_spread_z" not in out.columns:
+        out["cross_exchange_spread_z"] = pd.to_numeric(
+            out.get("basis_zscore", pd.Series(np.nan, index=out.index)),
+            errors="coerce",
+        )
+
+    if "revision_lag_bars" not in out.columns:
+        out["revision_lag_bars"] = 0
+    out["revision_lag_bars"] = (
+        pd.to_numeric(out["revision_lag_bars"], errors="coerce").fillna(0).astype(int)
+    )
+    out["revision_lag_minutes"] = out["revision_lag_bars"].map(
+        lambda n: _revision_lag_minutes(int(n), timeframe=timeframe)
+    )
+
+    buy_volume = pd.to_numeric(out["taker_base_volume"], errors="coerce").fillna(0.0).clip(lower=0.0)
+    total_volume = volume.fillna(0.0).clip(lower=0.0)
+    buy_volume = pd.Series(np.minimum(buy_volume.to_numpy(), total_volume.to_numpy()), index=out.index)
+    sell_volume = pd.Series(
+        np.maximum(total_volume.to_numpy() - buy_volume.to_numpy(), 0.0), index=out.index
+    )
+
+    out["ms_roll_24"] = calculate_roll_spread_bps(close, window=24)
+    out["ms_amihud_24"] = calculate_amihud_illiquidity(close, total_volume, window=24)
+    out["ms_kyle_24"] = calculate_kyle_lambda(close, buy_volume, sell_volume, window=24)
+    out["ms_vpin_24"] = calculate_vpin_score(total_volume, buy_volume, window=24)
+    out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24)
+    return out
+
+
+def build_features(
+    bars: pd.DataFrame,
+    funding: pd.DataFrame,
+    symbol: str,
+    run_id: str = "",
+    data_root: Optional[Path] = None,
+    timeframe: str = "5m",
+) -> pd.DataFrame:
+    """Build the canonical feature set: merge funding, add basis/spread/OI/liquidation features."""
+    if data_root is None:
+        from project.core.config import get_data_root
+
+        data_root = get_data_root()
+
+    tf = normalize_timeframe(timeframe)
+
+    out = _merge_funding_rates(bars, funding, symbol, timeframe=tf)
+    out = _add_basis_features(
+        out,
+        symbol=symbol,
+        run_id=run_id,
+        market="perp",
+        data_root=data_root,
+        timeframe=tf,
+    )
+    out = _merge_optional_oi_liquidation(
+        out,
+        symbol=symbol,
+        market="perp",
+        run_id=run_id,
+        data_root=data_root,
+        timeframe=tf,
+    )
+
+    # Add indicators (All lagged by 1 bar to ensure PIT-safety)
+    out["logret_1"] = _safe_logret_1(out["close"])
+    rv_window = _duration_to_bars(minutes=96 * _BASE_WINDOW_MINUTES, timeframe=tf, min_bars=2)
+    rv_min_periods = _duration_to_bars(minutes=8 * _BASE_WINDOW_MINUTES, timeframe=tf, min_bars=2)
+    rv_pct_window = _duration_to_bars(
+        minutes=17280 * _BASE_WINDOW_MINUTES, timeframe=tf, min_bars=1
+    )
+    range_med_window = _duration_to_bars(
+        minutes=2880 * _BASE_WINDOW_MINUTES, timeframe=tf, min_bars=1
+    )
+    range_med_min_periods = _duration_to_bars(
+        minutes=288 * _BASE_WINDOW_MINUTES, timeframe=tf, min_bars=1
+    )
+
+    out["rv_96"] = out["logret_1"].rolling(rv_window, min_periods=rv_min_periods).std().shift(1)
+    out["rv_pct_17280"] = _rolling_percentile(out["rv_96"], window=rv_pct_window).shift(1).fillna(50.0)
+    out["high_96"] = out["high"].rolling(rv_window, min_periods=1).max().shift(1)
+    out["low_96"] = out["low"].rolling(rv_window, min_periods=1).min().shift(1)
+    out["range_96"] = (out["high_96"] / out["low_96"].replace(0.0, np.nan) - 1.0).fillna(0.0)
+    out["range_med_2880"] = (
+        out["range_96"]
+        .rolling(range_med_window, min_periods=range_med_min_periods)
+        .median()
+        .shift(1)
+        .fillna(0.0)
+    )
+
+    if "oi_notional" in out.columns:
+        oi_delta_window = _duration_to_bars(minutes=60, timeframe=tf, min_bars=1)
+        out["oi_delta_1h"] = out["oi_notional"].diff(oi_delta_window).shift(1).fillna(0.0)
+    else:
+        out["oi_delta_1h"] = 0.0
+
+    # Add funding absolute and percentile features
+    if "funding_rate_scaled" in out.columns:
+        funding_abs = out["funding_rate_scaled"].astype(float).abs().fillna(0.0)
+        out["funding_abs"] = funding_abs.shift(1) # Lag raw magnitude too if used for thresholds
+        funding_abs_window = _duration_to_bars(
+            minutes=96 * _BASE_WINDOW_MINUTES,
+            timeframe=tf,
+            min_bars=1,
+        )
+        out["funding_abs_pct"] = _rolling_percentile(funding_abs, window=funding_abs_window).shift(1).fillna(
+            0.0
+        )
+    else:
+        out["funding_abs"] = 0.0
+        out["funding_abs_pct"] = 0.0
+
+    # Final data contract enforcement: ensure funding_rate_scaled is PIT-safe and populated
+    if "funding_rate_scaled" not in out.columns or out["funding_rate_scaled"].isna().all():
+        if "funding_rate_feature" in out.columns:
+            out["funding_rate_scaled"] = out["funding_rate_feature"]
+        else:
+            out["funding_rate_scaled"] = np.nan
+
+    return _ensure_feature_contract_columns(out, timeframe=tf)
+
+
+def _filter_time_window(
+    frame: pd.DataFrame,
+    *,
+    start: str | None,
+    end: str | None,
+) -> pd.DataFrame:
+    if frame.empty or "timestamp" not in frame.columns or (not start and not end):
+        return frame
+    out = frame.copy()
+    out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True, errors="coerce")
+    if start:
+        start_ts = pd.Timestamp(start, tz="UTC")
+        out = out[out["timestamp"] >= start_ts]
+    if end:
+        end_ts = pd.Timestamp(end, tz="UTC")
+        out = out[out["timestamp"] <= end_ts]
+    return out.reset_index(drop=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Build canonical features.")
+    parser.add_argument("--run_id", required=True)
+    parser.add_argument("--symbols", required=True)
+    parser.add_argument("--market", default="perp")
+    parser.add_argument("--timeframe", default="5m")
+    parser.add_argument("--force", type=int, default=0)
+    parser.add_argument("--allow_missing_funding", type=int, default=0)
+    parser.add_argument("--feature_schema_version", default="v2")
+    parser.add_argument("--start", default=None)
+    parser.add_argument("--end", default=None)
+    parser.add_argument("--log_path", default=None)
+    args = parser.parse_args()
+
+    run_id = args.run_id
+    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    market = args.market
+    tf = normalize_timeframe(args.timeframe)
+    feature_schema_version = normalize_feature_schema_version(args.feature_schema_version)
+    args.timeframe = tf
+    args.feature_schema_version = feature_schema_version
+
+    from project.core.config import get_data_root
+
+    data_root = get_data_root()
+
+    log_handlers = [logging.StreamHandler(sys.stdout)]
+    if args.log_path:
+        ensure_dir(Path(args.log_path).parent)
+        log_handlers.append(logging.FileHandler(args.log_path))
+    logging.basicConfig(
+        level=logging.INFO, handlers=log_handlers, format="%(asctime)s %(levelname)s %(message)s"
+    )
+
+    params = vars(args)
+    manifest = start_manifest(f"build_features_{tf}" + ("_spot" if market == "spot" else ""), run_id, params, [], [])
+
+    try:
+        for symbol in symbols:
+            # Load cleaned bars
+            bars_paths = [
+                run_scoped_lake_path(
+                    data_root, run_id, "cleaned", market, symbol, bars_dataset_name(tf)
+                ),
+                data_root / "lake" / "cleaned" / market / symbol / bars_dataset_name(tf),
+            ]
+            bars_dir = choose_partition_dir(bars_paths)
+            if not bars_dir:
+                logging.warning(f"No cleaned bars found for {symbol} {tf}")
+                continue
+            bars = read_parquet(list_parquet_files(bars_dir))
+            bars = _filter_time_window(bars, start=args.start, end=args.end)
+            if bars.empty:
+                logging.warning(f"No cleaned bars remain for {symbol} {tf} after start/end filtering")
+                continue
+
+            # Load funding (only for perp)
+            funding = pd.DataFrame()
+            if market == "perp":
+                funding_paths = [
+                    run_scoped_lake_path(
+                        data_root, run_id, "raw", "binance", "perp", symbol, funding_dataset_name(tf)
+                    ),
+                    data_root / "lake" / "raw" / "binance" / "perp" / symbol / funding_dataset_name(tf),
+                    run_scoped_lake_path(
+                        data_root, run_id, "raw", "binance", "perp", symbol, "funding"
+                    ),
+                    data_root / "lake" / "raw" / "binance" / "perp" / symbol / "funding",
+                ]
+                funding_dir = choose_partition_dir(funding_paths)
+                if funding_dir:
+                    funding = read_parquet(list_parquet_files(funding_dir))
+                    funding = _filter_time_window(funding, start=args.start, end=args.end)
+
+            # Build features
+            out = build_features(
+                bars,
+                funding,
+                symbol,
+                run_id=run_id,
+                data_root=data_root,
+                timeframe=tf,
+            )
+
+            if not out.empty:
+                out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
+                out["symbol"] = symbol
+
+                # Write to lake (partitioned by year/month)
+                out_root = run_scoped_lake_path(
+                    data_root,
+                    run_id,
+                    "features",
+                    market,
+                    symbol,
+                    tf,
+                    feature_dataset_dir_name(feature_schema_version),
+                )
+                for (year, month), group in out.groupby(
+                    [out["timestamp"].dt.year, out["timestamp"].dt.month]
+                ):
+                    out_dir = out_root / f"year={year}" / f"month={month:02d}"
+                    out_path = out_dir / f"features_{symbol}_{feature_schema_version}_{year}-{month:02d}.parquet"
+                    write_parquet(group, out_path)
+                    logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
+
+        finalize_manifest(manifest, "success")
+        return 0
+    except Exception as e:
+        logging.exception("Feature building failed")
+        finalize_manifest(manifest, "failed", error=str(e))
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

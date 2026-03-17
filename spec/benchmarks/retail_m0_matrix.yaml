@@ -1,0 +1,33 @@
+version: 1
+matrix_id: retail_m0
+description: >
+  Baseline reproducibility matrix for retail-profitability research runs.
+  Keep this matrix stable for M0-M1 comparisons.
+
+defaults:
+  mode: research
+  flags:
+    run_hypothesis_generator: 0
+    run_phase2_conditional: 1
+    phase2_event_type: LIQUIDITY_VACUUM
+    run_bridge_eval_phase2: 1
+    run_recommendations_checklist: 0
+    run_strategy_blueprint_compiler: 0
+    run_strategy_builder: 0
+    run_backtest: 0
+    run_make_report: 0
+    skip_ingest_ohlcv: 1
+    skip_ingest_funding: 1
+    skip_ingest_spot_ohlcv: 1
+    max_analyzer_workers: 1
+    phase2_parallel_workers: 1
+
+runs:
+  - run_id: retail_m0_btc_eth_2024h1
+    symbols: BTCUSDT,ETHUSDT
+    start: 2024-01-01
+    end: 2024-06-30
+  - run_id: retail_m0_btc_eth_2024h2
+    symbols: BTCUSDT,ETHUSDT
+    start: 2024-07-01
+    end: 2024-12-31

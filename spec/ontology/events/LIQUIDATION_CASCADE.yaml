@@ -1,0 +1,10 @@
+event_type: LIQUIDATION_CASCADE
+reports_dir: liquidation_cascade
+events_file: liquidation_cascade_events.parquet
+signal_column: liquidation_cascade_event
+parameters:
+  liq_multiplier: 3.0
+  median_window: 288
+  liq_vol_th: 100000.0
+  oi_drop_th: -500000.0
+canonical_family: POSITIONING_EXTREMES

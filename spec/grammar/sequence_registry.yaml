@@ -1,0 +1,15 @@
+version: 1
+kind: sequence_registry
+sequences:
+  - name: crowding_unwind
+    events: [FUNDING_EXTREME_ONSET, OI_FLUSH, LIQUIDATION_CASCADE]
+    max_gap: [6, 12]
+    mode: ordered_strict
+  - name: compression_breakout
+    events: [RANGE_COMPRESSION_END, BREAKOUT_TRIGGER, FALSE_BREAKOUT]
+    max_gap: [12, 6]
+    mode: ordered_strict
+  - name: liquidity_stress_repair
+    events: [SPREAD_BLOWOUT, ABSORPTION_EVENT]
+    max_gap: [6]
+    mode: ordered_strict

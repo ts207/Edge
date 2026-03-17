@@ -1,0 +1,10 @@
+event_type: GAP_OVERSHOOT
+reports_dir: statistical_dislocation
+events_file: statistical_dislocation_events.parquet
+signal_column: gap_overshoot_event
+parameters:
+  lookback_window: 288
+  band_z_threshold: 3.0
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: STATISTICAL_DISLOCATION

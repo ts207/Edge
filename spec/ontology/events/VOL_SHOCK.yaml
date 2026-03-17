@@ -1,0 +1,66 @@
+event_type: VOL_SHOCK
+reports_dir: vol_shock_relaxation
+events_file: vol_shock_relaxation_events.parquet
+signal_column: vol_shock_relaxation_event
+canonical_family: VOLATILITY_TRANSITION
+detector_contract: true
+
+parameters:
+  m_controls: 5
+  bootstrap_iters: 1000
+  phase_tolerance_bars: 16
+
+detector:
+  signal_definition: >
+    Detects a realized-volatility shock onset followed by a statistically
+    significant relaxation trajectory. The shock is identified as a rapid
+    expansion of realized vol above a calibrated threshold; relaxation is
+    confirmed via bootstrap test against matched control windows.
+  formula: |
+    realized_vol[i]  = std(log_returns[i-N..i]) * sqrt(bars_per_day)
+    vol_ratio[i]     = realized_vol[i] / rolling_median(realized_vol, window)[i]
+    shock_flag[i]    = vol_ratio[i] >= shock_threshold
+    relaxation[i]    = vol_ratio[i-1] >= shock_threshold AND vol_ratio[i] < shock_threshold
+    bootstrap_p      = bootstrap_test(relaxation_window vs m_controls matched windows)
+    event            = relaxation[i] AND bootstrap_p < 0.05
+  required_columns:
+    - timestamp
+    - close
+  lookback_bars: 288
+  warmup_bars: 288
+  bar_type: close_to_close
+  timestamp_alignment: >
+    Event anchor at first bar below shock threshold (relaxation onset).
+    Detected at bar close.
+  minimum_sample_size: 200
+
+calibration:
+  default_threshold: 2.0
+  search_range: [1.5, 1.75, 2.0, 2.25, 2.5, 3.0]
+  calibration_target: >
+    Maximize hit rate of forward realized vol decay within 48 bars vs matched
+    controls. Require bootstrap p < 0.05 and at least 30 events per window.
+  stability_requirement: >
+    Shock threshold consistent within 0.25 units across BTC/ETH.
+    Bootstrap rejection rate > 70% across yearly splits.
+  failure_modes:
+    - Flat price series: vol near zero, ratio undefined
+    - Persistent high-vol regime: shock threshold never exceeded
+    - Insufficient bootstrap controls (fewer than m_controls viable windows)
+
+expected_behavior:
+  holding_horizon_bars: 8-48
+  invalidation_conditions:
+    - Realized vol re-expands above shock threshold within phase_tolerance_bars
+    - Second shock occurs before first relaxation completes
+  false_positive_scenarios:
+    - Weekend low-liquidity vol collapse (not a true relaxation)
+    - Session open vol spike that reverts mechanically
+    - Thin-book instrument where vol is noise-dominated
+  disabled_regimes:
+    - LIQUIDITY_VACUUM active: vol signal unreliable during thin-book conditions
+    - SCHEDULED_NEWS_WINDOW_EVENT: vol shock may be sustained, not relaxing
+  expected_overlap:
+    - LIQUIDITY_VACUUM: moderate; both activate post-impulse
+    - SPREAD_BLOWOUT: low; different mechanisms
+    - TREND_ACCELERATION: low but possible; trending vol differs from shock vol

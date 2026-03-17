@@ -1,0 +1,87 @@
+"""
+Validation for HypothesisSpec and TriggerSpec objects.
+"""
+from __future__ import annotations
+
+from typing import List
+
+from project.domain.compiled_registry import get_domain_registry
+from project.research.search.feasibility import check_hypothesis_feasibility
+from project.domain.hypotheses import HypothesisSpec, TriggerType
+
+VALID_DIRECTIONS = {"long", "short", "both"}
+VALID_HORIZONS = {"1m", "5m", "15m", "30m", "60m", "1h", "4h", "1d"}
+VALID_OPERATORS = {">=", "<=", ">", "<", "=="}
+
+
+def validate_hypothesis_spec(spec: HypothesisSpec) -> List[str]:
+    """
+    Validate a HypothesisSpec. Returns a list of error strings.
+    Empty list means the spec is valid.
+    """
+    errors: List[str] = []
+
+    if spec.direction not in VALID_DIRECTIONS:
+        errors.append(f"Invalid direction {spec.direction!r}. Must be one of {sorted(VALID_DIRECTIONS)}")
+
+    if spec.horizon not in VALID_HORIZONS:
+        errors.append(f"Invalid horizon {spec.horizon!r}. Must be one of {sorted(VALID_HORIZONS)}")
+
+    if not spec.template_id or not spec.template_id.strip():
+        errors.append("template_id must not be empty")
+
+    if spec.entry_lag < 0:
+        errors.append(f"entry_lag must be >= 0, got {spec.entry_lag}")
+
+    try:
+        spec.trigger.validate()
+    except ValueError as e:
+        errors.append(f"Invalid trigger: {e}")
+
+    if spec.trigger.trigger_type == TriggerType.FEATURE_PREDICATE:
+        if spec.trigger.operator not in VALID_OPERATORS:
+            errors.append(
+                f"Invalid trigger operator {spec.trigger.operator!r}. "
+                f"Must be one of {sorted(VALID_OPERATORS)}"
+            )
+
+    if spec.feature_condition is not None:
+        try:
+            spec.feature_condition.validate()
+        except ValueError as e:
+            errors.append(f"Invalid feature_condition: {e}")
+        if spec.feature_condition.trigger_type != TriggerType.FEATURE_PREDICATE:
+            errors.append(
+                "feature_condition must be a FEATURE_PREDICATE trigger, "
+                f"got {spec.feature_condition.trigger_type!r}"
+            )
+        if spec.feature_condition.operator not in VALID_OPERATORS:
+            errors.append(
+                f"Invalid feature_condition operator {spec.feature_condition.operator!r}. "
+                f"Must be one of {sorted(VALID_OPERATORS)}"
+            )
+
+    if spec.context:
+        try:
+            registry = get_domain_registry()
+            for family, label in spec.context.items():
+                labels = set(registry.context_labels_for_family(family))
+                if not labels:
+                    errors.append(f"Context family {family!r} not found in compiled domain registry")
+                elif label not in labels:
+                    errors.append(f"Context label {label!r} not found for family {family!r} in compiled domain registry")
+        except Exception as e:
+            errors.append(f"Failed to load compiled domain registry for context validation: {e}")
+
+    feasibility = check_hypothesis_feasibility(spec)
+    for reason in feasibility.reasons:
+        errors.append(f"Feasibility: {reason}")
+
+    return errors
+
+
+def assert_valid(spec: HypothesisSpec) -> None:
+    """Raise ValueError if spec is invalid."""
+    errors = validate_hypothesis_spec(spec)
+    if errors:
+        raise ValueError(f"Invalid HypothesisSpec: {'; '.join(errors)}")

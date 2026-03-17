@@ -1,0 +1,10 @@
+event_type: COPULA_PAIRS_TRADING
+reports_dir: copula_pairs
+events_file: copula_pairs_events.parquet
+signal_column: copula_pairs_trading_event
+parameters:
+  alpha1: 0.05
+  alpha2: 0.95
+  lookback_window: 288
+  cooldown_bars: 12
+canonical_family: STATISTICAL_DISLOCATION

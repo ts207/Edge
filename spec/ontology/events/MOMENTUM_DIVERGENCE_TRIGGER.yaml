@@ -1,0 +1,10 @@
+event_type: MOMENTUM_DIVERGENCE_TRIGGER
+reports_dir: forced_flow_and_exhaustion
+events_file: forced_flow_and_exhaustion_events.parquet
+signal_column: momentum_divergence_trigger_event
+parameters:
+  liquidation_spike_z_threshold: 3.0
+  cascade_window_bars: 12
+  cooldown_bars: 24
+  merge_gap_bars: 0
+canonical_family: FORCED_FLOW_AND_EXHAUSTION

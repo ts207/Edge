@@ -1,0 +1,5 @@
+"""Orchestration facade package."""
+
+from project.infra.orchestration.run_all import main as run_all_main
+
+__all__ = ["run_all_main"]
