@@ -6,7 +6,7 @@ from typing import Dict, Any
 import numpy as np
 import pandas as pd
 
-from project.engine.execution_model import estimate_transaction_cost_bps
+from project.core.execution_costs import estimate_transaction_cost_bps
 from project.portfolio.risk_budget import calculate_portfolio_risk_multiplier, get_asset_correlation_adjustment
 
 _LOG = logging.getLogger(__name__)

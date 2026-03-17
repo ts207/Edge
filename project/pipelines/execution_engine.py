@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import concurrent.futures
-import hashlib
 import json
 import os
 import signal
@@ -9,16 +8,23 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime, timezone
-from functools import lru_cache
-from json import JSONDecodeError
 from pathlib import Path
-from typing import Callable, Dict, List, Mapping, Sequence, Tuple
+from typing import Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from project.pipelines.planner import StageDefinition
 
 from project import PROJECT_ROOT
 from project.pipelines.pipeline_defaults import DATA_ROOT
-from project.specs.manifest import validate_stage_manifest_contract
+from project.pipelines.execution_engine_support import (
+    _filter_unsupported_flags,
+    _manifest_declared_outputs_exist,
+    _required_stage_manifest_enabled,
+    _script_supports_log_path,
+    _synthesize_stage_manifest_if_missing,
+    _validate_stage_manifest_on_disk,
+    compute_stage_input_hash,
+    is_phase2_stage,
+    stage_instance_base,
+)
 
 StageLaunch = Tuple[str, str, Path, List[str]]
 WorkerArgs = Tuple[str, str, Path, List[str], str]
@@ -30,108 +36,6 @@ PartitionReduceFn = Callable[[List[object]], object]
 _RUNNING_STAGE_PROCS: Dict[Tuple[str, str], subprocess.Popen[str]] = {}
 _RUNNING_STAGE_PROCS_LOCK = threading.Lock()
 _STAGE_OUTPUT_LOCK = threading.Lock()
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def _base_args_to_parameters(base_args: List[str]) -> Dict[str, object]:
-    """Best-effort CLI arg decoding for synthesized stage manifests."""
-    params: Dict[str, object] = {}
-    idx = 0
-    while idx < len(base_args):
-        token = str(base_args[idx])
-        if token.startswith("--"):
-            key = token[2:]
-            value: object = True
-            if idx + 1 < len(base_args) and not str(base_args[idx + 1]).startswith("--"):
-                value = str(base_args[idx + 1])
-                idx += 1
-            params[key] = value
-        idx += 1
-    return params
-
-def _required_stage_manifest_enabled() -> bool:
-    return str(os.environ.get("BACKTEST_REQUIRE_STAGE_MANIFEST", "0")).strip() in {
-        "1",
-        "true",
-        "TRUE",
-        "yes",
-        "YES",
-    }
-
-def _validate_stage_manifest_on_disk(
-    manifest_path: Path,
-    *,
-    allow_failed_minimal: bool,
-) -> tuple[bool, str]:
-    if not manifest_path.exists():
-        return False, f"missing stage manifest: {manifest_path}"
-    try:
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, JSONDecodeError) as exc:
-        return False, f"invalid manifest JSON ({manifest_path}): {exc}"
-    if not isinstance(payload, dict):
-        return False, f"manifest payload must be an object: {manifest_path}"
-    try:
-        validate_stage_manifest_contract(
-            payload, allow_failed_minimal=allow_failed_minimal
-        )
-    except ValueError as exc:
-        return False, f"manifest schema validation failed ({manifest_path}): {exc}"
-    return True, ""
-
-def _synthesize_stage_manifest_if_missing(
-    *,
-    manifest_path: Path,
-    stage: str,
-    stage_instance_id: str,
-    run_id: str,
-    script_path: Path,
-    base_args: List[str],
-    log_path: Path,
-    status: str,
-    error: str | None = None,
-    input_hash: str | None = None,
-) -> None:
-    if manifest_path.exists():
-        return
-    payload: Dict[str, object] = {
-        "run_id": run_id,
-        "stage": stage,
-        "stage_name": stage,
-        "stage_instance_id": stage_instance_id,
-        "pipeline_session_id": str(os.environ.get("BACKTEST_PIPELINE_SESSION_ID", "")).strip() or None,
-        "started_at": _utc_now_iso(),
-        "finished_at": _utc_now_iso(),
-        "ended_at": _utc_now_iso(),
-        "status": status,
-        "error": error,
-        "parameters": {
-            "script_path": str(script_path),
-            "argv": list(base_args),
-            **_base_args_to_parameters(base_args),
-        },
-        "inputs": [],
-        "outputs": [{"path": str(log_path)}],
-        "stats": {"synthesized_manifest": True},
-        "input_parquet_hashes": {"files": {}, "truncated": False, "max_files": 32},
-        "input_artifact_hashes": {"files": {}, "truncated": False, "max_files": 256},
-        "output_artifact_hashes": {"files": {}, "truncated": False, "max_files": 256},
-        "spec_hashes": {},
-        "ontology_spec_hash": "",
-    }
-    if input_hash:
-        payload["input_hash"] = input_hash
-    tmp = manifest_path.with_suffix(manifest_path.suffix + ".tmp")
-    try:
-        tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-        tmp.replace(manifest_path)
-    except OSError:
-        try:
-            if tmp.exists():
-                tmp.unlink()
-        except OSError:
-            pass
 
 def _register_running_stage_proc(
     run_id: str, stage_instance_id: str, proc: subprocess.Popen[str]
@@ -183,183 +87,6 @@ def terminate_stage_instances(run_id: str, stage_instance_ids: Sequence[str]) ->
             continue
         _terminate_stage_process(run_id, stage_instance_id, proc)
 
-def _script_supports_log_path(script_path: Path) -> bool:
-    try:
-        # Include mtime in cache key to avoid staleness in long-lived processes
-        return _script_supports_log_path_cached(script_path, script_path.stat().st_mtime)
-    except OSError:
-        return False
-
-@lru_cache(maxsize=2048)
-def _script_supports_log_path_cached(script_path: Path, mtime: float) -> bool:
-    try:
-        return "--log_path" in script_path.read_text(encoding="utf-8")
-    except OSError:
-        return False
-
-@lru_cache(maxsize=2048)
-def _script_supports_flag_cached(script_path: Path, flag: str, mtime: float) -> bool:
-    import re
-    try:
-        content = script_path.read_text(encoding="utf-8")
-        # Match the flag ONLY if it is not preceded by a '#' on the same line
-        # Use lookbehind/lookahead to ensure the flag is not part of a larger word
-        # and handle the leading dashes correctly.
-        pattern = rf"^(?!.*#).*(?<![\w-]){re.escape(flag)}(?![\w-])"
-        return bool(re.search(pattern, content, re.MULTILINE))
-    except OSError:
-        return False
-
-
-_DANGEROUS_GLOBAL_FLAGS = {"--config", "--experiment_config", "--override"}
-
-
-def _filter_unsupported_flags(script_path: Path, base_args: List[str]) -> List[str]:
-    """Filters out CLI flags that the script does not explicitly support (naive string check)."""
-    try:
-        mtime = script_path.stat().st_mtime
-    except OSError:
-        return base_args
-
-    out = []
-    idx = 0
-    while idx < len(base_args):
-        token = str(base_args[idx])
-        if token.startswith("--"):
-            # Only filter out 'dangerous' global flags if they are not explicitly mentioned in the script.
-            # Core flags like --run_id and --symbols are always passed to avoid breaking scripts
-            # that delegate their argument parsing to other modules.
-            if token in _DANGEROUS_GLOBAL_FLAGS and not _script_supports_flag_cached(script_path, token, mtime):
-                # Skip flag and its potential value
-                if idx + 1 < len(base_args) and not str(base_args[idx + 1]).startswith("--"):
-                    idx += 1
-            else:
-                out.append(token)
-                if idx + 1 < len(base_args) and not str(base_args[idx + 1]).startswith("--"):
-                    out.append(base_args[idx + 1])
-                    idx += 1
-        else:
-            out.append(token)
-        idx += 1
-    return out
-
-
-def _flag_value(args: List[str], flag: str) -> str | None:
-    try:
-        idx = args.index(flag)
-    except ValueError:
-        return None
-    if idx + 1 >= len(args):
-        return None
-    return str(args[idx + 1]).strip()
-
-def stage_instance_base(stage: str, base_args: List[str]) -> str:
-    event_type = _flag_value(base_args, "--event_type")
-    if event_type and stage in {
-        "build_event_registry",
-        "phase2_conditional_hypotheses",
-        "bridge_evaluate_phase2",
-    }:
-        return f"{stage}_{event_type}"
-    return stage
-
-def _collect_project_module_hashes(script_path: Path) -> str:
-    """
-    Parse ``script_path`` for direct ``project.*`` imports and hash their source files.
-
-    Only hashes files for modules directly named in the script's import statements
-    (not transitive imports). Missing files are recorded deterministically.
-    Returns a single SHA256 digest over all found module hashes, sorted for stability.
-    """
-    import ast as _ast
-
-    try:
-        source = script_path.read_text(encoding="utf-8", errors="replace")
-        tree = _ast.parse(source)
-    except (OSError, SyntaxError):
-        return "parse_error"
-
-    # Collect all project.* module names referenced in top-level imports
-    project_modules: set[str] = set()
-    for node in _ast.walk(tree):
-        if isinstance(node, _ast.Import):
-            for alias in node.names:
-                if alias.name.startswith("project."):
-                    project_modules.add(alias.name)
-        elif isinstance(node, _ast.ImportFrom):
-            if node.module and node.module.startswith("project."):
-                project_modules.add(node.module)
-
-    if not project_modules:
-        return "no_project_imports"
-
-    # Walk up from script location to find the repo root (dir containing 'project/')
-    repo_root = script_path.resolve().parent
-    for _ in range(8):
-        if (repo_root / "project").is_dir():
-            break
-        repo_root = repo_root.parent
-    else:
-        return "repo_root_not_found"
-
-    # Hash each module file
-    hashes: list[str] = []
-    for module in sorted(project_modules):
-        rel_path = module.replace(".", "/") + ".py"
-        abs_path = repo_root / rel_path
-        try:
-            content = abs_path.read_bytes()
-            hashes.append(hashlib.sha256(content).hexdigest())
-        except OSError:
-            hashes.append(f"missing:{module}")
-
-    combined = "|".join(hashes)
-    return hashlib.sha256(combined.encode()).hexdigest()
- 
-def _manifest_declared_outputs_exist(
-    manifest_path: Path,
-    payload: Mapping[str, object],
-) -> bool:
-    outputs = payload.get("outputs")
-    if not isinstance(outputs, list) or not outputs:
-        return False
-    for row in outputs:
-        if not isinstance(row, dict):
-            return False
-        raw_path = str(row.get("path", "")).strip()
-        if not raw_path:
-            return False
-        candidate = Path(raw_path)
-        if candidate.is_absolute():
-            if not candidate.exists():
-                return False
-            continue
-        if not (manifest_path.parent / candidate).exists() and not (PROJECT_ROOT.parent / candidate).exists():
-            return False
-    return True
-
-
-def compute_stage_input_hash(
-    script_path: Path,
-    base_args: List[str],
-    run_id: str,
-    *,
-    cache_context: Mapping[str, object] | None = None,
-) -> str:
-    """Hash the stage command + script content + directly-imported module content."""
-    try:
-        script_hash = hashlib.sha256(script_path.read_bytes()).hexdigest()
-    except OSError:
-        script_hash = "unknown"
-    module_hash = _collect_project_module_hashes(script_path)
-    context_payload = json.dumps(dict(cache_context or {}), sort_keys=True, default=str)
-    payload = f"{script_path}:{script_hash}:{module_hash}:{' '.join(base_args)}:{run_id}:{context_payload}"
-    return hashlib.sha256(payload.encode()).hexdigest()
-
-def is_phase2_stage(stage_name: str) -> bool:
-    return stage_name == "phase2_conditional_hypotheses" or stage_name.startswith(
-        "phase2_conditional_hypotheses_"
-    )
 
 def _emit_buffered_stage_output(stage_instance_id: str, stage: str, text: str) -> None:
     payload = str(text or "").rstrip()

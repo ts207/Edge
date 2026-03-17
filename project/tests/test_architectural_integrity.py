@@ -115,6 +115,9 @@ def test_wrappers_are_pure_reexports():
     Ensures that compatibility wrappers are pure re-exports without local logic.
     """
     wrapper_dirs = [
+        PROJECT_ROOT / "apps",
+        PROJECT_ROOT / "execution",
+        PROJECT_ROOT / "infra",
         PROJECT_ROOT / "pipelines" / "eval",
     ]
     for d in wrapper_dirs:

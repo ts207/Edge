@@ -1,4 +1,4 @@
-"""Facade for the canonical backtest engine runner."""
+"""COMPAT WRAPPER: facade for the canonical backtest engine runner."""
 
 from project.engine.runner import run_engine
 

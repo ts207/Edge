@@ -26,9 +26,30 @@ The research layer owns hypothesis generation, statistical evaluation, promotion
 - `project.research.knowledge.query`
 - `project.research.agent_io.{proposal_to_experiment,execute_proposal,issue_proposal}`
 
+## Explicit Package Surfaces
+
+The layer also exposes lightweight package roots for stable helper families:
+
+- `project.research.clustering`
+- `project.research.reports`
+- `project.research.utils`
+
+## Internal Support Modules
+
+Some large research modules now split internal helper logic into focused support files. These are implementation details, not preferred public surfaces.
+
+Current examples:
+
+- `project.research.services.candidate_discovery_diagnostics`
+- `project.research.services.candidate_discovery_scoring`
+- `project.research.promotion.promotion_decision_support`
+- `project.research.promotion.promotion_result_support`
+- `project.research.promotion.promotion_reporting_support`
+
 ## Working Rules
 
 - Keep stable workflow APIs in service modules, not ad hoc wrappers.
 - Keep policy logic separate from raw metric computation.
 - Keep the layer deterministic for identical inputs and configs.
 - Prefer repo-native contracts and schemas over one-off dataframe conventions.
+- If a research module starts turning into a monolith, split internal support helpers without changing the canonical service surface.

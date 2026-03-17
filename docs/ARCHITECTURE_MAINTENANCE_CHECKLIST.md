@@ -23,6 +23,7 @@ python3 -m project.scripts.detector_coverage_audit \
 - Keep research pipeline wrappers entrypoint-only. Reusable helper logic belongs in `project.research.services.*`, `project.research.promotion.*`, or `project.specs.*`.
 - If a test needs a helper, prefer importing the canonical service/spec module instead of a pipeline wrapper.
 - If you add a new helper to discovery or promotion, decide whether it is service-owned or private before exporting it.
+- If `candidate_discovery_service.py`, `promotion_decisions.py`, or `promotion_reporting.py` starts growing again, split focused helpers into support modules instead of loosening the file-size threshold.
 
 ## Strategy Surfaces
 
@@ -30,11 +31,24 @@ python3 -m project.scripts.detector_coverage_audit \
 - If you touch `project.strategy.__init__`, avoid eager imports that can reintroduce circular-import chains.
 - Treat `project.strategy_dsl` and `project.strategy_templates` as removed packages; if they reappear, that is a regression.
 
+## Compatibility Facades
+
+- `project.apps.*`, `project.execution.*`, and `project.infra.*` are compatibility facades, not primary implementation homes.
+- Keep wrapper modules pure re-exports with the `COMPAT WRAPPER` marker and no local `def` or `class` logic.
+- If a facade needs new behavior, add it to the canonical source module and re-export it rather than implementing it inside the wrapper.
+
+## Package Roots
+
+- Prefer explicit package-root surfaces where they exist: `project.artifacts`, `project.compilers`, `project.eval`, `project.experiments`, `project.live`, `project.portfolio`, and `project.spec_validation`.
+- Keep package-root `__init__.py` files intentionally small. They should re-export stable symbols, not own heavy logic.
+- For lazy pipeline package roots such as `project.pipelines.clean`, `project.pipelines.features`, and `project.pipelines.ingest`, keep `__getattr__`-based dispatch minimal and deterministic.
+
 ## Orchestration
 
 - Keep `project/pipelines/run_all.py` as a coordinator over focused helpers.
 - Add or keep characterization tests before moving planning, bootstrap, or terminalization logic.
 - If `run_all` grows materially, measure whether the logic belongs in `run_all_support`, `run_all_bootstrap`, or `run_all_finalize` instead.
+- Keep `project/pipelines/execution_engine.py` coordinator-oriented as well. Shared helper logic belongs in `project/pipelines/execution_engine_support.py`.
 
 ## Metrics and Guardrails
 

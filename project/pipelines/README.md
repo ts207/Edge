@@ -22,13 +22,27 @@ The pipelines layer handles data ingestion, feature generation, orchestration, m
 - `run_all_bootstrap.py`
 - `run_all_support.py`
 - `run_all_finalize.py`
+- `execution_engine.py`
+- `execution_engine_support.py`
 - `pipeline_planning.py`
 - `pipeline_execution.py`
 - `pipeline_provenance.py`
 - `pipeline_summary.py`
+
+## Explicit Package Surfaces
+
+The layer now exposes package-root entrypoint groups for active stage families:
+
+- `project.pipelines.clean`
+- `project.pipelines.features`
+- `project.pipelines.ingest`
+- `project.pipelines.smoke`
+
+These package roots should stay lightweight. They exist to make stage-family imports explicit, not to become new orchestration layers.
 
 ## Constraints
 
 - Each stage should communicate through declared artifacts rather than shared in-memory state.
 - Wrappers should stay thin when a canonical service module already exists.
 - Orchestration code should remain coordinator-oriented rather than absorbing domain logic.
+- If a pipeline module grows large, extract pure support helpers before weakening size or import-boundary guardrails.

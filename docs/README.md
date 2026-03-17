@@ -29,6 +29,14 @@ Use these when the work touches package surfaces, contract ownership, or drift p
 - [Research Calibration Baseline](./RESEARCH_CALIBRATION_BASELINE.md)
 - [Architecture Maintenance Checklist](./ARCHITECTURE_MAINTENANCE_CHECKLIST.md)
 
+Relevant layer READMEs also live alongside the code:
+
+- `project/pipelines/README.md`
+- `project/research/README.md`
+- `project/contracts/README.md`
+- `project/engine/README.md`
+- `project/runtime/README.md`
+
 ## Generated Diagnostics
 
 The files under `docs/generated/` are machine-owned diagnostics, not policy documents.
