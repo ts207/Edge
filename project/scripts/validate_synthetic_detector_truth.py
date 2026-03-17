@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Union
 
 import pandas as pd
 
@@ -76,11 +76,17 @@ def validate_detector_truth(
     data_root: Path,
     run_id: str,
     truth_map_path: Path,
-    tolerance_minutes: int = 30,
+    tolerance_minutes: Union[int, Dict[str, int]] = 30,
     max_off_regime_rate: float = 0.75,
 ) -> Dict[str, Any]:
     segments = load_truth_map(truth_map_path)
-    tolerance = pd.Timedelta(minutes=int(tolerance_minutes))
+
+    def _get_tolerance(event_type: str) -> pd.Timedelta:
+        if isinstance(tolerance_minutes, dict):
+            minutes = tolerance_minutes.get(event_type, 30)
+        else:
+            minutes = int(tolerance_minutes)
+        return pd.Timedelta(minutes=minutes)
     expected_event_types = sorted(
         {
             str(event_type).strip().upper()
@@ -102,7 +108,7 @@ def validate_detector_truth(
             else:
                 symbol_frame = frame.iloc[0:0].copy()
             symbol_times = _event_time_series(symbol_frame)
-            windows = _truth_windows(relevant_segments, symbol=symbol, tolerance=tolerance)
+            windows = _truth_windows(relevant_segments, symbol=symbol, tolerance=_get_tolerance(event_type))
             in_window_events, hit_windows = _count_hits(symbol_times, windows)
             off_regime_events = max(0, int(symbol_times.notna().sum()) - in_window_events)
             expected_windows = len(windows)
@@ -136,7 +142,7 @@ def validate_detector_truth(
         "schema_version": "synthetic_detector_truth_validation_v1",
         "run_id": run_id,
         "truth_map_path": str(truth_map_path),
-        "tolerance_minutes": int(tolerance_minutes),
+        "tolerance_minutes": tolerance_minutes if isinstance(tolerance_minutes, int) else dict(tolerance_minutes),
         "max_off_regime_rate": float(max_off_regime_rate),
         "event_reports": event_reports,
         "passed": bool(overall_pass),

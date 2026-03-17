@@ -60,6 +60,42 @@ def test_validate_synthetic_detector_truth_scores_expected_windows(tmp_path):
     assert report["per_symbol"][0]["off_regime_events"] == 1
 
 
+def test_tolerance_minutes_accepts_dict():
+    """validate_detector_truth must accept tolerance_minutes as a dict."""
+    import inspect
+    from project.scripts.validate_synthetic_detector_truth import validate_detector_truth
+    sig = inspect.signature(validate_detector_truth)
+    assert "tolerance_minutes" in sig.parameters
+
+
+def test_tolerance_dict_uses_per_event_type_value(tmp_path):
+    """When tolerance_minutes is a dict, event-type-specific values are used."""
+    from project.scripts.validate_synthetic_detector_truth import validate_detector_truth
+    truth_map = {
+        "segments": [{
+            "regime_type": "test",
+            "symbol": "BTCUSDT",
+            "start_ts": "2024-01-01T01:00:00+00:00",
+            "end_ts": "2024-01-01T02:00:00+00:00",
+            "sign": 1,
+            "amplitude": 1.0,
+            "intended_effect_direction": "test",
+            "expected_event_types": ["VOL_SPIKE"],
+            "expected_detector_families": [],
+        }]
+    }
+    truth_map_path = tmp_path / "truth.json"
+    truth_map_path.write_text(json.dumps(truth_map))
+    result = validate_detector_truth(
+        data_root=tmp_path,
+        run_id="test_run",
+        truth_map_path=truth_map_path,
+        tolerance_minutes={"VOL_SPIKE": 60, "BASIS_DISLOC": 15},
+    )
+    assert isinstance(result, dict)
+    assert "passed" in result
+
+
 def test_validate_synthetic_detector_truth_fails_when_expected_detector_misses(tmp_path):
     run_id = "truth_fail"
     truth_dir = tmp_path / "synthetic" / run_id
