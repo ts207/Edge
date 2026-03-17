@@ -1,0 +1,15 @@
+event_type: POST_DELEVERAGING_REBOUND
+reports_dir: forced_flow_and_exhaustion
+events_file: forced_flow_and_exhaustion_events.parquet
+signal_column: post_deleveraging_rebound_event
+parameters:
+  rebound_window_bars: 12
+  rebound_window: 6
+  rebound_return_min: 0.0010
+  rv_peak_decay_ratio: 1.01
+  liq_cooldown_ratio: 0.55
+  liquidation_cooldown_abs_max: 100000.0
+  post_cluster_lookback: 48
+  cooldown_bars: 24
+  merge_gap_bars: 0
+canonical_family: FORCED_FLOW_AND_EXHAUSTION
