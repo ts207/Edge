@@ -83,7 +83,7 @@ class TrendAccelerationDetector(TrendBase):
         accel_q_threshold = features["accel_q_threshold"]
         
         # Consistency: recent returns moving in same direction as long trend
-        direction_consistent = (np.sign(ret_1.rolling(window=3, min_periods=1).mean()) == np.sign(trend_raw)).fillna(False)
+        direction_consistent = (np.sign(ret_1.rolling(window=6, min_periods=3).mean()) == np.sign(trend_raw)).fillna(False)
         
         return (
             (trend_abs >= trend_q_ext).fillna(False)
