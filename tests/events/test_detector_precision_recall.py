@@ -27,7 +27,10 @@ def _load_thresholds() -> Dict[str, Any]:
     raw = FIXTURE_PATH.read_text(encoding="utf-8").strip()
     if not raw or raw == "{}":
         return {}
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
 
 
 def _test_params():
