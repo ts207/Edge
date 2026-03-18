@@ -22,9 +22,9 @@ This file records the current default research-quality calibration after the arc
 ### Sample-Quality Policy
 
 - `standard`
-  - `min_validation_n_obs = 2`
-  - `min_test_n_obs = 2`
-  - `min_total_n_obs = 10`
+  - `min_validation_n_obs = 10`  (raised from 2; TICKET-005)
+  - `min_test_n_obs = 10`        (raised from 2; TICKET-005)
+  - `min_total_n_obs = 30`       (raised from 10; TICKET-005)
 - `synthetic`
   - `min_validation_n_obs = 1`
   - `min_test_n_obs = 1`

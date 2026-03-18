@@ -16,7 +16,7 @@ def test_research_calibration_baseline_doc_exists_and_mentions_current_defaults(
     assert "max_edge_candidate_count_delta_abs = 2.0" in text
     assert "max_edge_median_resolved_cost_bps_delta_abs = 0.25" in text
     assert "max_edge_median_expectancy_bps_delta_abs = 0.25" in text
-    assert "min_total_n_obs = 10" in text
+    assert "min_total_n_obs = 30" in text
     assert "min_total_n_obs = 4" in text
     assert "synthetic_2025_full_year_v4_promo_relaxed_dsr0" in text
     assert "failed_gate_promo_dsr" in text

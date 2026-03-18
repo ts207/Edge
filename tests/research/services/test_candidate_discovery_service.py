@@ -337,9 +337,9 @@ def test_resolve_sample_quality_policy_uses_profile_defaults():
         )
     )
 
-    assert standard["min_validation_n_obs"] == 2
-    assert standard["min_test_n_obs"] == 2
-    assert standard["min_total_n_obs"] == 10
+    assert standard["min_validation_n_obs"] == 10
+    assert standard["min_test_n_obs"] == 10
+    assert standard["min_total_n_obs"] == 30
     assert synthetic["min_validation_n_obs"] == 1
     assert synthetic["min_test_n_obs"] == 1
     assert synthetic["min_total_n_obs"] == 4
@@ -677,3 +677,20 @@ def test_split_and_score_candidates_expectancy_uses_train_rows_only(monkeypatch)
     assert int(row['test_n_obs']) == 1
     assert int(row['sample_size']) == 2
     assert int(row['n_obs']) == 2
+
+def test_standard_sample_quality_floors_are_defensible():
+    """Regression: standard sample quality floors must be >= 10 for credible split evidence.
+    Floors of 2 are not statistically defensible.
+    """
+    from project.research.services.candidate_discovery_service import DEFAULT_SAMPLE_QUALITY_POLICY
+    standard = DEFAULT_SAMPLE_QUALITY_POLICY["standard"]
+    assert standard["min_validation_n_obs"] >= 10, (
+        f"min_validation_n_obs must be >= 10; got {standard['min_validation_n_obs']}. "
+        "Two events in a holdout split provide near-zero statistical power."
+    )
+    assert standard["min_test_n_obs"] >= 10, (
+        f"min_test_n_obs must be >= 10; got {standard['min_test_n_obs']}."
+    )
+    assert standard["min_total_n_obs"] >= 30, (
+        f"min_total_n_obs must be >= 30; got {standard['min_total_n_obs']}."
+    )

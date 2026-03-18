@@ -41,9 +41,10 @@ from project.specs.manifest import finalize_manifest, start_manifest
 ResolvedCandidateCostEstimate = CandidateCostEstimate
 DEFAULT_SAMPLE_QUALITY_POLICY: Dict[str, Dict[str, int]] = {
     "standard": {
-        "min_validation_n_obs": 2,
-        "min_test_n_obs": 2,
-        "min_total_n_obs": 10,
+        # Raised from 2 to 10 (TICKET-005): two events provide near-zero statistical power.
+        "min_validation_n_obs": 10,
+        "min_test_n_obs": 10,
+        "min_total_n_obs": 30,
     },
     "synthetic": {
         "min_validation_n_obs": 1,
