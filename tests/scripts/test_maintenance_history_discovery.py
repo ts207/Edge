@@ -21,10 +21,16 @@ def test_maintenance_cycle_finds_multiple_priors():
     (history_dir / f"{matrix_id}_20260318_000001" / "benchmark_review.json").write_text(
         json.dumps({"matrix_id": matrix_id, "slices": []})
     )
+    (history_dir / f"{matrix_id}_20260318_000001" / "benchmark_certification.json").write_text(
+        json.dumps({"passed": True})
+    )
 
     (history_dir / f"{matrix_id}_20260318_000002").mkdir()
     (history_dir / f"{matrix_id}_20260318_000002" / "benchmark_review.json").write_text(
         json.dumps({"matrix_id": matrix_id, "slices": []})
+    )
+    (history_dir / f"{matrix_id}_20260318_000002" / "benchmark_certification.json").write_text(
+        json.dumps({"passed": True})
     )
 
     # We need to modify run_benchmark_maintenance_cycle.py first to even have something to test against.

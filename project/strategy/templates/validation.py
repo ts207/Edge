@@ -1,6 +1,5 @@
 import pandas as pd
 from typing import Dict, Any, Set
-from project.contracts.temporal_contracts import TemporalContract
 
 # Hardcoded list of inherently PIT-safe columns (price/vol)
 CORE_PIT_SAFE_COLUMNS: Set[str] = {

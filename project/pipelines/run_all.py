@@ -75,11 +75,15 @@ from project.pipelines.pipeline_summary import (
     print_artifact_summary,
 )
 
+from project.specs.utils import get_spec_hashes
+from project.specs.ontology import ontology_spec_hash
+from project.specs.invariants import validate_runtime_invariants_specs
+
 _git_commit = git_commit
 _refresh_runtime_lineage_fields = refresh_runtime_lineage_fields
 _run_runtime_postflight_audit = run_runtime_postflight_audit
-
-from project.specs.utils import get_spec_hashes
+_validate_phase2_event_chain = validate_phase2_event_chain
+_data_fingerprint = compute_data_fingerprint
 
 def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     # Synchronize environment with current DATA_ROOT for downstream helpers
@@ -177,7 +181,6 @@ def _run_all_impl(raw_argv: List[str] | None = None) -> int:
 
     runtime_spec_issues: List[str] = []
     if runtime_invariants_mode != "off":
-        from project.specs.invariants import validate_runtime_invariants_specs
         runtime_spec_issues = list(validate_runtime_invariants_specs(PROJECT_ROOT.parent))
         if runtime_spec_issues:
             run_manifest["runtime_invariants_validation_ok"] = False

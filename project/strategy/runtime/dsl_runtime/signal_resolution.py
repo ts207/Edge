@@ -57,6 +57,11 @@ def signal_mask(signal: str, frame: pd.DataFrame, blueprint: Blueprint) -> pd.Se
     if signal == "breakout_confirmation":
         return (frame["abs_ret_1"] >= frame["abs_ret_q75"]).fillna(False)
 
+    if signal == "event_detected":
+        if "event_detected" in frame.columns:
+            return frame["event_detected"].fillna(True).astype(bool)
+        return pd.Series(True, index=frame.index, dtype=bool)
+
     raise ValueError(f"unknown trigger signals: `{signal}` is not a recognized registry or built-in signal")
 
 def signal_list_mask(
