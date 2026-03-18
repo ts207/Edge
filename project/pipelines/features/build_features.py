@@ -19,11 +19,7 @@ from project.core.feature_quality import summarize_feature_quality
 from project.core.feature_schema import feature_dataset_dir_name, normalize_feature_schema_version
 from project.core.timeframes import bars_dataset_name, funding_dataset_name, normalize_timeframe, timeframe_to_minutes
 from project.features.microstructure import (
-    calculate_amihud_illiquidity,
     calculate_imbalance,
-    calculate_kyle_lambda,
-    calculate_roll_spread_bps,
-    calculate_vpin_score,
 )
 from project.io.utils import (
     ensure_dir,
@@ -434,10 +430,6 @@ def _ensure_feature_contract_columns(frame: pd.DataFrame, *, timeframe: str) -> 
         np.maximum(total_volume.to_numpy() - buy_volume.to_numpy(), 0.0), index=out.index
     )
 
-    out["ms_roll_24"] = calculate_roll_spread_bps(close, window=24)
-    out["ms_amihud_24"] = calculate_amihud_illiquidity(close, total_volume, window=24)
-    out["ms_kyle_24"] = calculate_kyle_lambda(close, buy_volume, sell_volume, window=24)
-    out["ms_vpin_24"] = calculate_vpin_score(total_volume, buy_volume, window=24)
     out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24)
     return out
 
