@@ -1,0 +1,13 @@
+version: 1
+kind: event
+event_type: POST_DELEVERAGING_REBOUND
+active: true
+status: prototype
+description: Rebound after a major deleveraging wave and liquidation cluster.
+reports_dir: forced_flow_and_exhaustion
+events_file: forced_flow_and_exhaustion_events.parquet
+signal_column: post_deleveraging_rebound_event
+parameters:
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: FORCED_FLOW_AND_EXHAUSTION

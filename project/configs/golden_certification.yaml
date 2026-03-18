@@ -10,7 +10,7 @@ freshness_streams:
 oms_lineage:
   order_source: smoke_oms
   session_id: golden-certification-session
-live_state_snapshot_path: artifacts/live_state.json
+live_state_snapshot_path: reliability/live_state.json
 microstructure_recovery_streak: 3
 account_sync_interval_seconds: 30.0
 account_sync_failure_threshold: 3

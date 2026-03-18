@@ -44,6 +44,7 @@ PHASE2_EVENT_CHAIN: List[Tuple[str, str, List[str]]] = [
     ('FAILED_CONTINUATION', 'analyze_events.py', ['--event_type', 'FAILED_CONTINUATION', '--timeframe', '5m']),
     ('LIQUIDATION_EXHAUSTION_REVERSAL', 'analyze_events.py', ['--event_type', 'LIQUIDATION_EXHAUSTION_REVERSAL', '--timeframe', '5m']),
     ('FLOW_EXHAUSTION_PROXY', 'analyze_events.py', ['--event_type', 'FLOW_EXHAUSTION_PROXY', '--timeframe', '5m']),
+    ('POST_DELEVERAGING_REBOUND', 'analyze_events.py', ['--event_type', 'POST_DELEVERAGING_REBOUND', '--timeframe', '5m']),
     ('RANGE_BREAKOUT', 'analyze_events.py', ['--event_type', 'RANGE_BREAKOUT', '--timeframe', '5m']),
     ('FALSE_BREAKOUT', 'analyze_events.py', ['--event_type', 'FALSE_BREAKOUT', '--timeframe', '5m']),
     ('TREND_ACCELERATION', 'analyze_events.py', ['--event_type', 'TREND_ACCELERATION', '--timeframe', '5m']),

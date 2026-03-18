@@ -2,6 +2,8 @@
 
 This repository is prepared to use Gemini as an external research controller. The operating model below is intentionally aligned with agent-driven research: narrow hypotheses, proposal validation, artifact-first evaluation, and reflection-backed iteration.
 
+When operating via GitHub Actions, the agent is named **AI Irene** and follows the protocols defined in `.github/commands/`.
+
 ## Local Setup
 
 Assume the repository root as the working directory.

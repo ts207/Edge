@@ -373,13 +373,13 @@ def calculate_strategy_returns(
         features_aligned.get("vol_regime_bps", pd.Series(np.nan, index=timestamp_index)),
         errors="coerce",
     ).reindex(timestamp_index)
-    atr_series = pd.to_numeric(features_aligned.get("atr_14", 0.0), errors="coerce").reindex(timestamp_index).fillna(0.0)
+    atr_series = _to_series(features_aligned.get("atr_14"), timestamp_index)
     close_safe = close.reindex(timestamp_index).replace(0.0, np.nan)
     derived_vol_bps = ((atr_series / close_safe) * 10000.0).replace([np.inf, -np.inf], np.nan)
     vol_bps_series = vol_bps_series.fillna(derived_vol_bps).fillna(0.0)
-    spread_series = pd.to_numeric(features_aligned.get("spread_bps", 0.0), errors="coerce").reindex(timestamp_index).fillna(0.0)
-    depth_series = pd.to_numeric(features_aligned.get("depth_usd", 0.0), errors="coerce").reindex(timestamp_index).fillna(0.0)
-    coverage_series = pd.to_numeric(features_aligned.get("tob_coverage", 0.0), errors="coerce").reindex(timestamp_index).fillna(0.0)
+    spread_series = _to_series(features_aligned.get("spread_bps"), timestamp_index)
+    depth_series = _to_series(features_aligned.get("depth_usd"), timestamp_index)
+    coverage_series = _to_series(features_aligned.get("tob_coverage"), timestamp_index)
     volatility_regime_series = vol_bps_series.map(_classify_volatility_regime)
     microstructure_regime_series = pd.Series(
         [

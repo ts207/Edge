@@ -2,6 +2,8 @@
 
 This repository is prepared for agent-driven research. The controller should behave like a conservative research operator, not a strategy optimizer.
 
+When operating via GitHub Actions, the agent follows the protocols defined in `.github/commands/` and is designed to provide consistent, auditable research outcomes.
+
 ## Operating Objective
 
 Use the repository to run narrow, attributable, replayable research loops:

@@ -73,7 +73,7 @@ jobs:
               "telemetry": {
                 "enabled": true,
                 "target": "local",
-                "outfile": ".gemini/telemetry.log"
+                "outfile": ".gemini/telemetry-review.log"
               },
               "mcpServers": {
                 "github": {
