@@ -260,7 +260,11 @@ class FeeRegimeChangeDetector(ThresholdDetector):
                 quantile=0.95,
                 min_periods=min_periods,
             )
-            persistent_shift = (fee != fee.shift(1)) & (fee.shift(-1) == fee)
+            persistent_shift = (
+                fee.shift(2).notna()
+                & (fee == fee.shift(1))
+                & (fee != fee.shift(2))
+            )
         else:
             fee_change = pd.Series(0.0, index=df.index)
             fee_baseline = pd.Series(0.0, index=df.index)
