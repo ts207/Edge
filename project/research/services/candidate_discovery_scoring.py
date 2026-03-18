@@ -29,6 +29,7 @@ def split_and_score_candidates(
     entry_lag_bars: int = 1,
     shift_labels_k: int = 0,
     cost_estimate: Optional[object] = None,
+    alpha: float = 0.05,
     build_event_return_frame_fn: Callable[..., pd.DataFrame] = build_event_return_frame,
     estimate_effect_from_frame_fn: Callable[..., object] = estimate_effect_from_frame,
 ) -> pd.DataFrame:
@@ -146,7 +147,7 @@ def split_and_score_candidates(
             eval_frame,
             value_col="forward_return",
             cluster_col="cluster_day",
-            alpha=0.05,
+            alpha=alpha,
             use_bootstrap_ci=True,
             n_boot=400,
         )

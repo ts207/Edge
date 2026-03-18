@@ -180,14 +180,21 @@ def _add_basis_features(
         timeframe=timeframe,
         min_bars=2,
     )
-    roll_mean = out["basis_bps"].rolling(zscore_window, min_periods=2).mean()
-    roll_std = out["basis_bps"].rolling(zscore_window, min_periods=2).std()
-    out["basis_zscore"] = (out["basis_bps"] - roll_mean) / roll_std.replace(0.0, np.nan)
+    
+    # SF-001: Replace Gaussian standard deviation with robust median absolute deviation (MAD)
+    # or direct quantile standardization to handle fat-tailed distributions smoothly.
+    roll_median = out["basis_bps"].rolling(zscore_window, min_periods=2).median()
+    roll_mad = (out["basis_bps"] - roll_median).abs().rolling(zscore_window, min_periods=2).median()
+    # Approx convert MAD to std equivalent (1.4826) to maintain existing signal scales
+    roll_robust_std = roll_mad * 1.4826 
+    out["basis_zscore"] = (out["basis_bps"] - roll_median) / roll_robust_std.replace(0.0, np.nan)
 
     if "spread_bps" in out.columns:
-        sm = out["spread_bps"].rolling(zscore_window, min_periods=2).mean()
-        ss = out["spread_bps"].rolling(zscore_window, min_periods=2).std()
-        out["spread_zscore"] = (out["spread_bps"] - sm) / ss.replace(0.0, np.nan)
+        sm = out["spread_bps"].rolling(zscore_window, min_periods=2).median()
+        # Same robust logic for spread to prevent extreme outliers skewing the denominator
+        s_mad = (out["spread_bps"] - sm).abs().rolling(zscore_window, min_periods=2).median()
+        s_robust_std = s_mad * 1.4826
+        out["spread_zscore"] = (out["spread_bps"] - sm) / s_robust_std.replace(0.0, np.nan)
     else:
         out["spread_zscore"] = np.nan
 
