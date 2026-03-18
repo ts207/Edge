@@ -52,6 +52,9 @@ def calculate_target_notional(
     symbol: str,
     asset_bucket: str = "default",
     expected_cost_bps: float = 0.0,
+    *,
+    concentration_cap_pct: float = 0.05,
+    max_kelly_multiplier: float = 5.0,
 ) -> Dict[str, Any]:
     """
     Calculate target notional based on trade edge and portfolio constraints.
@@ -67,7 +70,7 @@ def calculate_target_notional(
     edge = float(event_score) * net_expected_return
     
     # Kelly-like multiplier
-    confidence_multiplier = np.clip(edge / risk_variance, 0.0, 5.0)
+    confidence_multiplier = np.clip(edge / risk_variance, 0.0, max_kelly_multiplier)
     
     # Base position size (e.g. 0.1% of portfolio per unit of confidence)
     portfolio_value = portfolio_state.get("portfolio_value", 1000000.0)
@@ -78,7 +81,7 @@ def calculate_target_notional(
     liquidity_cap = liquidity_usd * 0.01
     
     # Concentration cap (max 5% of portfolio)
-    concentration_cap = portfolio_value * 0.05
+    concentration_cap = portfolio_value * concentration_cap_pct
     
     # Portfolio Risk Adjustment
     risk_mult = calculate_portfolio_risk_multiplier(
