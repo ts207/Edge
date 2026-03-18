@@ -101,24 +101,23 @@ class ScheduledNewsDetector(ThresholdDetector):
         return {'ts': ts, 'news_mask_col': news_mask, 'intensity': intensity}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        if features['news_mask_col'].any():
-            return features['news_mask_col']
-            
+        # Always evaluate spec windows — do not short-circuit on column presence.
         ts = features['ts']
         hh = ts.dt.hour
         mm = ts.dt.minute
         spec = load_event_spec(self.event_type)
         spec_params = spec.get('parameters', {}) if isinstance(spec, dict) else {}
         windows = spec_params.get('windows_utc', [])
-        mask = pd.Series(False, index=df.index, dtype=bool)
+        spec_mask = pd.Series(False, index=df.index, dtype=bool)
         for win in windows:
             if not isinstance(win, dict): continue
             hour = int(win.get('hour', -1))
             m_start = int(win.get('minute_start', 25))
             m_end = int(win.get('minute_end', 35))
             if hour != -1:
-                mask = mask | ((hh == hour) & mm.between(m_start, m_end))
-        return mask.fillna(False)
+                spec_mask = spec_mask | ((hh == hour) & mm.between(m_start, m_end))
+        # Merge column-based mask with spec windows via OR.
+        return (spec_mask | features['news_mask_col']).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['intensity']
