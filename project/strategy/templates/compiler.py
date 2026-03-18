@@ -31,6 +31,19 @@ def compile_positions(spec: StrategySpec, bundle: DataBundle) -> tuple[pd.Series
     entries = bundle.get_event_signal(spec.event_family, spec.entry_signal)
     exits = bundle.get_event_signal(spec.event_family, spec.exit_signal)
     
+    from project.strategy.templates.validation import validate_pit_invariants
+    if not validate_pit_invariants(entries):
+        raise ValueError(
+            f"PIT violation in entry signal for spec '{spec.strategy_id}': "
+            "index is not strictly monotone increasing. "
+            "This indicates unsorted or lookahead-contaminated data."
+        )
+    if not validate_pit_invariants(exits):
+        raise ValueError(
+            f"PIT violation in exit signal for spec '{spec.strategy_id}': "
+            "index is not strictly monotone increasing."
+        )
+    
     ent_arr = entries.to_numpy(dtype=np.bool_, copy=True)
     ext_arr = exits.to_numpy(dtype=np.bool_, copy=True)
     
