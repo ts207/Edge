@@ -248,6 +248,10 @@ def run_audit(repo_root: Path) -> Dict[str, Any]:
         failures.append(
             "declared_implemented_missing_in_registry=" + ",".join(declared_implemented_missing_in_registry)
         )
+    if materialized_not_in_registry:
+        failures.append(
+            "materialized_states_unregistered=" + ",".join(materialized_not_in_registry)
+        )
 
     return {
         "counts": {
