@@ -147,6 +147,60 @@ def _primary_reject_reason(row: Dict[str, Any]) -> str:
     return next((token for token in reject_reason.split("|") if token.strip()), "")
 
 
+def _classify_rejection(row: Dict[str, Any], failed_stages: List[str]) -> str:
+    primary_gate = str(row.get("promotion_fail_gate_primary", "")).strip().lower()
+    primary_reason = _primary_reject_reason(row).strip().lower()
+    reject_reason = str(row.get("reject_reason", "")).strip().lower()
+    combined = " ".join([primary_gate, primary_reason, reject_reason, " ".join(failed_stages)])
+
+    if any(token in combined for token in ["spec hash mismatch", "missing", "audit", "bridge_evaluation_failed", "unlocked candidates", "contract"]):
+        return "contract_failure"
+    if any(token in combined for token in ["oos_validation", "confirmatory", "validation", "test_support", "multiplicity_strict"]):
+        return "weak_holdout_support"
+    if any(
+        token in combined
+        for token in [
+            "expectancy",
+            "after_cost",
+            "turnover",
+            "retail",
+            "low_capital",
+            "dsr",
+            "economic",
+            "tradable",
+        ]
+    ):
+        return "weak_economics"
+    if any(
+        token in combined
+        for token in [
+            "baseline",
+            "complexity",
+            "placebo",
+            "timeframe_consensus",
+            "overlap",
+            "profile_correlation",
+            "regime_unstable",
+            "scope",
+        ]
+    ):
+        return "scope_mismatch"
+    if failed_stages:
+        return "scope_mismatch"
+    return "unclassified"
+
+
+def _recommended_next_action_for_rejection(classification: str) -> str:
+    mapping = {
+        "contract_failure": "repair_pipeline",
+        "weak_holdout_support": "run_confirmatory",
+        "weak_economics": "stop_or_reframe",
+        "scope_mismatch": "narrow_scope",
+        "unclassified": "review_manually",
+    }
+    return mapping.get(str(classification).strip().lower(), "review_manually")
+
+
 def _annotate_promotion_audit_decisions(audit_df: pd.DataFrame) -> pd.DataFrame:
     if audit_df.empty:
         out = audit_df.copy()
@@ -168,6 +222,10 @@ def _annotate_promotion_audit_decisions(audit_df: pd.DataFrame) -> pd.DataFrame:
                 "failed_gate_count": int(len(failed_stages)),
                 "failed_gate_list": "|".join(failed_stages),
                 "weakest_fail_stage": weakest_fail_stage,
+                "rejection_classification": _classify_rejection(row, failed_stages),
+                "recommended_next_action": _recommended_next_action_for_rejection(
+                    _classify_rejection(row, failed_stages)
+                ),
             }
         )
     return pd.DataFrame(rows)
@@ -182,6 +240,8 @@ def _build_promotion_decision_diagnostics(audit_df: pd.DataFrame) -> Dict[str, A
             "primary_fail_gate_counts": {},
             "primary_reject_reason_counts": {},
             "failed_stage_counts": {},
+            "rejection_classification_counts": {},
+            "recommended_next_action_counts": {},
             "mean_failed_gate_count_rejected": 0.0,
         }
 
@@ -201,6 +261,16 @@ def _build_promotion_decision_diagnostics(audit_df: pd.DataFrame) -> Dict[str, A
     )
     fail_reasons = (
         rejected.get("primary_reject_reason", pd.Series(dtype="object"))
+        .astype(str)
+        .str.strip()
+    )
+    rejection_classes = (
+        rejected.get("rejection_classification", pd.Series(dtype="object"))
+        .astype(str)
+        .str.strip()
+    )
+    next_actions = (
+        rejected.get("recommended_next_action", pd.Series(dtype="object"))
         .astype(str)
         .str.strip()
     )
@@ -224,6 +294,14 @@ def _build_promotion_decision_diagnostics(audit_df: pd.DataFrame) -> Dict[str, A
             for k, v in fail_reasons[fail_reasons != ""].value_counts().to_dict().items()
         },
         "failed_stage_counts": dict(sorted(stage_counter.items())),
+        "rejection_classification_counts": {
+            str(k): int(v)
+            for k, v in rejection_classes[rejection_classes != ""].value_counts().to_dict().items()
+        },
+        "recommended_next_action_counts": {
+            str(k): int(v)
+            for k, v in next_actions[next_actions != ""].value_counts().to_dict().items()
+        },
         "mean_failed_gate_count_rejected": 0.0
         if rejected.empty
         else float(pd.to_numeric(rejected.get("failed_gate_count", 0), errors="coerce").fillna(0).mean()),

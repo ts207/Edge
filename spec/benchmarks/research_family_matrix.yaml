@@ -1,0 +1,90 @@
+version: 2
+matrix_id: research_family_v1
+description: >
+  Maintained narrow benchmark slices for ontology-native family/template/context
+  comparison. These are intended as stable research benchmarks, not broad search runs.
+
+defaults:
+  mode: research
+  flags:
+    run_phase2_conditional: 1
+    run_bridge_eval_phase2: 1
+    run_recommendations_checklist: 0
+    run_strategy_blueprint_compiler: 0
+    run_strategy_builder: 0
+    run_candidate_promotion: 0
+    skip_ingest_ohlcv: 1
+    skip_ingest_funding: 1
+    skip_ingest_spot_ohlcv: 1
+    max_analyzer_workers: 1
+    phase2_parallel_workers: 1
+
+runs:
+  - benchmark_id: stat_disloc_zscore_stretch_live
+    family: STATISTICAL_DISLOCATION
+    event_type: ZSCORE_STRETCH
+    template: mean_reversion
+    context_label: vol_high__zscore_stretch_live
+    objective: narrow_family_benchmark
+    timeframe: 5m
+    run_id: bench_zscore_stretch_btc_2025jan
+    symbols: BTCUSDT
+    start: 2025-01-01
+    end: 2025-01-31
+    flags:
+      phase2_event_type: ZSCORE_STRETCH
+    post_reports:
+      live_foundation:
+        enabled: true
+        config: spec/benchmarks/btc_live_foundation.yaml
+        feature_schema_version: v2
+      context_comparison:
+        enabled: true
+        search_space_path: spec/search/search_benchmark_zscore_stretch_live.yaml
+        min_sample_size: 30
+
+  - benchmark_id: vol_transition_vol_shock_cont
+    family: VOLATILITY_TRANSITION
+    event_type: VOL_SHOCK
+    template: continuation
+    context_label: vol_shock__trend_confirmed
+    objective: narrow_family_benchmark
+    timeframe: 5m
+    run_id: bench_vol_shock_btc_2024q1
+    symbols: BTCUSDT
+    start: 2024-01-01
+    end: 2024-03-31
+    flags:
+      phase2_event_type: VOL_SHOCK
+    post_reports:
+      live_foundation:
+        enabled: true
+        config: spec/benchmarks/btc_live_foundation.yaml
+        feature_schema_version: v2
+      context_comparison:
+        enabled: true
+        search_space_path: spec/search/search_benchmark_vol_shock.yaml
+        min_sample_size: 30
+
+  - benchmark_id: trend_false_breakout_reversal
+    family: TREND_STRUCTURE
+    event_type: FALSE_BREAKOUT
+    template: mean_reversion
+    context_label: high_vol__false_breakout_quality_boundary
+    objective: narrow_family_benchmark
+    timeframe: 5m
+    run_id: bench_false_breakout_btc_2024q1
+    symbols: BTCUSDT
+    start: 2024-01-01
+    end: 2024-03-31
+    flags:
+      phase2_event_type: FALSE_BREAKOUT
+    post_reports:
+      live_foundation:
+        enabled: true
+        config: spec/benchmarks/btc_live_foundation.yaml
+        feature_schema_version: v2
+      context_comparison:
+        enabled: true
+        search_space_path: spec/search/search_benchmark_false_breakout_quality_boundary.yaml
+        min_sample_size: 34

@@ -58,6 +58,13 @@ def test_benchmark_matrix_dry_run_writes_manifest(tmp_path, monkeypatch):
     assert payload["results"][0]["status"] == "dry_run"
     assert "--run_id" in payload["results"][0]["command"]
     assert "unit_run_1" in payload["results"][0]["command"]
+    summary_path = out_dir / "benchmark_summary.json"
+    review_path = out_dir / "benchmark_review.json"
+    assert summary_path.exists()
+    assert review_path.exists()
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["matrix_id"] == "unit_matrix"
+    assert summary["status_counts"]["dry_run"] == 1
 
 def test_benchmark_matrix_execute_records_success(tmp_path, monkeypatch):
     module = _load_runner_module()
@@ -103,3 +110,98 @@ def test_benchmark_matrix_execute_records_success(tmp_path, monkeypatch):
     assert payload["execute"] is True
     assert payload["results"][0]["status"] == "success"
     assert payload["results"][0]["returncode"] == 0
+    summary = json.loads((out_dir / "benchmark_summary.json").read_text(encoding="utf-8"))
+    assert summary["status_counts"]["success"] == 1
+    review = json.loads((out_dir / "benchmark_review.json").read_text(encoding="utf-8"))
+    assert review["schema_version"] == "benchmark_review_v1"
+    assert review["slices"][0]["benchmark_status"] == "coverage_limited"
+
+
+def test_benchmark_matrix_execute_emits_post_run_reports(tmp_path, monkeypatch):
+    module = _load_runner_module()
+    data_root = tmp_path / "data"
+    out_dir = data_root / "reports" / "perf_matrix_reports"
+    matrix_path = tmp_path / "matrix_reports.yaml"
+    matrix_path.write_text(
+        "version: 1\n"
+        "matrix_id: report_matrix\n"
+        "runs:\n"
+        "  - run_id: report_run_1\n"
+        "    symbols: BTCUSDT\n"
+        "    start: 2024-01-01\n"
+        "    end: 2024-01-02\n"
+        "    timeframe: 5m\n"
+        "    post_reports:\n"
+        "      live_foundation:\n"
+        "        enabled: true\n"
+        "        config: spec/benchmarks/btc_live_foundation.yaml\n"
+        "      context_comparison:\n"
+        "        enabled: true\n"
+        "        search_space_path: spec/search/search_benchmark_fnd_disloc.yaml\n",
+        encoding="utf-8",
+    )
+
+    fake_run_all = tmp_path / "fake_run_all.py"
+    fake_run_all.write_text("raise SystemExit(0)\n", encoding="utf-8")
+
+    monkeypatch.setattr(module, "DATA_ROOT", data_root)
+
+    def fake_live_report(**kwargs):
+        path = data_root / "reports" / "live_foundation" / kwargs["run_id"] / "perp" / kwargs["symbol"] / kwargs["timeframe"] / "live_data_foundation_report.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"schema_version": "live_data_foundation_report_v1"}), encoding="utf-8")
+        return path
+
+    def fake_context_payload(**kwargs):
+        return {
+            "schema_version": "context_mode_comparison_v1",
+            "run_id": kwargs["run_id"],
+            "symbols": kwargs["symbols"],
+            "timeframe": kwargs["timeframe"],
+            "hard_label": {"evaluated_rows": 4, "selected": {"hypothesis_id": "h1", "valid": True}},
+            "confidence_aware": {"evaluated_rows": 4, "selected": {"hypothesis_id": "h1", "valid": True}},
+            "selection_changed": False,
+            "selection_outcome_changed": False,
+            "delta": {"n": -5.0},
+        }
+
+    def fake_context_report(*, out_path, comparison):
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(comparison), encoding="utf-8")
+        return out_path
+
+    monkeypatch.setattr(module, "write_live_data_foundation_report", fake_live_report)
+    monkeypatch.setattr(module, "build_context_mode_comparison_payload", fake_context_payload)
+    monkeypatch.setattr(module, "write_context_mode_comparison_report", fake_context_report)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_benchmark_matrix.py",
+            "--matrix",
+            str(matrix_path),
+            "--run_all",
+            str(fake_run_all),
+            "--python",
+            sys.executable,
+            "--execute",
+            "1",
+            "--out_dir",
+            str(out_dir),
+        ],
+    )
+
+    rc = module.main()
+    assert rc == 0
+
+    payload = json.loads((out_dir / "matrix_manifest.json").read_text(encoding="utf-8"))
+    generated = payload["results"][0]["generated_reports"]
+    assert "live_foundation" in generated
+    assert "context_mode_comparison" in generated
+
+    summary = json.loads((out_dir / "benchmark_summary.json").read_text(encoding="utf-8"))
+    assert "generated_reports" in summary["slices"][0]
+    assert "live_foundation" in summary["slices"][0]["generated_reports"]
+    review = json.loads((out_dir / "benchmark_review.json").read_text(encoding="utf-8"))
+    assert review["slices"][0]["benchmark_status"] == "informative"
+    assert review["slices"][0]["context_comparison_present"] is True

@@ -1,39 +1,69 @@
-# Claude Code Guide
+# Research Operator Guide
 
-This repository is prepared for agent-driven research. The controller should behave like a conservative research operator, not a strategy optimizer.
+This repository is designed for disciplined market research by an autonomous or semi-autonomous operator.
+
+The operator should behave like a conservative research lead:
+
+- start narrow
+- trust artifacts over impressions
+- separate mechanical, statistical, and deployment conclusions
+- treat promotion as a gate
+- leave behind a clear next action after every meaningful run
 
 ## Operating Objective
 
-Use the repository to run narrow, attributable, replayable research loops:
+Use the repository to run bounded, replayable research loops:
 
-`observe -> retrieve memory -> propose -> validate plan -> execute -> evaluate -> reflect -> update memory`
+`observe -> retrieve memory -> define objective -> propose -> plan -> execute -> evaluate -> reflect -> adapt`
 
 Optimize for:
 
-1. post-cost robustness
-2. reproducibility
-3. mechanical cleanliness
+1. reproducibility
+2. post-cost robustness
+3. contract cleanliness
 4. narrow attribution
-5. bounded search
+5. decision quality
+
+This is not a generic backtest sandbox. It is a system for testing explicit claims.
 
 ## Default Policy
 
-Start narrow.
+Prefer:
 
-- Prefer one event family, one template family, one context family, and one objective per run.
-- Use `plan_only` before material runs.
-- Use targeted replays after code or contract edits.
-- Treat promotion as a hard gate, not a formality.
-- Treat synthetic runs as calibration and falsification tools unless the operator explicitly says otherwise.
+- one event family or narrow trigger set per run
+- one template family per run
+- one primary context family per run
+- confidence-aware context when context matters
+- confirmatory follow-up over repeated broad discovery
 
 Avoid:
 
-- broad search over many unrelated triggers in one run
-- repeated proposal churn after inspecting outcomes
-- using synthetic wins as direct evidence of live profitability
-- bypassing memory because a run "looks different" without concrete differences
+- broad search over unrelated triggers in one run
+- reruns that differ only in wording
+- treating detector materialization as strategy proof
+- treating synthetic wins as live-market evidence
+- trusting command exit status without artifact reconciliation
 
-## Canonical Query And Proposal Flow
+## What Counts As A Good Run
+
+A good run is not the run with the best headline metric.
+
+A good run leaves behind:
+
+- a bounded question
+- a clean artifact trail
+- a defensible interpretation
+- a recorded next action
+
+Valid next actions:
+
+- `exploit`
+- `explore`
+- `repair`
+- `hold`
+- `stop`
+
+## Canonical Workflow
 
 Inspect knobs and prior memory first:
 
@@ -53,7 +83,7 @@ Translate a compact proposal into repo-native config:
   --overrides_path /tmp/run_all_overrides.json
 ```
 
-Execute conservatively:
+Inspect the plan before execution:
 
 ```bash
 .venv/bin/python -m project.research.agent_io.execute_proposal \
@@ -64,7 +94,7 @@ Execute conservatively:
   --plan_only 1
 ```
 
-Use the higher-level issuer when memory bookkeeping is required:
+Use the higher-level issuer when memory bookkeeping is desired:
 
 ```bash
 .venv/bin/python -m project.research.agent_io.issue_proposal \
@@ -77,13 +107,14 @@ Use the higher-level issuer when memory bookkeeping is required:
 
 A proposal should be compact and hypothesis-shaped.
 
-Required structure:
+Minimum structure:
 
 - `program_id`
 - `objective`
 - `symbols`
 - `timeframe`
-- `start` / `end`
+- `start`
+- `end`
 - `trigger_space`
 - `templates`
 - `contexts` when context matters
@@ -92,51 +123,6 @@ Required structure:
 - `entry_lags`
 
 Only set knobs that are explicitly proposal-settable.
-
-## Synthetic Research Policy
-
-Synthetic data is for:
-
-- detector truth recovery
-- infrastructure validation
-- negative-control testing
-- regime stress testing
-- promotion filter verification
-
-Synthetic data is not, by itself, proof of market edge.
-
-When using synthetic datasets:
-
-- freeze the generator profile before evaluating outcomes
-- keep the truth map and manifest with the run
-- rerun truth validation after detector or generator edits
-- prefer validation across multiple seeds or profiles rather than one hero run
-
-Recommended commands:
-
-```bash
-python3 -m project.scripts.generate_synthetic_crypto_regimes \
-  --suite_config project/configs/synthetic_dataset_suite.yaml \
-  --run_id synthetic_suite
-python3 -m project.scripts.run_golden_synthetic_discovery
-python3 -m project.scripts.run_fast_synthetic_certification
-python3 -m project.scripts.validate_synthetic_detector_truth \
-  --run_id golden_synthetic_discovery
-```
-
-For short synthetic windows, interpret outcomes conservatively:
-
-- detector truth plus artifact completion means calibration success
-- zero validation/test support is not a market discovery failure, it is insufficient evidence
-- promotion conclusions only count when the run has real holdout support
-
-Useful built-in synthetic profiles:
-
-- `default`
-- `2021_bull`
-- `range_chop`
-- `stress_crash`
-- `alt_rotation`
 
 ## Evaluation Discipline
 
@@ -156,50 +142,73 @@ Check at minimum:
 - artifact completeness
 - warning surface
 
-## Reflection Discipline
+## Synthetic Policy
 
-After each meaningful run, write down:
+Synthetic data is for:
 
-- what belief was tested
-- what materially changed
-- whether the result was market-driven or system-driven
-- what should be repeated, repaired, or stopped
+- detector truth recovery
+- infrastructure validation
+- negative-control testing
+- regime stress testing
+- search and promotion calibration
 
-The next action must be explicit:
+Synthetic data is not direct proof of live profitability.
 
-- exploit
-- explore adjacent
-- repair path
-- hold
-- stop
+When using synthetic datasets:
 
-## Generated Diagnostics
+- freeze the profile before evaluating outcomes
+- keep the manifest and truth map with the run
+- rerun truth validation after detector or generator edits
+- compare across at least one additional profile before strengthening belief
 
-The files under `docs/generated/` are machine-owned diagnostics, not policy docs.
+Useful maintained commands:
 
-- regenerate them with `scripts/regenerate_artifacts.sh`
-- recheck `docs/generated/detector_coverage.*` after detector inventory changes
-- recheck `docs/generated/system_map.*` after stage-family, service-boundary, or contract-surface changes
+```bash
+python3 -m project.scripts.generate_synthetic_crypto_regimes \
+  --suite_config project/configs/synthetic_dataset_suite.yaml \
+  --run_id synthetic_suite
+python3 -m project.scripts.run_golden_synthetic_discovery
+python3 -m project.scripts.run_fast_synthetic_certification
+python3 -m project.scripts.validate_synthetic_detector_truth \
+  --run_id golden_synthetic_discovery
+```
+
+Short synthetic windows are calibration first:
+
+- detector truth plus artifact completion means calibration success
+- zero validation or test support means insufficient evidence
+- promotion conclusions only count when holdout support is real
+
+## Artifact Rule
+
+Artifacts are the source of truth.
+
+Read in this order:
+
+1. top-level run manifest
+2. stage manifests
+3. stage logs
+4. report artifacts
+5. generated diagnostics
+
+If those disagree, the disagreement is a first-class finding.
 
 ## Repository Landmarks
 
-- `project/pipelines/run_all.py`: orchestrator
+- `project/pipelines/run_all.py`: end-to-end orchestration
 - `project/contracts/pipeline_registry.py`: stage and artifact contract source
-- `project/research/knowledge/`: static knowledge, memory, and reflection surfaces
-- `project/research/agent_io/`: proposal validation, translation, and execution
-- `project/research/services/`: canonical discovery, promotion, reporting, and comparison services
+- `project/research/knowledge/`: memory, static knowledge, reflection
+- `project/research/agent_io/`: proposal validation, translation, execution
+- `project/research/services/`: discovery, promotion, comparison, diagnostics
 - `project/events/detectors/catalog.py`: detector loading surface
-- `project/configs/registries/`: authoritative registry content
-- `docs/SYNTHETIC_DATASETS.md`: synthetic dataset guidance
-- `docs/AUTONOMOUS_RESEARCH_LOOP.md`: loop-level operating policy
+- `project/features/`: shared feature, regime, and guard helpers
+- `docs/README.md`: maintained docs index
 
-## Definition Of A Good Agent Run
+## Continue Reading
 
-A good run is not the run with the highest headline metric.
+For the full operator doc set, continue with:
 
-It is the run that leaves behind:
-
-- a bounded hypothesis
-- a clean artifact trail
-- an interpretable result
-- a justified next action
+1. [docs/RESEARCH_OPERATOR_PLAYBOOK.md](./docs/RESEARCH_OPERATOR_PLAYBOOK.md)
+2. [docs/AUTONOMOUS_RESEARCH_LOOP.md](./docs/AUTONOMOUS_RESEARCH_LOOP.md)
+3. [docs/EXPERIMENT_PROTOCOL.md](./docs/EXPERIMENT_PROTOCOL.md)
+4. [docs/ARTIFACTS_AND_CONTRACTS.md](./docs/ARTIFACTS_AND_CONTRACTS.md)

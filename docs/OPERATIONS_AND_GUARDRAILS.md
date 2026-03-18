@@ -1,86 +1,115 @@
 # Operations And Guardrails
 
+This document defines the default safety and operating rules for running research in the repository.
+
+Use it to prevent broad, expensive, low-trust experimentation.
+
 ## Operating Priorities
 
-Optimize in this order:
+Prefer:
 
-1. correctness
-2. comparability
-3. narrow attribution
-4. operational cleanliness
-5. iteration speed
+1. narrow attribution
+2. artifact cleanliness
+3. post-cost relevance
+4. reproducibility
+5. operator clarity
 
-## Scope Rules
+Do not trade those away for output volume.
 
-- use targeted stage execution for repair verification
-- use narrow search specs for isolated hypothesis testing
-- use full runs only after recent path stability is confirmed
-- do not broaden immediately after a mechanical fix
+## Scope Guardrails
 
-## Safety Rules
+Default to:
 
-- do not overwrite broad production artifacts when a narrow output path will do
-- do not treat a repaired tail replay as equivalent to the original full DAG run
-- do not call warning-heavy output clean without inspection
-- do not interpret synthetic profitability as live-market proof
+- one event family before many
+- one template family before many
+- one primary context family before many
+- one objective per run
 
-## Logging Rules
+Broadening is justified only after the narrow path is mechanically clean and still decision-relevant.
 
-Warnings should help triage, not flood the operator.
+## Contract Guardrails
 
-The agent should:
+Do not interpret results when:
 
-- suppress low-signal coercion noise where safe
-- preserve warnings that indicate real contract or data issues
-- call out stale or contradictory logs explicitly
+- manifests and logs disagree
+- expected artifacts are missing
+- generated diagnostics disagree with the owning code or registry surface
+- warning noise hides runtime faults
 
-## Promotion Guardrails
-
-Promotion is conservative by design.
-
-Do not bypass:
-
-- multiplicity controls
-- cost-survival checks
-- validation and test sample requirements
-- confirmatory locking rules
-- retail and capital viability filters
-
-## Memory Guardrails
-
-Memory should guide action without hard-coding bias.
-
-Still allow:
-
-- materially different contexts
-- repaired code paths
-- cleaner reruns that invalidate old conclusions
-
-## Review Checklist
-
-When a run looks abnormal, inspect:
-
-- manifests
-- logs
-- row counts across artifact boundaries
-- duplicate hypotheses
-- stale replay traces
-- missing split metadata
-- generated diagnostics when the issue may be architectural
-
-## Operationally Clean End State
-
-A run is operationally clean when:
-
-- stage and top-level manifests agree
-- downstream artifacts are populated as expected
-- warning noise is controlled
-- the next action is obvious from the evidence
+Repair the path first.
 
 ## Synthetic Guardrails
 
-- freeze `volatility_profile`, symbol set, and time window before review
-- prefer cross-profile survival over single-profile maximization
-- rerun truth validation after detector or generator edits
-- treat short certification windows as detector-and-pipeline calibration unless holdout support exists
-- do not keep tuning directly against one synthetic world
+Synthetic runs are for:
+
+- detector truth recovery
+- contract and artifact validation
+- negative-control testing
+- controlled regime stress
+
+They are not direct proof of live profitability.
+
+Keep these rules:
+
+- freeze the profile before evaluation
+- keep manifest and truth map with the run
+- validate truth before interpretation
+- prefer cross-profile survival over one strong world
+- treat short windows as calibration unless real holdout support exists
+
+## Promotion Guardrails
+
+Promotion is a hard gate.
+
+Do not treat attractive discovery output as promotion readiness.
+
+Promotion should only be trusted when:
+
+- the candidate contract is valid
+- split support exists
+- cost and stress quality survive
+- the claim is narrow enough to explain
+
+## Context Guardrails
+
+Confidence-aware context is the default for production research.
+
+That means:
+
+- hard labels still exist for compatibility
+- low-confidence or high-entropy regime rows should not be treated as fully trustworthy context
+- hard-label mode should be used mainly as a comparison baseline
+
+## Memory Guardrails
+
+Do not keep rerunning a region because the wording changed.
+
+Before repeating a similar slice, check:
+
+- same event or family
+- same template
+- same context
+- same fail gate
+
+If nothing material changed, do not rerun by default.
+
+## Review Checklist
+
+Before calling a run meaningful, ask:
+
+- is the question explicit
+- is the path narrow enough
+- do the artifacts reconcile
+- are the split counts real
+- do the costs still allow relevance
+- is the next action explicit
+
+## Stop Conditions
+
+Stop and reassess when:
+
+- a path remains mechanically unstable
+- a clean rerun still fails on holdout
+- promotion rejection is clear and repeated
+- the next run would only restate the same failed claim
+- the evidence is too weak to justify more scope

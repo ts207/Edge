@@ -1,240 +1,187 @@
 # Autonomous Research Loop
 
+This document defines the default research loop for the repository.
+
+Use it when deciding what to do next, how much to run, and when to stop.
+
 ## Purpose
 
-The research loop exists to turn market observations into bounded experiments, convert results into reusable
-evidence, and decide the next action without drifting outside repository contracts.
+The repo is designed to convert one observation into one or more bounded research actions, then convert the result into durable memory.
 
-This system is not a chat bot with occasional analysis. It is an iterative research worker with:
+The loop is:
 
-- explicit objectives
-- explicit hypotheses
-- bounded execution
-- artifact-based evaluation
-- memory-backed adaptation
+`observe -> retrieve memory -> define objective -> propose -> plan -> execute -> evaluate -> reflect -> adapt`
 
-## The Loop
+## Loop Outputs
 
-The canonical loop is:
+A complete loop leaves behind:
 
-1. observe the current state
-2. retrieve relevant memory
-3. define the objective
-4. generate hypotheses
-5. choose the smallest useful batch
-6. execute
-7. evaluate
-8. reflect
-9. choose the next action
-
-If the loop does not leave behind a durable decision trail, it did not happen.
-
-## Required Outputs
-
-Every completed loop should leave behind:
-
+- a bounded objective
 - a run or replay artifact set
 - an evaluation
-- a written reflection
-- a next-action decision
-- an updated memory record
+- a reflection
+- an explicit next action
 
-## Phase Guide
+If any of those are missing, the loop is incomplete.
 
-### 1. Observe
+## Phase 1: Observe
 
-Inspect the current local evidence before proposing new work.
+Collect the smallest evidence set that explains the current state:
 
-Minimum inputs:
+- latest run manifests
+- relevant stage manifests
+- stage logs when needed
+- discovery and promotion summaries
+- quality and audit reports
+- generated diagnostics when ownership or registry questions matter
 
-- run manifest
-- stage manifests
-- stage logs
-- discovery or promotion summaries
-- generated audits when relevant
-- prior reflections or memory for the same region
+Key questions:
 
-Questions to answer:
-
-- what was run
-- what completed
-- what failed
+- what was tried
+- what failed mechanically
+- what looked statistically interesting
 - what is still ambiguous
-- what was mechanical versus statistical
 
-### 2. Retrieve Memory
+## Phase 2: Retrieve Memory
 
-Look up prior work before rerunning a similar slice.
+Before proposing a new run, retrieve prior memory for:
 
-Retrieve memory for:
-
-- the same symbol
-- the same event or trigger family
+- the same event or family
 - the same template
+- the same symbol or timeframe
 - the same context
-- the same primary failure mode
+- the same fail gate
 
-Bias toward memory-backed iteration, not repeated rediscovery of already-rejected regions.
+Do not rerun a region by default if memory already shows repeated clean failure with no material new condition.
 
-### 3. Define The Objective
+## Phase 3: Define Objective
 
 The objective must be explicit and falsifiable.
 
-Good objectives:
+Good examples:
 
-- test whether basis-dislocation continuation under low liquidity survives costs
-- verify whether a promotion failure came from missing split counts or weak economics
-- isolate one regime-conditioned trigger with enough holdout support to justify follow-up
+- test whether a basis dislocation continuation survives costs in low-liquidity windows
+- verify whether a promotion rejection came from missing holdout support rather than weak economics
+- isolate whether high-confidence trend context improves a specific template
 
-Bad objectives:
+Bad examples:
 
 - find alpha
-- run more experiments
-- explore broadly
+- try more experiments
+- search more broadly
 
-### 4. Generate Hypotheses
+## Phase 4: Propose
 
-Hypotheses must be stated in repo-native terms:
+Translate the objective into repo-native terms:
 
-- trigger or event
-- direction
-- horizon
-- template
-- context
-- entry lag
+- trigger or event family
+- template set
+- context family
+- directions
+- horizons
+- entry lags
+- date and symbol scope
 
-Favor hypotheses that are:
+Use the ontology-native surfaces. Do not invent free-form categories when the registry already has a canonical form.
 
-- explainable from artifacts
-- comparable to prior runs
-- narrow enough to falsify
-- directly representable by registry and search specs
+## Phase 5: Plan
 
-### 5. Choose The Batch
+Use `plan_only` before material runs.
 
-Default batch logic:
+Planning exists to verify:
 
-- one exploit slice
-- one adjacent exploration slice
-- one repair or verification slice if code or contracts changed
+- the requested stages are in scope
+- the event and template set are actually what you intended
+- the run is still narrow
+- unnecessary downstream work is not being pulled in
 
-Do not mix unrelated objectives in one batch.
+If the plan is broader than the objective, fix the proposal before running.
 
-Prefer the smallest batch that can answer the actual question.
+## Phase 6: Execute
 
-### 6. Execute
+Default execution order:
 
-Use repository entrypoints that preserve manifests and downstream contracts.
+1. targeted replay if code or contract changes must be verified
+2. narrow discovery slice
+3. broader expansion only after the narrow path reconciles
 
-Preferred order:
+The repository should answer one question per run whenever possible.
 
-- targeted replay for repair verification
-- narrow search-engine slice for hypothesis isolation
-- full `run_all` only after the path is mechanically stable
+## Phase 7: Evaluate
 
-### 7. Evaluate
+Evaluate on three layers:
 
-Evaluate on three axes:
-
-- statistical quality
-- execution quality
-- contract integrity
-
-Statistical quality includes:
-
-- split counts
-- `q_value`
-- post-cost expectancy
-- stressed expectancy
-- regime stability
-
-Execution quality includes:
+### Mechanical
 
 - stage completion
-- manifest reconciliation
+- artifact presence
+- manifest and log agreement
 - warning surface
-- absence of stale replay traces
 
-Contract integrity includes:
+### Statistical
 
-- required inputs and outputs exist
-- fields propagate correctly
-- top-level and stage manifests agree
+- split counts
+- multiplicity-aware quality
+- post-cost expectancy
+- robustness across splits or conditions
 
-### 8. Reflect
+### Deployment Relevance
 
-Reflection is mandatory after material runs, fixes, or surprising failures.
+- friction feasibility
+- promotion eligibility
+- context stability
+- plausibility of live execution
 
-Reflection should answer:
+## Phase 8: Reflect
 
-- what belief was tested
-- what changed in that belief
-- what was learned about the market
-- what was learned about the system
-- what should be tried next
-- what should stop
+After every meaningful run, answer:
 
-### 9. Choose The Next Action
+1. what belief was tested
+2. what evidence changed that belief
+3. what was market-driven versus system-driven
+4. what reusable rule should be remembered
+5. what exact next action is justified
 
-Every loop must end with exactly one explicit next action:
+## Phase 9: Adapt
 
-- exploit
-- explore
-- repair
-- hold
-- stop
+Choose one next action:
 
-That choice should come from evidence and memory, not intuition alone.
-
-## Reinforcement Rules
-
-Increase priority for work that consistently leads to:
-
-- reproducible post-cost signal
-- validation and test support
-- low operational friction
-- clear explanatory structure
-
-Decrease priority for work that repeatedly leads to:
-
-- contract breakage
-- stale bookkeeping
-- duplicated search regions
-- high operational cost with weak evidence
-- warning-heavy runs that do not change the decision
+- `exploit`: narrow positive evidence deserves a confirmatory or adjacent strengthening run
+- `explore`: the result was informative, but the next move should test a nearby region
+- `repair`: system or contract issues dominate and must be fixed first
+- `hold`: evidence is too weak or ambiguous to justify more work now
+- `stop`: the idea or path is not worth continuing under current evidence
 
 ## Escalation Rules
 
 Escalate from narrow to broad only when:
 
-- the narrow path produced coherent outputs
-- the target has enough support to justify broader spend
-- the mechanical path is stable
+- the narrow path is mechanically clean
+- the target claim is still coherent
+- there is enough support to justify more scope
 
 De-escalate to repair mode when:
 
 - manifests and logs disagree
-- downstream artifacts are malformed
-- split counts are missing or suspect
-- warning floods hide the true failure
+- required artifacts are missing
+- candidate contracts are malformed
+- warnings obscure real failures
 
 ## Synthetic Branch
 
-Synthetic work uses the same loop, but with extra discipline.
+When the dataset is synthetic, the loop changes slightly:
 
-When the active dataset is synthetic:
-
-1. freeze the generator profile and slice before looking at results
-2. preserve the generation manifest and truth map with the run
-3. validate detector truth before interpreting misses
+1. freeze the profile before evaluating outcomes
+2. keep the manifest and truth map with the run
+3. validate truth before interpreting misses
 4. compare across at least one additional profile before strengthening belief
 5. separate detector recovery from profitability claims
 
-Synthetic research should optimize for:
+## Definition Of Done
 
-- mechanism recovery
-- falsification
-- contract verification
-- promotion robustness
+The loop is done only when:
 
-It should not be treated as direct evidence of live profitability.
+- the artifacts reconcile
+- the result is interpreted at the correct layer
+- the next action is explicit
+- memory has enough information to stop repeated rediscovery later

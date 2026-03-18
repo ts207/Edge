@@ -229,3 +229,96 @@ def test_adjacent_survivorship_classifies_fail_reasons(tmp_path):
     )
     report = json.loads(out_path.read_text(encoding="utf-8"))
     assert report["by_event_family"]["STATE_CHOP_STATE"]["origin_count"] == 1
+
+
+def test_build_confirmatory_workflow_payload_blocks_when_forward_data_missing(tmp_path):
+    data_root = tmp_path / "data"
+    (data_root / "runs" / "origin_run").mkdir(parents=True, exist_ok=True)
+    (data_root / "lake" / "raw" / "binance" / "perp" / "BTCUSDT" / "funding" / "year=2025" / "month=01").mkdir(parents=True, exist_ok=True)
+    (data_root / "runs" / "origin_run" / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "run_id": "origin_run",
+                "start": "2025-01-01",
+                "end": "2025-01-31",
+                "normalized_symbols": ["BTCUSDT"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = svc.build_confirmatory_workflow_payload(
+        data_root=data_root,
+        origin_run_id="origin_run",
+    )
+
+    assert payload["workflow_status"] == "blocked"
+    assert payload["next_action"] == "ingest_forward_data"
+    assert payload["blocking_reason"] == "2025-02"
+
+
+def test_build_confirmatory_workflow_payload_recommends_promotion_review_for_strict_pass(tmp_path):
+    data_root = tmp_path / "data"
+    origin_dir = data_root / "reports" / "edge_candidates" / "origin_run"
+    target_dir = data_root / "reports" / "phase2" / "target_run" / "search_engine"
+    origin_dir.mkdir(parents=True, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (data_root / "runs" / "origin_run").mkdir(parents=True, exist_ok=True)
+    (data_root / "runs" / "origin_run" / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "run_id": "origin_run",
+                "start": "2025-01-01",
+                "end": "2025-01-31",
+                "normalized_symbols": ["BTCUSDT"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (data_root / "lake" / "raw" / "binance" / "perp" / "BTCUSDT" / "funding" / "year=2025" / "month=01").mkdir(parents=True, exist_ok=True)
+    (data_root / "lake" / "raw" / "binance" / "perp" / "BTCUSDT" / "funding" / "year=2025" / "month=02").mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "origin_1",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "gate_bridge_tradable": "pass",
+                "q_value": 0.01,
+            }
+        ]
+    ).to_parquet(origin_dir / "edge_candidates_normalized.parquet", index=False)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "target_a",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "gate_oos_validation": True,
+                "gate_after_cost_positive": True,
+                "gate_after_cost_stressed_positive": True,
+                "gate_bridge_tradable": True,
+                "gate_multiplicity": True,
+                "gate_c_regime_stable": True,
+                "gate_multiplicity_strict": True,
+                "bridge_eval_status": "tradable",
+                "q_value": 0.03,
+            }
+        ]
+    ).to_parquet(target_dir / "phase2_candidates.parquet", index=False)
+
+    payload = svc.build_confirmatory_workflow_payload(
+        data_root=data_root,
+        origin_run_id="origin_run",
+        target_run_id="target_run",
+    )
+
+    assert payload["workflow_status"] == "confirmatory_strict_pass"
+    assert payload["next_action"] == "promotion_review"

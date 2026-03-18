@@ -78,6 +78,10 @@ If this milestone is not completed:
 
 ## Milestone 2: Build A Maintained Research Benchmark Matrix
 
+Current maintained benchmark policy:
+- `VOL_SHOCK` on BTC 2024Q1 is the maintained live context-comparison slice. It emits both `live_foundation` and `context_mode_comparison` artifacts and currently produces non-empty comparison rows.
+- `FND_DISLOC` on BTC 2024Q1 remains in the matrix as a live-foundation slice only. Its maintained live window is coverage-limited in the current repository baseline and should not be treated as a maintained context-comparison benchmark until a live window with real trigger coverage is promoted.
+
 ### Goal
 
 Move from isolated runs to a maintained benchmark set organized by family, template, context, and regime.

@@ -1,14 +1,17 @@
 # Memory And Reflection
 
+Memory stops the system from repeating avoidable work.
+
+Reflection turns one run into reusable decision support for the next run.
+
 ## Purpose
 
-Memory stops the agent from:
+Use memory to:
 
-- repeating failed slices
-- forgetting fragile system facts
-- overstating weak evidence
-
-Reflection converts one run into reusable decision support for the next run.
+- avoid rerunning failed regions under new wording
+- retain fragile system facts
+- distinguish market conclusions from system conclusions
+- prioritize the next best experiment
 
 ## Memory Classes
 
@@ -18,9 +21,9 @@ Facts about how the repository behaves.
 
 Examples:
 
-- export requires normalized edge-candidate artifacts
-- explicit contexts should not create unconditional duplicates
-- top-level manifests may need reconciliation after manual tail replay
+- a stage contract requires normalized candidates
+- a quality report is emitted at a specific path
+- a promotion fallback uses the same normalized contract as the canonical path
 
 ### Experimental Memory
 
@@ -28,8 +31,8 @@ Facts about what was tested and what happened.
 
 Examples:
 
-- low-liquidity basis continuation on BTC 15m survived cost in one January slice
-- search-engine candidates were once orphaned from promotion
+- one family-template-context region survived costs in one period
+- a narrow slice failed in validation despite attractive train metrics
 
 ### Negative Memory
 
@@ -37,17 +40,17 @@ Facts about what should be avoided.
 
 Examples:
 
-- broad noisy runs with stale manifests are low-trust
-- a region repeatedly fails retail net expectancy despite acceptable raw `q_value`
+- a broad noisy run pattern repeatedly produces low-trust output
+- a region repeatedly fails retail net expectancy after costs
 
 ### Action Memory
 
-Facts about what to do next.
+Facts about what the next justified move should be.
 
 Examples:
 
-- rerun a narrow slice after a generator contract change
-- escalate only after validation and test counts survive export
+- rerun a narrow slice after a generator change
+- stop re-testing a family-template region until live data coverage improves
 
 ## Reflection Questions
 
@@ -55,30 +58,30 @@ After each meaningful run, answer:
 
 1. what prior belief did this test
 2. what evidence increased or decreased that belief
-3. was the outcome market-driven or system-driven
+3. was the result market-driven or system-driven
 4. what reusable rule should be remembered
-5. what exact next experiment is justified
+5. what exact next action is justified
 
 ## Write Rules
 
 - store facts, not impressions
-- include run ids, scope, and failure class
+- include run ids and scope
 - separate system issues from market conclusions
-- record both positive and negative results
+- record both positive and negative findings
 - prefer short, high-signal entries over narrative dumps
 - reference exact artifact families when that fact will matter later
 
-## Retrieval Heuristics
+## Retrieval Rules
 
 Before any new experiment, retrieve memory for:
 
-- the same trigger or event family
+- the same event or family
 - the same template
-- the same symbol and timeframe
+- the same symbol or timeframe
 - the same context
 - the same fail gate
 
-If prior memory shows repeated failure with no material new condition, do not rerun by default.
+If prior memory shows repeated clean failure with no material new condition, do not rerun by default.
 
 ## Reinforcement Rules
 
@@ -87,7 +90,7 @@ Increase priority for experiments that:
 - resolve a known ambiguity
 - build on positive post-cost evidence
 - reduce uncertainty with a small run
-- validate a recent code-path fix
+- validate a recent code or contract fix
 
 Decrease priority for experiments that:
 
@@ -111,13 +114,13 @@ Each reflection should minimally include:
 
 ## Memory Hygiene
 
-Downgrade or supersede memories that are:
+Supersede or downgrade memories that are:
 
 - invalidated by code changes
 - contradicted by cleaner reruns
 - too vague to guide future selection
 
-Do not silently delete history when a superseded record would be more informative.
+Do not silently erase history when a superseded record is more informative than no record.
 
 ## Synthetic Memory
 
@@ -126,7 +129,6 @@ Synthetic runs should also store:
 - generator profile
 - noise scale
 - truth-map path
-- whether the result survived another profile or only one world
+- whether the result survived another profile or only one synthetic world
 
-If a synthetic result fails to survive a profile change, store it as simulator-specific rather than as a general
-market belief.
+If a synthetic result does not survive a profile change, record it as simulator-specific, not as a general market belief.

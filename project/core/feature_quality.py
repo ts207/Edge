@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy.stats import ks_2samp
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ def summarize_feature_quality(
     *,
     exclude: set[str] | None = None,
     z_threshold: float = 10.0,
+    baseline_frame: pd.DataFrame | None = None,
+    baseline_label: str | None = None,
 ) -> dict[str, Any]:
     excluded = {"timestamp", "symbol"}
     if exclude:
@@ -44,6 +47,7 @@ def summarize_feature_quality(
     null_flag_count = 0
     constant_flag_count = 0
     outlier_flag_count = 0
+    drift_flag_count = 0
 
     for col in sorted(numeric_cols):
         series = pd.to_numeric(frame[col], errors="coerce")
@@ -70,11 +74,32 @@ def summarize_feature_quality(
             constant_rate=constant_rate,
             outlier_rate=outlier_rate,
         ).to_dict()
+        if baseline_frame is not None and col in baseline_frame.columns:
+            baseline_series = pd.to_numeric(baseline_frame[col], errors="coerce").dropna()
+            if len(non_null) >= 10 and len(baseline_series) >= 10:
+                stat, p_value = ks_2samp(non_null.values, baseline_series.values)
+                median_delta = float(non_null.median() - baseline_series.median())
+                per_feature[col]["baseline_ks_statistic"] = float(stat)
+                per_feature[col]["baseline_p_value"] = float(p_value)
+                per_feature[col]["baseline_median_delta"] = median_delta
+                if float(p_value) < 0.05:
+                    drift_flag_count += 1
+            else:
+                per_feature[col]["baseline_ks_statistic"] = None
+                per_feature[col]["baseline_p_value"] = None
+                per_feature[col]["baseline_median_delta"] = None
 
-    return {
+    payload = {
         "feature_count": len(numeric_cols),
         "features_with_nulls": null_flag_count,
         "constant_features": constant_flag_count,
         "features_with_outliers": outlier_flag_count,
         "per_feature": per_feature,
     }
+    if baseline_frame is not None:
+        payload["baseline"] = {
+            "label": str(baseline_label or "").strip(),
+            "feature_count_compared": len([col for col in numeric_cols if col in baseline_frame.columns]),
+            "drift_flag_count": drift_flag_count,
+        }
+    return payload

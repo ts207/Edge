@@ -1,19 +1,138 @@
-# Repository Guidelines
+# Agent System Instructions
 
-## Project Structure & Module Organization
-Core application code lives in `project/`. Use `project/pipelines/run_all.py` for end-to-end orchestration, `project/events/` for detector and registry logic, and `project/research/` for discovery and promotion workflows. Keep executable helpers in `scripts/`, reference material in `docs/`, and formal specs in `spec/`. Tests live under `tests/`, with focused suites such as `tests/events/`, `tests/strategy_dsl/`, and `tests/architecture/`. Local outputs are typically written to `data/` and should not be treated as source files.
+This file defines the repository-local operating rules for coding agents working in this repo.
 
-## Build, Test, and Development Commands
-Install the project in editable mode with `pip install -e .` or `pip install -e ".[nautilus]"` for the optional Nautilus surface. Use `make test` for the full pytest suite and `make test-fast` for the non-slow profile. Run `make discover-edges` for the main research discovery path, or `edge-run-all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-01-31 --plan_only 1` to inspect pipeline plans without executing them. Check changed Python files with `make lint`, `make format-check`, and `make format`.
+Use it together with [CLAUDE.md](./CLAUDE.md). `CLAUDE.md` explains how research should be run. This file explains how an implementation agent should work safely inside the codebase.
 
-## Coding Style & Naming Conventions
-Target Python 3.11. Follow 4-space indentation and Ruff defaults with the repo’s `line-length = 100`. Prefer explicit, domain-specific module names such as `event_scoring.py` or `phase2_candidate_discovery.py`. Use `snake_case` for functions, variables, and file names; reserve `UPPER_SNAKE_CASE` for constants and spec identifiers when the surrounding files already use it. Keep CLI entry points and pipeline stages explicit rather than hiding orchestration behind generic helpers.
+## Core Role
 
-## Testing Guidelines
-Write pytest tests as `tests/**/test_*.py`. Regressions for event logic belong near `tests/events/`; import-boundary and repository-contract checks belong near `tests/architecture/`. Mark long-running coverage with `@pytest.mark.slow` so `make test-fast` can exclude it. Add or update tests whenever detector thresholds, pipeline contracts, or strategy DSL behavior changes.
+You are modifying and maintaining a research platform.
 
-## Commit & Pull Request Guidelines
-Recent history follows short Conventional Commit prefixes such as `feat:` and `fix:`. Keep commit subjects imperative and scoped to the behavioral change, for example `fix: tighten FUNDING_FLIP threshold`. Pull requests should state the affected pipeline or detector surface, summarize risk, list the validation commands run, and attach artifacts or screenshots only when the change affects generated reports or operator-facing outputs.
+Priorities:
 
-## Configuration & Operations Notes
-Prefer checked-in templates under `deploy/env/` and `deploy/systemd/` over ad hoc runtime configs. Do not commit secrets, generated `data/` outputs, or one-off experiment artifacts unless they are intentional fixtures or documented baselines.
+1. preserve contract correctness
+2. keep research behavior attributable
+3. prefer narrow, reversible changes
+4. update tests when behavior changes
+5. keep docs aligned with real repo behavior
+
+Do not optimize for superficial output volume.
+
+## Project Structure
+
+Core code lives in `project/`.
+
+Important areas:
+
+- `project/pipelines/`: orchestration and stage entrypoints
+- `project/events/`: detector logic, family logic, registry-facing event behavior
+- `project/features/`: shared feature and regime helpers
+- `project/research/`: discovery, evaluation, promotion, diagnostics
+- `project/contracts/`: artifact and stage contracts
+- `project/scripts/`: operator and maintenance entrypoints
+- `docs/`: maintained operator and reference docs
+- `tests/`: regression and contract coverage
+
+Generated outputs under `data/` are not source files unless explicitly maintained as fixtures or baselines.
+
+## Working Rules
+
+When making changes:
+
+- inspect the local code before assuming behavior
+- preserve backward-compatible surfaces when possible
+- keep stage and artifact contracts explicit
+- prefer canonical shared helpers over new local duplicates
+- treat generated diagnostics as outputs, not authored policy
+
+If a change affects:
+
+- detector semantics
+- pipeline contracts
+- feature definitions
+- search or promotion behavior
+
+then update or add tests.
+
+## Build And Validation Commands
+
+Typical commands:
+
+```bash
+pip install -e .
+pip install -e ".[nautilus]"
+make test
+make test-fast
+make lint
+make format-check
+make format
+make discover-edges
+```
+
+Useful plan-only example:
+
+```bash
+edge-run-all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-01-31 --plan_only 1
+```
+
+Use the narrowest validation slice that credibly checks the changed behavior.
+
+## Coding Style
+
+- target Python 3.11
+- 4-space indentation
+- Ruff defaults
+- repo line length `100`
+- explicit, domain-specific names over vague generic names
+- `snake_case` for functions, variables, and file names
+- `UPPER_SNAKE_CASE` for constants and spec identifiers where appropriate
+
+Keep CLI entrypoints and stage boundaries explicit. Do not hide orchestration behind ambiguous helper layers.
+
+## Testing Rules
+
+Write pytest tests as `tests/**/test_*.py`.
+
+Place regressions near the owned surface:
+
+- event logic: `tests/events/`
+- pipeline behavior: `tests/pipelines/`
+- architecture and contract rules: `tests/architecture/`, `tests/contracts/`
+- research behavior: `tests/research/`
+
+Mark long-running coverage with `@pytest.mark.slow` when appropriate so `make test-fast` remains useful.
+
+## Change Discipline
+
+Before broad refactors:
+
+- identify the contract you are changing
+- identify the tests that pin it
+- keep the write set focused
+
+When editing docs:
+
+- prefer maintained operator docs over ad hoc notes
+- keep `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` aligned on core policy
+- do not describe repo behavior that is not actually implemented
+
+## Commits And PRs
+
+Prefer short conventional subjects such as:
+
+- `feat: add context-quality report`
+- `fix: tighten funding persistence subtype handling`
+
+PRs should state:
+
+- the affected surface
+- the behavioral risk
+- the validation commands run
+- any artifact or operator-facing impact
+
+## Config And Operations Notes
+
+- prefer checked-in templates under `deploy/`
+- do not commit secrets
+- do not commit one-off `data/` outputs unless they are intentional fixtures or documented baselines
+- do not silently rewrite or remove maintained baselines without updating the related docs and tests

@@ -68,6 +68,36 @@ def _write_feature_quality_report(path: Path, payload: dict[str, object]) -> Non
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _load_baseline_features(
+    *,
+    data_root: Path,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+    feature_schema_version: str,
+) -> pd.DataFrame:
+    candidates = [
+        run_scoped_lake_path(
+            data_root,
+            run_id,
+            "features",
+            market,
+            symbol,
+            timeframe,
+            feature_dataset_dir_name(feature_schema_version),
+        ),
+        data_root / "lake" / "runs" / run_id / "features" / market / symbol / timeframe / feature_dataset_dir_name(feature_schema_version),
+    ]
+    path_dir = choose_partition_dir(candidates)
+    if not path_dir:
+        return pd.DataFrame()
+    files = list_parquet_files(path_dir)
+    if not files:
+        return pd.DataFrame()
+    return read_parquet(files)
+
+
 def _rolling_percentile(series: pd.Series, window: int = 96) -> pd.Series:
     # Use pandas native rolling rank for significant performance speedup
     return series.rolling(window=window, min_periods=min(window, 8)).rank(pct=True) * 100.0
@@ -537,6 +567,7 @@ def main() -> int:
     parser.add_argument("--start", default=None)
     parser.add_argument("--end", default=None)
     parser.add_argument("--log_path", default=None)
+    parser.add_argument("--baseline_run_id", default=None)
     args = parser.parse_args()
 
     run_id = args.run_id
@@ -546,6 +577,11 @@ def main() -> int:
     feature_schema_version = normalize_feature_schema_version(args.feature_schema_version)
     args.timeframe = tf
     args.feature_schema_version = feature_schema_version
+    baseline_run_id = (
+        str(args.baseline_run_id).strip()
+        if args.baseline_run_id is not None and str(args.baseline_run_id).strip().lower() != "none"
+        else ""
+    )
 
     from project.core.config import get_data_root
 
@@ -613,6 +649,16 @@ def main() -> int:
             if not out.empty:
                 out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
                 out["symbol"] = symbol
+                baseline_features = pd.DataFrame()
+                if baseline_run_id:
+                    baseline_features = _load_baseline_features(
+                        data_root=data_root,
+                        run_id=baseline_run_id,
+                        market=market,
+                        symbol=symbol,
+                        timeframe=tf,
+                        feature_schema_version=feature_schema_version,
+                    )
 
                 # Write to lake (partitioned by year/month)
                 out_root = run_scoped_lake_path(
@@ -641,13 +687,18 @@ def main() -> int:
                     feature_schema_version=feature_schema_version,
                 )
                 quality_payload = {
-                    "schema_version": "feature_quality_report_v1",
+                    "schema_version": "feature_quality_report_v2",
                     "run_id": run_id,
                     "market": market,
                     "symbol": symbol,
                     "timeframe": tf,
                     "feature_schema_version": feature_schema_version,
-                    "quality": summarize_feature_quality(out),
+                    "baseline_run_id": baseline_run_id or None,
+                    "quality": summarize_feature_quality(
+                        out,
+                        baseline_frame=baseline_features if not baseline_features.empty else None,
+                        baseline_label=baseline_run_id or None,
+                    ),
                 }
                 _write_feature_quality_report(report_path, quality_payload)
                 stats["symbols"][symbol] = {

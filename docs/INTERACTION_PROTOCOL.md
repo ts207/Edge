@@ -1,51 +1,48 @@
 # Interaction Protocol
 
-## Role
+This document defines how a research operator or agent should communicate while using the repository.
 
-The agent interacts with three things:
+The goal is not polished prose. The goal is clear decisions and visible uncertainty.
 
-- the operator
-- repository artifacts
+## The Three Inputs
+
+Every interaction should keep track of three sources:
+
+- the operator request
+- the repository artifacts
 - prior memory
 
-The operator supplies goals and constraints.
-Artifacts supply the current source of truth.
-Memory supplies prior lessons and prior failure boundaries.
+Operator intent says what matters.
+Artifacts say what actually happened.
+Memory says what already failed, worked, or changed before.
 
-## Communication Rules
+## Default Pattern
 
-The agent should always make the following clear:
+Use this interaction pattern by default:
+
+1. restate the objective in repo-native terms
+2. inspect local evidence
+3. name the next smallest informative action
+4. execute or explain the constraint
+5. summarize findings and the next decision
+
+## What Must Be Made Explicit
+
+Always make these points visible:
 
 - the working objective
 - the immediate next action
 - important assumptions
 - abnormal findings
-- why the next step is justified
+- whether the conclusion is mechanical, statistical, or operational
 
-Never hide uncertainty.
-
-If a run is:
-
-- partial
-- replayed
-- manually reconciled
-- generated from synthetic data
-
-say so explicitly.
-
-## Default Interaction Pattern
-
-1. restate the objective
-2. inspect local evidence
-3. narrow the request into repo-native terms
-4. run the smallest informative action
-5. summarize findings and the next decision
+Never hide uncertainty behind broad summaries.
 
 ## Artifact-First Rule
 
-Artifacts are the primary source of truth.
+Artifacts are the source of truth.
 
-Read in this order:
+Read evidence in this order:
 
 1. top-level run manifest
 2. stage manifests
@@ -57,28 +54,29 @@ If those sources disagree, the disagreement is itself a finding.
 
 ## Memory Use
 
-Before proposing a materially similar run, retrieve memory for:
+Before proposing a materially similar run, check memory for:
 
-- the same event or trigger
+- the same event or family
 - the same template
-- the same symbol
+- the same symbol or timeframe
 - the same context
 - the same fail gate
 
-If memory shows repeated failure with no material new condition:
+If nothing material changed, default to not rerunning.
 
-- explain what is different now
-- or do not rerun
+## Communication Rules During Execution
 
-## Operator Escalation
+If a run is:
 
-Ask the operator for input only when:
+- partial
+- replayed
+- synthetic
+- manually reconciled
+- using a fallback or compatibility path
 
-- the decision changes risk materially
-- a destructive action is required
-- the repo evidence is insufficient to make a defensible choice
+say so explicitly.
 
-Otherwise, prefer making the best evidence-backed choice and proceeding.
+Do not make the operator infer those distinctions from filenames or logs.
 
 ## Run Summary Contract
 
@@ -92,12 +90,22 @@ After each meaningful run, summarize:
 
 The operator should not need to reconstruct the decision from raw logs.
 
+## When To Escalate To The Operator
+
+Ask for operator input only when:
+
+- the choice changes risk materially
+- a destructive action is required
+- the evidence is insufficient for a defensible assumption
+
+Otherwise, make the best evidence-backed choice and proceed.
+
 ## Synthetic Interaction Rules
 
-When synthetic data is involved, state:
+When synthetic data is involved, always state:
 
-- the active profile
-- the truth-validation status
+- the active profile or workflow
+- truth-validation status
 - whether the conclusion is about detector recovery, pipeline mechanics, or synthetic profitability only
 
-Do not present synthetic profitability as live-market evidence.
+Do not phrase synthetic profitability as live-market evidence.

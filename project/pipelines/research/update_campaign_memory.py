@@ -23,6 +23,7 @@ from project.research.knowledge.memory import (
     write_memory_table,
 )
 from project.research.knowledge.reflection import build_run_reflection
+from project.research.services.campaign_memory_rollup_service import write_campaign_memory_rollup
 from project.specs.manifest import finalize_manifest, load_run_manifest, start_manifest
 
 _LOG = logging.getLogger(__name__)
@@ -246,12 +247,17 @@ def update_campaign_memory(
         frontier_repair_top_k=int(frontier_repair_top_k),
         exhausted_failure_threshold=int(exhausted_failure_threshold),
     )
+    rollup_path = write_campaign_memory_rollup(
+        program_id=program_id,
+        data_root=data_root,
+    )
     return {
         "tested_regions_rows": int(len(incoming_tested)),
         "failures_rows": int(len(incoming_failures)),
         "reflection_written": True,
         "compatibility_summary_status": compatibility["summary"].get("status", "ok"),
         "memory_root": str(paths.root),
+        "campaign_memory_rollup_path": str(rollup_path),
         "promising_top_k": int(promising_top_k),
         "repair_top_k": int(repair_top_k),
         "frontier_untested_top_k": int(frontier_untested_top_k),
@@ -312,6 +318,10 @@ def main(argv: list[str] | None = None) -> int:
             {"path": str(paths.tested_regions), "artifact_type": "experiment.memory.tested_regions"},
             {"path": str(paths.reflections), "artifact_type": "experiment.memory.reflections"},
             {"path": str(paths.failures), "artifact_type": "experiment.memory.failures"},
+            {
+                "path": str(diagnostics.get("campaign_memory_rollup_path", "")),
+                "artifact_type": "experiment.memory.rollup",
+            },
         ]
         finalize_manifest(
             manifest,
