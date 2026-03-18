@@ -36,16 +36,19 @@ class LiveEngineRunner:
         reconcile_at_startup: bool = True,
     ):
         self.symbols = symbols
-        if data_manager is None:
-            from project.live.ingest.manager import LiveDataManager
-
-            data_manager = LiveDataManager(symbols)
-        self.data_manager = data_manager
         self.state_store = LiveStateStore(snapshot_path=snapshot_path)
         self.kill_switch = KillSwitchManager(
             self.state_store,
             microstructure_recovery_streak=microstructure_recovery_streak,
         )
+        if data_manager is None:
+            from project.live.ingest.manager import LiveDataManager
+
+            data_manager = LiveDataManager(
+                symbols,
+                on_reconnect_exhausted=self._on_ws_reconnect_exhausted,
+            )
+        self.data_manager = data_manager
         self.order_manager = order_manager or OrderManager()
         self.execution_quality_report_path = (
             Path(execution_quality_report_path) if execution_quality_report_path is not None else None
@@ -324,6 +327,14 @@ class LiveEngineRunner:
             except Exception as e:
                 _LOG.error(f"Error monitoring data health: {e}")
             await asyncio.sleep(self.health_check_interval_seconds)
+
+    def _on_ws_reconnect_exhausted(self) -> None:
+        """Callback invoked when the WebSocket client exhausts all reconnect attempts."""
+        _LOG.error("WebSocket reconnect retries exhausted; triggering EXCHANGE_DISCONNECT kill-switch.")
+        self.kill_switch.trigger(
+            KillSwitchReason.EXCHANGE_DISCONNECT,
+            "WebSocket connection lost and all reconnect attempts exhausted",
+        )
 
 async def main(snapshot_path: str | Path | None = None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")

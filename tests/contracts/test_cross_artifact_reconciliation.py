@@ -13,7 +13,7 @@ def test_reconcile_bundle_outputs(tmp_path: Path):
     bundle_path.write_text(json.dumps({'candidate_id': 'c1'}) + '\n', encoding='utf-8')
     summary = pd.DataFrame({
         'candidate_id': ['c1'], 'event_type': ['VOL_SHOCK'], 'promotion_decision': ['promoted'], 'promotion_track': ['standard'],
-        'policy_version': ['p1'], 'bundle_version': ['b1'],
+        'policy_version': ['p1'], 'bundle_version': ['b1'], 'is_reduced_evidence': [False],
     })
     info = reconcile_bundle_outputs(bundle_path, summary)
     assert info['bundle_count'] == 1

@@ -488,3 +488,81 @@ def test_live_runner_persists_execution_quality_report_after_fill(monkeypatch, t
 def test_live_runner_persist_execution_quality_report_returns_none_without_path() -> None:
     runner = LiveEngineRunner(["btcusdt"], data_manager=_DummyDataManager())
     assert runner.persist_execution_quality_report() is None
+
+
+# --- TICKET-010: kill-switch trigger tests ---
+
+def test_stale_data_triggers_kill_switch() -> None:
+    """STALE_DATA kill-switch fires when data health monitor reports unhealthy."""
+    import time
+    from unittest.mock import patch
+
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        data_manager=_DummyDataManager(),
+        stale_threshold_sec=1.0,
+    )
+    # Register an event on a symbol so the monitor has state, then advance the clock
+    runner.health_monitor.on_event("btcusdt", "kline:1m")
+
+    stale_report = {
+        "is_healthy": False,
+        "stale_count": 1,
+        "max_last_seen_sec_ago": 30.0,
+    }
+    with patch.object(runner.health_monitor, "check_health", return_value=stale_report):
+        async def _run():
+            # Simulate one iteration of _monitor_data_health
+            report = runner.health_monitor.check_health()
+            if not report["is_healthy"]:
+                from project.live.kill_switch import KillSwitchReason
+                runner.kill_switch.trigger(
+                    KillSwitchReason.STALE_DATA,
+                    f"Stale data feeds detected: {report['stale_count']} streams",
+                )
+
+        asyncio.run(_run())
+
+    assert runner.kill_switch.status.is_active
+    assert runner.kill_switch.status.reason == KillSwitchReason.STALE_DATA
+
+
+def test_ws_reconnect_exhaustion_triggers_exchange_disconnect() -> None:
+    """EXCHANGE_DISCONNECT kill-switch fires when WebSocket reconnect retries are exhausted."""
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        data_manager=_DummyDataManager(),
+    )
+    assert not runner.kill_switch.status.is_active
+
+    # Simulate the ws_client calling the exhaustion callback
+    runner._on_ws_reconnect_exhausted()
+
+    assert runner.kill_switch.status.is_active
+    assert runner.kill_switch.status.reason == KillSwitchReason.EXCHANGE_DISCONNECT
+
+
+def test_ws_client_calls_on_reconnect_exhausted_after_max_retries() -> None:
+    """ws_client invokes on_reconnect_exhausted callback when retries are exhausted."""
+    import asyncio
+    from project.live.ingest.ws_client import BinanceWebSocketClient
+
+    exhausted_calls = []
+
+    client = BinanceWebSocketClient(
+        streams=["btcusdt@kline_1m"],
+        on_message=lambda _: None,
+        on_reconnect_exhausted=lambda: exhausted_calls.append(True),
+    )
+
+    async def _run():
+        # Patch websockets.connect to always raise, forcing exhaustion
+        import unittest.mock as mock
+        with mock.patch("project.live.ingest.ws_client.websockets.connect", side_effect=ConnectionRefusedError("refused")):
+            # Override sleep to avoid actual delay
+            with mock.patch("asyncio.sleep", return_value=None):
+                client._running = True
+                await client._listen()
+
+    asyncio.run(_run())
+    assert len(exhausted_calls) == 1

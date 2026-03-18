@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from project.live.ingest.ws_client import BinanceWebSocketClient
 from project.live.ingest.parsers import parse_book_ticker_event, parse_kline_event
@@ -11,13 +11,21 @@ _LOG = logging.getLogger(__name__)
 
 
 class LiveDataManager:
-    def __init__(self, symbols: List[str]):
+    def __init__(
+        self,
+        symbols: List[str],
+        on_reconnect_exhausted: Optional[Callable[[], None]] = None,
+    ):
         self.symbols = [s.lower() for s in symbols]
         self.kline_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)
         self.ticker_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)
         self._loop: asyncio.AbstractEventLoop | None = None
         self.streams = self._build_streams()
-        self.client = BinanceWebSocketClient(self.streams, self._on_message)
+        self.client = BinanceWebSocketClient(
+            self.streams,
+            self._on_message,
+            on_reconnect_exhausted=on_reconnect_exhausted,
+        )
 
     def _build_streams(self) -> List[str]:
         streams = []
