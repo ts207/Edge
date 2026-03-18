@@ -38,7 +38,6 @@ DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
     ("build_features_{tf}", ["build_cleaned_{tf}", "ingest_binance_um_funding"]),
     ("build_features_{tf}_spot", ["build_cleaned_{tf}_spot"]),
     ("build_universe_snapshots", ["@CLEANED_STAGES"]),
-    ("build_context_features_{tf}", ["build_features_{tf}"]),
     ("build_market_context_{tf}", ["build_features_{tf}"]),
     ("build_microstructure_rollup_{tf}", ["build_features_{tf}"]),
     ("validate_feature_integrity_{tf}", ["build_features_{tf}"]),
@@ -49,8 +48,8 @@ DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
     ("run_oms_replay_validation", ["run_causal_lane_ticks"]),
     
     # Research Chain
-    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}", "build_context_features_{tf}"]),
-    ("analyze_events__{event}_{tf}", ["build_features_{tf}", "build_context_features_{tf}"]),
+    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}"]),
+    ("analyze_events__{event}_{tf}", ["build_features_{tf}"]),
     ("build_event_registry__{event}_{tf}", ["@ANALYZERS_FOR_EVENT"]),
     ("canonicalize_event_episodes__{event}_{tf}", ["build_event_registry__{event}_{tf}"]),
     ("phase2_conditional_hypotheses__{event}_{tf}", ["canonicalize_event_episodes__{event}_{tf}"]),
@@ -248,7 +247,6 @@ def build_pipeline_plan(
     stages_with_config_prefixes = (
         "build_cleaned_",
         "build_features",
-        "build_context_features",
         "build_market_context",
     )
     for name, stage in plan.items():

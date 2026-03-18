@@ -47,11 +47,6 @@ def build_core_stages(
     for tf in timeframes:
         stages.extend([
             (
-                f"build_context_features_{tf}",
-                project_root / "pipelines" / "features" / "build_context_features.py",
-                ["--run_id", run_id, "--symbols", symbols, "--timeframe", tf, "--start", start, "--end", end, "--force", force_flag],
-            ),
-            (
                 f"build_market_context_{tf}",
                 project_root / "pipelines" / "features" / "build_market_context.py",
                 ["--run_id", run_id, "--symbols", symbols, "--timeframe", tf, "--start", start, "--end", end, "--force", force_flag],

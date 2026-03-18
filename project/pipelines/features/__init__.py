@@ -5,7 +5,6 @@ from __future__ import annotations
 from importlib import import_module
 
 __all__ = [
-    "build_context_features",
     "build_features",
     "build_market_context",
     "build_microstructure_rollup",
