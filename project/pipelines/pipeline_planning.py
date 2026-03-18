@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow_funding_timestamp_rounding", type=int, default=0)
     parser.add_argument("--run_ingest_liquidation_snapshot", type=int, default=0)
     parser.add_argument("--run_ingest_open_interest_hist", type=int, default=0)
-    parser.add_argument("--open_interest_period", default="5m")
+    # LT-002: Hardcoded Open Interest to only use 5m archive to prevent API trailing gaps and distribution mismatches
     parser.add_argument(
         "--timeframes", default="5m", help="Comma-separated list of timeframes (e.g., '1m,5m,15m')"
     )
