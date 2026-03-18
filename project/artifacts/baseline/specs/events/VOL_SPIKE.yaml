@@ -1,0 +1,10 @@
+event_type: VOL_SPIKE
+reports_dir: volatility_transition
+events_file: volatility_transition_events.parquet
+signal_column: vol_spike_event
+parameters:
+  merge_gap_bars: 1
+  cooldown_bars: 6
+  anchor_rule: first
+  min_occurrences: 5
+canonical_family: VOLATILITY_TRANSITION

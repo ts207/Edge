@@ -1,0 +1,12 @@
+event_type: TREND_EXHAUSTION_TRIGGER
+reports_dir: forced_flow_and_exhaustion
+events_file: forced_flow_and_exhaustion_events.parquet
+signal_column: trend_exhaustion_trigger_event
+parameters:
+  trend_window: 96
+  min_trend_duration_bars: 72
+  liquidation_spike_z_threshold: 3.0
+  cascade_window_bars: 12
+  cooldown_bars: 96
+  merge_gap_bars: 0
+canonical_family: FORCED_FLOW_AND_EXHAUSTION

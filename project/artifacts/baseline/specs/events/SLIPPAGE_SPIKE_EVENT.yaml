@@ -1,0 +1,10 @@
+event_type: SLIPPAGE_SPIKE_EVENT
+reports_dir: execution_friction
+events_file: execution_friction_events.parquet
+signal_column: slippage_spike_event
+parameters:
+  spread_z_threshold: 3.0
+  slippage_z_threshold: 3.0
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: EXECUTION_FRICTION

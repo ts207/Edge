@@ -1,0 +1,15 @@
+version: 1
+kind: event
+event_type: FLOW_EXHAUSTION_PROXY
+active: true
+status: prototype
+description: Explicit proxy replacement for legacy forced-flow exhaustion labeling.
+reports_dir: forced_flow_and_exhaustion
+events_file: forced_flow_and_exhaustion_events.parquet
+signal_column: flow_exhaustion_proxy_event
+parameters:
+  lookback_window: 288
+  z_threshold: 3.0
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: FORCED_FLOW_AND_EXHAUSTION

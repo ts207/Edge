@@ -1,0 +1,13 @@
+event_type: FND_DISLOC
+reports_dir: funding_dislocation
+events_file: funding_dislocation_events.parquet
+signal_column: funding_dislocation_event
+description: Funding dislocation requires an extreme spot-perp basis event aligned with an extreme funding-rate move of the same sign.
+parameters:
+  threshold_bps: 2.0
+  funding_quantile: 0.95
+  alignment_window: 3
+  cooldown_bars: 12
+notes:
+  - "`threshold_bps` is expressed in basis points and is converted against decimal `funding_rate_scaled` values at runtime."
+canonical_family: STATISTICAL_DISLOCATION

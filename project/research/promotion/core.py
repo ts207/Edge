@@ -155,6 +155,7 @@ def promote_candidates(
             enforce_baseline_beats_complexity=enforce_baseline_beats_complexity,
             enforce_placebo_controls=enforce_placebo_controls,
             enforce_timeframe_consensus=enforce_timeframe_consensus,
+            is_reduced_evidence=is_reduced_evidence,
             benchmark_certification=bench_cert,
         )
         merged = dict(row)

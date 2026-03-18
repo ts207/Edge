@@ -1,0 +1,17 @@
+event_type: LIQUIDITY_SHOCK
+active: true
+status: implemented
+description: Polymorphic liquidity shock detector (legacy). Dispatches to Direct or Proxy based on column availability.
+reports_dir: liquidity_shock
+events_file: liquidity_shock_events.parquet
+signal_column: liquidity_shock_event
+parameters:
+  depth_collapse_th: 0.5
+  spread_spike_th: 3.0
+  median_window: 288
+provenance:
+  source_id: R4
+  claim_id:
+  - CL_0094
+  - CL_0408
+canonical_family: LIQUIDITY_DISLOCATION

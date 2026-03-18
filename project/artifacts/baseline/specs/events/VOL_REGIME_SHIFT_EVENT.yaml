@@ -1,0 +1,13 @@
+# [QUALITY: LOW] - Marginal Information Gain (0.000129). Likely lagged trigger.
+version: 1
+kind: event
+event_type: VOL_REGIME_SHIFT_EVENT
+reports_dir: regime_transition
+events_file: regime_transition_events.parquet
+signal_column: vol_regime_shift_event
+parameters:
+  regime_window: 288
+  transition_z_threshold: 2.5
+  cooldown_bars: 48
+  merge_gap_bars: 0
+canonical_family: REGIME_TRANSITION

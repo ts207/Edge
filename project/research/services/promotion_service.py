@@ -694,6 +694,7 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
                 "rejection_reasons",
                 "policy_version",
                 "bundle_version",
+                "is_reduced_evidence",
             ]
             if column in evidence_bundle_summary.columns
         ]

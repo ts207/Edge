@@ -1,0 +1,10 @@
+event_type: SPOT_PERP_BASIS_SHOCK
+reports_dir: information_desync
+events_file: information_desync_events.parquet
+signal_column: spot_perp_basis_shock_event
+parameters:
+  desync_z_threshold: 3.0
+  lead_lag_window: 60
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: INFORMATION_DESYNC

@@ -73,6 +73,7 @@ def _assemble_promotion_result(
     is_trade_trigger: bool,
     max_q_value: float,
     promotion_profile: str,
+    is_reduced_evidence: bool = False,
     benchmark_pass: bool = True,
 ) -> Dict[str, Any]:
     promoted = bool(
@@ -126,6 +127,7 @@ def _assemble_promotion_result(
         "promotion_fail_reason_primary": f"failed_{primary_promo_fail}" if primary_promo_fail else "",
         "run_mode_normalized": run_mode_normalized,
         "is_deploy_mode": bool(is_deploy_mode),
+        "is_reduced_evidence": bool(is_reduced_evidence),
         "deploy_only_reject_reason": reasons.unique_deploy_only_reject_reason_str(),
         "reject_reason_categories_json": reasons.categorized_reject_json(),
         "promotion_fail_reason_categories_json": reasons.categorized_promo_fail_json(),

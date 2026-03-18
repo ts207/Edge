@@ -1,0 +1,11 @@
+event_type: TREND_ACCELERATION
+reports_dir: trend_structure
+events_file: trend_structure_events.parquet
+signal_column: trend_acceleration_event
+parameters:
+  trend_window: 96
+  breakout_z_threshold: 2.5
+  min_spacing: 192
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: TREND_STRUCTURE

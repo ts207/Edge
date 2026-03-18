@@ -54,6 +54,7 @@ def evaluate_row(
     enforce_regime_stability: bool = True,
     policy_version: str = "phase4_pr5_v1",
     bundle_version: str = "phase4_bundle_v1",
+    is_reduced_evidence: bool = False,
     benchmark_certification: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     try:
@@ -212,6 +213,7 @@ def evaluate_row(
             is_trade_trigger=is_trade_trigger,
             max_q_value=max_q_value,
             promotion_profile=promotion_profile,
+            is_reduced_evidence=is_reduced_evidence,
             benchmark_pass=bench_pass,
         )
         result["is_continuation_template_family"] = continuation_eval["is_continuation_template_family"]

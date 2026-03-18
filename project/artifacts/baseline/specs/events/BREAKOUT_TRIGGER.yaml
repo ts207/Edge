@@ -1,0 +1,14 @@
+event_type: BREAKOUT_TRIGGER
+reports_dir: volatility_transition
+events_file: volatility_transition_events.parquet
+signal_column: breakout_trigger_event
+description: Breakout trigger requires recent range compression followed by a distance-confirmed break beyond the rolling high or low.
+parameters:
+  vol_lookback_window: 288
+  compression_ratio_max: 0.80
+  compression_window: 6
+  min_breakout_distance: 0.0025
+  expansion_quantile: 0.85
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: VOLATILITY_TRANSITION

@@ -1,0 +1,13 @@
+event_type: SPREAD_REGIME_WIDENING_EVENT
+reports_dir: execution_friction
+events_file: execution_friction_events.parquet
+signal_column: spread_regime_widening_event
+parameters:
+  trend_window: 24
+  lookback_window: 2880
+  min_periods: 288
+  low_volume_quantile: 0.25
+  min_spacing: 48
+  cooldown_bars: 48
+  merge_gap_bars: 0
+canonical_family: EXECUTION_FRICTION

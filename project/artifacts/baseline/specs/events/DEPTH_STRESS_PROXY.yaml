@@ -1,0 +1,18 @@
+version: 1
+kind: event
+event_type: DEPTH_STRESS_PROXY
+active: true
+status: validated
+description: Explicit proxy replacement for legacy depth-collapse labeling.
+reports_dir: liquidity_dislocation
+events_file: liquidity_dislocation_events.parquet
+signal_column: depth_stress_proxy_event
+parameters:
+  window: 288
+  spread_quantile: 0.99
+  rv_quantile: 0.90
+  depth_quantile: 0.93
+  min_history_bars: 288
+  cooldown_bars: 96
+  merge_gap_bars: 0
+canonical_family: LIQUIDITY_DISLOCATION
