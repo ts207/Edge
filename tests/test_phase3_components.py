@@ -4,7 +4,7 @@ import pytest
 
 from project.engine.execution_model import get_comprehensive_execution_estimate
 from project.portfolio.sizing import calculate_execution_aware_target_notional, calculate_target_notional
-from project.strategies.exits import check_exit_conditions
+from project.strategy.runtime.exits import check_exit_conditions
 
 def test_execution_estimate():
     market_data = {

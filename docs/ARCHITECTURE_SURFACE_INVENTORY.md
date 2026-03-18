@@ -85,15 +85,15 @@ Compatibility wrappers must:
 
 ## Internal Legacy-Carrying Surfaces
 
-- `project.strategies`
+- `project.strategy.runtime`
   This is still heavily used by runtime internals and tests. Treat it as an internal implementation package for now rather than a preferred public import surface.
   Current importer count: 16 files.
   Target disposition: keep stable internally while converging public callers on `project.strategy.runtime`.
   
   **Strategy Namespace Boundary Policy:**
   - `project.strategy`: The **canonical** namespace. All new models, DSL definitions, and template logic must be added here.
-  - `project.strategies`: The **legacy** implementation tree. It currently hosts concrete runtime logic (e.g., `dsl_runtime`). 
-  - **Consolidation Path**: Move concrete runtime implementation from `project.strategies` to `project.strategy.runtime` (or a private peer like `project.strategy._runtime`) once the public surface is fully decoupled. Do not add new business logic to `project.strategies`.
+  - `project.strategy.runtime`: The **legacy** implementation tree. It currently hosts concrete runtime logic (e.g., `dsl_runtime`). 
+  - **Consolidation Path**: Move concrete runtime implementation from `project.strategy.runtime` to `project.strategy.runtime` (or a private peer like `project.strategy._runtime`) once the public surface is fully decoupled. Do not add new business logic to `project.strategy.runtime`.
 
 ## Current Policy
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from project.strategies.dsl_runtime.execution_context import build_signal_frame
+from project.strategy.runtime.dsl_runtime.execution_context import build_signal_frame
 
 
 def test_build_signal_frame_requires_canonical_funding_rate_scaled() -> None:

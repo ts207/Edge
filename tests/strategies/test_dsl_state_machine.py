@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from project.strategies.dsl_interpreter_v1 import generate_positions_numba
+from project.strategy.runtime.dsl_interpreter_v1 import generate_positions_numba
 
 def test_dsl_numba_cooldown_reentry_lockout():
     n_bars = 10

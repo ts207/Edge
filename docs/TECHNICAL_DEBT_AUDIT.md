@@ -23,7 +23,7 @@ This document records dead code, redundant logic, architectural scaffolding, and
 
 | Finding ID | Artifact / Path | Description | Target Disposition |
 | :--- | :--- | :--- | :--- |
-| **LI-001** | `project/strategies/` | Legacy runtime namespace. Overlaps with `project/strategy/runtime`. | Consolidation |
+| **LI-001** | `project/strategy/runtime/` | Legacy runtime namespace. Overlaps with `project/strategy/runtime`. | Consolidation |
 | **LI-002** | `tests/test_legacy_wrapper_packages_removed.py` | Meta-test verifying package deletion. | Removal |
 | **LI-003** | `project/events/detectors/legacy_aliases.py` | Registry bloat for renamed events. | In-place consolidation |
 

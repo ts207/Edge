@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from project.compilers.executable_strategy_spec import ExecutableStrategySpec
-from project.strategies.dsl_interpreter_v1 import DslInterpreterV1, _build_blueprint
+from project.strategy.runtime.dsl_interpreter_v1 import DslInterpreterV1, _build_blueprint
 
 
 def _base_blueprint() -> dict:
