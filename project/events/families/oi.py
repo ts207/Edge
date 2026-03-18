@@ -8,6 +8,8 @@ import pandas as pd
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.events.sparsify import sparsify_mask
+from project.features.context_guards import state_at_least, state_at_most
+from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.research.analyzers import run_analyzer_suite
 
 
@@ -45,19 +47,26 @@ class OISpikePositiveDetector(BaseOIShockDetector):
         std = baseline.rolling(window=window, min_periods=min_periods).std()
         oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
         close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(1)
-        
         spike_z_th = float(params.get('spike_z_th', params.get('threshold', 2.5)))
         mask = (oi_z >= spike_z_th) & (close_ret > 0)
+        canonical_oi_accel = state_at_least(
+            df,
+            'ms_oi_state',
+            2.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
         
         return {
             'oi_z': oi_z, 
             'close_ret': close_ret, 
             'oi_pct_change': oi.pct_change(1),
+            'canonical_oi_accel': canonical_oi_accel,
             'mask': mask.fillna(False)
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return features['mask']
+        return (features['mask'] & features['canonical_oi_accel'].fillna(False)).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['oi_z'].abs()
@@ -77,19 +86,26 @@ class OISpikeNegativeDetector(BaseOIShockDetector):
         std = baseline.rolling(window=window, min_periods=min_periods).std()
         oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
         close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(1)
-        
         spike_z_th = float(params.get('spike_z_th', params.get('threshold', 2.5)))
         mask = (oi_z >= spike_z_th) & (close_ret < 0)
+        canonical_oi_accel = state_at_least(
+            df,
+            'ms_oi_state',
+            2.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
         
         return {
             'oi_z': oi_z, 
             'close_ret': close_ret, 
             'oi_pct_change': oi.pct_change(1),
+            'canonical_oi_accel': canonical_oi_accel,
             'mask': mask.fillna(False)
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return features['mask']
+        return (features['mask'] & features['canonical_oi_accel'].fillna(False)).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['oi_z'].abs()
@@ -105,7 +121,6 @@ class OIFlushDetector(BaseOIShockDetector):
         oi = pd.to_numeric(df['oi_notional'], errors='coerce').replace(0.0, np.nan).astype(float)
         oi_pct_change = oi.pct_change(1)
         close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(1)
-        
         oi_log_delta = np.log(oi).diff()
         baseline = oi_log_delta.shift(1)
         mean = baseline.rolling(window=window, min_periods=min_periods).mean()
@@ -114,16 +129,24 @@ class OIFlushDetector(BaseOIShockDetector):
         
         flush_pct_th = float(params.get('flush_pct_th', -0.005))
         mask = (oi_pct_change <= flush_pct_th)
+        canonical_oi_decel = state_at_most(
+            df,
+            'ms_oi_state',
+            0.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
         
         return {
             'oi_z': oi_z, 
             'close_ret': close_ret, 
             'oi_pct_change': oi_pct_change,
+            'canonical_oi_decel': canonical_oi_decel,
             'mask': mask.fillna(False)
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return features['mask']
+        return (features['mask'] & features['canonical_oi_decel'].fillna(False)).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['oi_pct_change'].abs() * 100.0
@@ -171,16 +194,41 @@ class DeleveragingWaveDetector(ThresholdDetector):
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         oi_delta_1h = pd.to_numeric(df['oi_delta_1h'], errors='coerce').astype(float)
         rv_96 = pd.to_numeric(df['rv_96'], errors='coerce').ffill().astype(float)
-        
         from project.events.thresholding import rolling_mean_std_zscore
         rv_z = rolling_mean_std_zscore(rv_96, window=288)
         
-        oi_q01 = oi_delta_1h.rolling(2880, min_periods=288).quantile(0.01).shift(1)
-        rv_q90 = rv_z.rolling(2880, min_periods=288).quantile(0.90).shift(1)
-        return {'oi_delta_1h': oi_delta_1h, 'rv_z': rv_z, 'oi_q01': oi_q01, 'rv_q90': rv_q90}
+        oi_q01 = lagged_rolling_quantile(oi_delta_1h, window=2880, quantile=0.01, min_periods=288)
+        rv_q90 = lagged_rolling_quantile(rv_z, window=2880, quantile=0.90, min_periods=288)
+        canonical_oi_decel = state_at_most(
+            df,
+            'ms_oi_state',
+            0.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
+        canonical_high_vol = state_at_least(
+            df,
+            'ms_vol_state',
+            2.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
+        return {
+            'oi_delta_1h': oi_delta_1h,
+            'rv_z': rv_z,
+            'oi_q01': oi_q01,
+            'rv_q90': rv_q90,
+            'canonical_oi_decel': canonical_oi_decel,
+            'canonical_high_vol': canonical_high_vol,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return ((features['oi_delta_1h'] <= features['oi_q01']).fillna(False) & (features['rv_z'] >= features['rv_q90']).fillna(False)).fillna(False)
+        return (
+            features['canonical_oi_decel'].fillna(False)
+            & features['canonical_high_vol'].fillna(False)
+            & (features['oi_delta_1h'] <= features['oi_q01']).fillna(False)
+            & (features['rv_z'] >= features['rv_q90']).fillna(False)
+        ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['rv_z'].abs().fillna(0.0)

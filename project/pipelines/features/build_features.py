@@ -2,6 +2,7 @@ from __future__ import annotations
 from project.core.config import get_data_root
 
 import argparse
+import json
 import logging
 import math
 import re
@@ -13,6 +14,8 @@ import numpy as np
 import pandas as pd
 
 from project.core.validation import ts_ns_utc
+from project.core.feature_registry import ensure_core_feature_definitions_registered
+from project.core.feature_quality import summarize_feature_quality
 from project.core.feature_schema import feature_dataset_dir_name, normalize_feature_schema_version
 from project.core.timeframes import bars_dataset_name, funding_dataset_name, normalize_timeframe, timeframe_to_minutes
 from project.features.microstructure import (
@@ -37,6 +40,32 @@ _OI_MAX_STALENESS_H = 4
 _ZSCORE_WINDOW = 96
 _BASE_WINDOW_MINUTES = 5  # legacy 5m semantic baseline, converted to active timeframe via _duration_to_bars
 _WARMUP_COL_PATTERN = re.compile(r"_\d+$")
+
+
+def _feature_quality_report_path(
+    data_root: Path,
+    *,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+    feature_schema_version: str,
+) -> Path:
+    return (
+        data_root
+        / "reports"
+        / "feature_quality"
+        / run_id
+        / market
+        / symbol
+        / timeframe
+        / f"feature_quality_{feature_schema_version}.json"
+    )
+
+
+def _write_feature_quality_report(path: Path, payload: dict[str, object]) -> None:
+    ensure_dir(path.parent)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _rolling_percentile(series: pd.Series, window: int = 96) -> pd.Series:
@@ -392,6 +421,7 @@ def build_features(
     timeframe: str = "5m",
 ) -> pd.DataFrame:
     """Build the canonical feature set: merge funding, add basis/spread/OI/liquidation features."""
+    ensure_core_feature_definitions_registered()
     if data_root is None:
         from project.core.config import get_data_root
 
@@ -531,6 +561,7 @@ def main() -> int:
 
     params = vars(args)
     manifest = start_manifest(f"build_features_{tf}" + ("_spot" if market == "spot" else ""), run_id, params, [], [])
+    stats: dict[str, object] = {"symbols": {}}
 
     try:
         for symbol in symbols:
@@ -601,11 +632,35 @@ def main() -> int:
                     write_parquet(group, out_path)
                     logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
 
-        finalize_manifest(manifest, "success")
+                report_path = _feature_quality_report_path(
+                    data_root,
+                    run_id=run_id,
+                    market=market,
+                    symbol=symbol,
+                    timeframe=tf,
+                    feature_schema_version=feature_schema_version,
+                )
+                quality_payload = {
+                    "schema_version": "feature_quality_report_v1",
+                    "run_id": run_id,
+                    "market": market,
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "feature_schema_version": feature_schema_version,
+                    "quality": summarize_feature_quality(out),
+                }
+                _write_feature_quality_report(report_path, quality_payload)
+                stats["symbols"][symbol] = {
+                    "rows": int(len(out)),
+                    "feature_quality_report_path": str(report_path),
+                    "feature_quality_summary": quality_payload["quality"],
+                }
+
+        finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as e:
         logging.exception("Feature building failed")
-        finalize_manifest(manifest, "failed", error=str(e))
+        finalize_manifest(manifest, "failed", error=str(e), stats=stats)
         return 1
 
 

@@ -128,13 +128,23 @@ class FundingPersistenceDetector(BaseFundingDetector):
         accel_rank = percentile_rank_historical(accel, window=threshold_window, min_periods=max(24, accel_lookback))
         accel_raw = ((accel_rank >= accel_pct) & (accel_rank.shift(1) < accel_pct)).fillna(False)
 
-        high = (f_pct >= persistence_pct).fillna(False)
-        run_len = pd.Series(list(_run_length(high)), index=high.index)
-        persistence_raw = (high & (run_len == persistence_bars)).fillna(False)
+        fp_active = pd.to_numeric(df.get("fp_active", pd.Series(np.nan, index=df.index)), errors="coerce")
+        fp_age_bars = pd.to_numeric(df.get("fp_age_bars", pd.Series(np.nan, index=df.index)), errors="coerce")
+        fp_severity = pd.to_numeric(df.get("fp_severity", pd.Series(np.nan, index=df.index)), errors="coerce")
+
+        if fp_active.notna().any():
+            persistence_raw = (fp_active.fillna(0.0) > 0).astype(bool)
+            run_len = (fp_age_bars.fillna(0.0) + max(persistence_bars - 1, 0)).astype(float)
+            persistence_intensity = fp_severity.fillna(0.0).clip(lower=0.0)
+        else:
+            high = (f_pct >= persistence_pct).fillna(False)
+            run_len = pd.Series(list(_run_length(high)), index=high.index)
+            persistence_raw = (high & (run_len == persistence_bars)).fillna(False)
+            persistence_intensity = (run_len / max(persistence_bars, 1)).clip(lower=0.0)
+
         subtype = pd.Series("none", index=df.index, dtype="object")
         subtype = subtype.where(~accel_raw, "acceleration")
         subtype = subtype.where(~persistence_raw, "persistence")
-        persistence_intensity = (run_len / max(persistence_bars, 1)).clip(lower=0.0)
         accel_intensity = (accel_rank / 100.0).clip(lower=0.0)
         signal_intensity = pd.Series(0.0, index=df.index, dtype=float)
         signal_intensity = signal_intensity.where(~accel_raw, accel_intensity.fillna(0.0))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -87,6 +88,68 @@ def test_main_writes_output_to_requested_timeframe_path(monkeypatch, tmp_path):
     assert captured_writes
     expected_dir = f"/features/perp/BTCUSDT/1m/{feature_dataset_dir_name('v2')}/"
     assert any(expected_dir in str(path) for path in captured_writes)
+
+
+def test_main_writes_feature_quality_report(monkeypatch, tmp_path):
+    bars = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(["2026-01-01T00:00:00Z"], utc=True),
+            "open": [100.0],
+            "high": [101.0],
+            "low": [99.0],
+            "close": [100.5],
+            "volume": [10.0],
+            "basis_zscore": [0.2],
+        }
+    )
+    finalized: dict[str, object] = {}
+
+    monkeypatch.setattr(build_features, "get_data_root", lambda: tmp_path / "data")
+    monkeypatch.setattr(build_features, "start_manifest", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        build_features,
+        "finalize_manifest",
+        lambda *args, **kwargs: finalized.setdefault("stats", kwargs.get("stats")),
+    )
+
+    def fake_choose_partition_dir(paths):
+        for path in paths:
+            if "bars_5m" in str(path):
+                return path
+        return None
+
+    monkeypatch.setattr(build_features, "choose_partition_dir", fake_choose_partition_dir)
+    monkeypatch.setattr(build_features, "list_parquet_files", lambda _path: [Path("dummy.parquet")])
+    monkeypatch.setattr(build_features, "read_parquet", lambda _files: bars.copy())
+    monkeypatch.setattr(
+        build_features,
+        "build_features",
+        lambda bars, funding, symbol, run_id, data_root, timeframe: bars.copy(),
+    )
+    monkeypatch.setattr(build_features, "write_parquet", lambda _df, path: path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_features.py",
+            "--run_id",
+            "r_quality",
+            "--symbols",
+            "BTCUSDT",
+            "--timeframe",
+            "5m",
+        ],
+    )
+
+    rc = build_features.main()
+
+    assert rc == 0
+    report_path = Path(finalized["stats"]["symbols"]["BTCUSDT"]["feature_quality_report_path"])
+    assert report_path.exists()
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "feature_quality_report_v1"
+    assert payload["symbol"] == "BTCUSDT"
+    assert payload["quality"]["feature_count"] >= 1
 
 
 def test_filter_time_window_respects_start_and_end() -> None:

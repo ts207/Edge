@@ -33,3 +33,39 @@ def test_evaluator_utils_context_mask_registry_failure(monkeypatch):
     features = pd.DataFrame({"close": [100, 101]}, index=[0, 1])
     # context_mask should return None (resolving to invalid)
     assert context_mask({"vol": "high"}, features) is None
+
+
+def test_context_mask_respects_context_confidence_and_entropy(monkeypatch):
+    import project.research.search.evaluator_utils as utils
+
+    monkeypatch.setattr(utils, "_CACHED_CONTEXT_MAP", {("vol", "high"): "vol_high"})
+
+    features = pd.DataFrame(
+        {
+            "state_vol_high": [1, 1, 1],
+            "ms_vol_confidence": [0.80, 0.40, 0.80],
+            "ms_vol_entropy": [0.20, 0.20, 0.95],
+        }
+    )
+
+    mask = context_mask({"vol": "high"}, features)
+
+    assert mask.tolist() == [True, False, False]
+
+
+def test_context_mask_can_disable_context_quality_gating(monkeypatch):
+    import project.research.search.evaluator_utils as utils
+
+    monkeypatch.setattr(utils, "_CACHED_CONTEXT_MAP", {("vol", "high"): "vol_high"})
+
+    features = pd.DataFrame(
+        {
+            "state_vol_high": [1, 1],
+            "ms_vol_confidence": [0.40, 0.40],
+            "ms_vol_entropy": [0.20, 0.20],
+        }
+    )
+
+    mask = context_mask({"vol": "high"}, features, use_context_quality=False)
+
+    assert mask.tolist() == [True, True]

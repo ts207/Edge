@@ -108,6 +108,15 @@ def test_main_warns_only_when_fail_on_issues_disabled(monkeypatch, tmp_path):
         ],
     )
     assert integrity.main() == 0
+    report_path = (
+        data_root
+        / "reports"
+        / "feature_quality"
+        / run_id
+        / "validation"
+        / "validate_feature_integrity_5m.json"
+    )
+    assert report_path.exists()
 
 
 def test_validate_symbol_logs_single_drift_summary(monkeypatch, tmp_path, caplog):

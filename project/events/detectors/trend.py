@@ -8,6 +8,7 @@ import pandas as pd
 from project.events.detectors.composite import CompositeDetector
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.sparsify import sparsify_mask
+from project.features.context_guards import optional_state
 
 
 def _onset_mask(mask: pd.Series) -> pd.Series:
@@ -36,6 +37,17 @@ class TrendBase(ThresholdDetector):
         trend = close.pct_change(trend_window).abs().fillna(0.0)
         retrace = close.pct_change(rebound_window).abs().fillna(0.0)
         return (trend * (1.0 + retrace)).clip(lower=0.0)
+
+    def _canonical_trend_state(self, df: pd.DataFrame) -> pd.Series:
+        return optional_state(
+            df,
+            "ms_trend_state",
+            min_confidence=0.55,
+            max_entropy=0.90,
+        )
+
+    def _canonical_trend_present(self, df: pd.DataFrame) -> pd.Series:
+        return optional_state(df, "ms_trend_state").notna()
 
 
 class TrendAccelerationDetector(TrendBase):
@@ -72,6 +84,8 @@ class TrendAccelerationDetector(TrendBase):
             "ret_1": ret_1,
             "trend_q_ext": trend_q_ext,
             "accel_q_threshold": accel_q_threshold,
+            "canonical_trend_state": self._canonical_trend_state(df),
+            "canonical_trend_present": self._canonical_trend_present(df),
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -85,11 +99,22 @@ class TrendAccelerationDetector(TrendBase):
         
         # Consistency: recent returns moving in same direction as long trend
         direction_consistent = (np.sign(ret_1.rolling(window=6, min_periods=3).mean()) == np.sign(trend_raw)).fillna(False)
+        canonical_trend_state = features["canonical_trend_state"]
+        canonical_trend_present = features.get(
+            "canonical_trend_present",
+            canonical_trend_state.notna(),
+        )
+        canonical_trend_active = (
+            pd.Series(True, index=canonical_trend_state.index, dtype=bool)
+            if not canonical_trend_present.any()
+            else canonical_trend_state.isin([1.0, 2.0]).fillna(False)
+        )
         
         return (
             (trend_abs >= trend_q_ext).fillna(False)
             & (trend_delta >= accel_q_threshold).fillna(False)
             & direction_consistent
+            & canonical_trend_active
         ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -107,13 +132,33 @@ class TrendDecelerationDetector(TrendBase):
         
         trend_abs = close.pct_change(trend_window).abs()
         trend_delta = trend_abs.diff(accel_window)
-        return {"close": close, "trend_abs": trend_abs, "trend_delta": trend_delta}
+        return {
+            "close": close,
+            "trend_abs": trend_abs,
+            "trend_delta": trend_delta,
+            "canonical_trend_state": self._canonical_trend_state(df),
+            "canonical_trend_present": self._canonical_trend_present(df),
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df
         min_trend = float(params.get("min_trend_pct", 0.01))
         min_decel = float(params.get("min_deceleration_pct", 0.001))
-        return ((features["trend_abs"] > min_trend) & (features["trend_delta"] < -min_decel)).fillna(False)
+        canonical_trend_state = features["canonical_trend_state"]
+        canonical_trend_present = features.get(
+            "canonical_trend_present",
+            canonical_trend_state.notna(),
+        )
+        canonical_trend_active = (
+            pd.Series(True, index=canonical_trend_state.index, dtype=bool)
+            if not canonical_trend_present.any()
+            else canonical_trend_state.isin([1.0, 2.0]).fillna(False)
+        )
+        return (
+            (features["trend_abs"] > min_trend)
+            & (features["trend_delta"] < -min_decel)
+            & canonical_trend_active
+        ).fillna(False)
 
 
 class RangeBreakoutDetector(TrendBase):

@@ -9,6 +9,7 @@ from project.events.detectors.dislocation import DislocationDetector
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.events.sparsify import sparsify_mask
 from project.events.thresholding import rolling_robust_zscore, dynamic_quantile_floor, rolling_vol_regime_factor
+from project.features.context_guards import state_at_least
 from project.research.analyzers import run_analyzer_suite
 
 
@@ -150,13 +151,23 @@ class FndDislocDetector(BasisDislocationDetector):
                 'funding_abs': funding_abs,
                 'funding_q95': funding_q95,
                 'funding_sign': np.sign(funding.fillna(0.0)),
+                'canonical_funding_extreme': state_at_least(
+                    df,
+                    'ms_funding_state',
+                    2.0,
+                    min_confidence=float(params.get('context_min_confidence', 0.55)),
+                    max_entropy=float(params.get('context_max_entropy', 0.90)),
+                ),
             }
         )
         return features
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         basis_mask = super().compute_raw_mask(df, features=features, **params)
-        funding_extreme = (features['funding_abs'] >= features['funding_q95']).fillna(False)
+        funding_extreme = (
+            (features['funding_abs'] >= features['funding_q95']).fillna(False)
+            & features['canonical_funding_extreme'].fillna(False)
+        )
         
         # Allow alignment within a window (e.g. 3 bars) to improve recall
         alignment_window = int(params.get('alignment_window', 5))

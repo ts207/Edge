@@ -2,6 +2,7 @@ from __future__ import annotations
 from project.core.config import get_data_root
 
 import argparse
+import json
 import logging
 import sys
 from datetime import datetime, timedelta, timezone
@@ -36,6 +37,7 @@ from project.core.sanity import (
     is_constant_series,
 )
 from project.core.validation import validate_columns
+from project.core.data_quality import summarize_frame_quality
 from project.core.timeframes import bars_dataset_name, normalize_timeframe, ohlcv_dataset_name, timeframe_to_minutes, timeframe_to_pandas_freq
 from project.schemas.data_contracts import Cleaned5mBarsSchema
 
@@ -133,6 +135,44 @@ def _align_funding(bars: pd.DataFrame, funding: pd.DataFrame) -> Tuple[pd.DataFr
     merged["funding_missing"] = merged["funding_rate_feature"].isna()
     missing_pct = float(merged["funding_missing"].mean()) if len(merged) else 0.0
     return merged[["timestamp", "funding_event_ts", "funding_rate_feature", "funding_rate_realized", "funding_missing"]], missing_pct
+
+
+def _coerce_numeric_columns(frame: pd.DataFrame, columns: list[str]) -> int:
+    coerced_value_count = 0
+    for col in columns:
+        if col not in frame.columns:
+            continue
+        before_non_null = int(frame[col].notna().sum())
+        coerced = pd.to_numeric(frame[col], errors="coerce")
+        after_non_null = int(coerced.notna().sum())
+        coerced_value_count += max(0, before_non_null - after_non_null)
+        frame[col] = coerced.astype(float)
+    return coerced_value_count
+
+
+def _data_quality_report_path(
+    data_root: Path,
+    *,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+) -> Path:
+    return (
+        data_root
+        / "reports"
+        / "data_quality"
+        / run_id
+        / "cleaned"
+        / market
+        / symbol
+        / f"bars_{timeframe}_quality.json"
+    )
+
+
+def _write_data_quality_report(path: Path, payload: dict[str, object]) -> None:
+    ensure_dir(path.parent)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 def main() -> int:
     data_root = get_data_root()
@@ -275,9 +315,10 @@ def main() -> int:
 
             # Normalize numeric OHLCV dtypes to float for schema stability.
             # Upstream parquet chunks can carry integer volume when there are no NaNs.
-            for col in ["open", "high", "low", "close", "volume", "quote_volume", "taker_base_volume"]:
-                if col in bars.columns:
-                    bars[col] = pd.to_numeric(bars[col], errors="coerce").astype(float)
+            coerced_value_count = _coerce_numeric_columns(
+                bars,
+                ["open", "high", "low", "close", "volume", "quote_volume", "taker_base_volume"],
+            )
 
             if market == "perp" and not funding.empty:
                 funding["timestamp"] = pd.to_datetime(funding["timestamp"], utc=True, format="ISO8601")
@@ -373,6 +414,23 @@ def main() -> int:
                 bars["funding_rate_realized"] = 0.0
                 bars["funding_missing"] = True
 
+            overall_quality = summarize_frame_quality(
+                bars,
+                expected_minutes=tf_minutes,
+                numeric_cols=[
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "quote_volume",
+                    "taker_base_volume",
+                    "funding_rate_scaled",
+                ],
+                coerced_value_count=coerced_value_count,
+            )
+            monthly_quality: dict[str, dict[str, object]] = {}
+
             cleaned_dir = data_root / "lake" / "cleaned" / market / symbol / bars_dataset
             run_cleaned_dir = run_scoped_lake_path(data_root, run_id, "cleaned", market, symbol, bars_dataset)
 
@@ -415,6 +473,46 @@ def main() -> int:
                     "end_ts": bars_month["timestamp"].max().isoformat(),
                     "storage": storage,
                 })
+                month_key = f"{month_start.year}-{month_start.month:02d}"
+                monthly_quality[month_key] = summarize_frame_quality(
+                    bars_month,
+                    expected_minutes=tf_minutes,
+                    numeric_cols=[
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "volume",
+                        "quote_volume",
+                        "taker_base_volume",
+                        "funding_rate_scaled",
+                    ],
+                ).to_dict()
+
+            report_path = _data_quality_report_path(
+                data_root,
+                run_id=run_id,
+                market=market,
+                symbol=symbol,
+                timeframe=timeframe,
+            )
+            _write_data_quality_report(
+                report_path,
+                {
+                    "schema_version": "data_quality_report_v1",
+                    "run_id": run_id,
+                    "stage": stage_name,
+                    "market": market,
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "requested_start": requested_start.isoformat() if requested_start is not None else None,
+                    "requested_end_exclusive": (
+                        requested_end_exclusive.isoformat() if requested_end_exclusive is not None else None
+                    ),
+                    "overall": overall_quality.to_dict(),
+                    "by_month": monthly_quality,
+                },
+            )
 
             stats["symbols"][symbol] = {
                 "start": start_ts.isoformat(),
@@ -426,6 +524,8 @@ def main() -> int:
                     requested_end_exclusive.isoformat() if requested_end_exclusive is not None else None
                 ),
                 "funding_missing_pct": float(pd.to_numeric(bars["funding_missing"], errors="coerce").mean()),
+                "data_quality": overall_quality.to_dict(),
+                "data_quality_report_path": str(report_path),
             }
 
         validate_input_provenance(inputs)

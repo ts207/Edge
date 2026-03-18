@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 
 from project.events.detectors.threshold import ThresholdDetector
+from project.features.context_guards import state_at_least
+from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.research.analyzers import run_analyzer_suite
 from project.spec_registry import load_event_spec
@@ -141,11 +143,33 @@ class SpreadRegimeWideningDetector(ThresholdDetector):
         low_volume_quantile = float(params.get('low_volume_quantile', 0.25))
         
         spread_avg = spread.rolling(trend_window, min_periods=max(4, trend_window // 4)).mean()
-        spread_q85 = spread.rolling(lookback_window, min_periods=min_periods).quantile(0.85).shift(1)
+        spread_q85 = lagged_rolling_quantile(
+            spread,
+            window=lookback_window,
+            quantile=0.85,
+            min_periods=min_periods,
+        )
         accel = spread_avg - spread_avg.shift(trend_window // 2 or 1)
-        accel_q75 = accel.abs().rolling(lookback_window, min_periods=min_periods).quantile(0.75).shift(1)
-        volume_low_q = volume.rolling(lookback_window, min_periods=min_periods).quantile(low_volume_quantile).shift(1)
+        accel_q75 = lagged_rolling_quantile(
+            accel.abs(),
+            window=lookback_window,
+            quantile=0.75,
+            min_periods=min_periods,
+        )
+        volume_low_q = lagged_rolling_quantile(
+            volume,
+            window=lookback_window,
+            quantile=low_volume_quantile,
+            min_periods=min_periods,
+        )
         history_ready = spread_q85.notna() & accel_q75.notna() & volume_low_q.notna()
+        canonical_wide = state_at_least(
+            df,
+            'ms_spread_state',
+            1.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
         return {
             'spread': spread,
             'spread_avg': spread_avg,
@@ -155,12 +179,14 @@ class SpreadRegimeWideningDetector(ThresholdDetector):
             'volume': volume,
             'volume_low_q': volume_low_q,
             'history_ready': history_ready,
+            'canonical_wide': canonical_wide,
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
         return (
             features['history_ready']
+            & features['canonical_wide']
             & (features['spread_avg'] >= features['spread_q85']).fillna(False)
             & (features['accel'] > 0).fillna(False)
             & (features['accel'] >= features['accel_q75']).fillna(False)
@@ -188,9 +214,19 @@ class SlippageSpikeDetector(ThresholdDetector):
         lookback_window = int(params.get('lookback_window', 2880))
         min_periods = int(params.get('min_periods', 288))
         
-        slip_q99 = slippage.rolling(lookback_window, min_periods=min_periods).quantile(0.99).shift(1)
+        slip_q99 = lagged_rolling_quantile(
+            slippage,
+            window=lookback_window,
+            quantile=0.99,
+            min_periods=min_periods,
+        )
         slippage_ratio = slippage / spread_proxy.replace(0.0, np.nan)
-        ratio_q90 = slippage_ratio.rolling(lookback_window, min_periods=min_periods).quantile(0.90).shift(1)
+        ratio_q90 = lagged_rolling_quantile(
+            slippage_ratio,
+            window=lookback_window,
+            quantile=0.90,
+            min_periods=min_periods,
+        )
         return {'slippage': slippage, 'slip_q99': slip_q99, 'slippage_ratio': slippage_ratio, 'ratio_q90': ratio_q90}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -218,7 +254,12 @@ class FeeRegimeChangeDetector(ThresholdDetector):
             lookback_window = int(params.get('lookback_window', 2880))
             min_periods = int(params.get('min_periods', 288))
             
-            fee_q95 = fee_change.rolling(lookback_window, min_periods=min_periods).quantile(0.95).shift(1)
+            fee_q95 = lagged_rolling_quantile(
+                fee_change,
+                window=lookback_window,
+                quantile=0.95,
+                min_periods=min_periods,
+            )
             persistent_shift = (fee != fee.shift(1)) & (fee.shift(-1) == fee)
         else:
             fee_change = pd.Series(0.0, index=df.index)
@@ -267,8 +308,18 @@ class CopulaPairsTradingDetector(ThresholdDetector):
         lookback_window = int(params.get('lookback_window', 2880))
         min_periods = int(params.get('min_periods', 288))
         
-        z_q95 = zscore_abs.rolling(lookback_window, min_periods=min_periods).quantile(0.95).shift(1)
-        spread_q75 = spread_proxy.rolling(lookback_window, min_periods=min_periods).quantile(0.75).shift(1)
+        z_q95 = lagged_rolling_quantile(
+            zscore_abs,
+            window=lookback_window,
+            quantile=0.95,
+            min_periods=min_periods,
+        )
+        spread_q75 = lagged_rolling_quantile(
+            spread_proxy,
+            window=lookback_window,
+            quantile=0.75,
+            min_periods=min_periods,
+        )
         return {
             'zscore': zscore,
             'zscore_abs': zscore_abs,

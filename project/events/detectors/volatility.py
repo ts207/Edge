@@ -7,6 +7,8 @@ import pandas as pd
 
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.thresholding import dynamic_quantile_floor, rolling_vol_regime_factor
+from project.features.context_guards import state_at_least
+from project.features.rolling_thresholds import lagged_rolling_quantile
 
 
 def _ewma_z(series: pd.Series, span: int) -> pd.Series:
@@ -48,6 +50,13 @@ class VolSpikeDetector(VolatilityBase):
         rv_96 = df["rv_96"].ffill()
         rv_z = _ewma_z(rv_96, 288)
         vol_factor = rolling_vol_regime_factor(df["range_med_2880"], window=2880)
+        canonical_high_vol = state_at_least(
+            df,
+            "ms_vol_state",
+            2.0,
+            min_confidence=float(params.get("context_min_confidence", 0.55)),
+            max_entropy=float(params.get("context_max_entropy", 0.90)),
+        )
         
         quantile = float(params.get("quantile", 0.97))
         expansion_z = float(params.get("expansion_z_threshold", 2.0))
@@ -58,11 +67,20 @@ class VolSpikeDetector(VolatilityBase):
             quantile=quantile,
             floor=expansion_z * vol_factor.clip(0.8, 1.5),
         )
-        return {"rv_z": rv_z, "dynamic_threshold": dynamic_th, "vol_factor": vol_factor, "close": df["close"]}
+        return {
+            "rv_z": rv_z,
+            "dynamic_threshold": dynamic_th,
+            "vol_factor": vol_factor,
+            "close": df["close"],
+            "canonical_high_vol": canonical_high_vol,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
-        return (features["rv_z"] >= features["dynamic_threshold"]).fillna(False)
+        return (
+            features["canonical_high_vol"].fillna(False)
+            & (features["rv_z"] >= features["dynamic_threshold"]).fillna(False)
+        ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
@@ -83,13 +101,25 @@ class VolRelaxationDetector(VolatilityBase):
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         rv_96 = df["rv_96"].ffill()
         rv_z = _ewma_z(rv_96, 288)
-        
         q_start = float(params.get("rv_q_start", 0.95))
         q_end = float(params.get("rv_q_end", 0.70))
         
-        rv_q95 = rv_z.rolling(window=2880, min_periods=288).quantile(q_start).shift(1)
-        rv_q70 = rv_z.rolling(window=2880, min_periods=288).quantile(q_end).shift(1)
-        return {"rv_z": rv_z, "rv_q95": rv_q95, "rv_q70": rv_q70}
+        rv_q95 = lagged_rolling_quantile(rv_z, window=2880, quantile=q_start, min_periods=288)
+        rv_q70 = lagged_rolling_quantile(rv_z, window=2880, quantile=q_end, min_periods=288)
+        canonical_from_high_vol = state_at_least(
+            df,
+            "ms_vol_state",
+            2.0,
+            lag=1,
+            min_confidence=float(params.get("context_min_confidence", 0.55)),
+            max_entropy=float(params.get("context_max_entropy", 0.90)),
+        )
+        return {
+            "rv_z": rv_z,
+            "rv_q95": rv_q95,
+            "rv_q70": rv_q70,
+            "canonical_from_high_vol": canonical_from_high_vol,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
@@ -97,6 +127,8 @@ class VolRelaxationDetector(VolatilityBase):
         rv_q95 = features["rv_q95"]
         rv_q70 = features["rv_q70"]
         return (
+            features["canonical_from_high_vol"].fillna(False)
+            &
             (rv_z.shift(1) >= rv_q95).fillna(False)
             & (rv_z < rv_q70).fillna(False)
             & (rv_z.diff() < 0).fillna(False)
@@ -116,7 +148,7 @@ class VolClusterShiftDetector(VolatilityBase):
         rv_diff_abs = rv_z.diff().abs()
         
         shift_q = float(params.get("shift_quantile", 0.98))
-        rv_shift_q98 = rv_diff_abs.rolling(window=2880, min_periods=288).quantile(shift_q).shift(1)
+        rv_shift_q98 = lagged_rolling_quantile(rv_diff_abs, window=2880, quantile=shift_q, min_periods=288)
         return {"rv_diff_abs": rv_diff_abs, "rv_shift_q98": rv_shift_q98, "rv_z": rv_z}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -171,10 +203,15 @@ class BreakoutTriggerDetector(VolatilityBase):
         breakout_dist = pd.concat([breakout_dist_up, breakout_dist_down], axis=1).max(axis=1)
         
         window = int(params.get("threshold_window", 2880))
-        ret_q80 = ret_abs.rolling(window, min_periods=288).quantile(0.80).shift(1)
+        ret_q80 = lagged_rolling_quantile(ret_abs, window=window, quantile=0.80, min_periods=288)
         
         exp_q = float(params.get("expansion_quantile", 0.85))
-        breakout_q85 = breakout_dist.rolling(window, min_periods=288).quantile(exp_q).shift(1)
+        breakout_q85 = lagged_rolling_quantile(
+            breakout_dist,
+            window=window,
+            quantile=exp_q,
+            min_periods=288,
+        )
         return {
             "comp_ratio": comp_ratio,
             "rolling_hi": rolling_hi,

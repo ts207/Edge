@@ -123,6 +123,7 @@ def evaluate_hypothesis_batch(
     min_sample_size: int = 20,
     annualisation_factor: Optional[float] = None,
     time_decay_tau_days: Optional[float] = 60.0,
+    use_context_quality: bool = True,
 ) -> pd.DataFrame:
     """
     Evaluate a batch of HypothesisSpec with rich metrics.
@@ -198,7 +199,11 @@ def evaluate_hypothesis_batch(
         # Apply context filter (regime conditioning)
         # If context is specified but cannot be resolved to feature columns, skip this hypothesis.
         if spec.context:
-            ctx_mask = _context_mask(spec.context, features)
+            ctx_mask = _context_mask(
+                spec.context,
+                features,
+                use_context_quality=use_context_quality,
+            )
             if ctx_mask is None:
                 rows.append(_null_row(spec, 0, "context_unresolvable"))
                 continue
