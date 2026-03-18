@@ -45,6 +45,7 @@ def test_news_col_true_takes_precedence():
     with patch("project.events.families.temporal.load_event_spec", return_value={"parameters": {"windows_utc": []}}):
         events = det.detect(df, symbol="BTC")
 
-    fire_times = {pd.to_datetime(e["timestamp"]) for e in events}
-    expected = df["timestamp"].iloc[5]
+    fire_times = {pd.to_datetime(row["timestamp"]) for row in events.to_dict(orient="records")}
+    # Signal is emitted on the NEXT bar after detection (12:25 -> 12:30)
+    expected = df["timestamp"].iloc[5] + pd.Timedelta(minutes=5)
     assert expected in fire_times, "Bar with news_col=True should fire even with empty spec windows."

@@ -6,9 +6,25 @@ from typing import Iterable
 import pandas as pd
 
 from project.events.event_flags import load_registry_flags
-from project.pipelines.research._family_event_utils import load_features
+from project.research.phase2 import load_features as load_features_impl
 from project.research.validation import assign_split_labels
 from project.specs.ontology import MATERIALIZED_STATE_COLUMNS_BY_ID
+
+
+def _load_features_wrapper(
+    run_id: str,
+    symbol: str,
+    timeframe: str = "5m",
+    data_root: Path | None = None,
+) -> pd.DataFrame:
+    from project.core.config import get_data_root
+
+    return load_features_impl(
+        data_root=data_root or get_data_root(),
+        run_id=run_id,
+        symbol=symbol,
+        timeframe=timeframe,
+    )
 
 
 def normalize_search_feature_columns(features: pd.DataFrame) -> pd.DataFrame:
@@ -48,9 +64,9 @@ def prepare_search_features_for_symbol(
     symbol: str,
     timeframe: str,
     data_root: Path,
-    load_features_fn=load_features,
+    load_features_fn=_load_features_wrapper,
 ) -> pd.DataFrame:
-    features = load_features_fn(run_id, symbol, timeframe=timeframe, data_root=data_root)
+    features = load_features_fn(run_id=run_id, symbol=symbol, timeframe=timeframe, data_root=data_root)
     if features.empty:
         return features
 

@@ -25,12 +25,14 @@ def test_fee_regime_detector_no_future_lookahead():
     fees = [1.0] * 10 + [2.0] * 5
     df = _make_fee_df(fees)
     det = FeeRegimeChangeDetector()
-    events = det.detect(df, symbol="BTC")
+    # Use small windows so we have valid quantiles in a short series
+    params = {"lookback_window": 10, "min_periods": 2}
+    events = det.detect(df, symbol="BTC", **params)
 
     # Bar index 10 timestamp = 2024-01-01 00:50:00 UTC
     # First permissible fire is bar 11 = 2024-01-01 00:55:00 UTC
     forbidden_ts = pd.Timestamp("2024-01-01 00:50:00", tz="UTC")
-    fire_times = [pd.to_datetime(e["timestamp"]) for e in events]
+    fire_times = [pd.to_datetime(row["timestamp"]) for row in events.to_dict(orient="records")]
     assert forbidden_ts not in fire_times, (
         f"Detector fired at {forbidden_ts} — the first bar of a fee change before "
         "it was confirmed. This indicates future lookahead (LT-003)."
@@ -48,9 +50,10 @@ def test_fee_regime_fires_only_after_confirmation():
     fees = [1.0] * 20 + [3.0] * 5
     df = _make_fee_df(fees)
     det = FeeRegimeChangeDetector()
-    events = det.detect(df, symbol="BTC")
+    params = {"lookback_window": 10, "min_periods": 2}
+    events = det.detect(df, symbol="BTC", **params)
 
-    fire_times = [pd.to_datetime(e["timestamp"]) for e in events]
+    fire_times = [pd.to_datetime(row["timestamp"]) for row in events.to_dict(orient="records")]
     # Bar 20 (index 20): 2024-01-01 01:40:00 UTC — must NOT fire
     # Bar 21 (index 21): 2024-01-01 01:45:00 UTC — may fire
     forbidden = pd.Timestamp("2024-01-01 01:40:00", tz="UTC")

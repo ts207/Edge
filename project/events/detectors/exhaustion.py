@@ -680,7 +680,7 @@ class FailedContinuationDetector(ThresholdDetector):
 
     def event_indices(self, df: pd.DataFrame, *, features: Mapping[str, pd.Series], **params: Any) -> list[int]:
         mask = self.compute_raw_mask(df, features=features, **params)
-        onset = _onset_mask(mask)
+        onset = onset_mask(mask)
         from project.events.sparsify import sparsify_mask
 
         spacing = int(params.get("cooldown_bars", params.get("min_spacing", self.min_spacing)))

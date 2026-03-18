@@ -1842,3 +1842,38 @@ events:
     - 15m
     - 60m
     max_candidates_per_run: 350
+    parameters:
+      max_gap_bars: 24
+      cooldown_bars: 12
+  SEQ_FND_EXTREME_THEN_BREAKOUT:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_fnd_extreme_then_breakout_event
+    parameters:
+      max_gap_bars: 96
+      cooldown_bars: 24
+  SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
+    canonical_family: POSITIONING_EXTREMES
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_oi_spikepos_then_vol_spike_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24
+  SEQ_VOL_COMP_THEN_BREAKOUT:
+    canonical_family: VOLATILITY_TRANSITION
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_vol_comp_then_breakout_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24
+  SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    reports_dir: event_sequences
+    events_file: event_sequences.parquet
+    signal_column: seq_liq_vacuum_then_depth_recovery_event
+    parameters:
+      max_gap_bars: 48
+      cooldown_bars: 24

@@ -278,8 +278,13 @@ class FeeRegimeChangeDetector(ThresholdDetector):
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        # Audit LT-003: fee_change (diff at T) must be shifted to match 
+        # persistent_shift (confirmation at T+1).
+        magnitude_at_confirmation = features['fee_change'].shift(1)
+        threshold_at_confirmation = features['fee_q95'].shift(1)
+        
         return (
-            (features['fee_change'] >= features['fee_q95']).fillna(False)
+            (magnitude_at_confirmation >= threshold_at_confirmation).fillna(False)
             & features['persistent_shift']
         ).fillna(False)
 

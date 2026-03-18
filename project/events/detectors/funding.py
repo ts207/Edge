@@ -26,7 +26,7 @@ from project.events.detectors.base import MarketEventDetector
 
 class BaseFundingDetector(ThresholdDetector, MarketEventDetector):
     """Base logic for funding-related detectors."""
-    required_columns = ("timestamp", "funding_abs_pct", "funding_abs", "close")
+    required_columns = ("timestamp", "funding_abs_pct", "funding_abs")
     severity_major_threshold = 0.95
     
     defaults = {

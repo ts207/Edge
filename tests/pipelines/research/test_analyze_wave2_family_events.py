@@ -97,6 +97,12 @@ def test_family_wave2_detector_returns_dataframe(event_type: str, _reports_dir: 
         df["close_perp"] = df["close"] * 1.05
         df["close_spot"] = df["close"] * 0.95
         df["perp_close"] = df["close"] * 1.05
+    
+    # Audit: Add required proxy columns for canonical proxy family
+    if "micro_depth_depletion" not in df.columns:
+        df["micro_depth_depletion"] = np.random.default_rng(59).normal(0.0, 1.0, len(df))
+    if "imbalance" not in df.columns:
+        df["imbalance"] = np.random.default_rng(61).normal(0.0, 1.0, len(df))
 
     res = detector.detect(df, symbol="BTCUSDT")
     assert isinstance(res, pd.DataFrame)
@@ -119,6 +125,10 @@ def test_family_wave2_main_writes_target_event(monkeypatch, tmp_path, event_type
         if market == "perp" and "BASIS" in event_type:
             # Inject a basis spike to trigger Z-score detector
             df.loc[400:410, "close"] *= 1.2
+        
+        # Audit: Add required proxy columns
+        df["micro_depth_depletion"] = np.random.default_rng(59).normal(0.0, 1.0, len(df))
+        df["imbalance"] = np.random.default_rng(61).normal(0.0, 1.0, len(df))
         return df
     
     monkeypatch.setattr(analyze_events, "load_features", mock_load)

@@ -27,7 +27,7 @@ from project.research.search.bridge_adapter import hypotheses_to_bridge_candidat
 from project.io.utils import ensure_dir, write_parquet
 from project.research.search.distributed_runner import run_distributed_search
 from project.pipelines.research._family_event_utils import load_features as load_features
-from project.pipelines.research.search_feature_frame import (
+from project.research.search.search_feature_utils import (
     normalize_search_feature_columns,
     prepare_search_features_for_symbol,
 )
