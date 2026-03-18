@@ -156,6 +156,25 @@ def run_certification_workflow(*, root: Path, config_path: Path) -> Dict[str, An
         encoding="utf-8",
     )
 
+    benchmark_path = config.get("benchmark_matrix_path")
+    if benchmark_path and config.get("enforce_benchmark_certification", False):
+        import subprocess
+        import sys
+        
+        benchmark_abs = PROJECT_ROOT.parent / benchmark_path
+        if not benchmark_abs.exists():
+            raise FileNotFoundError(f"Configured benchmark_matrix_path does not exist: {benchmark_abs}")
+            
+        print(f"Running benchmark certification gate against {benchmark_path}...")
+        result = subprocess.run([
+            sys.executable, "-m", "project.scripts.run_benchmark_matrix",
+            "--matrix", str(benchmark_abs),
+            "--execute", "1"
+        ])
+        if result.returncode != 0:
+            raise RuntimeError(f"Benchmark certification failed (exit code {result.returncode})")
+        certification_manifest["benchmark_certification_passed"] = True
+
     payload = {
         "workflow_id": str(config.get("workflow_id", "golden_certification_v1")),
         "config_path": str(config_path),

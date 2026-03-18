@@ -1,4 +1,5 @@
 event_type: DELEVERAGING_WAVE
+synthetic_coverage: covered
 reports_dir: positioning_extremes
 events_file: positioning_extremes_events.parquet
 signal_column: deleveraging_wave_event

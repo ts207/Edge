@@ -1,4 +1,5 @@
 event_type: BASIS_DISLOC
+synthetic_coverage: covered
 reports_dir: basis_dislocation
 events_file: basis_dislocation_events.parquet
 signal_column: basis_dislocation_event

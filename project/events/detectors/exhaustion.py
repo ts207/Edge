@@ -131,12 +131,33 @@ class TrendExhaustionDetector(CompositeDetector):
     event_type = "TREND_EXHAUSTION_TRIGGER"
     required_columns = ("timestamp", "close", "rv_96")
     min_spacing = 96
+    
+    defaults = {
+        "context_min_confidence": 0.55,
+        "context_max_entropy": 0.90,
+        "trend_window": 96,
+        "vol_window": 288,
+        "slope_fast_window": 12,
+        "slope_slow_window": 48,
+        "pullback_window": 96,
+        "threshold_window": 2880,
+        "trend_quantile": 0.95,
+        "cooldown_quantile": 0.35,
+        "pullback_quantile": 0.70,
+        "reversal_window": 3,
+        "reversal_quantile": 0.65,
+        "trend_peak_multiplier": 1.30,
+        "trend_strength_ratio": 3.0,
+        "min_trend_duration_bars": 72,
+        "cooldown_ratio": 0.90,
+        "reversal_alignment_window": 3,
+    }
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        return prepare_trend_exhaustion_features(df, params)
+        return prepare_trend_exhaustion_features(df, self.defaults, params)
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return compute_trend_exhaustion_mask(features, params)
+        return compute_trend_exhaustion_mask(features, self.defaults, params)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params

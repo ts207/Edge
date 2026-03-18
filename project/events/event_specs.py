@@ -24,6 +24,7 @@ class EventRegistrySpec:
     requires_confirmation: bool = False
     allowed_templates: Sequence[str] = ("all",)
     disallowed_states: Sequence[str] = ()
+    synthetic_coverage: str = "uncovered"
 
 
 def _load_event_specs() -> Dict[str, EventRegistrySpec]:
@@ -78,6 +79,7 @@ def _load_event_specs() -> Dict[str, EventRegistrySpec]:
             requires_confirmation=as_bool(_canon_param("requires_confirmation", False)),
             allowed_templates=list(_canon_param("allowed_templates", ["all"])),
             disallowed_states=list(_canon_param("disallowed_states", [])),
+            synthetic_coverage=str(_canon_param("synthetic_coverage", "uncovered")),
         )
         specs[spec.event_type] = spec
     return specs

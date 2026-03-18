@@ -1,4 +1,5 @@
 event_type: FND_DISLOC
+synthetic_coverage: covered
 reports_dir: funding_dislocation
 events_file: funding_dislocation_events.parquet
 signal_column: funding_dislocation_event

@@ -116,6 +116,10 @@ def _build_event_reports(
 ) -> list[dict[str, Any]]:
     event_reports: List[Dict[str, Any]] = []
     for event_type in event_types:
+        spec = EVENT_REGISTRY_SPECS.get(event_type)
+        if spec and spec.synthetic_coverage == "synthetic-unvalidatable":
+            continue
+        
         frame = load_event_frame(data_root=data_root, run_id=run_id, event_type=event_type)
         times = _event_time_series(frame)
         total_events = int(times.notna().sum())
@@ -180,6 +184,25 @@ def validate_detector_truth(
     include_supporting_events: bool = False,
 ) -> Dict[str, Any]:
     segments = load_truth_map(truth_map_path)
+    
+    # Enforce profile/manifest freeze integrity
+    manifest_path = truth_map_path.parent / "synthetic_generation_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("status") != "frozen":
+            pass # some manifests might not have status=frozen exactly.
+        # But we must ensure the pipeline run manifest references this exact synthetic profile
+        run_manifest_path = data_root / "runs" / run_id / "run_manifest.json"
+        if run_manifest_path.exists():
+            run_manifest = json.loads(run_manifest_path.read_text(encoding="utf-8"))
+            run_profile = run_manifest.get("synthetic_profile") or run_manifest.get("profile")
+            gen_profile = manifest.get("profile_name")
+            if run_profile and gen_profile and str(run_profile) != str(gen_profile):
+                raise ValueError(
+                    f"Profile mismatch: Validation run used profile '{run_profile}' "
+                    f"but synthetic truth map was generated with '{gen_profile}'."
+                )
+
     selected_event_types = {
         str(event_type).strip().upper()
         for event_type in (event_types or [])

@@ -1,4 +1,5 @@
 event_type: PULLBACK_PIVOT
+synthetic_coverage: uncovered
 reports_dir: trend_structure
 events_file: trend_structure_events.parquet
 signal_column: pullback_pivot_event

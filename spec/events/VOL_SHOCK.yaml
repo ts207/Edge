@@ -1,4 +1,5 @@
 event_type: VOL_SHOCK
+synthetic_coverage: uncovered
 reports_dir: vol_shock_relaxation
 events_file: vol_shock_relaxation_events.parquet
 signal_column: vol_shock_relaxation_event

@@ -9,8 +9,9 @@ def test_event_and_template_composers_use_unified_registry():
     event_cfg = compose_event_config("LIQUIDATION_CASCADE")
     template_cfg = compose_template_config("LIQUIDITY_SHOCK")
 
+    from project import PROJECT_ROOT
     unified_path = (
-        Path(__file__).resolve().parents[2]
+        PROJECT_ROOT.parent
         / "spec"
         / "events"
         / "event_registry_unified.yaml"

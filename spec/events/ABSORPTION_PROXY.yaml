@@ -1,6 +1,7 @@
 version: 1
 kind: event
 event_type: ABSORPTION_PROXY
+synthetic_coverage: covered
 active: true
 status: validated
 description: Explicit proxy replacement for legacy absorption labeling.

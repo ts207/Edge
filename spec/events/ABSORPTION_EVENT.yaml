@@ -1,4 +1,5 @@
 event_type: ABSORPTION_EVENT
+synthetic_coverage: uncovered
 reports_dir: liquidity_dislocation
 events_file: liquidity_dislocation_events.parquet
 signal_column: absorption_event

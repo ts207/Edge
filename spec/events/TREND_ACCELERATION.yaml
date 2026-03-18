@@ -1,4 +1,5 @@
 event_type: TREND_ACCELERATION
+synthetic_coverage: covered
 reports_dir: trend_structure
 events_file: trend_structure_events.parquet
 signal_column: trend_acceleration_event

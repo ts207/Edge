@@ -1,6 +1,7 @@
 version: 1
 kind: event
 event_type: FLOW_EXHAUSTION_PROXY
+synthetic_coverage: uncovered
 active: true
 status: prototype
 description: Explicit proxy replacement for legacy forced-flow exhaustion labeling.

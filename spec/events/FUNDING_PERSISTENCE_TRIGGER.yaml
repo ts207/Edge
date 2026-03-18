@@ -1,4 +1,5 @@
 event_type: FUNDING_PERSISTENCE_TRIGGER
+synthetic_coverage: uncovered
 reports_dir: funding_events
 events_file: funding_episode_events.parquet
 signal_column: funding_persistence_event

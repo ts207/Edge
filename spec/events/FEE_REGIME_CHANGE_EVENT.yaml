@@ -1,4 +1,5 @@
 event_type: FEE_REGIME_CHANGE_EVENT
+synthetic_coverage: uncovered
 reports_dir: execution_friction
 events_file: execution_friction_events.parquet
 signal_column: fee_regime_change_event

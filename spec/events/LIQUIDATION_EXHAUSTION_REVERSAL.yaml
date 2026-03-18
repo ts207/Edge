@@ -1,6 +1,7 @@
 version: 1
 kind: event
 event_type: LIQUIDATION_EXHAUSTION_REVERSAL
+synthetic_coverage: covered
 active: true
 status: implemented
 description: Canonical rebound phase after a forced deleveraging cluster cools, liquidation pressure fades, and price reverses against the prior cluster direction.

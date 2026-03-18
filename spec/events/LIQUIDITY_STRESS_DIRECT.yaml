@@ -1,6 +1,7 @@
 version: 1
 kind: event
 event_type: LIQUIDITY_STRESS_DIRECT
+synthetic_coverage: covered
 active: true
 status: validated
 description: High-fidelity liquidity stress detection using explicit L2/L3 depth and spread observables.

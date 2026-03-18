@@ -58,6 +58,7 @@ def generate_event_coverage_report(
 
         row = {
             "event_type": evt_type,
+            "synthetic_coverage_status": getattr(EVENT_REGISTRY_SPECS.get(evt_type), "synthetic_coverage", "uncovered"),
             "total_hits": total_hits,
             "hits_per_symbol_min": hits_min,
             "hits_per_symbol_median": hits_median,

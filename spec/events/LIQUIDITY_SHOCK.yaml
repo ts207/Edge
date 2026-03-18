@@ -1,4 +1,5 @@
 event_type: LIQUIDITY_SHOCK
+synthetic_coverage: uncovered
 active: true
 status: implemented
 description: Polymorphic liquidity shock detector (legacy). Dispatches to Direct or Proxy based on column availability.

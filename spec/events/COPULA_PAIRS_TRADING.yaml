@@ -1,4 +1,5 @@
 event_type: COPULA_PAIRS_TRADING
+synthetic_coverage: uncovered
 reports_dir: copula_pairs
 events_file: copula_pairs_events.parquet
 signal_column: copula_pairs_trading_event

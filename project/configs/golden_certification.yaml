@@ -22,3 +22,5 @@ required_outputs:
   - reliability/golden_workflow_summary.json
   - reliability/runtime_certification_manifest.json
   - reliability/golden_certification_summary.json
+benchmark_matrix_path: spec/benchmarks/fresh_benchmark_slice.yaml
+enforce_benchmark_certification: true

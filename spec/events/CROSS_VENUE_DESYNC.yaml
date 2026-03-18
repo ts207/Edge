@@ -1,4 +1,5 @@
 event_type: CROSS_VENUE_DESYNC
+synthetic_coverage: covered
 reports_dir: cross_venue_desync
 events_file: cross_venue_desync_events.parquet
 signal_column: cross_venue_desync_event

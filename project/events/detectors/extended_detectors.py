@@ -400,5 +400,4 @@ _LEGACY_ALIAS_DETECTORS = {
 }
 
 
-for event_type, detector_cls in _LEGACY_ALIAS_DETECTORS.items():
-    register_detector(event_type, detector_cls)
+register_detector("LIQUIDATION_EXHAUSTION_REVERSAL", LiquidationExhaustionReversalDetector)

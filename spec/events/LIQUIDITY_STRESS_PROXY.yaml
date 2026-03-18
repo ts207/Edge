@@ -1,6 +1,7 @@
 version: 1
 kind: event
 event_type: LIQUIDITY_STRESS_PROXY
+synthetic_coverage: covered
 active: true
 status: validated
 description: Low-fidelity liquidity stress detection using indirect OHLCV proxies, specifically quote-volume collapse and bar-range expansion relative to rolling medians.

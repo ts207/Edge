@@ -263,6 +263,7 @@ def compute_post_deleveraging_mask(
 
 def prepare_trend_exhaustion_features(
     df: pd.DataFrame, 
+    defaults: Mapping[str, Any],
     params: Mapping[str, Any]
 ) -> dict[str, pd.Series]:
     """Extracted feature preparation for TrendExhaustionDetector."""
@@ -272,11 +273,11 @@ def prepare_trend_exhaustion_features(
     canonical_trend_state = optional_state(
         df,
         "ms_trend_state",
-        min_confidence=float(params.get("context_min_confidence", 0.55)),
-        max_entropy=float(params.get("context_max_entropy", 0.90)),
+        min_confidence=float(params.get("context_min_confidence", defaults.get("context_min_confidence", 0.55))),
+        max_entropy=float(params.get("context_max_entropy", defaults.get("context_max_entropy", 0.90))),
     )
     
-    trend_window = int(params.get("trend_window", 96))
+    trend_window = int(params.get("trend_window", defaults.get("trend_window", 96)))
     trend = close.pct_change(periods=trend_window)
     trend_abs = trend.abs()
     trend_sign = np.sign(trend).fillna(0.0)
@@ -284,32 +285,32 @@ def prepare_trend_exhaustion_features(
     trend_streak = trend_sign.groupby(trend_group.cumsum()).cumcount() + 1
     trend_streak = trend_streak.where(trend_sign != 0.0, 0).astype(float)
     
-    vol_window = int(params.get("vol_window", 288))
+    vol_window = int(params.get("vol_window", defaults.get("vol_window", 288)))
     rv_z = rolling_mean_std_zscore(rv_96, window=vol_window)
     rv_median = rv_96.rolling(vol_window, min_periods=12).median().shift(1)
     
-    slope_fast = close.diff(int(params.get("slope_fast_window", 12)))
-    slope_slow = close.diff(int(params.get("slope_slow_window", 48)))
+    slope_fast = close.diff(int(params.get("slope_fast_window", defaults.get("slope_fast_window", 12))))
+    slope_slow = close.diff(int(params.get("slope_slow_window", defaults.get("slope_slow_window", 48))))
     
-    pullback_window = int(params.get("pullback_window", 96))
+    pullback_window = int(params.get("pullback_window", defaults.get("pullback_window", 96)))
     rolling_high = close.rolling(pullback_window, min_periods=12).max().shift(1)
     rolling_low = close.rolling(pullback_window, min_periods=12).min().shift(1)
     pullback_up = ((rolling_high - close) / rolling_high.replace(0.0, np.nan)).clip(lower=0.0)
     pullback_down = ((close - rolling_low) / rolling_low.replace(0.0, np.nan)).clip(lower=0.0)
     
-    threshold_window = int(params.get("threshold_window", 2880))
+    threshold_window = int(params.get("threshold_window", defaults.get("threshold_window", 2880)))
     min_periods = max(threshold_window // 10, 1)
-    trend_q_extreme = lagged_rolling_quantile(trend_abs, window=threshold_window, quantile=float(params.get("trend_quantile", 0.95)), min_periods=min_periods)
+    trend_q_extreme = lagged_rolling_quantile(trend_abs, window=threshold_window, quantile=float(params.get("trend_quantile", defaults.get("trend_quantile", 0.95))), min_periods=min_periods)
     trend_median = trend_abs.rolling(trend_window, min_periods=12).median().shift(1)
     
-    rv_q35 = lagged_rolling_quantile(rv_z, window=threshold_window, quantile=float(params.get("cooldown_quantile", 0.35)), min_periods=min_periods)
+    rv_q35 = lagged_rolling_quantile(rv_z, window=threshold_window, quantile=float(params.get("cooldown_quantile", defaults.get("cooldown_quantile", 0.35))), min_periods=min_periods)
     
-    pullback_quantile = float(params.get("pullback_quantile", 0.70))
+    pullback_quantile = float(params.get("pullback_quantile", defaults.get("pullback_quantile", 0.70)))
     pullback_q70 = lagged_rolling_quantile(pd.concat([pullback_up, pullback_down], axis=1).max(axis=1), window=threshold_window, quantile=pullback_quantile, min_periods=min_periods)
     
-    reversal_window = int(params.get("reversal_window", 3))
+    reversal_window = int(params.get("reversal_window", defaults.get("reversal_window", 3)))
     reversal_impulse = close.pct_change(periods=reversal_window).abs()
-    reversal_q65 = lagged_rolling_quantile(reversal_impulse, window=threshold_window, quantile=float(params.get("reversal_quantile", 0.65)), min_periods=min_periods)
+    reversal_q65 = lagged_rolling_quantile(reversal_impulse, window=threshold_window, quantile=float(params.get("reversal_quantile", defaults.get("reversal_quantile", 0.65))), min_periods=min_periods)
     
     return {
         "trend": trend,
@@ -334,13 +335,14 @@ def prepare_trend_exhaustion_features(
 
 def compute_trend_exhaustion_mask(
     features: Mapping[str, pd.Series], 
+    defaults: Mapping[str, Any],
     params: Mapping[str, Any]
 ) -> pd.Series:
     """Extracted mask computation for TrendExhaustionDetector."""
     # 1. Structural Signal: Trend must be at a historical extreme
-    trend_peak_multiplier = float(params.get("trend_peak_multiplier", 1.30))
-    trend_strength_ratio = float(params.get("trend_strength_ratio", 3.0))
-    min_trend_duration_bars = int(params.get("min_trend_duration_bars", 72))
+    trend_peak_multiplier = float(params.get("trend_peak_multiplier", defaults.get("trend_peak_multiplier", 1.30)))
+    trend_strength_ratio = float(params.get("trend_strength_ratio", defaults.get("trend_strength_ratio", 3.0)))
+    min_trend_duration_bars = int(params.get("min_trend_duration_bars", defaults.get("min_trend_duration_bars", 72)))
     
     trend_peak = (
         (features["trend_abs"] >= features["trend_q_extreme"] * trend_peak_multiplier).fillna(False)
@@ -359,14 +361,14 @@ def compute_trend_exhaustion_mask(
     )
     
     # 2. Cooldown Guard: Volatility must be decelerating or low
-    cooldown_ratio = float(params.get("cooldown_ratio", 0.90))
+    cooldown_ratio = float(params.get("cooldown_ratio", defaults.get("cooldown_ratio", 0.90)))
     cooldown = (
         (features["rv_z"] <= features["rv_q35"]).fillna(False)
         | (features["rv_96"] <= features["rv_median"] * cooldown_ratio).fillna(False)
     )
     
     # 3. Reversal Guard: Look for immediate counter-trend impulse or weakening
-    reversal_window = int(params.get("reversal_alignment_window", 3))
+    reversal_window = int(params.get("reversal_alignment_window", defaults.get("reversal_alignment_window", 3)))
     
     weakening_up = (features["trend"].shift(1) > 0).fillna(False) & (
         (features["slope_fast"] <= 0).fillna(False)
