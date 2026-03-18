@@ -21,6 +21,7 @@ Read these in order when starting new research work:
 6. [Memory And Reflection](./MEMORY_AND_REFLECTION.md)
 7. [Synthetic Datasets](./SYNTHETIC_DATASETS.md)
 8. [Event Families, Templates, Contexts, And Regimes](./FAMILIES_TEMPLATES_AND_REGIMES.md)
+9. [Research Workflow Example](./RESEARCH_WORKFLOW_EXAMPLE.md)
 
 ## Read By Question
 
@@ -34,12 +35,14 @@ Use these shortcuts when the task is already scoped.
 - "What should be remembered or reflected?" -> [Memory And Reflection](./MEMORY_AND_REFLECTION.md)
 - "How should synthetic data be used?" -> [Synthetic Datasets](./SYNTHETIC_DATASETS.md)
 - "How do families, templates, contexts, and regimes fit together?" -> [Event Families, Templates, Contexts, And Regimes](./FAMILIES_TEMPLATES_AND_REGIMES.md)
+- "What does one good research run actually look like end to end?" -> [Research Workflow Example](./RESEARCH_WORKFLOW_EXAMPLE.md)
 
 ## Calibration And Maintenance
 
 Use these when the work touches policy defaults, package surfaces, or detector quality history:
 
 - [Research Calibration Baseline](./RESEARCH_CALIBRATION_BASELINE.md)
+- [Future Milestones](./FUTURE_MILESTONES.md)
 - [Architecture Surface Inventory](./ARCHITECTURE_SURFACE_INVENTORY.md)
 - [Architecture Maintenance Checklist](./ARCHITECTURE_MAINTENANCE_CHECKLIST.md)
 - [Detector Defect Ledger](./defect_ledger.md)
