@@ -25,7 +25,7 @@ def run_stage(stage: str, script: Path, base_args: List[str], run_id: str, **kwa
     engine_kwargs = {
         "data_root": DATA_ROOT,
         "strict_recommendations_checklist": bool(kwargs.get("strict_recommendations_checklist", False)),
-        "feature_schema_version": str(kwargs.get("feature_schema_version", "v2")),
+        "feature_schema_version": str(kwargs.get("feature_schema_version", "")),
         "current_pipeline_session_id": str(kwargs.get("current_pipeline_session_id", "")),
         "current_stage_instance_id": kwargs.get("stage_instance_id", stage),
         "stage_cache_meta": kwargs.get("stage_cache_meta", {}),

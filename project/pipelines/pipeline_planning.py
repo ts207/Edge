@@ -149,7 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--performance_mode", type=int, default=0)
     parser.add_argument("--enable_event_stage_cache", type=int, default=1)
     parser.add_argument("--resume_from_failed_stage", type=int, default=0)
-    parser.add_argument("--feature_schema_version", default="v2", choices=["v2"])
+    parser.add_argument("--feature_schema_version", default="", help="Leave empty for canonical default.")
 
     # Strategy / Promotion Flags
     parser.add_argument("--run_candidate_promotion", type=int, default=1)
