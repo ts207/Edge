@@ -13,10 +13,10 @@ import project.research.reports as research_reports
 import project.research.utils as research_utils
 import project.spec_validation as spec_validation
 import project.apps.pipeline.manifest as app_manifest
-from project.execution.backtest.engine import run_engine
-from project.execution.runtime.dsl_interpreter import DslInterpreterV1
+from project.engine.runner import run_engine
+from project.strategy.runtime import DslInterpreterV1
 from project.infra.io import ensure_dir, read_parquet, write_parquet
-from project.infra.orchestration.run_all import main as run_all_main
+from project.pipelines.run_all import main as run_all_main
 import project.strategy.dsl as strategy_dsl
 import project.strategy.runtime as strategy_runtime
 import project.strategy.templates as strategy_templates
