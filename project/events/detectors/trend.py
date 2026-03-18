@@ -8,6 +8,7 @@ import pandas as pd
 from project.events.detectors.composite import CompositeDetector
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.sparsify import sparsify_mask
+from project.features.context_guards import optional_state
 
 
 def _onset_mask(mask: pd.Series) -> pd.Series:
@@ -37,9 +38,21 @@ class TrendBase(ThresholdDetector):
         retrace = close.pct_change(rebound_window).abs().fillna(0.0)
         return (trend * (1.0 + retrace)).clip(lower=0.0)
 
+    def _canonical_trend_state(self, df: pd.DataFrame) -> pd.Series:
+        return optional_state(
+            df,
+            "ms_trend_state",
+            min_confidence=0.55,
+            max_entropy=0.90,
+        )
+
+    def _canonical_trend_present(self, df: pd.DataFrame) -> pd.Series:
+        return optional_state(df, "ms_trend_state").notna()
+
 
 class TrendAccelerationDetector(TrendBase):
     event_type = "TREND_ACCELERATION"
+    min_spacing = 192
     threshold_quantile: float = 0.98
     min_trend_extension_quantile: float = 0.92
 
@@ -71,6 +84,8 @@ class TrendAccelerationDetector(TrendBase):
             "ret_1": ret_1,
             "trend_q_ext": trend_q_ext,
             "accel_q_threshold": accel_q_threshold,
+            "canonical_trend_state": self._canonical_trend_state(df),
+            "canonical_trend_present": self._canonical_trend_present(df),
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -83,12 +98,23 @@ class TrendAccelerationDetector(TrendBase):
         accel_q_threshold = features["accel_q_threshold"]
         
         # Consistency: recent returns moving in same direction as long trend
-        direction_consistent = (np.sign(ret_1.rolling(window=3, min_periods=1).mean()) == np.sign(trend_raw)).fillna(False)
+        direction_consistent = (np.sign(ret_1.rolling(window=6, min_periods=3).mean()) == np.sign(trend_raw)).fillna(False)
+        canonical_trend_state = features["canonical_trend_state"]
+        canonical_trend_present = features.get(
+            "canonical_trend_present",
+            canonical_trend_state.notna(),
+        )
+        canonical_trend_active = (
+            pd.Series(True, index=canonical_trend_state.index, dtype=bool)
+            if not canonical_trend_present.any()
+            else canonical_trend_state.isin([1.0, 2.0]).fillna(False)
+        )
         
         return (
             (trend_abs >= trend_q_ext).fillna(False)
             & (trend_delta >= accel_q_threshold).fillna(False)
             & direction_consistent
+            & canonical_trend_active
         ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -106,13 +132,33 @@ class TrendDecelerationDetector(TrendBase):
         
         trend_abs = close.pct_change(trend_window).abs()
         trend_delta = trend_abs.diff(accel_window)
-        return {"close": close, "trend_abs": trend_abs, "trend_delta": trend_delta}
+        return {
+            "close": close,
+            "trend_abs": trend_abs,
+            "trend_delta": trend_delta,
+            "canonical_trend_state": self._canonical_trend_state(df),
+            "canonical_trend_present": self._canonical_trend_present(df),
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df
         min_trend = float(params.get("min_trend_pct", 0.01))
         min_decel = float(params.get("min_deceleration_pct", 0.001))
-        return ((features["trend_abs"] > min_trend) & (features["trend_delta"] < -min_decel)).fillna(False)
+        canonical_trend_state = features["canonical_trend_state"]
+        canonical_trend_present = features.get(
+            "canonical_trend_present",
+            canonical_trend_state.notna(),
+        )
+        canonical_trend_active = (
+            pd.Series(True, index=canonical_trend_state.index, dtype=bool)
+            if not canonical_trend_present.any()
+            else canonical_trend_state.isin([1.0, 2.0]).fillna(False)
+        )
+        return (
+            (features["trend_abs"] > min_trend)
+            & (features["trend_delta"] < -min_decel)
+            & canonical_trend_active
+        ).fillna(False)
 
 
 class RangeBreakoutDetector(TrendBase):
@@ -144,7 +190,8 @@ class FalseBreakoutDetector(TrendBase):
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df
-        min_break_dist = float(params.get("min_breakout_distance", 0.0025))
+        min_break_dist = float(params.get("min_breakout_distance", 0.0030))
+        return_buffer = float(params.get("return_buffer", 0.0020))
         # Detect breakout at t-1 that fails (returns inside range) at t
         breakout_up_prev = (
             (features["close"].shift(1) - features["rolling_max"].shift(1))
@@ -157,10 +204,11 @@ class FalseBreakoutDetector(TrendBase):
 
         was_break_up = (breakout_up_prev >= min_break_dist).fillna(False)
         was_break_dn = (breakout_dn_prev >= min_break_dist).fillna(False)
-        
-        is_back_in_up = (features["close"] <= features["rolling_max"]).fillna(False)
-        is_back_in_dn = (features["close"] >= features["rolling_min"]).fillna(False)
-        
+
+        # Require a meaningful return inside the range (not just barely crossing the boundary)
+        is_back_in_up = (features["close"] <= features["rolling_max"] * (1 - return_buffer)).fillna(False)
+        is_back_in_dn = (features["close"] >= features["rolling_min"] * (1 + return_buffer)).fillna(False)
+
         return ((was_break_up & is_back_in_up) | (was_break_dn & is_back_in_dn)).fillna(False)
 
 
@@ -191,11 +239,46 @@ class SREventDetector(TrendBase):
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         close = df["close"]
-        return {"close": close}
+        trend_window = int(params.get("trend_window", 288))
+        breakout_z_threshold = float(params.get("breakout_z_threshold", 2.5))
+        min_periods = max(24, trend_window // 6)
+        rolling_high = close.rolling(trend_window, min_periods=min_periods).max().shift(1)
+        rolling_low = close.rolling(trend_window, min_periods=min_periods).min().shift(1)
+        ret_1 = close.pct_change(1)
+        vol = ret_1.rolling(trend_window, min_periods=min_periods).std().shift(1)
+        breakout_up = ((close - rolling_high) / close.replace(0.0, np.nan)).clip(lower=0.0)
+        breakout_down = ((rolling_low - close) / close.replace(0.0, np.nan)).clip(lower=0.0)
+        breakout_mag = pd.concat([breakout_up, breakout_down], axis=1).max(axis=1)
+        breakout_z = breakout_mag / vol.replace(0.0, np.nan)
+        return {
+            "close": close,
+            "rolling_high": rolling_high,
+            "rolling_low": rolling_low,
+            "breakout_up": breakout_up,
+            "breakout_down": breakout_down,
+            "breakout_z": breakout_z.replace([np.inf, -np.inf], np.nan).fillna(0.0),
+            "breakout_z_threshold": pd.Series(breakout_z_threshold, index=df.index, dtype=float),
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
-        return pd.Series(False, index=features["close"].index)
+        breaks_level = (
+            (features["close"] > features["rolling_high"]).fillna(False)
+            | (features["close"] < features["rolling_low"]).fillna(False)
+        )
+        return (breaks_level & (features["breakout_z"] >= features["breakout_z_threshold"]).fillna(False)).fillna(False)
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        del df, params
+        return features["breakout_z"].fillna(0.0)
+
+    def compute_direction(self, idx: int, features: Mapping[str, pd.Series], **params: Any) -> str:
+        del params
+        if bool(features["breakout_up"].iloc[idx]):
+            return "up"
+        if bool(features["breakout_down"].iloc[idx]):
+            return "down"
+        return "non_directional"
 
 
 __all__ = [

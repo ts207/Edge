@@ -46,21 +46,16 @@ def resolve_effect_sign(
     if evt_sign == 0:
         evt_sign = 1 if int(fallback_sign) >= 0 else -1
 
-    verb = str(template_verb).strip().lower()
-    is_contrarian_template = verb in {
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "overshoot_repair",
-    }
-
+    # Absolute policy semantics: 
+    # 'directional' follows the event direction.
+    # 'contrarian' always flips the event direction.
     if policy == "directional":
-        return int(-evt_sign if is_contrarian_template else evt_sign)
+        return int(evt_sign)
     if policy == "contrarian":
-        return int(evt_sign if is_contrarian_template else -evt_sign)
+        return int(-evt_sign)
     
-    # Default 'both' policy
-    return int(-evt_sign if is_contrarian_template else evt_sign)
+    # Default 'both' policy — assume directional for effect sign resolution
+    return int(evt_sign)
 
 
 def resolve_candidate_action(

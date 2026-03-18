@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# clean_data.sh — fast data artifact cleanup using rm -rf + recreate
-# Usage: clean_data.sh [runtime|all|repo]
+# clean_data.sh — comprehensive artifact and data cleanup
+# Usage: clean_data.sh [runtime|all|repo|hygiene]
 set -euo pipefail
 
 MODE="${1:-runtime}"
@@ -8,23 +8,13 @@ MODE="${1:-runtime}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-# Fast wipe: rm -rf the directory, then recreate it with a .gitkeep
-wipe_dir() {
-  local dir="$1"
-  if [[ -d "$dir" ]]; then
-    rm -rf "${dir:?}"
-  fi
-  mkdir -p "$dir"
-  touch "$dir/.gitkeep"
-}
-
 # Wipe contents only, keeping the directory itself (for top-level dirs tracked by git)
 wipe_contents() {
   local dir="$1"
   if [[ -d "$dir" ]]; then
-    # Remove everything inside except the directory itself
-    find "$dir" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' \
-      -exec rm -rf {} +
+    echo "  - Wiping $dir"
+    # Remove everything inside except .gitkeep
+    find "$dir" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
   fi
   mkdir -p "$dir"
   [[ -f "$dir/.gitkeep" ]] || touch "$dir/.gitkeep"
@@ -36,49 +26,39 @@ case "$MODE" in
     wipe_contents "data/runs"
     wipe_contents "data/reports"
     wipe_contents "data/events"
-    if [[ -d "data/lake/runs" ]]; then
-      rm -rf data/lake/runs
-      mkdir -p data/lake/runs
-    fi
-    if [[ -d "data/lake/trades" ]]; then
-      rm -rf data/lake/trades
-      mkdir -p data/lake/trades
-    fi
+    if [[ -d "data/lake/runs" ]]; then rm -rf data/lake/runs; mkdir -p data/lake/runs; fi
+    if [[ -d "data/lake/trades" ]]; then rm -rf data/lake/trades; mkdir -p data/lake/trades; fi
     ;;
   all)
-    echo "Cleaning ALL data artifacts..."
-    wipe_contents "data/runs"
-    wipe_contents "data/reports"
-    wipe_contents "data/events"
-    for subdir in runs raw cleaned features trades; do
-      if [[ -d "data/lake/$subdir" ]]; then
-        rm -rf "data/lake/$subdir"
-        mkdir -p "data/lake/$subdir"
-      fi
+    echo "Cleaning ALL data and research artifacts..."
+    for subdir in artifacts events knowledge lake reports research runs synthetic; do
+      wipe_contents "data/$subdir"
     done
-    if [[ -d "data/features" ]]; then
-      rm -rf data/features
-      mkdir -p data/features
+    if [[ -d "artifacts" ]]; then
+      wipe_contents "artifacts"
     fi
-    touch data/.gitkeep data/lake/.gitkeep data/runs/.gitkeep data/reports/.gitkeep
     ;;
   repo)
-    echo "Cleaning repo-local runtime and cache artifacts..."
-    if [[ -d "project/runs" ]]; then wipe_contents "project/runs"; fi
-    for cache_dir in .pytest_cache .mypy_cache .ruff_cache htmlcov; do
-      [[ -d "$cache_dir" ]] && rm -rf "$cache_dir" || true
-    done
-    find . -not -path './.venv/*' -not -path './.git/*' -type f \
-      \( -name "*.pyc" -o -name "*.pyo" -o -name "*.tmp" -o -name "*.swp" \
-         -o -name ".coverage" -o -name ".coverage.*" -o -name ".DS_Store" \
-         -o -name "*:Zone.Identifier" \) \
-      -delete
-    find . -not -path './.venv/*' -not -path './.git/*' -type d \
-      \( -name "__pycache__" -o -name ".ipynb_checkpoints" \) \
-      -exec rm -rf {} + 2>/dev/null || true
+    echo "Cleaning repository caches and temporary files..."
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    find . -type d -name ".pytest_cache" -exec rm -rf {} +
+    find . -type d -name ".ruff_cache" -exec rm -rf {} +
+    find . -type d -name ".mypy_cache" -exec rm -rf {} +
+    find . -type f -name "*.pyc" -delete
+    find . -type f -name "*.pyo" -delete
+    find . -type f -name "*.pyd" -delete
+    find . -type f -name ".coverage" -delete
+    find . -type d -name "htmlcov" -exec rm -rf {} +
+    rm -rf /tmp/edgee_smoke_out
+    ;;
+  hygiene)
+    echo "Cleaning hygiene artifacts (Zone.Identifier files)..."
+    find . -not -path './.git/*' -not -path './.venv/*' -type f \
+      \( -name '*:Zone.Identifier' -o -name '*#Uf03aZone.Identifier' -o -name '*#Uf03aZone.Identifier:Zone.Identifier' \) \
+      -print -delete
     ;;
   *)
-    echo "Usage: $0 [runtime|all|repo]" >&2
+    echo "Usage: $0 [runtime|all|repo|hygiene]" >&2
     exit 1
     ;;
 esac

@@ -43,6 +43,15 @@ def test_compose_event_config_falls_back_to_runtime_event_specs_for_promoted_eve
     assert cfg.reports_dir == "liquidity_shock"
     assert "spec/events/LIQUIDITY_STRESS_DIRECT.yaml" in cfg.source_layers["event_spec"]
 
+
+def test_compose_event_config_trend_acceleration_uses_calibrated_runtime_parameters():
+    cfg = compose_event_config("TREND_ACCELERATION")
+
+    assert cfg.event_type == "TREND_ACCELERATION"
+    assert cfg.parameters["trend_window"] == 96
+    assert cfg.parameters["min_spacing"] == 192
+    assert cfg.parameters["cooldown_bars"] == 12
+
 def test_compose_template_config_resolves_registry_row():
     cfg = compose_template_config("LIQUIDITY_SHOCK")
 

@@ -56,20 +56,10 @@ from project.research.services.run_comparison_service import write_run_compariso
 from project.pipelines.pipeline_provenance import write_run_manifest as _write_run_manifest
 from project.events.phase2 import PHASE2_EVENT_CHAIN
 from project.events.event_specs import EVENT_REGISTRY_SPECS
-
-def _validate_phase2_event_chain() -> List[str]:
-    import project.events.detectors.registry as _det_reg
-    _det_reg.load_all_detectors()
-    issues = []
-    for etype, script, _ in PHASE2_EVENT_CHAIN:
-        if etype not in EVENT_REGISTRY_SPECS:
-            issues.append(f"Missing event spec/registry entry for {etype}")
-        script_path = PROJECT_ROOT / "pipelines" / "research" / str(script)
-        if not script_path.exists():
-            issues.append(f"Missing phase2 analyzer script for {etype}: {script}")
-        if _det_reg.get_detector(etype) is None:
-            issues.append(f"No registered detector for {etype}")
-    return issues
+from project.pipelines.run_all_provenance import (
+    validate_phase2_event_chain,
+    compute_data_fingerprint,
+)
 
 from project.pipelines.pipeline_audit import (
     apply_run_terminal_audit,
@@ -85,44 +75,15 @@ from project.pipelines.pipeline_summary import (
     print_artifact_summary,
 )
 
-_git_commit = git_commit
-
 from project.specs.utils import get_spec_hashes
-from project.specs.ontology import (
-    ontology_spec_hash,
-    ontology_component_hash_fields,
-    ontology_component_hashes,
-)
-from project.specs.invariants import (
-    validate_runtime_invariants_specs as _validate_runtime_invariants_specs_impl,
-)
+from project.specs.ontology import ontology_spec_hash
+from project.specs.invariants import validate_runtime_invariants_specs
 
-validate_runtime_invariants_specs = _validate_runtime_invariants_specs_impl
-_run_runtime_postflight_audit = run_runtime_postflight_audit
+_git_commit = git_commit
 _refresh_runtime_lineage_fields = refresh_runtime_lineage_fields
-
-def _data_fingerprint(
-    symbols: List[str],
-    run_id: str,
-    *,
-    runtime_invariants: Dict[str, object] | None = None,
-    objective_profile: Dict[str, object] | None = None,
-    effective_config_hash: str | None = None,
-) -> Tuple[str, Dict[str, object]]:
-    digest, lineage = data_fingerprint(
-        symbols,
-        run_id,
-        project_root=PROJECT_ROOT,
-        data_root=DATA_ROOT,
-        runtime_invariants=runtime_invariants,
-        objective_profile=objective_profile,
-        effective_config_hash=effective_config_hash,
-    )
-    lake = lineage.get("lake", {}) if isinstance(lineage, dict) else {}
-    if isinstance(lake, dict):
-        lineage.setdefault("file_count", int(lake.get("file_count", 0) or 0))
-        lineage.setdefault("lake_digest", str(lake.get("digest", "")))
-    return digest, lineage
+_run_runtime_postflight_audit = run_runtime_postflight_audit
+_validate_phase2_event_chain = validate_phase2_event_chain
+_data_fingerprint = compute_data_fingerprint
 
 def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     # Synchronize environment with current DATA_ROOT for downstream helpers
@@ -191,8 +152,8 @@ def _run_all_impl(raw_argv: List[str] | None = None) -> int:
             planned_stage_instances=planned_stage_instances,
             pipeline_session_id=pipeline_session_id,
             data_root=DATA_ROOT,
-            data_fingerprint_fn=_data_fingerprint,
-            git_commit_fn=_git_commit,
+            data_fingerprint_fn=compute_data_fingerprint,
+            git_commit_fn=git_commit,
         )
     except Exception as exc:
         print(f"Run bootstrap failed: {exc}", file=sys.stderr)

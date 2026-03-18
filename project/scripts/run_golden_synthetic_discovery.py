@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -36,6 +37,25 @@ def _run_pipeline(*, data_root: Path, argv: List[str]) -> subprocess.CompletedPr
     )
 
 
+def _normalized_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        items = value.replace(",", " ").split()
+    elif isinstance(value, Iterable) and not isinstance(value, (bytes, bytearray, dict)):
+        items = [str(item).strip() for item in value]
+    else:
+        items = [str(value).strip()]
+    return [item for item in items if item]
+
+
+def _render_required_outputs(raw_outputs: object, *, run_id: str) -> list[str]:
+    rendered: list[str] = []
+    for item in _normalized_list(raw_outputs):
+        rendered.append(item.format(run_id=run_id))
+    return rendered
+
+
 def _candidate_summary(search_candidates_path: Path) -> Dict[str, Any]:
     if not search_candidates_path.exists() and not search_candidates_path.with_suffix(".csv").exists():
         return {"candidate_rows": 0, "candidate_event_types": []}
@@ -51,8 +71,11 @@ def run_golden_synthetic_discovery(
     root: Path,
     config_path: Path,
     pipeline_runner=_run_pipeline,
+    overrides: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
     config = load_workflow_config(config_path)
+    if overrides:
+        config.update({key: value for key, value in overrides.items() if value is not None})
     run_id = str(config.get("run_id", "golden_synthetic_discovery"))
     symbols = str(config.get("symbols", "BTCUSDT,ETHUSDT"))
     start_date = str(config.get("start_date", "2026-01-01"))
@@ -63,6 +86,17 @@ def run_golden_synthetic_discovery(
     search_min_n = int(config.get("search_min_n", 8))
     volatility_profile = str(config.get("volatility_profile", "default"))
     noise_scale = float(config.get("noise_scale", 1.0))
+    timeframes = _normalized_list(config.get("timeframes")) or ["5m"]
+    events = _normalized_list(config.get("events"))
+    templates = _normalized_list(config.get("templates"))
+    horizons = _normalized_list(config.get("horizons"))
+    directions = _normalized_list(config.get("directions"))
+    contexts = _normalized_list(config.get("contexts"))
+    entry_lags = _normalized_list(config.get("entry_lags"))
+    search_budget = config.get("search_budget")
+    interpretation_scope = str(
+        config.get("interpretation_scope", "full_discovery_validation")
+    ).strip() or "full_discovery_validation"
 
     synthetic_manifest = generate_synthetic_crypto_run(
         run_id=run_id,
@@ -82,11 +116,12 @@ def run_golden_synthetic_discovery(
         "--symbols", symbols,
         "--start", start_date,
         "--end", end_date,
+        "--timeframes", ",".join(timeframes),
         "--skip_ingest_ohlcv", "1",
         "--skip_ingest_funding", "1",
         "--skip_ingest_spot_ohlcv", "1",
         "--run_phase2_conditional", "1",
-        "--phase2_event_type", "all",
+        "--phase2_event_type", "all" if not events else events[0],
         "--run_bridge_eval_phase2", "0",
         "--run_candidate_promotion", "0",
         "--run_recommendations_checklist", "0",
@@ -107,6 +142,20 @@ def run_golden_synthetic_discovery(
         "--search_min_n", str(search_min_n),
         "--config", "project/configs/pipeline.yaml",
     ]
+    if events:
+        pipeline_args.extend(["--events", *events])
+    if templates:
+        pipeline_args.extend(["--templates", *templates])
+    if horizons:
+        pipeline_args.extend(["--horizons", *horizons])
+    if directions:
+        pipeline_args.extend(["--directions", *directions])
+    if contexts:
+        pipeline_args.extend(["--contexts", *contexts])
+    if entry_lags:
+        pipeline_args.extend(["--entry_lags", *entry_lags])
+    if search_budget is not None:
+        pipeline_args.extend(["--search_budget", str(int(search_budget))])
     completed = pipeline_runner(data_root=root, argv=pipeline_args)
     if completed.returncode != 0:
         raise RuntimeError(
@@ -120,6 +169,7 @@ def run_golden_synthetic_discovery(
         data_root=root,
         run_id=run_id,
         truth_map_path=truth_map_path,
+        event_types=events or None,
     )
     search_diag_path = root / "reports" / "phase2" / run_id / "search_engine" / "phase2_diagnostics.json"
     search_diag = json.loads(search_diag_path.read_text(encoding="utf-8")) if search_diag_path.exists() else {}
@@ -135,10 +185,21 @@ def run_golden_synthetic_discovery(
             "argv": pipeline_args,
             "returncode": int(completed.returncode),
         },
+        "selection": {
+            "timeframes": timeframes,
+            "events": events,
+            "templates": templates,
+            "horizons": horizons,
+            "directions": directions,
+            "contexts": contexts,
+            "entry_lags": [int(item) for item in entry_lags],
+            "search_budget": int(search_budget) if search_budget is not None else None,
+        },
+        "interpretation_scope": interpretation_scope,
         "truth_validation": truth_validation,
         "search_engine_diagnostics": search_diag,
         "candidate_summary": candidate_summary,
-        "required_outputs": list(config.get("required_outputs", [])),
+        "required_outputs": _render_required_outputs(config.get("required_outputs", []), run_id=run_id),
     }
     out_path = root / "reliability" / "golden_synthetic_discovery_summary.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,10 +211,38 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the canonical synthetic discovery workflow.")
     parser.add_argument("--root", default=None)
     parser.add_argument("--config", default=str(_default_config_path()))
+    parser.add_argument("--run_id", default=None)
+    parser.add_argument("--symbols", default=None)
+    parser.add_argument("--start_date", default=None)
+    parser.add_argument("--end_date", default=None)
+    parser.add_argument("--search_spec", default=None)
+    parser.add_argument("--search_min_n", type=int, default=None)
+    parser.add_argument("--search_budget", type=int, default=None)
+    parser.add_argument("--events", nargs="+", default=None)
+    parser.add_argument("--templates", nargs="+", default=None)
+    parser.add_argument("--horizons", nargs="+", default=None)
+    parser.add_argument("--directions", nargs="+", default=None)
+    parser.add_argument("--contexts", nargs="+", default=None)
+    parser.add_argument("--entry_lags", nargs="+", type=int, default=None)
     args = parser.parse_args(argv)
 
     root = Path(args.root) if args.root else (PROJECT_ROOT.parent / "artifacts" / "golden_synthetic_discovery")
-    run_golden_synthetic_discovery(root=root, config_path=Path(args.config))
+    overrides = {
+        "run_id": args.run_id,
+        "symbols": args.symbols,
+        "start_date": args.start_date,
+        "end_date": args.end_date,
+        "search_spec": args.search_spec,
+        "search_min_n": args.search_min_n,
+        "search_budget": args.search_budget,
+        "events": args.events,
+        "templates": args.templates,
+        "horizons": args.horizons,
+        "directions": args.directions,
+        "contexts": args.contexts,
+        "entry_lags": args.entry_lags,
+    }
+    run_golden_synthetic_discovery(root=root, config_path=Path(args.config), overrides=overrides)
     return 0
 
 

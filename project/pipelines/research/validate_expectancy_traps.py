@@ -40,7 +40,7 @@ from project.pipelines.research.expectancy_traps_support import (
     stable_row_seed,
     write_empty_robustness_payload,
 )
-from project.eval.splits import build_walk_forward_split_labels
+from project.eval import build_walk_forward_split_labels
 
 @dataclass
 class CompressionEvent:

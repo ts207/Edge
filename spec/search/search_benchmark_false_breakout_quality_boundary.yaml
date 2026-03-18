@@ -1,0 +1,28 @@
+version: 1
+kind: search_spec
+metadata:
+  phase: benchmark
+  description: "Maintained FALSE_BREAKOUT quality-boundary benchmark spec. Intended for context-quality demotion checks."
+search_mode: subset
+
+triggers:
+  events:
+    - FALSE_BREAKOUT
+
+contexts:
+  vol_regime: high
+
+templates:
+  - mean_reversion
+  - breakout_followthrough
+  - pullback_entry
+  - only_if_trend
+horizons:
+  - 15m
+directions:
+  - long
+  - short
+entry_lag:
+  - 1
+cost_profiles:
+  - standard

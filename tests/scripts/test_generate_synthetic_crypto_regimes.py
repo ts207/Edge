@@ -6,7 +6,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from project.events.families.canonical_proxy import AbsorptionProxyDetector, DepthStressProxyDetector
 from project.io.utils import read_parquet
+from project.scripts.detector_audit_module import _enrich_df
 from project.scripts.generate_synthetic_crypto_regimes import (
     build_regime_schedule,
     generate_synthetic_crypto_run,
@@ -27,6 +29,9 @@ def test_generate_symbol_frames_has_regimes_and_supporting_streams():
     assert not payload["funding"].empty
     assert not payload["open_interest"].empty
     assert "spread_bps" in payload["perp"].columns
+    assert "bid_depth_usd" in payload["perp"].columns
+    assert "ask_depth_usd" in payload["perp"].columns
+    assert "imbalance" in payload["perp"].columns
     assert len(payload["regimes"]) > 0
 
 
@@ -90,6 +95,7 @@ def test_generate_synthetic_crypto_run_writes_run_scoped_lake(tmp_path):
     assert truth["segments"]
     first_segment = truth["segments"][0]
     assert "expected_event_types" in first_segment
+    assert "supporting_event_types" in first_segment
     assert "expected_detector_families" in first_segment
     assert "intended_effect_direction" in first_segment
     assert any(seg["regime_type"] == "post_deleveraging_rebound" for seg in truth["segments"])
@@ -155,6 +161,31 @@ def test_liquidity_stress_regime_collapses_quote_volume_and_widens_spread():
     assert not baseline.empty
     assert seg["quote_volume"].median() < baseline["quote_volume"].median() * 0.5
     assert seg["spread_bps"].median() > baseline["spread_bps"].median() * 2.0
+    supporting = set(liquidity_segment["supporting_event_types"])
+    assert {"ABSORPTION_PROXY", "DEPTH_STRESS_PROXY"}.issubset(supporting)
+    windows = liquidity_segment["event_truth_windows"]
+    assert "ABSORPTION_PROXY" in windows
+    assert "DEPTH_STRESS_PROXY" in windows
+    abs_window = windows["ABSORPTION_PROXY"][0]
+    depth_window = windows["DEPTH_STRESS_PROXY"][0]
+    assert pd.Timestamp(abs_window["start_ts"], tz="UTC") > seg_start
+    assert pd.Timestamp(depth_window["end_ts"], tz="UTC") < seg_end
+
+
+def test_liquidity_stress_regime_supports_proxy_detectors():
+    payload = generate_symbol_frames(
+        symbol="BTCUSDT",
+        start_ts=pd.Timestamp("2026-01-01T00:00:00Z"),
+        end_exclusive=pd.Timestamp("2026-03-01T00:00:00Z"),
+        seed=7,
+    )
+
+    enriched = _enrich_df(payload["perp"])
+    absorption_events = AbsorptionProxyDetector().detect(enriched, symbol="BTCUSDT")
+    depth_events = DepthStressProxyDetector().detect(enriched, symbol="BTCUSDT")
+
+    assert len(absorption_events) >= 1
+    assert len(depth_events) >= 1
 
 
 def test_post_deleveraging_rebound_properties():

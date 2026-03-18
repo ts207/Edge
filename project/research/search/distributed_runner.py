@@ -19,12 +19,17 @@ from project.research.search.evaluator import evaluate_hypothesis_batch, METRICS
 log = logging.getLogger(__name__)
 
 
-def _evaluate_chunk(args: Tuple[Sequence[HypothesisSpec], pd.DataFrame, int]) -> pd.DataFrame:
+def _evaluate_chunk(args: Tuple[Sequence[HypothesisSpec], pd.DataFrame, int, bool]) -> pd.DataFrame:
     """Worker function: unpack and evaluate a chunk of hypotheses."""
-    chunk, features, min_sample_size = args
+    chunk, features, min_sample_size, use_context_quality = args
     if features.empty:
         return pd.DataFrame(columns=METRICS_COLUMNS)
-    return evaluate_hypothesis_batch(list(chunk), features, min_sample_size=min_sample_size)
+    return evaluate_hypothesis_batch(
+        list(chunk),
+        features,
+        min_sample_size=min_sample_size,
+        use_context_quality=use_context_quality,
+    )
 
 
 def run_distributed_search(
@@ -34,6 +39,7 @@ def run_distributed_search(
     n_workers: Optional[int] = None,
     chunk_size: int = 256,
     min_sample_size: int = 20,
+    use_context_quality: bool = True,
 ) -> pd.DataFrame:
     """
     Evaluate hypotheses against features, optionally in parallel.
@@ -59,7 +65,12 @@ def run_distributed_search(
 
     if effective_workers == 1 or len(chunks) == 1:
         parts = [
-            evaluate_hypothesis_batch(chunk, features, min_sample_size=min_sample_size)
+            evaluate_hypothesis_batch(
+                chunk,
+                features,
+                min_sample_size=min_sample_size,
+                use_context_quality=use_context_quality,
+            )
             for chunk in chunks
         ]
     else:
@@ -68,10 +79,25 @@ def run_distributed_search(
             # On Windows/MacOS (spawn), this will pickle the DataFrame which is still 
             # more efficient than to_dict("records").
             with multiprocessing.Pool(effective_workers) as pool:
-                parts = pool.map(
-                    _evaluate_chunk,
-                    [(chunk, features, min_sample_size) for chunk in chunks],
-                )
+                # OOM Fix (SL-001): Only pass the subset of columns that these specific hypotheses need 
+                # rather than the full feature dataframe. This prevents massive memory duplication.
+                args_list = []
+                for chunk in chunks:
+                    # Determine required columns for this chunk
+                    req_cols = set(["symbol", "time_open", "time_close"])
+                    for h in chunk:
+                        if hasattr(h, 'features'):
+                            req_cols.update(h.features)
+                        if hasattr(h, 'feature_weights'):
+                            req_cols.update(h.feature_weights.keys())
+                    
+                    # Filter to available columns to avoid KeyError
+                    valid_cols = [c for c in req_cols if c in features.columns]
+                    chunk_features = features[valid_cols] if valid_cols else features
+                    
+                    args_list.append((chunk, chunk_features, min_sample_size, use_context_quality))
+                
+                parts = pool.map(_evaluate_chunk, args_list)
         except Exception as exc:
             log.warning(
                 "Multiprocessing in run_distributed_search (workers=%d, chunks=%d) failed: %s. "
@@ -83,7 +109,10 @@ def run_distributed_search(
             )
             parts = [
                 evaluate_hypothesis_batch(
-                    chunk, features, min_sample_size=min_sample_size
+                    chunk,
+                    features,
+                    min_sample_size=min_sample_size,
+                    use_context_quality=use_context_quality,
                 )
                 for chunk in chunks
             ]

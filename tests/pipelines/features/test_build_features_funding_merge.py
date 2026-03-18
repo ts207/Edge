@@ -174,9 +174,5 @@ def test_ensure_feature_contract_columns_materializes_schema_columns():
         "cross_exchange_spread_z",
         "revision_lag_bars",
         "revision_lag_minutes",
-        "ms_vpin_24",
-        "ms_roll_24",
-        "ms_amihud_24",
-        "ms_kyle_24",
     }
     assert required.issubset(set(out.columns))

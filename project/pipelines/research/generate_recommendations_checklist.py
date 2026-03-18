@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from project.artifacts.catalog import kpi_scorecard_path, promotion_summary_path, run_manifest_path
+from project.artifacts import kpi_scorecard_path, promotion_summary_path, run_manifest_path
 from typing import Any, Dict, List
 
 import numpy as np

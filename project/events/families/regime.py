@@ -8,12 +8,10 @@ import pandas as pd
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.detectors.transition import TransitionDetector
 from project.events.detectors.composite import CompositeDetector
+from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.events.thresholding import rolling_mean_std_zscore
 from project.research.analyzers import run_analyzer_suite
-
-def past_quantile(series: pd.Series, q: float, window: int = 2880) -> pd.Series:
-    return series.rolling(window, min_periods=window//10).quantile(q).shift(1)
 
 class VolRegimeShiftDetector(TransitionDetector):
     event_type = 'VOL_REGIME_SHIFT_EVENT'
@@ -22,8 +20,9 @@ class VolRegimeShiftDetector(TransitionDetector):
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         rv_96 = df['rv_96'].ffill()
         window = int(params.get('lookback_window', 2880))
-        rv_low_th = past_quantile(rv_96, 0.33, window=window)
-        rv_high_th = past_quantile(rv_96, 0.66, window=window)
+        min_periods = max(window // 10, 1)
+        rv_low_th = lagged_rolling_quantile(rv_96, window=window, quantile=0.33, min_periods=min_periods)
+        rv_high_th = lagged_rolling_quantile(rv_96, window=window, quantile=0.66, min_periods=min_periods)
         return {'rv_96': rv_96, 'rv_low_th': rv_low_th, 'rv_high_th': rv_high_th}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -41,7 +40,7 @@ class VolRegimeShiftDetector(TransitionDetector):
         del params
         rv = features['rv_96'].iloc[idx]
         hi = features['rv_high_th'].iloc[idx]
-        return "long" if rv >= hi else "short"
+        return "up" if rv >= hi else "down"
 
 class TrendToChopDetector(TransitionDetector):
     event_type = 'TREND_TO_CHOP_SHIFT'
@@ -51,9 +50,9 @@ class TrendToChopDetector(TransitionDetector):
         close = df['close']
         rv_96 = df['rv_96'].ffill()
         trend_abs = close.pct_change(96).abs()
-        trend_hi = past_quantile(trend_abs, 0.70)
-        trend_lo = past_quantile(trend_abs, 0.35)
-        rv_lo = past_quantile(rv_96, 0.35)
+        trend_hi = lagged_rolling_quantile(trend_abs, window=2880, quantile=0.70, min_periods=max(2880 // 10, 1))
+        trend_lo = lagged_rolling_quantile(trend_abs, window=2880, quantile=0.35, min_periods=max(2880 // 10, 1))
+        rv_lo = lagged_rolling_quantile(rv_96, window=2880, quantile=0.35, min_periods=max(2880 // 10, 1))
         return {'trend_abs': trend_abs, 'rv_96': rv_96, 'trend_hi': trend_hi, 'trend_lo': trend_lo, 'rv_lo': rv_lo}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -74,9 +73,9 @@ class ChopToTrendDetector(TransitionDetector):
         close = df['close']
         rv_96 = df['rv_96'].ffill()
         trend_abs = close.pct_change(96).abs()
-        trend_hi = past_quantile(trend_abs, 0.70)
-        trend_lo = past_quantile(trend_abs, 0.35)
-        rv_hi = past_quantile(rv_96, 0.70)
+        trend_hi = lagged_rolling_quantile(trend_abs, window=2880, quantile=0.70, min_periods=max(2880 // 10, 1))
+        trend_lo = lagged_rolling_quantile(trend_abs, window=2880, quantile=0.35, min_periods=max(2880 // 10, 1))
+        rv_hi = lagged_rolling_quantile(rv_96, window=2880, quantile=0.70, min_periods=max(2880 // 10, 1))
         return {'trend_abs': trend_abs, 'rv_96': rv_96, 'trend_hi': trend_hi, 'trend_lo': trend_lo, 'rv_hi': rv_hi}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -100,8 +99,8 @@ class CorrelationBreakdownDetector(CompositeDetector):
         basis_z = df.get('basis_zscore', df.get('cross_exchange_spread_z', pd.Series(0.0, index=df.index)))
         basis_abs = basis_z.abs()
         spread_abs = spread_z.abs()
-        basis_hi = past_quantile(basis_abs, 0.92)
-        spread_hi = past_quantile(spread_abs, 0.80)
+        basis_hi = lagged_rolling_quantile(basis_abs, window=2880, quantile=0.92, min_periods=max(2880 // 10, 1))
+        spread_hi = lagged_rolling_quantile(spread_abs, window=2880, quantile=0.80, min_periods=max(2880 // 10, 1))
         return {'ret_1': ret_1, 'basis_z': basis_z, 'basis_abs': basis_abs, 'spread_abs': spread_abs, 'basis_hi': basis_hi, 'spread_hi': spread_hi}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -122,9 +121,9 @@ class BetaSpikeDetector(CompositeDetector):
         rv_96 = df['rv_96'].ffill()
         basis_z = df.get('basis_zscore', df.get('cross_exchange_spread_z', pd.Series(0.0, index=df.index)))
         basis_abs = basis_z.abs()
-        ret_tail = past_quantile(ret_abs, 0.99)
-        basis_med_hi = past_quantile(basis_abs, 0.85)
-        rv_hi = past_quantile(rv_96, 0.70)
+        ret_tail = lagged_rolling_quantile(ret_abs, window=2880, quantile=0.99, min_periods=max(2880 // 10, 1))
+        basis_med_hi = lagged_rolling_quantile(basis_abs, window=2880, quantile=0.85, min_periods=max(2880 // 10, 1))
+        rv_hi = lagged_rolling_quantile(rv_96, window=2880, quantile=0.70, min_periods=max(2880 // 10, 1))
         return {'ret_abs': ret_abs, 'rv_96': rv_96, 'basis_abs': basis_abs, 'ret_tail': ret_tail, 'basis_med_hi': basis_med_hi, 'rv_hi': rv_hi}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:

@@ -4,21 +4,6 @@ defaults:
   state_scope: source_only
   min_events: 200
 states:
-- state_id: LOW_LIQUIDITY_STATE
-  family: LIQUIDITY_DISLOCATION
-  source_event_type: LIQUIDITY_VACUUM
-  activation_rule: depth_pct <= p10 OR spread_pct >= p90
-  decay_rule: exit when depth_pct >= p30 AND spread_pct <= p70
-  features_required:
-  - market_depth
-  - spread_bps
-  allowed_templates:
-  - mean_reversion
-  - stop_run_repair
-  - overshoot_repair
-  - continuation
-  - only_if_liquidity
-  - slippage_aware_filter
 - state_id: REFILL_LAG_STATE
   family: LIQUIDITY_DISLOCATION
   source_event_type: LIQUIDITY_VACUUM
@@ -707,19 +692,6 @@ states:
   - slippage_aware_filter
   - tail_risk_avoid
   - only_if_liquidity
-- state_id: MS_BASIS_STATE
-  family: STATISTICAL_DISLOCATION
-  source_event_type: BASIS_DISLOC
-  state_scope: family_safe
-  min_events: 300
-  activation_rule: basis_z_abs >= 1.0
-  decay_rule: exit when basis_z_abs < 1.0
-  features_required:
-  - basis_zscore
-  allowed_templates:
-  - mean_reversion
-  - overshoot_repair
-  - tail_risk_avoid
 - state_id: MS_LIQUIDATION_STATE
   family: POSITIONING_EXTREMES
   source_event_type: LIQUIDATION_CASCADE
@@ -734,4 +706,144 @@ states:
   - convexity_capture
   - mean_reversion
   - continuation
+  - tail_risk_avoid
+- state_id: BEAR_TREND_REGIME
+  family: REGIME_CONTEXT
+  source_event_type: TREND_EXHAUSTION_TRIGGER
+  state_scope: global
+  min_events: 1
+  activation_rule: "regime detector signals bearish trend"
+  decay_rule: "regime transitions to neutral or bull"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: BULL_TREND_REGIME
+  family: REGIME_CONTEXT
+  source_event_type: TREND_EXHAUSTION_TRIGGER
+  state_scope: global
+  min_events: 1
+  activation_rule: "regime detector signals bullish trend"
+  decay_rule: "regime transitions to neutral or bear"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: CHOP_REGIME
+  family: REGIME_CONTEXT
+  source_event_type: TREND_EXHAUSTION_TRIGGER
+  state_scope: global
+  min_events: 1
+  activation_rule: "regime detector signals choppy/ranging market"
+  decay_rule: "regime transitions to directional trend"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_CONTEXT_STATE_CODE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: LIQUIDITY_STRESS_DIRECT
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "composite microstructure context code is non-neutral"
+  decay_rule: "composite code returns to neutral baseline"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_FUNDING_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: FUNDING_RATE_EXTREME
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "funding rate in stressed or extreme regime"
+  decay_rule: "funding rate normalizes to baseline range"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_LIQ_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: LIQUIDITY_STRESS_DIRECT
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "liquidity context is degraded"
+  decay_rule: "liquidity context normalizes"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_OI_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: OI_SURGE
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "open interest in elevated or compressed regime"
+  decay_rule: "open interest normalizes"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_SPREAD_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: LIQUIDITY_STRESS_DIRECT
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "bid-ask spread in elevated regime"
+  decay_rule: "spread normalizes to baseline"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_TREND_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: TREND_EXHAUSTION_TRIGGER
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "microstructure trend context is directional"
+  decay_rule: "trend context returns to neutral"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+- state_id: MS_VOL_STATE
+  family: MICROSTRUCTURE_CONTEXT
+  source_event_type: VOL_SHOCK
+  state_scope: source_only
+  min_events: 1
+  activation_rule: "volatility context is elevated or suppressed"
+  decay_rule: "volatility normalizes"
+  allowed_templates:
+  - continuation
+  - reversal
+  - breakout
+
+- state_id: LOW_LIQUIDITY_STATE
+  family: LIQUIDITY_DISLOCATION
+  source_event_type: LIQUIDITY_VACUUM
+  activation_rule: depth_pct <= p10 OR spread_pct >= p90
+  decay_rule: exit when depth_pct >= p30 AND spread_pct <= p70
+  features_required:
+  - market_depth
+  - spread_bps
+  allowed_templates:
+  - mean_reversion
+  - stop_run_repair
+  - overshoot_repair
+  - continuation
+  - only_if_liquidity
+  - slippage_aware_filter
+
+- state_id: MS_BASIS_STATE
+  family: STATISTICAL_DISLOCATION
+  source_event_type: BASIS_DISLOC
+  state_scope: family_safe
+  min_events: 300
+  activation_rule: basis_z_abs >= 1.0
+  decay_rule: exit when basis_z_abs < 1.0
+  features_required:
+  - basis_zscore
+  allowed_templates:
+  - mean_reversion
+  - overshoot_repair
   - tail_risk_avoid

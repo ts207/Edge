@@ -672,7 +672,7 @@
     {
       "family": "ingest",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/ingest/ingest_binance_um_ohlcv*.py",
@@ -692,7 +692,7 @@
     {
       "family": "core",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/clean/build_cleaned_bars.py",
@@ -720,7 +720,7 @@
     {
       "family": "runtime_invariants",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/runtime/build_normalized_replay_stream.py",
@@ -738,7 +738,7 @@
     {
       "family": "phase1_analysis",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/research/analyze_*.py",
@@ -752,7 +752,7 @@
     {
       "family": "phase2_event_registry",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/research/build_event_registry.py",
@@ -806,7 +806,7 @@
     {
       "family": "research_quality",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/research/analyze_conditional_expectancy.py",
@@ -822,7 +822,7 @@
     {
       "family": "strategy_packaging",
       "is_legacy": false,
-      "owner_service": "project.pipelines.orchestration.run_all_service",
+      "owner_service": "project.pipelines.run_all",
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/research/compile_strategy_blueprints.py",

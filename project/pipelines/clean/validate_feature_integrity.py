@@ -2,6 +2,7 @@ from __future__ import annotations
 from project.core.config import get_data_root
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -9,12 +10,29 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from project.core.feature_quality import summarize_feature_quality
 from project.core.feature_schema import feature_dataset_dir_name
 from project.io.utils import choose_partition_dir, list_parquet_files, read_parquet, run_scoped_lake_path
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.eval.drift_detection import detect_feature_drift
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _report_path(data_root: Path, *, run_id: str, timeframe: str) -> Path:
+    return (
+        data_root
+        / "reports"
+        / "feature_quality"
+        / run_id
+        / "validation"
+        / f"validate_feature_integrity_{timeframe}.json"
+    )
+
+
+def _write_report(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _summarize_drift_flags(symbol: str, drift_flags: List[Dict[str, float]]) -> None:
@@ -76,6 +94,7 @@ def validate_symbol(
     reference_distributions_path: str = "train_distributions.json",
 ) -> Dict[str, List[str]]:
     symbol_issues = {}
+    feature_quality_summary = None
     
     # 1. Check cleaned bars
     bars_candidates = [
@@ -100,6 +119,7 @@ def validate_symbol(
     if features_dir:
         df_feats = read_parquet(list_parquet_files(features_dir))
         if not df_feats.empty:
+            feature_quality_summary = summarize_feature_quality(df_feats)
             feat_issues = (
                 check_nans(df_feats, threshold=nan_threshold)
                 + check_constant_values(df_feats)
@@ -114,7 +134,9 @@ def validate_symbol(
             
             if feat_issues:
                 symbol_issues["features"] = feat_issues
-            
+    if feature_quality_summary is not None:
+        symbol_issues["feature_quality_summary"] = feature_quality_summary
+
     return symbol_issues
 
 def main() -> int:
@@ -150,10 +172,29 @@ def main() -> int:
         LOGGER.warning(f"Integrity check found issues in {len(all_issues)} symbols.")
         status = "failed" if int(args.fail_on_issues) else "warning"
 
+    report_path = _report_path(data_root, run_id=args.run_id, timeframe=args.timeframe)
+    _write_report(
+        report_path,
+        {
+            "schema_version": "feature_integrity_report_v1",
+            "run_id": args.run_id,
+            "timeframe": args.timeframe,
+            "nan_threshold": args.nan_threshold,
+            "z_threshold": args.z_threshold,
+            "fail_on_issues": int(args.fail_on_issues),
+            "status": status,
+            "symbols": all_issues,
+        },
+    )
+
     finalize_manifest(
         manifest,
         status,
-        stats={"symbols_with_issues": len(all_issues), "details": all_issues}
+        stats={
+            "symbols_with_issues": len(all_issues),
+            "report_path": str(report_path),
+            "details": all_issues,
+        }
     )
     return 1 if all_issues and int(args.fail_on_issues) else 0
 

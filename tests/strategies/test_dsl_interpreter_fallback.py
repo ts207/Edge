@@ -24,7 +24,7 @@ def test_njit_fallback_supports_bare_decorator():
     Tests if the fallback_njit shim correctly handles the bare decorator syntax.
     """
     # Monkeypatch njit to use our fallback shim for this test scope
-    with patch("project.strategies.dsl_interpreter_v1.njit", fallback_njit):
+    with patch("project.strategy.runtime.dsl_interpreter_v1.njit", fallback_njit):
         @fallback_njit
         def f(x):
             return x + 1
@@ -36,7 +36,7 @@ def test_njit_fallback_supports_parametrized_decorator():
     Tests if the fallback_njit shim correctly handles parametrized decorator syntax.
     """
     # Monkeypatch njit to use our fallback shim for this test scope
-    with patch("project.strategies.dsl_interpreter_v1.njit", fallback_njit):
+    with patch("project.strategy.runtime.dsl_interpreter_v1.njit", fallback_njit):
         @fallback_njit(cache=True) # Example of a parameter
         def g(x):
             return x + 2
@@ -51,7 +51,7 @@ def test_njit_symbol_uses_fallback_or_numba():
     If numba is NOT installed, it should be a fallback/shim.
     This test specifically checks if the fallback shim IS BEING USED.
     """
-    import project.strategies.dsl_interpreter_v1 as m
+    import project.strategy.runtime.dsl_interpreter_v1 as m
 
     # Check if njit symbol is present
     assert hasattr(m, "njit"), "njit symbol not found in dsl_interpreter_v1 module"
@@ -138,7 +138,7 @@ def test_njit_symbol_uses_fallback_or_numba():
 
     # Additionally, let's ensure the shim logic itself works when injected.
     # This is covered by tests 1 & 2, but we can re-run one here for clarity.
-    with patch("project.strategies.dsl_interpreter_v1.njit", fallback_njit):
+    with patch("project.strategy.runtime.dsl_interpreter_v1.njit", fallback_njit):
         @fallback_njit
         def h(x):
             return x * 2

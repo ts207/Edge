@@ -8,6 +8,11 @@ import pandas as pd
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.sparsify import sparsify_mask
 from project.events.thresholding import percentile_rank_historical
+from project.events.detectors.funding_support import (
+    run_length,
+    prepare_funding_persistence_features,
+    prepare_funding_normalization_features,
+)
 
 
 FUNDING_EVENT_TYPES = (
@@ -17,25 +22,39 @@ FUNDING_EVENT_TYPES = (
 )
 
 
-def _run_length(mask: pd.Series) -> pd.Series:
-    out = pd.Series(0, index=mask.index, dtype=int)
-    streak = 0
-    for flag in mask.fillna(False).astype(bool).tolist():
-        streak = streak + 1 if flag else 0
-        yield streak
+from project.events.detectors.base import MarketEventDetector
 
-
-class BaseFundingDetector(ThresholdDetector):
+class BaseFundingDetector(ThresholdDetector, MarketEventDetector):
     """Base logic for funding-related detectors."""
     required_columns = ("timestamp", "funding_abs_pct", "funding_abs")
-    timeframe_minutes = 5
-    default_severity = "moderate"
     severity_major_threshold = 0.95
-    default_extreme_pct = 95.0
-    default_accel_pct = 90.0
-    default_persistence_pct = 85.0
-    default_normalization_pct = 50.0
-    default_normalization_lookback = 288
+    
+    defaults = {
+        "extreme_pct": 95.0,
+        "accel_pct": 90.0,
+        "persistence_pct": 85.0,
+        "normalization_pct": 50.0,
+        "normalization_lookback": 288,
+    }
+
+    def _signed_funding(self, df: pd.DataFrame) -> pd.Series:
+        if "funding_rate_scaled" in df.columns:
+            return pd.to_numeric(df["funding_rate_scaled"], errors="coerce").astype(float)
+        return pd.Series(0.0, index=df.index, dtype=float)
+
+    def compute_direction(
+        self,
+        idx: int,
+        features: dict[str, pd.Series],
+        **params: Any,
+    ) -> str:
+        del params
+        signed = float(np.nan_to_num(features.get("funding_signed", pd.Series(0.0)).iloc[idx], nan=0.0))
+        if signed > 0.0:
+            return "up"
+        if signed < 0.0:
+            return "down"
+        return "non_directional"
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params
@@ -55,11 +74,13 @@ class BaseFundingDetector(ThresholdDetector):
     def compute_metadata(self, idx: int, features: dict[str, pd.Series], **params: Any) -> dict[str, Any]:
         del params
         f_pct = float(np.nan_to_num(features["funding_abs_pct"].iloc[idx], nan=0.0))
+        signed = float(np.nan_to_num(features.get("funding_signed", pd.Series(0.0)).iloc[idx], nan=0.0))
         return {
             "funding_abs_pct": f_pct,
             "funding_abs": float(np.nan_to_num(features["funding_abs"].iloc[idx], nan=0.0)),
             "fr_magnitude": f_pct if f_pct > 1.0 else f_pct * 10000.0,
-            "fr_sign": 1.0,
+            "funding_signed": signed,
+            "fr_sign": 1.0 if signed > 0.0 else -1.0 if signed < 0.0 else 0.0,
         }
 
 
@@ -70,9 +91,10 @@ class FundingExtremeOnsetDetector(BaseFundingDetector):
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         f_pct = pd.to_numeric(df["funding_abs_pct"], errors="coerce").astype(float)
         f_abs = pd.to_numeric(df["funding_abs"], errors="coerce").astype(float)
-        extreme_pct = float(params.get("extreme_pct", self.default_extreme_pct))
+        funding_signed = self._signed_funding(df)
+        extreme_pct = float(params.get("extreme_pct", self.defaults["extreme_pct"]))
         mask = ((f_pct >= extreme_pct) & (f_pct.shift(1) < extreme_pct)).fillna(False)
-        return {"funding_abs_pct": f_pct, "funding_abs": f_abs, "mask": mask}
+        return {"funding_abs_pct": f_pct, "funding_abs": f_abs, "funding_signed": funding_signed, "mask": mask}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         mask = features["mask"]
@@ -91,32 +113,25 @@ class FundingPersistenceDetector(BaseFundingDetector):
     event_type = "FUNDING_PERSISTENCE_TRIGGER"
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        f_pct = pd.to_numeric(df["funding_abs_pct"], errors="coerce").astype(float)
-        f_abs = pd.to_numeric(df["funding_abs"], errors="coerce").astype(float)
-        
-        accel_pct = float(params.get("accel_pct", self.default_accel_pct))
-        accel_lookback = int(params.get("accel_lookback", 12))
-        persistence_pct = float(params.get("persistence_pct", self.default_persistence_pct))
-        persistence_bars = int(params.get("persistence_bars", 8))
-        threshold_window = int(params.get("threshold_window", 2880))
-
-        accel = f_abs - f_abs.shift(accel_lookback)
-        accel = accel.where(accel > 0.0)
-        accel_rank = percentile_rank_historical(accel, window=threshold_window, min_periods=max(24, accel_lookback))
-        accel_raw = ((accel_rank >= accel_pct) & (accel_rank.shift(1) < accel_pct)).fillna(False)
-
-        high = (f_pct >= persistence_pct).fillna(False)
-        run_len = pd.Series(list(_run_length(high)), index=high.index)
-        persistence_raw = (high & (run_len == persistence_bars)).fillna(False)
-        
-        return {
-            "funding_abs_pct": f_pct, 
-            "funding_abs": f_abs, 
-            "mask": (accel_raw | persistence_raw).fillna(False)
-        }
+        return prepare_funding_persistence_features(df, self._signed_funding(df), self.defaults, params)
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features["mask"]
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        del df, params
+        return features["signal_intensity"].fillna(0.0)
+
+    def compute_metadata(self, idx: int, features: dict[str, pd.Series], **params: Any) -> dict[str, Any]:
+        base = super().compute_metadata(idx, features, **params)
+        base.update(
+            {
+                "funding_subtype": str(features["subtype"].iloc[idx]),
+                "funding_run_length": float(np.nan_to_num(features["run_len"].iloc[idx], nan=0.0)),
+                "funding_accel_rank": float(np.nan_to_num(features["accel_rank"].iloc[idx], nan=0.0)),
+            }
+        )
+        return base
 
 
 class FundingNormalizationDetector(BaseFundingDetector):
@@ -124,32 +139,24 @@ class FundingNormalizationDetector(BaseFundingDetector):
     event_type = "FUNDING_NORMALIZATION_TRIGGER"
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        f_pct = pd.to_numeric(df["funding_abs_pct"], errors="coerce").astype(float)
-        f_abs = pd.to_numeric(df["funding_abs"], errors="coerce").astype(float)
-        
-        extreme_pct = float(params.get("extreme_pct", self.default_extreme_pct))
-        normalization_pct = float(params.get("normalization_pct", self.default_normalization_pct))
-        normalization_lookback = int(
-            params.get("normalization_lookback", self.default_normalization_lookback)
-        )
-
-        recent_extreme = (
-            (f_pct.shift(1) >= extreme_pct)
-            .rolling(window=normalization_lookback, min_periods=1)
-            .max()
-            .fillna(0)
-            .astype(bool)
-        )
-        mask = (
-            (f_pct <= normalization_pct)
-            & (f_pct.shift(1) > normalization_pct)
-            & recent_extreme
-        ).fillna(False)
-        
-        return {"funding_abs_pct": f_pct, "funding_abs": f_abs, "mask": mask}
+        return prepare_funding_normalization_features(df, self._signed_funding(df), self.defaults, params)
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features["mask"]
+
+    def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        del df, params
+        return features["signal_intensity"].fillna(0.0)
+
+    def compute_metadata(self, idx: int, features: dict[str, pd.Series], **params: Any) -> dict[str, Any]:
+        base = super().compute_metadata(idx, features, **params)
+        base.update(
+            {
+                "funding_subtype": "normalization",
+                "prior_extreme_pct": float(np.nan_to_num(features["prior_extreme_pct"].iloc[idx], nan=0.0)),
+            }
+        )
+        return base
 
 
 class FundingDetector(BaseFundingDetector):
@@ -163,6 +170,7 @@ class FundingDetector(BaseFundingDetector):
         return {
             "funding_abs_pct": onset["funding_abs_pct"],
             "funding_abs": onset["funding_abs"],
+            "funding_signed": onset["funding_signed"],
             "FUNDING_EXTREME_ONSET": onset["mask"],
             "FUNDING_PERSISTENCE_TRIGGER": persistence["mask"],
             "FUNDING_NORMALIZATION_TRIGGER": normalization["mask"],
@@ -187,34 +195,50 @@ class FundingDetector(BaseFundingDetector):
 class FundingFlipDetector(ThresholdDetector):
     event_type = "FUNDING_FLIP"
     required_columns = ("timestamp", "funding_rate_scaled")
-    min_magnitude_quantile: float = 0.50
+    causal = False
+    min_spacing = 24
+    min_magnitude_quantile: float = 0.75
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         funding = pd.to_numeric(df["funding_rate_scaled"], errors="coerce").astype(float)
         funding_abs = funding.abs()
+        funding_prev_abs = funding_abs.shift(1)
         
         # Adaptive thresholds
         window = int(params.get("threshold_window", 2880))
         q_mag = float(params.get("min_magnitude_quantile", self.min_magnitude_quantile))
+        min_flip_abs = float(params.get("min_flip_abs", 2.5e-4))
         
         funding_q_mag = funding_abs.rolling(window, min_periods=288).quantile(q_mag).shift(1)
+        required_abs = funding_q_mag.fillna(0.0).clip(lower=min_flip_abs)
         
         return {
             "funding": funding, 
-            "funding_abs": funding_abs, 
-            "funding_q_mag": funding_q_mag
+            "funding_abs": funding_abs,
+            "funding_prev_abs": funding_prev_abs,
+            "required_abs": required_abs,
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        del df, params
+        del df
         funding = features["funding"]
         funding_abs = features["funding_abs"]
-        funding_q_mag = features["funding_q_mag"]
+        funding_prev_abs = features["funding_prev_abs"]
+        required_abs = features["required_abs"]
+        persistence_bars = int(params.get("persistence_bars", 2))
         
-        flip = (np.sign(funding) != np.sign(funding.shift(1))).fillna(False)
-        significant = (funding_abs >= funding_q_mag).fillna(False)
+        sign_now = np.sign(funding)
+        sign_prev = np.sign(funding.shift(1))
+        flip = ((sign_now != sign_prev) & (sign_now != 0) & (sign_prev != 0)).fillna(False)
+        significant = ((funding_abs >= required_abs) & (funding_prev_abs >= required_abs)).fillna(False)
+        if persistence_bars > 1:
+            future_same_sign = pd.Series(True, index=funding.index, dtype=bool)
+            for step in range(1, persistence_bars):
+                future_same_sign &= (np.sign(funding.shift(-step)) == sign_now).fillna(False)
+        else:
+            future_same_sign = pd.Series(True, index=funding.index, dtype=bool)
         
-        return (flip & significant).fillna(False)
+        return (flip & significant & future_same_sign).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         del df, params

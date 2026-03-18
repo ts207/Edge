@@ -1,24 +1,30 @@
 # Contracts Layer (`project/contracts`)
 
-The contracts layer defines the formal interfaces and data schemas between all other layers.
+The contracts layer defines the formal interfaces between stages, artifacts, and schema-validated outputs.
 
-## 1. Ownership
-- **Schema Definitions**: Pydantic models for data interchange.
-- **System Mapping**: Formal representation of platform components.
-- **Invariant Validation**: Rules for artifact integrity (manifests, traces).
+## Ownership
 
-## 2. Non-Ownership
-- **Business Logic**: It never performs calculations; it only validates their results.
-- **Configuration**: It defines the *schema* for config, but not the values.
-- **Pipeline Execution**: It doesn't run tasks; it verifies the artifacts they produce.
+- pipeline and stage-family contract definitions
+- artifact input and output declarations
+- schema normalization and validation helpers
+- generated system-map payloads and related integrity checks
 
-## 3. Public Interfaces
-- **`SystemMap`**: The graph of the entire platform.
-- **`SchemaRegistry`**: Central access point for all Pydantic schemas.
-- **`ContractVerification`**: API for checking if a dataframe or artifact adheres to a schema.
+## Non-Ownership
 
-## 4. Constraints
-- **Core-Only Dependency**: Contracts can only import from `core`.
-- **Side-Effect Free**: Importing or using a contract must not modify system state.
-- **Truth Source**: For any artifact (e.g., `strategy_trace`), this layer is the source of truth for its schema.
-- **Honest Dependency Declaration**: Stage contracts must declare optional raw inputs that implementations may read at runtime.
+- business logic or numerical computation
+- runtime orchestration
+- environment-specific configuration values
+
+## Important Modules
+
+- `pipeline_registry.py`: source of truth for stage-family registry definitions
+- `artifacts.py`: artifact contract registry
+- `schemas.py`: dataframe normalization and schema validation
+- `stage_dag.py`: stage-family contract view used by tests and generated docs
+- `system_map.py`: machine-readable and markdown system map generation
+
+## Constraints
+
+- Imports should stay side-effect free.
+- Contract declarations should reflect the artifacts implementations actually read and write.
+- Generated docs should be derived from these contracts rather than edited by hand.

@@ -30,11 +30,7 @@
         "high_96",
         "low_96",
         "range_96",
-        "range_med_2880",
-        "ms_vpin_24",
-        "ms_roll_24",
-        "ms_amihud_24",
-        "ms_kyle_24"
+        "range_med_2880"
       ],
       "optional_gated_columns": [
         "spread_bps",
@@ -43,7 +39,8 @@
         "tob_age_bars",
         "funding_age_bars",
         "oi_age_bars",
-        "liq_age_bars"
+        "liq_age_bars",
+        "ms_imbalance_24"
       ]
     },
     "context_funding_persistence_v1": {

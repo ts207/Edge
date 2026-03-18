@@ -9,7 +9,7 @@ from project.pipelines.research.bridge_evaluate_phase2 import (
 )
 from project.research.bridge_evaluation import bridge_metrics_for_row
 
-def test_bridge_summary_count_fields_include_canonical_and_legacy_aliases():
+def test_bridge_summary_count_fields_include_canonical_and_extended_detectors():
     out = _bridge_summary_count_fields(
         n_candidates_in=12,
         n_candidates_tradable=3,

@@ -18,8 +18,12 @@ from project.research.search.feasibility import FeasibilityResult, check_hypothe
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec, TriggerType
 from project.research.search.stage_models import CandidateHypothesis, FeasibilityCheckedHypothesis
 from project.research.search.validation import validate_hypothesis_spec
-from project.spec_validation.loaders import load_search_spec
-from project.spec_validation.search import expand_triggers, resolve_entry_lags, resolve_filter_templates
+from project.spec_validation import (
+    expand_triggers,
+    loaders,
+    resolve_entry_lags,
+    resolve_filter_templates,
+)
 
 log = logging.getLogger(__name__)
 
@@ -139,7 +143,7 @@ def generate_hypotheses_with_audit(
         from project.spec_registry import load_yaml_path
         doc = load_yaml_path(Path(search_space_path))
     else:
-        doc = load_search_spec(search_spec_name)
+        doc = loaders.load_search_spec(search_spec_name)
     
     # Expand triggers from families and explicit lists
     expanded = expand_triggers(doc)

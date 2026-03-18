@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.research.search.evaluator import METRICS_COLUMNS
+import project.research.search.distributed_runner as distributed_runner
 from project.research.search.distributed_runner import run_distributed_search
 
 
@@ -72,3 +72,31 @@ def test_run_distributed_search_empty_hypotheses():
     result = run_distributed_search([], features, n_workers=1)
     assert isinstance(result, pd.DataFrame)
     assert len(result) == 0
+
+
+def test_run_distributed_search_forwards_context_quality_flag(monkeypatch):
+    captured: list[bool] = []
+
+    def fake_evaluate(chunk, features, *, min_sample_size, use_context_quality):
+        del chunk, features, min_sample_size
+        captured.append(bool(use_context_quality))
+        return pd.DataFrame(columns=METRICS_COLUMNS)
+
+    monkeypatch.setattr(distributed_runner, "evaluate_hypothesis_batch", fake_evaluate)
+
+    run_distributed_search(
+        _make_hypotheses(4),
+        _make_features(),
+        n_workers=1,
+        chunk_size=2,
+        use_context_quality=True,
+    )
+    run_distributed_search(
+        _make_hypotheses(4),
+        _make_features(),
+        n_workers=1,
+        chunk_size=2,
+        use_context_quality=False,
+    )
+
+    assert captured == [True, False]

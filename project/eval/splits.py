@@ -30,7 +30,7 @@ def build_time_splits(
     end: str | pd.Timestamp,
     train_frac: float = 0.6,
     validation_frac: float = 0.2,
-    embargo_days: int = 0,
+    embargo_days: int = 5,
 ) -> List[SplitWindow]:
     """
     Deterministic walk-forward windows with optional embargo between split boundaries.
@@ -83,7 +83,7 @@ def build_time_splits_with_purge(
     end: str | pd.Timestamp,
     train_frac: float = 0.6,
     validation_frac: float = 0.2,
-    embargo_days: int = 0,
+    embargo_days: int = 5,
     purge_bars: int = 0,
     bar_duration_minutes: int = 5,
 ) -> List[SplitWindow]:
@@ -124,7 +124,7 @@ def build_repeated_walk_forward_folds(
     n_folds: int = 5,
     train_frac: float = 0.5,
     validation_frac: float = 0.2,
-    embargo_days: int = 0,
+    embargo_days: int = 5,
     purge_bars: int = 0,
     bar_duration_minutes: int = 5,
 ) -> List[List[SplitWindow]]:

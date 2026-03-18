@@ -1,7 +1,22 @@
-from project.execution.backtest.engine import run_engine
-from project.execution.runtime.dsl_interpreter import DslInterpreterV1
+import project.artifacts as artifacts
+import project.compilers as compilers
+import project.experiments as experiments
+import project.eval as eval_pkg
+import project.live as live
+import project.pipelines.clean as pipelines_clean
+import project.pipelines.features as pipelines_features
+import project.pipelines.ingest as pipelines_ingest
+import project.pipelines.smoke as pipelines_smoke
+import project.portfolio as portfolio
+import project.research.clustering as research_clustering
+import project.research.reports as research_reports
+import project.research.utils as research_utils
+import project.spec_validation as spec_validation
+import project.apps.pipeline.manifest as app_manifest
+from project.engine.runner import run_engine
+from project.strategy.runtime import DslInterpreterV1
 from project.infra.io import ensure_dir, read_parquet, write_parquet
-from project.infra.orchestration.run_all import main as run_all_main
+from project.pipelines.run_all import main as run_all_main
 import project.strategy.dsl as strategy_dsl
 import project.strategy.runtime as strategy_runtime
 import project.strategy.templates as strategy_templates
@@ -29,3 +44,33 @@ def test_cosmetic_infra_namespace_is_importable():
     assert callable(read_parquet)
     assert callable(write_parquet)
     assert callable(run_all_main)
+
+
+def test_cosmetic_apps_namespace_is_importable():
+    assert callable(app_manifest.start_manifest)
+    assert callable(app_manifest.finalize_manifest)
+    assert callable(app_manifest.load_run_manifest)
+
+
+def test_explicit_package_root_surfaces_are_importable():
+    assert callable(artifacts.run_manifest_path)
+    assert callable(artifacts.load_json_dict)
+    assert compilers.ExecutableStrategySpec is not None
+    assert callable(compilers.transform_blueprint_to_spec)
+    assert callable(experiments.resolve_experiment_config)
+    assert experiments.ExperimentConfig is not None
+    assert eval_pkg.multiplicity is not None
+    assert callable(eval_pkg.build_time_splits)
+    assert live.LiveEngineRunner is not None
+    assert callable(live.check_kill_switch_triggers)
+    assert pipelines_clean.build_cleaned_bars is not None
+    assert pipelines_features.build_features is not None
+    assert pipelines_ingest.build_universe_snapshots is not None
+    assert callable(pipelines_smoke.smoke_offline_main)
+    assert portfolio.AllocationSpec is not None
+    assert callable(portfolio.calculate_target_notional)
+    assert callable(research_clustering.cluster_hypotheses)
+    assert callable(research_reports.generate_strategy_summary)
+    assert callable(research_utils.fail_closed_bool)
+    assert spec_validation.loaders is not None
+    assert callable(spec_validation.validate_ontology)

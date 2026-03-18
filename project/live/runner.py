@@ -10,6 +10,7 @@ from project.live.kill_switch import KillSwitchManager, KillSwitchReason
 from project.live.oms import OrderManager, OrderType, OrderStatus, build_live_order_from_strategy_result
 from project.live.state import LiveStateStore
 from project.live.execution_attribution import summarize_execution_attribution_by
+from project.live.health_checks import DataHealthMonitor
 
 _LOG = logging.getLogger(__name__)
 
@@ -30,18 +31,24 @@ class LiveEngineRunner:
         execution_degradation_throttle_scale: float = 0.5,
         order_manager: OrderManager | None = None,
         data_manager: Any | None = None,
+        health_check_interval_seconds: float = 5.0,
+        stale_threshold_sec: float = 10.0,
+        reconcile_at_startup: bool = True,
     ):
         self.symbols = symbols
-        if data_manager is None:
-            from project.live.ingest.manager import LiveDataManager
-
-            data_manager = LiveDataManager(symbols)
-        self.data_manager = data_manager
         self.state_store = LiveStateStore(snapshot_path=snapshot_path)
         self.kill_switch = KillSwitchManager(
             self.state_store,
             microstructure_recovery_streak=microstructure_recovery_streak,
         )
+        if data_manager is None:
+            from project.live.ingest.manager import LiveDataManager
+
+            data_manager = LiveDataManager(
+                symbols,
+                on_reconnect_exhausted=self._on_ws_reconnect_exhausted,
+            )
+        self.data_manager = data_manager
         self.order_manager = order_manager or OrderManager()
         self.execution_quality_report_path = (
             Path(execution_quality_report_path) if execution_quality_report_path is not None else None
@@ -54,6 +61,9 @@ class LiveEngineRunner:
         self.execution_degradation_throttle_scale = min(
             1.0, max(0.0, float(execution_degradation_throttle_scale))
         )
+        self.health_monitor = DataHealthMonitor(stale_threshold_sec=stale_threshold_sec)
+        self.health_check_interval_seconds = max(1.0, float(health_check_interval_seconds))
+        self.reconcile_at_startup = bool(reconcile_at_startup)
         self.account_snapshot_fetcher = account_snapshot_fetcher
         self.account_sync_failure_count = 0
         self._running = False
@@ -211,6 +221,20 @@ class LiveEngineRunner:
         _LOG.info("Starting Live Engine for %s", self.symbols)
         if self.state_store._snapshot_path is not None:
             _LOG.info("Live state auto-persist enabled at %s", self.state_store._snapshot_path)
+            
+        if self.reconcile_at_startup and self.account_snapshot_fetcher is not None:
+            _LOG.info("Performing strict startup reconciliation...")
+            exchange_snapshot = await self.account_snapshot_fetcher()
+            discrepancies = self.state_store.reconcile(exchange_snapshot)
+            if discrepancies:
+                for error in discrepancies:
+                    _LOG.error(f"RECONCILIATION ERROR: {error}")
+                raise RuntimeError(
+                    f"Startup reconciliation failed with {len(discrepancies)} discrepancies. "
+                    "Aborting startup for safety."
+                )
+            _LOG.info("Reconciliation successful.")
+
         self._running = True
         
         # Start the data ingestion manager
@@ -219,6 +243,7 @@ class LiveEngineRunner:
         # Start consumers
         self._tasks.append(asyncio.create_task(self._consume_klines()))
         self._tasks.append(asyncio.create_task(self._consume_tickers()))
+        self._tasks.append(asyncio.create_task(self._monitor_data_health()))
         if self.account_snapshot_fetcher is not None:
             self._tasks.append(asyncio.create_task(self._sync_account_state()))
         
@@ -243,6 +268,7 @@ class LiveEngineRunner:
                 event = await self.data_manager.kline_queue.get()
                 # Here we would update the live engine's feature state
                 _LOG.debug(f"Consumed kline: {event.symbol} {event.timeframe} close={event.close} final={event.is_final}")
+                self.health_monitor.on_event(event.symbol, f"kline:{event.timeframe}")
                 self.data_manager.kline_queue.task_done()
             except asyncio.CancelledError:
                 break
@@ -255,6 +281,7 @@ class LiveEngineRunner:
                 event = await self.data_manager.ticker_queue.get()
                 # Here we would update order execution state, bid/ask spread, etc.
                 _LOG.debug(f"Consumed ticker: {event.symbol} bid={event.best_bid_price} ask={event.best_ask_price}")
+                self.health_monitor.on_event(event.symbol, "ticker")
                 self.data_manager.ticker_queue.task_done()
             except asyncio.CancelledError:
                 break
@@ -282,6 +309,32 @@ class LiveEngineRunner:
                         ),
                     )
             await asyncio.sleep(self.account_sync_interval_seconds)
+
+    async def _monitor_data_health(self):
+        while self._running:
+            try:
+                report = self.health_monitor.check_health()
+                if not report["is_healthy"]:
+                    self.kill_switch.trigger(
+                        KillSwitchReason.STALE_DATA,
+                        (
+                            f"Stale data feeds detected: {report['stale_count']} streams "
+                            f"(max_staleness={report['max_last_seen_sec_ago']}s)"
+                        ),
+                    )
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                _LOG.error(f"Error monitoring data health: {e}")
+            await asyncio.sleep(self.health_check_interval_seconds)
+
+    def _on_ws_reconnect_exhausted(self) -> None:
+        """Callback invoked when the WebSocket client exhausts all reconnect attempts."""
+        _LOG.error("WebSocket reconnect retries exhausted; triggering EXCHANGE_DISCONNECT kill-switch.")
+        self.kill_switch.trigger(
+            KillSwitchReason.EXCHANGE_DISCONNECT,
+            "WebSocket connection lost and all reconnect attempts exhausted",
+        )
 
 async def main(snapshot_path: str | Path | None = None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")

@@ -13,8 +13,7 @@ import pandas as pd
 import numpy as np
 
 from project.research.gating import two_sided_p_from_t
-from project.spec_validation.ontology import get_event_family
-from project.spec_validation.search import resolve_execution_templates
+from project.spec_validation import get_event_family, resolve_execution_templates
 
 log = logging.getLogger(__name__)
 

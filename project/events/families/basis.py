@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,7 @@ from project.events.detectors.dislocation import DislocationDetector
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.events.sparsify import sparsify_mask
 from project.events.thresholding import rolling_robust_zscore, dynamic_quantile_floor, rolling_vol_regime_factor
+from project.features.context_guards import state_at_least
 from project.research.analyzers import run_analyzer_suite
 
 
@@ -16,7 +17,7 @@ class BasisDislocationDetector(DislocationDetector):
     event_type = 'BASIS_DISLOC'
     required_columns = ('timestamp', 'close_perp', 'close_spot')
     signal_column = 'basis_zscore'
-    threshold = 3.0
+    threshold = 3.5
     min_spacing = 24
     timeframe_minutes = 5
     default_severity = 'moderate'
@@ -59,51 +60,30 @@ class BasisDislocationDetector(DislocationDetector):
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return pd.to_numeric(features['basis_zscore'], errors='coerce').abs()
 
+    def compute_direction(self, idx: int, features: Mapping[str, pd.Series], **params: Any) -> str:
+        basis_bps = float(pd.to_numeric(features['basis_bps'], errors='coerce').iloc[idx])
+        return 'up' if basis_bps >= 0 else 'down'
+
+    def compute_severity(self, idx: int, intensity: float, features: Mapping[str, pd.Series], **params: Any) -> str:
+        z = float(pd.to_numeric(features['basis_zscore'], errors='coerce').iloc[idx])
+        return 'extreme' if abs(z) >= 5.0 else 'major' if abs(z) >= 4.0 else 'moderate'
+
+    def compute_metadata(self, idx: int, features: Mapping[str, pd.Series], **params: Any) -> Mapping[str, Any]:
+        z = float(pd.to_numeric(features['basis_zscore'], errors='coerce').iloc[idx])
+        basis_bps = float(pd.to_numeric(features['basis_bps'], errors='coerce').iloc[idx])
+        return {
+            'event_idx': int(idx),
+            'basis_bps': basis_bps,
+            'basis_zscore': z,
+            'vol_regime': str(features['vol_regime'].iloc[idx]),
+        }
+
     def event_indices(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> list[int]:
         mask = self.compute_raw_mask(df, features=features, **params)
         mask = mask.astype("boolean")
         mask = (mask & ~mask.shift(1, fill_value=False)).astype(bool)
         spacing = int(params.get('cooldown_bars', params.get('min_spacing', self.min_spacing)))
         return sparsify_mask(mask, min_spacing=spacing)
-
-    def detect(self, df: pd.DataFrame, *, symbol: str, **params: Any) -> pd.DataFrame:
-        self.check_required_columns(df)
-        if df.empty:
-            return pd.DataFrame(columns=EVENT_COLUMNS)
-        features = self.prepare_features(df, **params)
-        intensity = self.compute_intensity(df, features=features, **params)
-        rows: list[dict[str, Any]] = []
-        for sub_idx, idx in enumerate(self.event_indices(df, features=features, **params)):
-            ts = pd.to_datetime(df.at[idx, 'timestamp'], utc=True, errors='coerce')
-            if pd.isna(ts): continue
-            z = float(pd.to_numeric(features['basis_zscore'], errors='coerce').iloc[idx])
-            basis_bps = float(pd.to_numeric(features['basis_bps'], errors='coerce').iloc[idx])
-            severity = 'extreme' if abs(z) >= 5.0 else 'major' if abs(z) >= 4.0 else 'moderate'
-            rows.append(
-                emit_event(
-                    event_type=self.event_type,
-                    symbol=symbol,
-                    event_id=format_event_id(self.event_type, symbol, int(idx), sub_idx),
-                    eval_bar_ts=ts,
-                    intensity=float(np.nan_to_num(intensity.iloc[idx], nan=1.0)),
-                    severity=severity,
-                    timeframe_minutes=self.timeframe_minutes,
-                    direction='long' if basis_bps >= 0 else 'short',
-                    sign=1 if basis_bps >= 0 else -1,
-                    metadata={
-                        'event_idx': int(idx),
-                        'basis_bps': basis_bps,
-                        'basis_zscore': z,
-                        'vol_regime': str(features['vol_regime'].iloc[idx]),
-                    },
-                )
-            )
-        events = pd.DataFrame(rows) if rows else pd.DataFrame(columns=EVENT_COLUMNS)
-        if not events.empty:
-            events['timestamp'] = events['signal_ts']
-            if 'duration_bars' not in events.columns:
-                events['duration_bars'] = 1
-        return events
 
 
 class CrossVenueDesyncDetector(BasisDislocationDetector):
@@ -112,7 +92,13 @@ class CrossVenueDesyncDetector(BasisDislocationDetector):
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         # Accept older column aliases, but prefer the canonical dual-market feature names.
-        work = df.rename(columns={'close': 'close_spot', 'perp_close': 'close_perp'})
+        # Audit 4.5: Defensively handle renaming to avoid overwriting existing canonical columns.
+        work = df.copy()
+        if "close_spot" not in work.columns and "close" in work.columns:
+            work = work.rename(columns={"close": "close_spot"})
+        if "close_perp" not in work.columns and "perp_close" in work.columns:
+            work = work.rename(columns={"perp_close": "close_perp"})
+            
         features = super().prepare_features(work, **params)
         persistence_bars = int(params.get('persistence_bars', 2))
         features['persistent_shock'] = (
@@ -141,7 +127,7 @@ class FndDislocDetector(BasisDislocationDetector):
         funding_q95 = dynamic_quantile_floor(
             funding_abs,
             window=2880,
-            quantile=float(params.get('funding_quantile', 0.95)),
+            quantile=float(params.get('funding_quantile', 0.90)),
             floor=threshold_bps / 10_000.0,
         )
         features.update(
@@ -150,16 +136,26 @@ class FndDislocDetector(BasisDislocationDetector):
                 'funding_abs': funding_abs,
                 'funding_q95': funding_q95,
                 'funding_sign': np.sign(funding.fillna(0.0)),
+                'canonical_funding_extreme': state_at_least(
+                    df,
+                    'ms_funding_state',
+                    2.0,
+                    min_confidence=float(params.get('context_min_confidence', 0.55)),
+                    max_entropy=float(params.get('context_max_entropy', 0.90)),
+                ),
             }
         )
         return features
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         basis_mask = super().compute_raw_mask(df, features=features, **params)
-        funding_extreme = (features['funding_abs'] >= features['funding_q95']).fillna(False)
+        funding_extreme = (
+            (features['funding_abs'] >= features['funding_q95']).fillna(False)
+            & features['canonical_funding_extreme'].fillna(False)
+        )
         
         # Allow alignment within a window (e.g. 3 bars) to improve recall
-        alignment_window = int(params.get('alignment_window', 3))
+        alignment_window = int(params.get('alignment_window', 5))
         basis_active = basis_mask.rolling(window=alignment_window, min_periods=1).max().astype(bool)
         
         sign_align = (
@@ -243,8 +239,16 @@ def detect_basis_family(
     )
     if not events.empty:
         events['timestamp'] = events['signal_ts']
-        events['severity'] = events.get('event_score', events['evt_signal_intensity'])
-        events['intensity'] = events.get('evt_signal_intensity', events.get('event_score'))
+        # Audit 3.7: Correct semantic mapping for severity and intensity
+        if 'severity' not in events.columns and 'event_score' in events.columns:
+            events['severity'] = events['event_score']
+        
+        if 'intensity' not in events.columns:
+            if 'evt_signal_intensity' in events.columns:
+                events['intensity'] = events['evt_signal_intensity']
+            elif 'event_score' in events.columns:
+                events['intensity'] = events['event_score']
+
         if 'duration_bars' not in events.columns:
             events['duration_bars'] = 1
         else:

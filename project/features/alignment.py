@@ -5,7 +5,7 @@ import numpy as np
 
 from project.contracts.temporal_contracts import TemporalContract
 from project.core.validation import ts_ns_utc
-from project.core.sanity import assert_monotonic_utc_timestamp
+from project.core.validation import assert_monotonic_utc_timestamp
 
 LOGGER = logging.getLogger(__name__)
 

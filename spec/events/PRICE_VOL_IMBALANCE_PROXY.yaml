@@ -8,9 +8,11 @@ reports_dir: liquidity_dislocation
 events_file: liquidity_dislocation_events.parquet
 signal_column: price_vol_imbalance_proxy_event
 parameters:
-  lookback_window: 288
-  z_threshold: 3.0
-  cooldown_bars: 12
+  ret_quantile: 0.995
+  rv_quantile: 0.9
+  volume_quantile: 0.9
+  min_history_bars: 288
+  min_spacing: 24
+  cooldown_bars: 24
   merge_gap_bars: 0
-  min_volume_quantile: 0.2
 canonical_family: LIQUIDITY_DISLOCATION

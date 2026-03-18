@@ -51,6 +51,14 @@ operators:
     - STATISTICAL_DISLOCATION
     - TEMPORAL_STRUCTURE
     - VOLATILITY_TRANSITION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required:
     - tail_risk_avoid
@@ -68,6 +76,14 @@ operators:
     - TEMPORAL_STRUCTURE
     - TREND_STRUCTURE
     - VOLATILITY_TRANSITION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required: []
   trend_continuation:
@@ -81,6 +97,14 @@ operators:
     - TREND_STRUCTURE
     - VOLATILITY_TRANSITION
     - LIQUIDITY_DISLOCATION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required:
     - drawdown_filter
@@ -95,6 +119,14 @@ operators:
     - TREND_STRUCTURE
     - VOLATILITY_TRANSITION
     - LIQUIDITY_DISLOCATION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required: []
   false_breakout_reversal:
@@ -106,6 +138,14 @@ operators:
     test_spec: mean_gt_0
     compatible_families:
     - TREND_STRUCTURE
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required: []
   overshoot_repair:
@@ -118,6 +158,14 @@ operators:
     compatible_families:
     - LIQUIDITY_DISLOCATION
     - STATISTICAL_DISLOCATION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required:
     - tail_risk_avoid
@@ -132,6 +180,14 @@ operators:
     - TREND_STRUCTURE
     - VOLATILITY_TRANSITION
     - LIQUIDITY_DISLOCATION
+    - ABSORPTION_PROXY
+    - DEPTH_STRESS_PROXY
+    - FLOW_EXHAUSTION_PROXY
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - PRICE_VOL_IMBALANCE_PROXY
+    - WICK_REVERSAL_PROXY
+    - LIQUIDATION_EXHAUSTION_REVERSAL
     default_conditioning: {}
     risk_metrics_required:
     - drawdown_filter

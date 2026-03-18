@@ -65,7 +65,8 @@ def build_ingest_stages(
         stages.append((
             "ingest_binance_um_open_interest_hist",
             project_root / "pipelines" / "ingest" / "ingest_binance_um_open_interest_hist.py",
-            ["--run_id", run_id, "--symbols", symbols, "--start", start, "--end", end, "--period", str(args.open_interest_period), "--force", force_flag],
+            # LT-002: Force "5m" to enforce the standard binance archive source
+            ["--run_id", run_id, "--symbols", symbols, "--start", start, "--end", end, "--period", "5m", "--force", force_flag],
         ))
 
     return stages

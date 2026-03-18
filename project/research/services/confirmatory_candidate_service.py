@@ -500,3 +500,94 @@ def write_confirmatory_window_plan(
     out_path = report_dir / "confirmatory_window_plan.json"
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return out_path
+
+
+def build_confirmatory_workflow_payload(
+    *,
+    data_root: Path,
+    origin_run_id: str,
+    target_run_id: str | None = None,
+) -> Dict[str, Any]:
+    window_plan = plan_confirmatory_window(
+        data_root=data_root,
+        origin_run_id=origin_run_id,
+    )
+    comparison: Dict[str, Any] = {}
+    workflow_status = "planning_only"
+    next_action = "inspect_confirmatory_plan"
+    blocking_reason = ""
+
+    target = str(target_run_id or "").strip()
+    if not target:
+        readiness = str(window_plan.get("readiness", "")).strip()
+        if readiness == "blocked_by_missing_forward_data":
+            workflow_status = "blocked"
+            next_action = "ingest_forward_data"
+            blocking_reason = str(window_plan.get("next_required_funding_month", "")).strip()
+        elif readiness in {"ready", "ready_to_run_forward_confirmatory"}:
+            workflow_status = "ready_for_confirmatory_run"
+            next_action = "run_confirmatory"
+        return {
+            "origin_run_id": origin_run_id,
+            "target_run_id": None,
+            "workflow_status": workflow_status,
+            "next_action": next_action,
+            "blocking_reason": blocking_reason,
+            "window_plan": window_plan,
+            "comparison": comparison,
+        }
+
+    comparison = compare_confirmatory_candidates(
+        data_root=data_root,
+        origin_run_id=origin_run_id,
+        target_run_id=target,
+    )
+    matched = dict(comparison.get("matched_summary", {}))
+    matched_rows = int(matched.get("matched_structural_rows", 0))
+    matched_gate_pass = int(matched.get("matched_gate_pass_count", 0))
+    matched_strict_pass = int(matched.get("matched_strict_pass_count", 0))
+
+    if matched_strict_pass > 0:
+        workflow_status = "confirmatory_strict_pass"
+        next_action = "promotion_review"
+    elif matched_gate_pass > 0:
+        workflow_status = "confirmatory_pass"
+        next_action = "review_for_promotion"
+    elif matched_rows > 0:
+        workflow_status = "confirmatory_failed"
+        next_action = "review_fail_reasons"
+    else:
+        workflow_status = "no_structural_match"
+        next_action = "reframe_confirmatory_slice"
+
+    return {
+        "origin_run_id": origin_run_id,
+        "target_run_id": target,
+        "workflow_status": workflow_status,
+        "next_action": next_action,
+        "blocking_reason": "",
+        "window_plan": window_plan,
+        "comparison": comparison,
+    }
+
+
+def write_confirmatory_workflow_report(
+    *,
+    data_root: Path,
+    origin_run_id: str,
+    target_run_id: str | None = None,
+    out_dir: Path | None = None,
+) -> Path:
+    payload = build_confirmatory_workflow_payload(
+        data_root=data_root,
+        origin_run_id=origin_run_id,
+        target_run_id=target_run_id,
+    )
+    if target_run_id:
+        report_dir = out_dir if out_dir is not None else data_root / "reports" / "confirmatory_workflow" / str(target_run_id) / f"vs_{origin_run_id}"
+    else:
+        report_dir = out_dir if out_dir is not None else data_root / "reports" / "confirmatory_workflow" / origin_run_id
+    report_dir.mkdir(parents=True, exist_ok=True)
+    out_path = report_dir / "confirmatory_workflow.json"
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return out_path

@@ -616,6 +616,9 @@ events:
     instrument_classes:
     - crypto
     - futures
+    parameters:
+      min_spacing: 192
+      trend_window: 96
     requires_features: []
     sequence_eligible: true
     tags: []

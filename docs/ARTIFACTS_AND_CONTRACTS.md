@@ -1,20 +1,20 @@
 # Artifacts And Contracts
 
-## Principle
+Artifacts are contracts, not incidental files.
 
-The agent must treat repository artifacts as durable contracts, not incidental files.
+A run is trustworthy only when the expected artifacts exist and reconcile with the manifests and logs that describe them.
 
-## Primary Artifact Layers
+## Artifact Layers
 
 ### Run Layer
 
 Located under `data/runs/<run_id>/`.
 
-Use for:
+Use it for:
 
-- run status
-- planned stage list
-- stage manifests
+- overall run status
+- planned stages
+- per-stage manifests
 - stage logs
 - reconciliation checks
 
@@ -22,48 +22,48 @@ Use for:
 
 Located under `data/reports/`.
 
-Use for:
+Use it for:
 
-- phase 2 candidate outputs
+- phase 2 outputs
+- candidate exports
 - discovery summaries
-- edge candidate exports
 - promotion audits
-- registry updates
+- benchmark and comparison reports
 
 ### Event Layer
 
 Located under `data/events/<run_id>/`.
 
-Use for:
+Use it for:
 
 - event materialization
-- registry manifests
-- event-level troubleshooting
+- event-level debugging
+- detector registry and event report verification
 
 ### Lake Layer
 
 Located under `data/lake/runs/<run_id>/`.
 
-Use for:
+Use it for:
 
 - cleaned bars
 - feature tables
 - context features
-- market context
+- market-state features
+- rollups used downstream
 
-## Contract Expectations
+## Core Contract Expectations
 
-The agent should expect:
+Normal expectations:
 
-- manifests to match actual terminal stage status
-- zero-candidate bridge stages to finalize as successful no-op stages rather than runner failures
-- exported candidates to include downstream-required fields
-- promotion fallbacks to emit the same normalized candidate contract as the canonical export path
-- split-aware metrics to survive into promotion-facing artifacts
-- storage writes for durable artifacts to flow through the shared IO helpers rather than direct parquet writes
-- warnings to be informative rather than overwhelming
+- manifests match actual stage outcomes
+- stage success implies the expected outputs exist
+- zero-candidate no-op stages are still successful if that is the intended behavior
+- exported candidates carry required downstream fields
+- split-aware metrics survive into promotion-facing artifacts
+- generated diagnostics agree with the code and registry surfaces that produced them
 
-## Contract Failure Classes
+## Failure Classes
 
 ### Mechanical Contract Failure
 
@@ -71,43 +71,64 @@ Examples:
 
 - missing input artifact
 - stale manifest after replay
-- stage success with no outputs
+- success status with missing outputs
 - logs disagree with manifests
-- detector registry metadata disagrees with the runnable detector inventory
 
 ### Semantic Contract Failure
 
 Examples:
 
-- field exists but carries wrong meaning
-- parameter units drift from their canonical meaning, for example bps floors being compared against decimal funding rates
-- train metric computed on all rows
-- regime-conditioned run contains unconditional duplicates
+- field exists but means the wrong thing
+- units drift from the canonical definition
+- train metrics are computed over all rows
+- regime-conditioned outputs duplicate unconditional rows
 
 ### Statistical Contract Failure
 
 Examples:
 
-- zero validation/test support
+- zero validation or test support
 - invalid multiplicity interpretation
 - no cost-surviving expectancy
+
+## Trust Order
+
+Inspect in this order:
+
+1. top-level run manifest
+2. stage manifests
+3. stage logs
+4. report artifacts
+5. generated diagnostics
+
+If those disagree, treat the disagreement as a first-class finding.
 
 ## Required Checks Before Trusting A Run
 
 - top-level run status matches stage outcomes
-- candidate counts reconcile across summary/export/promotion
-- feature-stage declared inputs match the raw artifacts the implementation can actually read
-- split counts are present where required
-- artifacts exist where manifests say they do
-- detector ownership, registry, and generated coverage diagnostics agree
-- warnings do not conceal unexpected runtime faults
+- candidate counts reconcile across summaries and exports
+- declared feature-stage inputs match what the implementation actually reads
+- split counts exist where required
+- expected artifacts exist where manifests say they do
+- detector ownership, registry, and coverage diagnostics agree when relevant
+- warning noise does not hide runtime faults
 
-## Agent Response To Contract Breakage
+## Response To Contract Breakage
 
 When contracts break:
 
 1. stop broad experimentation
-2. isolate the failure path
-3. repair propagation or bookkeeping
+2. isolate the broken path
+3. repair the propagation or bookkeeping issue
 4. replay the smallest affected chain
-5. only then resume research interpretation
+5. resume interpretation only after reconciliation
+
+## Operator Rule
+
+Do not call a run good because the command exited with code `0`.
+
+Call it good only when:
+
+- the artifacts exist
+- the artifacts reconcile
+- the interpretation is being made at the correct layer

@@ -202,3 +202,37 @@ def _validate_proposal(proposal: AgentProposal) -> None:
         raise ValueError("EVENT trigger proposals must include trigger_space.events.include")
     if "STATE" in allowed and not proposal.trigger_space.get("states", {}).get("include"):
         raise ValueError("STATE trigger proposals must include trigger_space.states.include")
+
+
+def _load_proxy_event_types() -> set[str]:
+    """Return event types with evidence_tier=proxy from canonical_event_registry.yaml."""
+    from project.spec_registry import load_yaml_relative
+    registry = load_yaml_relative("spec/events/canonical_event_registry.yaml")
+    meta = registry.get("event_metadata", {})
+    return {
+        event_type
+        for event_type, attrs in meta.items()
+        if isinstance(attrs, dict) and attrs.get("evidence_tier") == "proxy"
+    }
+
+
+def validate_proposal_with_warnings(
+    path_or_payload: "str | Path | Dict[str, Any]",
+) -> list[str]:
+    """Validate proposal and return a list of non-fatal advisory warnings.
+
+    Raises ValueError on hard failures (same as load_agent_proposal).
+    Returns warnings (not errors) for proxy-tier events.
+    """
+    proposal = load_agent_proposal(path_or_payload)
+    warnings: list[str] = []
+    proxy_events = _load_proxy_event_types()
+    included_events = set(
+        proposal.trigger_space.get("events", {}).get("include", [])
+    )
+    for event_type in sorted(included_events & proxy_events):
+        warnings.append(
+            f"[PROXY_TIER] {event_type} resolves to a proxy detector "
+            "(evidence_tier=proxy). Results reflect indirect signal quality."
+        )
+    return warnings

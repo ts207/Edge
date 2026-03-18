@@ -67,7 +67,7 @@ def run_alpha_pipeline(
     
     # 3. Evaluate
     log.info("Evaluating hypotheses...")
-    metrics_df = evaluate_hypothesis_batch(hypotheses, features)
+    metrics_df = evaluate_hypothesis_batch(hypotheses, features, use_context_quality=True)
     write_parquet(metrics_df, output_dir / f"raw_metrics_{run_id}.parquet")
     
     # 4. Map to Bridge Schema

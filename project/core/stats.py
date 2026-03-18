@@ -8,9 +8,13 @@ import numpy as np
 import pandas as pd
 
 try:
-    from scipy import stats
+    from scipy import stats as scipy_stats
 except ModuleNotFoundError:  # pragma: no cover - environment-specific fallback
-    pass
+    scipy_stats = None
+
+# Re-export so downstream `from project.core.stats import stats` resolves to scipy.stats
+# rather than to this module itself.
+stats = scipy_stats
 
 
 def calculate_kendalls_tau(x: np.ndarray | pd.Series, y: np.ndarray | pd.Series) -> float:

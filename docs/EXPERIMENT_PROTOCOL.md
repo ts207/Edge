@@ -1,153 +1,144 @@
 # Experiment Protocol
 
-## Goal
+This document defines how to turn one research question into one bounded, replayable experiment.
 
-Experiments convert a research question into a bounded, replayable, and comparable repository run.
+## Purpose
 
-## Experiment Unit
+An experiment should answer a specific question with the smallest trustworthy run.
 
-A single experiment should be describable as:
+It should not exist to generate lots of output.
 
-- symbol set
-- time range
-- trigger or event
-- context or regime
-- template
-- direction set
-- horizon set
-- entry lag set
-- objective
+## What An Experiment Is
 
-If an experiment cannot be summarized this way, it is too vague.
+A good experiment specifies:
 
-## Experiment Types
+- the belief being tested
+- the repo-native trigger or event family
+- the allowed template family
+- the conditioning context
+- the symbol and date scope
+- the horizon and entry logic
+- the pass and fail interpretation
 
-### Repair Experiment
+## What A Good Experiment Looks Like
 
-Purpose:
+Good:
 
-- verify a code or contract fix
-- ensure prior failure mode is gone
+- one narrow objective
+- one explicit ambiguity being resolved
+- one attributable region of the search space
 
-Success criteria:
+Bad:
 
-- expected artifacts exist
-- failure no longer reproduces
-- no new contract breakage
+- many unrelated families in one run
+- many symbols without a reason
+- many templates "just in case"
+- expansion before the narrow path reconciles
 
-### Narrow Discovery Experiment
+## Experiment Card
 
-Purpose:
+Each material experiment should be describable in this shape:
 
-- isolate a specific signal region
-- compare conditioned vs unconditioned behavior
+- `objective`
+- `run_scope`
+- `trigger_space`
+- `templates`
+- `contexts`
+- `directions`
+- `horizons_bars`
+- `entry_lags`
+- `expected_artifacts`
+- `success_condition`
+- `failure_condition`
 
-Success criteria:
+## Batch Design
 
-- enough samples by split
-- coherent metrics
-- interpretable outcome
+Default batch composition:
 
-### Promotion-Path Experiment
+- one primary slice
+- one comparison slice
+- optionally one adjacent slice
 
-Purpose:
+The comparison slice should answer one useful question such as:
 
-- verify candidate propagation into export, promotion, and registry update
+- does context help
+- is the adjacent legal template better
+- is the effect robust to one small design variation
 
-Success criteria:
+Do not add unrelated objectives into the same batch.
 
-- candidate fields survive the chain
-- promotion rejects or accepts for substantive reasons
+## Scope Rules
 
+Keep scope narrow by default:
 
-### Synthetic Validation Experiment
+- one family before many
+- one template family before many
+- one context family before many
+- one symbol before many unless cross-sectional behavior is the actual question
 
-Purpose:
+Widen only after the narrow slice is mechanically clean and statistically interpretable.
 
-- verify detector recovery against known planted regimes
-- verify promotion and guardrail behavior across controlled worlds
+## Planning Rule
 
-Success criteria:
+Use `plan_only` before material runs.
 
-- synthetic truth validation passes or expected misses are explained
-- promotion outcomes are consistent with the planted mechanism and cost assumptions
-- results survive at least one additional profile or seed when the hypothesis is strengthened
+Planning should verify:
 
-### Full Loop Experiment
+- the run is actually narrow
+- the event set is correct
+- the template set is correct
+- the stages in scope are what you intended
 
-Purpose:
+If the plan looks broader than the objective, stop and fix the proposal.
 
-- validate end-to-end stability when the local path is ready
+## Execution Order
 
-Success criteria:
+Default order:
 
-- all planned stages terminate cleanly
-- manifests reconcile
-- outputs are explainable
-
-## Experiment Design Rules
-
-- Change one important variable at a time when debugging.
-- Keep symbol/time scope narrow during repair.
-- Use explicit contexts for regime-conditioned claims.
-- Avoid broad exploratory runs if prior runs already show the region is weak.
-- Record why the experiment exists before running it.
-
-## Batch Construction
-
-Every batch should include:
-
-- primary hypothesis
-- reason for inclusion
-- prior memory reference
-- stop condition
-
-Recommended sequence:
-
-1. confirm the path works
-2. test the strongest hypothesis
-3. test one adjacent alternative
+1. repair replay if a code or contract change must be verified
+2. narrow discovery slice
+3. broader expansion only after reconciliation
+4. confirmatory or promotion path only after discovery justifies it
 
 ## Evaluation Checklist
 
-For each candidate or experiment result, check:
+Every experiment should be evaluated for:
 
-- `train_n_obs`
-- `validation_n_obs`
-- `test_n_obs`
-- `q_value`
-- post-cost expectancy
-- stressed post-cost expectancy
-- regime stability
-- bridge tradability
-- promotion eligibility
+- artifact completeness
+- manifest and log agreement
+- split counts
+- post-cost quality
+- stressed quality
+- context plausibility
+- promotion relevance
 
-## Reflection Template
+## Stop Rules
 
-For each completed experiment, write:
+Stop broadening an experiment when:
 
-- objective
-- actual executed slice
-- key metrics
-- anomalies
-- belief update
-- next action
-
-## Stop Conditions
-
-Stop a line of inquiry when:
-
-- repeated runs fail for the same substantive statistical reason
-- the region shows no post-cost viability
-- support exists only in train and not in validation/test
-- the implementation path is still mechanically unstable
+- the path is mechanically broken
+- the idea fails cleanly on holdout
+- the context claim adds no value
+- promotion rejection is clearly explained and no new condition exists
+- the next run would only restate the same failed question
 
 ## Promotion Discipline
 
-Do not over-interpret discovery outputs.
+Discovery and promotion are different surfaces.
 
-A discovery is not a promoted edge.
-A promoted edge is not a production strategy.
-A full-loop agent must maintain those boundaries.
+A discovery result is not promotion-ready just because it looks attractive.
 
-Synthetic experiments should record the generator profile and truth-map path in the reflection.
+Promotion should only be trusted when:
+
+- the candidate contract is valid
+- split support exists
+- costs and stressed quality survive
+- the claim is narrow enough to understand
+
+## Synthetic Discipline
+
+When the experiment uses synthetic data:
+
+- truth validation comes before interpretation
+- short windows should be read as calibration unless holdout evidence exists
+- cross-profile survival matters more than one strong synthetic world

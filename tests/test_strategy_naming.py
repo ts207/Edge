@@ -1,7 +1,7 @@
 """Tests for strategy naming conventions and registry resolution."""
 
 import pytest
-from project.strategies.registry import (
+from project.strategy.runtime.registry import (
     parse_strategy_name,
     get_strategy,
     resolve_strategy,

@@ -34,8 +34,9 @@ def test_basis_features_keep_nan_when_spot_is_missing(monkeypatch):
         frame, symbol="BTCUSDT", run_id="r1", market="perp", data_root=Path("/tmp")
     )
 
-    assert out.loc[0, "basis_bps"] == 0.0
-    assert pd.isna(out.loc[1, "basis_bps"])
+    # Shift(1) means index 0 is NaN, index 1 has value from bar 0
+    assert pd.isna(out.loc[0, "basis_bps"])
+    assert out.loc[1, "basis_bps"] == 0.0
     assert pd.isna(out.loc[2, "basis_bps"])
     assert pd.isna(out.loc[1, "basis_zscore"])
     assert pd.isna(out.loc[2, "basis_zscore"])

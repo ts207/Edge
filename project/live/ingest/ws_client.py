@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 import websockets
 
@@ -11,12 +11,18 @@ _LOG = logging.getLogger(__name__)
 
 class BinanceWebSocketClient:
     """Async WebSocket client for Binance UM futures."""
-    
+
     BASE_URL = "wss://fstream.binance.com/ws"
-    
-    def __init__(self, streams: List[str], on_message: Callable[[dict], None]):
+
+    def __init__(
+        self,
+        streams: List[str],
+        on_message: Callable[[dict], None],
+        on_reconnect_exhausted: Optional[Callable[[], None]] = None,
+    ):
         self.streams = streams
         self.on_message = on_message
+        self.on_reconnect_exhausted = on_reconnect_exhausted
         self._connection: websockets.WebSocketClientProtocol | None = None
         self._running = False
         self._task: asyncio.Task | None = None
@@ -75,6 +81,8 @@ class BinanceWebSocketClient:
                     if retry_count >= max_retries:
                         _LOG.error(f"WS max retries exhausted: {e}")
                         self._running = False
+                        if self.on_reconnect_exhausted is not None:
+                            self.on_reconnect_exhausted()
                         break
                     delay = base_delay * (2 ** retry_count) + random.uniform(0, 1)
                     _LOG.error(f"WS connection error: {e}. Reconnecting in {delay:.2f}s...")

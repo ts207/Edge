@@ -1,24 +1,49 @@
 # Pipelines Layer (`project/pipelines`)
 
-The pipelines layer handles data ingestion, bulk feature engineering, and high-level research workflow orchestration.
+The pipelines layer handles data ingestion, feature generation, orchestration, manifest bookkeeping, and stage execution.
 
-## 1. Ownership
-- **Data Ingestion**: Fetching and cleaning raw venue data.
-- **Bulk Transforms**: Calculating features for historical universes.
-- **Orchestration**: Directing the flow from ingestion to candidate generation and promotion.
-- **Artifact Management**: Writing and versioning data artifacts.
+## Ownership
 
-## 2. Non-Ownership
-- **Core Numerical Kernels**: These belong in `research/helpers` or `engine`. Pipelines only *call* them.
-- **Low-Latency Logic**: No runtime execution logic belongs here.
-- **Contract Enforcement**: It uses contracts but does not own their definition.
+- `run_all.py` and its helper modules for full-pipeline orchestration
+- ingestion, clean, feature, and context stage scripts
+- pipeline planning, execution, provenance, and summary utilities
+- research-facing stage entrypoints under `project/pipelines/research/`
 
-## 3. Public Interfaces
-- **`PipelineEngine`**: Orchestrator for task execution.
-- **`IngestionServices`**: Specific services for Binance Spot/UM data.
-- **`FeatureProcessor`**: Service for calculating features at scale.
+## Non-Ownership
 
-## 4. Constraints
-- **Separation of Concerns**: Each pipeline step must be a discrete task or service.
-- **State via Artifacts**: Communication between stages occurs via files on disk, not shared memory.
-- **Side-Effect Free**: Beyond writing artifacts, pipelines should not modify global configuration.
+- detector business logic
+- research policy and promotion rules
+- low-latency runtime execution
+- schema ownership for stage and artifact contracts
+
+## Important Modules
+
+- `run_all.py`
+- `run_all_bootstrap.py`
+- `run_all_support.py`
+- `run_all_finalize.py`
+- `run_all_provenance.py`
+- `execution_engine.py`
+- `execution_engine_support.py`
+- `pipeline_planning.py`
+- `pipeline_execution.py`
+- `pipeline_provenance.py`
+- `pipeline_summary.py`
+
+## Explicit Package Surfaces
+
+The layer now exposes package-root entrypoint groups for active stage families:
+
+- `project.pipelines.clean`
+- `project.pipelines.features`
+- `project.pipelines.ingest`
+- `project.pipelines.smoke`
+
+These package roots should stay lightweight. They exist to make stage-family imports explicit, not to become new orchestration layers.
+
+## Constraints
+
+- Each stage should communicate through declared artifacts rather than shared in-memory state.
+- Wrappers should stay thin when a canonical service module already exists.
+- Orchestration code should remain coordinator-oriented rather than absorbing domain logic.
+- If a pipeline module grows large, extract pure support helpers before weakening size or import-boundary guardrails.

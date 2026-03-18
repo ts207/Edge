@@ -20,31 +20,31 @@ Legacy wrapper surfaces have been removed.
 
 ### `ingest`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `ingest_binance_um_ohlcv_*`, `ingest_binance_um_funding`, `ingest_binance_spot_ohlcv_*`, `ingest_binance_um_liquidation_snapshot`, `ingest_binance_um_open_interest_hist`
 - Script patterns: `pipelines/ingest/ingest_binance_um_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_funding.py`, `pipelines/ingest/ingest_binance_spot_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_liquidation_snapshot.py`, `pipelines/ingest/ingest_binance_um_open_interest_hist.py`
 
 ### `core`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `build_cleaned_*`, `build_features*`, `build_universe_snapshots`, `build_context_features*`, `build_market_context*`, `build_microstructure_rollup*`, `validate_feature_integrity*`, `validate_data_coverage*`, `validate_context_entropy`
 - Script patterns: `pipelines/clean/build_cleaned_bars.py`, `pipelines/features/build_features.py`, `pipelines/ingest/build_universe_snapshots.py`, `pipelines/features/build_context_features.py`, `pipelines/features/build_market_context.py`, `pipelines/features/build_microstructure_rollup.py`, `pipelines/clean/validate_feature_integrity.py`, `pipelines/clean/validate_data_coverage.py`, `pipelines/clean/validate_context_entropy.py`
 
 ### `runtime_invariants`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `build_normalized_replay_stream`, `run_causal_lane_ticks`, `run_determinism_replay_checks`, `run_oms_replay_validation`
 - Script patterns: `pipelines/runtime/build_normalized_replay_stream.py`, `pipelines/runtime/run_causal_lane_ticks.py`, `pipelines/runtime/run_determinism_replay_checks.py`, `pipelines/runtime/run_oms_replay_validation.py`
 
 ### `phase1_analysis`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `analyze_*`, `phase1_correlation_clustering`
 - Script patterns: `pipelines/research/analyze_*.py`, `pipelines/research/phase1_correlation_clustering.py`
 
 ### `phase2_event_registry`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `build_event_registry*`, `canonicalize_event_episodes*`
 - Script patterns: `pipelines/research/build_event_registry.py`, `pipelines/research/canonicalize_event_episodes.py`
 
@@ -62,13 +62,13 @@ Legacy wrapper surfaces have been removed.
 
 ### `research_quality`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `analyze_conditional_expectancy`, `validate_expectancy_traps`, `generate_recommendations_checklist`
 - Script patterns: `pipelines/research/analyze_conditional_expectancy.py`, `pipelines/research/validate_expectancy_traps.py`, `pipelines/research/generate_recommendations_checklist.py`
 
 ### `strategy_packaging`
 
-- Owner service: `project.pipelines.orchestration.run_all_service`
+- Owner service: `project.pipelines.run_all`
 - Stage patterns: `compile_strategy_blueprints`, `build_strategy_candidates`, `select_profitable_strategies`
 - Script patterns: `pipelines/research/compile_strategy_blueprints.py`, `pipelines/research/build_strategy_candidates.py`, `pipelines/research/select_profitable_strategies.py`
 

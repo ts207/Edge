@@ -19,6 +19,31 @@ from project.events.event_specs import EVENT_REGISTRY_SPECS
 
 log = logging.getLogger(__name__)
 
+_CONTEXT_CONFIDENCE_COLUMN_BY_FAMILY = {
+    "vol": "ms_vol_confidence",
+    "vol_regime": "ms_vol_confidence",
+    "liq": "ms_liq_confidence",
+    "liquidity": "ms_liq_confidence",
+    "oi": "ms_oi_confidence",
+    "funding": "ms_funding_confidence",
+    "trend": "ms_trend_confidence",
+    "spread": "ms_spread_confidence",
+}
+
+_CONTEXT_ENTROPY_COLUMN_BY_FAMILY = {
+    "vol": "ms_vol_entropy",
+    "vol_regime": "ms_vol_entropy",
+    "liq": "ms_liq_entropy",
+    "liquidity": "ms_liq_entropy",
+    "oi": "ms_oi_entropy",
+    "funding": "ms_funding_entropy",
+    "trend": "ms_trend_entropy",
+    "spread": "ms_spread_entropy",
+}
+
+_DEFAULT_CONTEXT_MIN_CONFIDENCE = 0.55
+_DEFAULT_CONTEXT_MAX_ENTROPY = 0.90
+
 
 def horizon_bars(horizon: str) -> int:
     h = horizon.lower().strip()
@@ -168,7 +193,12 @@ def load_context_state_map() -> Dict[Tuple[str, str], str]:
 _CACHED_CONTEXT_MAP: Optional[Dict[Tuple[str, str], str]] = None
 
 
-def context_mask(context: Dict[str, str], features: pd.DataFrame) -> Optional[pd.Series]:
+def context_mask(
+    context: Dict[str, str],
+    features: pd.DataFrame,
+    *,
+    use_context_quality: bool = True,
+) -> Optional[pd.Series]:
     """
     Build a boolean mask from a context dict (e.g. {vol_regime: "high", carry_state: "funding_pos"}).
     Returns None if ANY context key cannot be resolved to a feature column (context is unresolvable).
@@ -194,7 +224,25 @@ def context_mask(context: Dict[str, str], features: pd.DataFrame) -> Optional[pd
             log.debug("Context state column %r not found in features — context unresolvable", state_id)
             return None
         vals = pd.to_numeric(features[col], errors="coerce").fillna(0)
-        combined = combined & (vals == 1)
+        quality_mask = pd.Series(True, index=features.index)
+        if use_context_quality:
+            family_key = str(family).strip().lower()
+
+            confidence_col = _CONTEXT_CONFIDENCE_COLUMN_BY_FAMILY.get(family_key)
+            if confidence_col and confidence_col in features.columns:
+                confidence = pd.to_numeric(features[confidence_col], errors="coerce")
+                quality_mask = quality_mask & (
+                    confidence >= _DEFAULT_CONTEXT_MIN_CONFIDENCE
+                ).fillna(False)
+
+            entropy_col = _CONTEXT_ENTROPY_COLUMN_BY_FAMILY.get(family_key)
+            if entropy_col and entropy_col in features.columns:
+                entropy = pd.to_numeric(features[entropy_col], errors="coerce")
+                quality_mask = quality_mask & (
+                    entropy <= _DEFAULT_CONTEXT_MAX_ENTROPY
+                ).fillna(False)
+
+        combined = combined & (vals == 1) & quality_mask
     return combined
 
 

@@ -5,6 +5,9 @@ signal_column: funding_flip_event
 parameters:
   funding_extreme_quantile: 0.99
   oi_change_z_threshold: 3.0
+  min_flip_abs: 0.00025
+  persistence_bars: 2
+  min_spacing: 24
   cooldown_bars: 24
   merge_gap_bars: 0
 canonical_family: POSITIONING_EXTREMES

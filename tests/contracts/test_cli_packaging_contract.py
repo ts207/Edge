@@ -19,7 +19,7 @@ REMOVED_ALIASES = [
 ]
 
 
-def test_canonical_commands_packaged_and_legacy_aliases_removed():
+def test_canonical_commands_packaged_and_extended_detectors_removed():
     data = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
     scripts = data['project']['scripts']
     for cmd in CANONICAL_COMMANDS:

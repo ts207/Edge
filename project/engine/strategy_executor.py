@@ -16,7 +16,7 @@ from project.engine.exchange_constraints import apply_constraints, load_symbol_c
 from project.engine.pnl import compute_pnl_ledger
 from project.engine.schema import validate_strategy_frame_schema, validate_trace_schema
 from project.features.funding_persistence import FP_DEF_VERSION
-from project.portfolio.sizing import calculate_execution_aware_target_notional
+from project.portfolio import calculate_execution_aware_target_notional
 from project.strategy.runtime import get_strategy
 
 LOGGER = logging.getLogger(__name__)

@@ -1,0 +1,10 @@
+foundation_id: btc_live_foundation
+description: >
+  Maintained BTC-first live historical data foundation report. Use this to verify
+  that cleaned bars, feature quality, feature validation, and context quality
+  artifacts exist and are internally coherent before treating a live historical
+  run as a trustworthy research foundation.
+market: perp
+symbol: BTCUSDT
+timeframe: 5m
+feature_schema_version: v2

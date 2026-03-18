@@ -67,6 +67,7 @@ def detect_kill_switches(
     if candidates is None:
         candidates = KILL_SWITCH_CANDIDATE_FEATURES
 
+
     if features.empty or "close" not in features.columns:
         return pd.DataFrame()
 

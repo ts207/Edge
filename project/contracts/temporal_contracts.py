@@ -38,8 +38,8 @@ class TemporalContract:
     """
     name: str
     output_mode: OutputMode
-
     observation_clock: ObservationClock
+    invariance: Literal["pit", "stochastic", "unstable"] = "unstable"
     decision_lag_bars: int = 0
     lookback_bars: int | None = None
 

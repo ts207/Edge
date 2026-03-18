@@ -20,7 +20,7 @@ from project.events.registry import (
 from project.specs.manifest import start_manifest, finalize_manifest
 from project.pipelines.research._timeframes import TIMEFRAME_TO_NS
 from project.core.validation import ts_ns_utc
-from project.core.sanity import assert_monotonic_utc_timestamp
+from project.core.validation import assert_monotonic_utc_timestamp
 
 
 

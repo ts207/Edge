@@ -1,85 +1,111 @@
 # Interaction Protocol
 
-## Role
+This document defines how a research operator or agent should communicate while using the repository.
 
-The agent interacts with operators, artifacts, and prior memory.
+The goal is not polished prose. The goal is clear decisions and visible uncertainty.
 
-The operator supplies goals, constraints, and approvals.
-The repository supplies executable structure.
-Memory supplies prior lessons.
+## The Three Inputs
 
-## Communication Style
+Every interaction should keep track of three sources:
 
-The agent should communicate:
+- the operator request
+- the repository artifacts
+- prior memory
 
-- current objective
-- immediate next action
+Operator intent says what matters.
+Artifacts say what actually happened.
+Memory says what already failed, worked, or changed before.
+
+## Default Pattern
+
+Use this interaction pattern by default:
+
+1. restate the objective in repo-native terms
+2. inspect local evidence
+3. name the next smallest informative action
+4. execute or explain the constraint
+5. summarize findings and the next decision
+
+## What Must Be Made Explicit
+
+Always make these points visible:
+
+- the working objective
+- the immediate next action
 - important assumptions
-- discovered abnormalities
-- why the next experiment is justified
+- abnormal findings
+- whether the conclusion is mechanical, statistical, or operational
 
-The agent should not hide uncertainty. If a run is partial, replayed, or manually reconciled, say so explicitly.
+Never hide uncertainty behind broad summaries.
 
-## Default Interaction Pattern
+## Artifact-First Rule
 
-1. Restate the working objective.
-2. Inspect relevant local context.
-3. Narrow the request to executable repository-native terms.
-4. Run the smallest informative action.
-5. Summarize findings and next decision.
+Artifacts are the source of truth.
 
-## Interaction With Artifacts
+Read evidence in this order:
 
-Artifacts are the primary source of truth.
-
-Use, in order:
-
-1. run manifest
+1. top-level run manifest
 2. stage manifests
 3. stage logs
 4. report artifacts
-5. generated audits
+5. generated diagnostics
 
-If artifacts disagree, the agent must treat that as a first-class finding.
+If those sources disagree, the disagreement is itself a finding.
 
-## Interaction With Memory
+## Memory Use
 
-Memory retrieval is required before proposing a materially similar experiment.
+Before proposing a materially similar run, check memory for:
 
-Look up:
+- the same event or family
+- the same template
+- the same symbol or timeframe
+- the same context
+- the same fail gate
 
-- same event or trigger
-- same template
-- same context
-- same symbol
-- same failure class
+If nothing material changed, default to not rerunning.
 
-If memory says the region is exhausted, the agent must either:
+## Communication Rules During Execution
 
-- show why the new run is materially different
-- or avoid the run
+If a run is:
 
-## Interaction With The Operator
+- partial
+- replayed
+- synthetic
+- manually reconciled
+- using a fallback or compatibility path
 
-Ask for input only when:
+say so explicitly.
 
-- the decision changes risk materially
-- a destructive action is required
-- a choice cannot be inferred from local evidence
+Do not make the operator infer those distinctions from filenames or logs.
 
-Otherwise, prefer making a defensible choice and proceeding.
+## Run Summary Contract
 
-## Reflection Hand-Off
-
-After each meaningful run, provide the operator with:
+After each meaningful run, summarize:
 
 - what was run
 - what passed
 - what failed
 - what is suspicious
-- what is the next best move
+- what the next best move is
 
-The operator should never need to reconstruct the run from raw logs.
+The operator should not need to reconstruct the decision from raw logs.
 
+## When To Escalate To The Operator
 
-When synthetic data is in use, the agent should state the active profile, the truth-validation status, and whether the conclusion is about detector recovery, pipeline mechanics, or synthetic profitability only.
+Ask for operator input only when:
+
+- the choice changes risk materially
+- a destructive action is required
+- the evidence is insufficient for a defensible assumption
+
+Otherwise, make the best evidence-backed choice and proceed.
+
+## Synthetic Interaction Rules
+
+When synthetic data is involved, always state:
+
+- the active profile or workflow
+- truth-validation status
+- whether the conclusion is about detector recovery, pipeline mechanics, or synthetic profitability only
+
+Do not phrase synthetic profitability as live-market evidence.

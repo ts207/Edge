@@ -122,12 +122,38 @@ def test_annotate_promotion_audit_decisions_derives_failed_stage_summary():
     assert row["failed_gate_count"] == 2
     assert row["failed_gate_list"] == "stability|negative_control"
     assert row["weakest_fail_stage"] == "stability"
+    assert row["rejection_classification"] == "scope_mismatch"
+    assert row["recommended_next_action"] == "narrow_scope"
 
     diagnostics = svc._build_promotion_decision_diagnostics(out)
     assert diagnostics["rejected_count"] == 1
     assert diagnostics["primary_fail_gate_counts"]["gate_promo_stability"] == 1
     assert diagnostics["primary_reject_reason_counts"]["stability_score"] == 1
     assert diagnostics["failed_stage_counts"]["negative_control"] == 1
+    assert diagnostics["rejection_classification_counts"]["scope_mismatch"] == 1
+    assert diagnostics["recommended_next_action_counts"]["narrow_scope"] == 1
+
+
+def test_classify_rejection_maps_holdout_and_contract_failures():
+    holdout = svc._classify_rejection(
+        {
+            "promotion_fail_gate_primary": "gate_promo_oos_validation",
+            "reject_reason": "oos_validation_fail",
+        },
+        ["oos_validation"],
+    )
+    contract = svc._classify_rejection(
+        {
+            "promotion_fail_gate_primary": "gate_promo_contract",
+            "reject_reason": "missing_hypothesis_audit",
+        },
+        [],
+    )
+
+    assert holdout == "weak_holdout_support"
+    assert svc._recommended_next_action_for_rejection(holdout) == "run_confirmatory"
+    assert contract == "contract_failure"
+    assert svc._recommended_next_action_for_rejection(contract) == "repair_pipeline"
 
 
 def test_load_negative_control_summary_returns_empty_dict_on_invalid_json(monkeypatch, tmp_path):

@@ -205,15 +205,15 @@ class UnwindOrchestrator:
             return
         
         self.is_unwinding = True
-        positions = list(self.state_store.account.positions.values())
-        LOGGER.warning(f"Starting unwind for {len(positions)} positions.")
-        
-        for pos in positions:
-            # In a real implementation, this would call the exchange API via OMS
-            LOGGER.info(f"Unwinding {pos.symbol}: {pos.side} {pos.quantity}")
-            # Mocking the order creation
-            # order = LiveOrder(..., side=BUY if pos.side==SHORT else SELL, ...)
-            # self.oms_manager.add_order(order)
+        try:
+            # 1. Cancel all open orders first
+            await self.oms_manager.cancel_all_orders()
             
-        self.is_unwinding = False
-        LOGGER.info("Unwind orchestration complete.")
+            # 2. Flatten all positions
+            await self.oms_manager.flatten_all_positions(self.state_store)
+            
+            LOGGER.warning("Emergency unwind orchestration completed successfully.")
+        except Exception as e:
+            LOGGER.error(f"Error during emergency unwind: {e}")
+        finally:
+            self.is_unwinding = False

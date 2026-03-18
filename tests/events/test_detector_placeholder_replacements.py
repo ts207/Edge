@@ -80,6 +80,7 @@ def test_replacement_detectors_emit_events() -> None:
 
     spread_df = _base_frame()
     spread_df.loc[450:, "spread_zscore"] = np.linspace(1.0, 5.0, len(spread_df.loc[450:]))
+    spread_df.loc[450:, "volume"] = np.linspace(700.0, 250.0, len(spread_df.loc[450:]))
     cases["SPREAD_REGIME_WIDENING_EVENT"] = (spread_df, {})
 
     slip_df = _base_frame()

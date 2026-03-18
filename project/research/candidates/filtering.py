@@ -5,7 +5,12 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
-from project.artifacts.catalog import checklist_path, load_json_dict, promoted_blueprints_path, promotion_report_path
+from project.artifacts import (
+    checklist_path,
+    load_json_dict,
+    promoted_blueprints_path,
+    promotion_report_path,
+)
 
 def checklist_decision(run_id: str, data_root: Path) -> str:
     payload = load_json_dict(checklist_path(run_id, data_root))

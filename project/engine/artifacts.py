@@ -17,7 +17,7 @@ from project.engine.schema import (
 )
 from project.engine.risk_allocator import AllocationContract
 from project.io.utils import write_parquet
-from project.portfolio.allocation_spec import AllocationSpec
+from project.portfolio import AllocationSpec
 
 
 ENGINE_RUN_MANIFEST_VERSION = "engine_run_manifest_v1"

@@ -398,6 +398,8 @@ def build_research_stages(
             "--min_n", str(int(getattr(args, "search_min_n", 30))),
             "--registry_root", str(getattr(args, "registry_root", "project/configs/registries")),
         ]
+        if getattr(args, "search_budget", None):
+            search_args.extend(["--search_budget", str(int(args.search_budget))])
         if experiment_plan:
             search_args.extend(["--experiment_config", str(args.experiment_config)])
             search_args.extend(["--program_id", experiment_plan.program_id])

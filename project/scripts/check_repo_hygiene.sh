@@ -13,11 +13,7 @@ fail=0
 
 echo "[hygiene] checking forbidden tracked path patterns..."
 present_tracked="$(mktemp)"
-git ls-files | while IFS= read -r path; do
-  if [[ -f "$path" ]]; then
-    echo "$path"
-  fi
-done >"$present_tracked"
+git ls-files >"$present_tracked"
 
 blocked_patterns=(
   '^data/reports/.+'
@@ -33,10 +29,9 @@ blocked_patterns=(
   '^nohup\.out$'
 )
 for pattern in "${blocked_patterns[@]}"; do
-  if rg -n "$pattern" "$present_tracked" >/tmp/hygiene_blocked.txt; then
-    rg -n '\.gitkeep$' /tmp/hygiene_blocked.txt >/dev/null || true
+  if grep -E "$pattern" "$present_tracked" >/tmp/hygiene_blocked.txt; then
     filtered="$(mktemp)"
-    rg -v '\.gitkeep$' /tmp/hygiene_blocked.txt >"$filtered" || true
+    grep -v '\.gitkeep$' /tmp/hygiene_blocked.txt >"$filtered" || true
     if [[ -s "$filtered" ]]; then
       echo "[hygiene] blocked tracked files matched pattern: $pattern"
       cat "$filtered"
@@ -60,7 +55,7 @@ zone_files="$(find . \
 if [[ -n "$zone_files" ]]; then
   echo "[hygiene] Zone.Identifier sidecar files detected ($(echo "$zone_files" | wc -l) files):"
   echo "$zone_files" | head -20
-  echo "[hygiene] Fix: make clean-repo   (or: find . -name '*:Zone.Identifier' -delete)"
+  echo "[hygiene] Fix: make clean-hygiene"
   fail=1
 fi
 
@@ -73,6 +68,40 @@ while IFS= read -r path; do
     fail=1
   fi
 done < <(git ls-files)
+
+echo "[hygiene] checking root directory clutter..."
+# Allowed files in root
+allowed_root=(
+  "CLAUDE.md" "GEMINI.md" "README.md" "CONTRIBUTING.md" "Makefile"
+  "pyproject.toml" "pyrightconfig.json" "pytest.ini" "requirements-dev.txt" "constraints.lock"
+  ".gitignore" ".dockerignore" ".editorconfig" "LICENSE" "LICENSE.md"
+)
+# Check for unexpected files in root (non-directories)
+for f in *; do
+  if [[ -f "$f" ]]; then
+    found=0
+    for a in "${allowed_root[@]}"; do
+      if [[ "$f" == "$a" ]]; then
+        found=1
+        break
+      fi
+    done
+    if [[ "$found" -eq 0 ]]; then
+      echo "[hygiene] unexpected file in root: $f"
+      fail=1
+    fi
+  fi
+done
+
+echo "[hygiene] checking for large untracked data..."
+untracked_data="$(find data -type f ! -name ".gitkeep" | head -n 1)"
+if [[ -n "$untracked_data" ]]; then
+  echo "[hygiene] untracked data detected in data/ directory. Run 'make clean-all-data' to purge."
+  # We don't fail hard on untracked data, just warn, unless strict mode requested
+  if [[ "${STRICT_HYGIENE:-0}" == "1" ]]; then
+    fail=1
+  fi
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   echo "[hygiene] FAILED"

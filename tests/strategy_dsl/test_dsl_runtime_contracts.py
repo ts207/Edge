@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from project.compilers.executable_strategy_spec import ExecutableStrategySpec
-from project.strategies.dsl_interpreter_v1 import DslInterpreterV1, _build_blueprint
+from project.strategy.runtime.dsl_interpreter_v1 import DslInterpreterV1, _build_blueprint
 
 
 def _base_blueprint() -> dict:
@@ -16,9 +16,9 @@ def _base_blueprint() -> dict:
         "symbol_scope": {"mode": "single_symbol", "symbols": ["BTCUSDT"], "candidate_symbol": "BTCUSDT"},
         "direction": "long",
         "entry": {
-            "triggers": ["event_detected"],
+            "triggers": ["spread_guard_pass"],
             "conditions": ["all"],
-            "confirmations": ["oos_validation_pass"],
+            "confirmations": [],
             "delay_bars": 0,
             "cooldown_bars": 0,
             "condition_logic": "all",
@@ -65,8 +65,10 @@ def _base_blueprint() -> dict:
 
 
 def _base_features(bars: pd.DataFrame) -> pd.DataFrame:
+    # Preserve timestamp for the merge join in DslInterpreterV1
     return bars[["timestamp", "close", "quote_volume"]].assign(
-        funding_rate_scaled=0.0001
+        funding_rate_scaled=0.0001,
+        spread_bps=1.0,  # 1bp << 12bps threshold for spread_guard_pass
     ).copy()
 
 
@@ -99,6 +101,7 @@ def test_dsl_enforces_minimum_one_bar_decision_lag():
             "high": [101.0, 102.0, 103.0],
             "low": [99.0, 100.0, 101.0],
             "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
         }
     )
@@ -133,6 +136,7 @@ def test_dsl_accepts_registry_backed_signal_without_hardcoded_allowlist_entry():
             "high": [101.0, 102.0, 103.0],
             "low": [99.0, 100.0, 101.0],
             "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
         }
     )
@@ -168,6 +172,7 @@ def test_dsl_rejects_unknown_non_registry_signal():
             "high": [101.0, 102.0],
             "low": [99.0, 100.0],
             "close": [100.0, 101.0],
+            "volume": [10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0],
         }
     )
@@ -204,6 +209,7 @@ def test_dsl_enforces_fail_on_zero_trigger_coverage():
             "high": [101.0, 102.0, 103.0],
             "low": [99.0, 100.0, 101.0],
             "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
         }
     )
@@ -241,6 +247,7 @@ def test_dsl_emits_trigger_coverage_in_metadata():
             "high": [101.0, 102.0, 103.0],
             "low": [99.0, 100.0, 101.0],
             "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
         }
     )
@@ -283,6 +290,7 @@ def test_dsl_accepts_executable_strategy_spec_contract():
             "high": [101.0, 102.0, 103.0],
             "low": [99.0, 100.0, 101.0],
             "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
             "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
         }
     )

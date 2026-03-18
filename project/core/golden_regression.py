@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 import yaml
 
-from project.artifacts.catalog import (
+from project.artifacts import (
     blueprint_summary_path,
     checklist_path,
     kpi_scorecard_path,

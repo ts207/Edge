@@ -86,7 +86,7 @@ def test_validate_portfolio_frame_schema_accepts_equity_based_portfolio_frame() 
     validate_portfolio_frame_schema(frame)
 
 
-def test_validate_strategy_frame_schema_does_not_require_legacy_aliases() -> None:
+def test_validate_strategy_frame_schema_does_not_require_extended_detectors() -> None:
     frame = _base_strategy_frame()
     assert "position" not in frame.columns
     assert "pnl" not in frame.columns

@@ -1,29 +1,135 @@
-# Agent Research Docs
+# Research Docs
 
-This documentation set is for an autonomous research agent operating inside this repository.
+This repository is operated as a research system, not a general-purpose backtest sandbox.
 
-The intended loop is:
+Use this docs set to answer four questions:
 
-`observe -> propose -> run -> evaluate -> reflect -> store memory -> adapt next run`
+1. What is the repo for?
+2. How should an operator run research safely?
+3. How should results be interpreted?
+4. Which docs are policy, reference, or machine output?
 
-Read in this order:
+## Start Here
 
-1. [Claude Code Guide](../CLAUDE.md)
-2. [Autonomous Loop](./AUTONOMOUS_RESEARCH_LOOP.md)
-3. [Interaction Protocol](./INTERACTION_PROTOCOL.md)
+If you are a new operator, read in this order:
+
+1. [Root Operator Guide](../CLAUDE.md)
+2. [Research Operator Playbook](./RESEARCH_OPERATOR_PLAYBOOK.md)
+3. [Autonomous Research Loop](./AUTONOMOUS_RESEARCH_LOOP.md)
 4. [Experiment Protocol](./EXPERIMENT_PROTOCOL.md)
-5. [Memory And Reflection](./MEMORY_AND_REFLECTION.md)
-6. [Synthetic Datasets](./SYNTHETIC_DATASETS.md)
-7. [Artifacts And Contracts](./ARTIFACTS_AND_CONTRACTS.md)
-8. [Operations And Guardrails](./OPERATIONS_AND_GUARDRAILS.md)
+5. [Artifacts And Contracts](./ARTIFACTS_AND_CONTRACTS.md)
+6. [Operations And Guardrails](./OPERATIONS_AND_GUARDRAILS.md)
 
-If the controlling agent is Claude Code, start with `../CLAUDE.md` first. It points at the current proposal/query/issue entrypoints and the default safe operating policy.
+That sequence is the minimum onboarding path.
 
-The generated diagnostics under `docs/generated/` are machine outputs, not policy documents.
+## Read By Task
 
-Current generated artifacts worth checking after infrastructure edits:
+Use these docs when you need to answer a specific operator question.
 
-1. `docs/generated/detector_coverage.*` after detector registry or ownership changes
-2. `docs/generated/system_map.*` after stage, service, or contract-surface changes
+### I am new and need the repo mental model
 
-Agent-driven synthetic research should read `SYNTHETIC_DATASETS.md` before running discovery on generated data.
+- [Root Operator Guide](../CLAUDE.md)
+- [Research Operator Playbook](./RESEARCH_OPERATOR_PLAYBOOK.md)
+- [Event Families, Templates, Contexts, And Regimes](./FAMILIES_TEMPLATES_AND_REGIMES.md)
+
+### I need to run one disciplined research loop
+
+- [Autonomous Research Loop](./AUTONOMOUS_RESEARCH_LOOP.md)
+- [Experiment Protocol](./EXPERIMENT_PROTOCOL.md)
+- [Research Workflow Example](./RESEARCH_WORKFLOW_EXAMPLE.md)
+
+### I need to understand how to communicate and decide
+
+- [Interaction Protocol](./INTERACTION_PROTOCOL.md)
+- [Memory And Reflection](./MEMORY_AND_REFLECTION.md)
+
+### I need to trust or debug a run
+
+- [Artifacts And Contracts](./ARTIFACTS_AND_CONTRACTS.md)
+- [Operations And Guardrails](./OPERATIONS_AND_GUARDRAILS.md)
+
+### I need to work with synthetic data
+
+- [Synthetic Datasets](./SYNTHETIC_DATASETS.md)
+- [Research Calibration Baseline](./RESEARCH_CALIBRATION_BASELINE.md)
+
+### I need ontology or feature reference
+
+- [Event Families, Templates, Contexts, And Regimes](./FAMILIES_TEMPLATES_AND_REGIMES.md)
+- [Feature Catalog](./FEATURE_CATALOG.md)
+
+### I need roadmap context
+
+- [Future Milestones](./FUTURE_MILESTONES.md)
+- [Benchmark Status](./BENCHMARK_STATUS.md)
+
+### I need the current maintained benchmark baseline
+
+- [Benchmark Status](./BENCHMARK_STATUS.md)
+- [Research Operator Playbook](./RESEARCH_OPERATOR_PLAYBOOK.md)
+
+Current verified artifact baseline:
+
+- [data/reports/benchmarks/latest/benchmark_review.json](../data/reports/benchmarks/latest/benchmark_review.json)
+
+## Benchmark Governance
+
+Maintain the benchmark suite and certify reruns:
+
+```bash
+# Full maintenance cycle (re-run, certify, report)
+PYTHONPATH=. python3 project/scripts/run_benchmark_maintenance_cycle.py
+
+# Quick terminal review
+PYTHONPATH=. python3 project/scripts/show_benchmark_review.py
+```
+
+Core docs:
+- [Benchmark Status](./BENCHMARK_STATUS.md)
+- [Benchmark Governance Runbook](./BENCHMARK_GOVERNANCE_RUNBOOK.md)
+- [Benchmark Triage Guide](./BENCHMARK_TRIAGE.md)
+
+## Core Policy Docs
+
+These are the maintained operator policy docs.
+
+- [Root Operator Guide](../CLAUDE.md)
+- [Research Operator Playbook](./RESEARCH_OPERATOR_PLAYBOOK.md)
+- [Autonomous Research Loop](./AUTONOMOUS_RESEARCH_LOOP.md)
+- [Interaction Protocol](./INTERACTION_PROTOCOL.md)
+- [Experiment Protocol](./EXPERIMENT_PROTOCOL.md)
+- [Artifacts And Contracts](./ARTIFACTS_AND_CONTRACTS.md)
+- [Memory And Reflection](./MEMORY_AND_REFLECTION.md)
+- [Operations And Guardrails](./OPERATIONS_AND_GUARDRAILS.md)
+- [Synthetic Datasets](./SYNTHETIC_DATASETS.md)
+
+## Reference Docs
+
+These explain ontology, examples, baseline expectations, and future direction.
+
+- [Event Families, Templates, Contexts, And Regimes](./FAMILIES_TEMPLATES_AND_REGIMES.md)
+- [Feature Catalog](./FEATURE_CATALOG.md)
+- [Benchmark Status](./BENCHMARK_STATUS.md)
+- [Research Workflow Example](./RESEARCH_WORKFLOW_EXAMPLE.md)
+- [Research Calibration Baseline](./RESEARCH_CALIBRATION_BASELINE.md)
+- [Future Milestones](./FUTURE_MILESTONES.md)
+
+## Architecture And Maintenance Docs
+
+These are for repo maintenance, package boundaries, and contract inventory.
+
+- [Architecture Surface Inventory](./ARCHITECTURE_SURFACE_INVENTORY.md)
+- [Architecture Maintenance Checklist](./ARCHITECTURE_MAINTENANCE_CHECKLIST.md)
+
+## Machine-Owned Diagnostics
+
+The files under `docs/generated/` are generated diagnostics, not authored policy docs.
+
+Treat them as evidence surfaces:
+
+- `detector_coverage.*`: detector inventory and coverage state
+- `system_map.*`: stage, service, and ownership structure
+- `ontology_audit.json`: ontology consistency output
+- `architecture_metrics.json`: architecture summary metrics
+
+Do not edit generated files manually. Regenerate them from the code and contract surfaces that own them.

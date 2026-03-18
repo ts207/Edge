@@ -67,10 +67,11 @@ PROMOTION_AUDIT_SCHEMA = ArtifactSchemaSpec(
     schema_version='promotion_audit_v2',
     required_columns=(
         'candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version',
+        'is_reduced_evidence',
         'gate_promo_statistical', 'gate_promo_stability', 'gate_promo_cost_survival', 'gate_promo_negative_control',
     ),
     optional_columns=('evidence_bundle_json', 'bundle_rejection_reasons', 'promotion_score', 'q_value'),
-    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version'),
+    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version', 'is_reduced_evidence'),
     enum_columns={
         'promotion_decision': ('promoted', 'rejected'),
         'gate_promo_statistical': ('pass', 'fail', 'missing_evidence'),
@@ -83,17 +84,17 @@ PROMOTION_AUDIT_SCHEMA = ArtifactSchemaSpec(
 EVIDENCE_BUNDLE_SUMMARY_SCHEMA = ArtifactSchemaSpec(
     artifact_type='evidence_bundle_summary',
     schema_version='phase4_bundle_v1',
-    required_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version'),
+    required_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version', 'is_reduced_evidence'),
     optional_columns=('rank_score', 'rejection_reasons', 'q_value', 'control_pass_rate'),
-    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track'),
+    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'is_reduced_evidence'),
 )
 
 PROMOTION_DECISION_SCHEMA = ArtifactSchemaSpec(
     artifact_type='promotion_decisions',
     schema_version='phase4_bundle_v1',
-    required_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version'),
+    required_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'policy_version', 'bundle_version', 'is_reduced_evidence'),
     optional_columns=('rank_score', 'rejection_reasons'),
-    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track'),
+    non_null_columns=('candidate_id', 'event_type', 'promotion_decision', 'promotion_track', 'is_reduced_evidence'),
 )
 
 ENGINE_MANIFEST_SCHEMA = ManifestSchemaSpec(

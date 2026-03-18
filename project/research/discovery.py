@@ -148,17 +148,27 @@ def candidate_return_series(events_df: pd.DataFrame, horizon_bars: int, directio
         return pd.Series(dtype=float)
     return events_df[col] * float(direction_sign)
 
-def series_stats(values: pd.Series) -> Dict[str, float]:
-    """Compute summary statistics for a return series."""
+def series_stats(values: pd.Series, horizon_bars: Optional[int] = None) -> Dict[str, float]:
+    """Compute summary statistics for a return series with optional overlap correction."""
     if values.empty:
         return {"n": 0, "mean": 0.0, "std": 0.0, "t_stat": 0.0}
     vals = values.dropna()
     n = len(vals)
     if n == 0:
         return {"n": 0, "mean": 0.0, "std": 0.0, "t_stat": 0.0}
+    
     mu = vals.mean()
     sigma = vals.std()
-    t_stat = (mu / (sigma / np.sqrt(n))) if sigma > 1e-9 and n > 1 else 0.0
+    
+    # Use robust Newey-West t-stat if horizon_bars is provided to correct for overlap bias
+    if horizon_bars is not None and horizon_bars > 1:
+        from project.core.stats import newey_west_t_stat_for_mean
+        # NW lag choice: h-1 is standard for overlapping returns of length h
+        nw_res = newey_west_t_stat_for_mean(vals, max_lag=horizon_bars - 1)
+        t_stat = nw_res.t_stat
+    else:
+        t_stat = (mu / (sigma / np.sqrt(n))) if sigma > 1e-9 and n > 1 else 0.0
+        
     return {"n": n, "mean": mu, "std": sigma, "t_stat": t_stat}
 
 def condition_routing(cond_name: str, *, strict: bool = True) -> Tuple[str, str]:
@@ -376,17 +386,21 @@ def _synthesize_experiment_hypotheses(
                       e1, e2 = t.events[0], t.events[1]
                       gap = t.max_gap[0] if t.max_gap else 1
                       
-                      # Find all e1 events
-                      e1_times = working[working["event_type"] == e1]["enter_ts"]
-                      
-                      def has_recent_e1(row):
-                          if row["event_type"] != e2: return False
-                          # This is slow but works for now. 
-                          # Ideally use searchsorted or merge_asof
-                          recent = e1_times[(e1_times < row["enter_ts"]) & (e1_times >= row["enter_ts"] - pd.Timedelta(minutes=gap * 5))] # Assume 5m bars
-                          return not recent.empty
-                      
-                      trigger_mask &= working.apply(has_recent_e1, axis=1)
+                      # Vectorized searchsorted implementation to avoid O(n^2) behavior
+                      e1_times = working[working["event_type"] == e1]["enter_ts"].sort_values()
+                      if e1_times.empty:
+                          trigger_mask &= False
+                      else:
+                          e1_ts_vals = e1_times.values.astype(np.int64)
+                          bar_ts_vals = working["enter_ts"].values.astype(np.int64)
+                          gap_ns = int(pd.Timedelta(minutes=gap * 5).asm8.view(np.int64))
+                          
+                          # Find index of largest e1_time < current_time
+                          idx = np.searchsorted(e1_ts_vals, bar_ts_vals, side="left") - 1
+                          
+                          # Validate index and gap
+                          has_e1 = (idx >= 0) & ((bar_ts_vals - e1_ts_vals[np.maximum(idx, 0)]) <= gap_ns)
+                          trigger_mask &= pd.Series(has_e1 & (working["event_type"] == e2).values, index=working.index)
                   else:
                       # TODO: Support longer sequences
                       trigger_mask &= False
@@ -422,7 +436,7 @@ def _synthesize_experiment_hypotheses(
         if trigger_mask.any():
             matched_events = working[trigger_mask]
             returns = candidate_return_series(matched_events, horizon_bars=h_bars, direction_sign=actual_sign)
-            stats = series_stats(returns)
+            stats = series_stats(returns, horizon_bars=int(h_bars))
             
             rows.append({
                 "candidate_id": h.hypothesis_id(),

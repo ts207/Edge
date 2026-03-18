@@ -1,26 +1,55 @@
 # Research Layer (`project/research`)
 
-The research layer owns strategy discovery, statistical evaluation, and promotion.
+The research layer owns hypothesis generation, statistical evaluation, promotion policy, and research memory.
 
-## 1. Ownership
-- **Candidate Discovery**: Finding potential edge-bearing conditions.
-- **Statistical Gating**: Applying shrinkage, multiple testing, and OOS validation.
-- **Promotion Workflow**: Moving candidates from research into potential deployment.
-- **Numerical Kernels**: Shrinkage math and evaluation metrics.
+## Ownership
 
-## 2. Non-Ownership
-- **Live Execution**: It does not execute live trades; that is `runtime`.
-- **Data Cleaning**: It expects clean events from `pipelines`.
-- **Venue Interfaces**: It is agnostic of venue-specific APIs.
+- Candidate discovery and phase-2 evaluation
+- Promotion policy and audit generation
+- Research reporting and run comparison
+- Knowledge, memory, and reflection surfaces for agent-driven workflows
+- Search, robustness, gating, and recommendation helpers used by the research pipeline
 
-## 3. Public Interfaces
-- **`CandidateDiscoveryService`**: Service for finding new edges.
-- **`PromotionService`**: Service for evaluating and promoting candidates.
-- **`EvaluationSummaryService`**: Service for generating research quality reports.
-- **`ShrinkageWrapper`**: API for applying hierarchical shrinkage.
+## Non-Ownership
 
-## 4. Constraints
-- **Statistical Determinism**: Repeated runs on identical data must yield identical metrics.
-- **Concerns Separation**: No single function should mix metric computation with policy decisions.
-- **Library Reliance**: Pandas/Numpy/Scipy are core to this layer.
-- **Façade Pattern**: Complex logic must be exposed through stable façades in `core.py` or services.
+- Live execution and OMS behavior
+- Raw data ingestion and cleaning
+- Venue-specific adapters and low-level market interfaces
+- Top-level orchestration of the full pipeline DAG
+
+## Canonical Public Surfaces
+
+- `project.research.services.candidate_discovery_service`
+- `project.research.services.promotion_service`
+- `project.research.services.reporting_service`
+- `project.research.services.run_comparison_service`
+- `project.research.knowledge.query`
+- `project.research.agent_io.{proposal_to_experiment,execute_proposal,issue_proposal}`
+
+## Explicit Package Surfaces
+
+The layer also exposes lightweight package roots for stable helper families:
+
+- `project.research.clustering`
+- `project.research.reports`
+- `project.research.utils`
+
+## Internal Support Modules
+
+Some large research modules now split internal helper logic into focused support files. These are implementation details, not preferred public surfaces.
+
+Current examples:
+
+- `project.research.services.candidate_discovery_diagnostics`
+- `project.research.services.candidate_discovery_scoring`
+- `project.research.promotion.promotion_decision_support`
+- `project.research.promotion.promotion_result_support`
+- `project.research.promotion.promotion_reporting_support`
+
+## Working Rules
+
+- Keep stable workflow APIs in service modules, not ad hoc wrappers.
+- Keep policy logic separate from raw metric computation.
+- Keep the layer deterministic for identical inputs and configs.
+- Prefer repo-native contracts and schemas over one-off dataframe conventions.
+- If a research module starts turning into a monolith, split internal support helpers without changing the canonical service surface.

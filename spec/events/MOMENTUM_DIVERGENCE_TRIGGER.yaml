@@ -3,8 +3,10 @@ reports_dir: forced_flow_and_exhaustion
 events_file: forced_flow_and_exhaustion_events.parquet
 signal_column: momentum_divergence_trigger_event
 parameters:
+  slow_trend_quantile: 0.70
+  max_trend_persistence_bars: 72
   liquidation_spike_z_threshold: 3.0
   cascade_window_bars: 12
-  cooldown_bars: 24
+  cooldown_bars: 96
   merge_gap_bars: 0
 canonical_family: FORCED_FLOW_AND_EXHAUSTION

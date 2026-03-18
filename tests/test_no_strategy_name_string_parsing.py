@@ -21,7 +21,7 @@ FORBIDDEN = [
 
 # Allowlist: files where these patterns are explicitly allowed
 ALLOW = {
-    "project/strategies/registry.py",  # Centralized parser uses partition("__")
+    "project/strategy/runtime/registry.py",  # Centralized parser uses partition("__")
 }
 
 def test_no_strategy_name_string_parsing_in_production():
@@ -47,7 +47,7 @@ def test_no_strategy_name_string_parsing_in_production():
 
 def test_is_dsl_strategy_exact_match_not_substring():
     """Invariant: is_dsl_strategy must match exact base, not substring."""
-    from project.strategies.registry import is_dsl_strategy, parse_strategy_name
+    from project.strategy.runtime.registry import is_dsl_strategy, parse_strategy_name
 
     # Valid DSL names
     assert is_dsl_strategy("dsl_interpreter_v1")[0] is True

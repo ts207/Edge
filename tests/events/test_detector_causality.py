@@ -13,6 +13,8 @@ import pytest
 
 from project.events.detectors.base import BaseEventDetector
 from project.events.detectors.episode import EpisodeDetector
+from project.events.detectors.funding import FundingFlipDetector
+from project.events.families.temporal import FeeRegimeChangeDetector
 
 # The bar index column name as discovered from detect() output.
 BAR_INDEX_COL = "event_idx"
@@ -208,12 +210,14 @@ def test_detect_threads_params_into_event_hooks():
         symbol="SYM",
         intensity_scale=1.5,
         severity_threshold=1.2,
-        direction_label="up",
+        direction_label="long",
     )
 
     assert not events.empty
     assert set(events["severity_bucket"]) == {"major"}
     assert set(events["direction"]) == {"up"}
+    assert set(events["sign"]) == {1}
+    assert set(events["causal"]) == {True}
     assert set(events["severity_threshold"]) == {1.2}
 
 
@@ -284,3 +288,28 @@ def test_episode_detector_is_causal():
     indices = events[BAR_INDEX_COL].astype(int)
     assert (indices >= 0).all(), "Episode bar indices must be non-negative"
     assert (indices < len(df)).all(), "Episode bar indices must be within df bounds"
+    assert set(events["causal"]) == {True}
+
+
+def test_retrospective_detectors_emit_causal_false_metadata():
+    funding_df = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=400, freq="5min", tz="UTC"),
+            "funding_rate_scaled": np.r_[np.full(320, 0.0006), np.full(80, -0.0008)],
+        }
+    )
+    funding_events = FundingFlipDetector().detect(funding_df, symbol="BTCUSDT")
+    assert not funding_events.empty
+    assert set(funding_events["causal"]) == {False}
+
+    fee = np.full(400, 1.0)
+    fee[320:] = 4.0
+    fee_df = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=400, freq="5min", tz="UTC"),
+            "fee_bps": fee,
+        }
+    )
+    fee_events = FeeRegimeChangeDetector().detect(fee_df, symbol="BTCUSDT")
+    assert not fee_events.empty
+    assert set(fee_events["causal"]) == {False}

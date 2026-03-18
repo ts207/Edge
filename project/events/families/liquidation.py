@@ -86,10 +86,10 @@ class LiquidationCascadeDetector(EpisodeDetector):
                 event_id=format_event_id(self.event_type, symbol, idx, sub_idx),
                 eval_bar_ts=ts,
                 direction="down",
-                sign=-1,
                 intensity=float(np.nan_to_num(intensity.iloc[idx], nan=1.0)),
                 severity=self.default_severity,
                 timeframe_minutes=self.timeframe_minutes,
+                causal=self.causal,
                 metadata={
                     "start_idx": int(episode.start_idx),
                     "end_idx": int(episode.end_idx),

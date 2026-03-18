@@ -16,7 +16,7 @@ ENABLE_CROSS_VENUE_SPOT_PIPELINE ?= 0
 CHANGED_BASE ?= origin/main
 CHANGED_HEAD ?= HEAD
 
-.PHONY: help run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate
+.PHONY: help run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance
 
 help:
 	@echo "Primary Research Targets:"
@@ -35,8 +35,28 @@ help:
 	@echo "  style              - Run lint + format-check on changed Python files"
 	@echo "  governance         - Audit specs and sync schemas"
 	@echo "  benchmark-m0       - Emit (or execute) frozen M0 benchmark run matrix"
+	@echo "  benchmark-maintenance-smoke - End-to-end dry-run of the benchmark governance cycle"
+	@echo "  benchmark-maintenance - Full production execution of the benchmark governance cycle"
 	@echo "  clean-all-data     - Wipe all data/lake and reports"
 	@echo "  minimum-green-gate - Required baseline for platform stabilization"
+
+benchmark-maintenance-smoke:
+	@echo "Running benchmark maintenance dry-run..."
+	@mkdir -p /tmp/edgee_smoke_out
+	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --execute 0 | tee /tmp/edgee_smoke_out/cycle_output.txt
+	@echo "Reviewing smoke reports..."
+	@TARGET_DIR=$$(grep "CYCLE_OUTPUT_DIR: " /tmp/edgee_smoke_out/cycle_output.txt | cut -d' ' -f2); \
+	PYTHONPATH=. $(PYTHON) project/scripts/show_benchmark_review.py --path $$TARGET_DIR/benchmark_review.json; \
+	PYTHONPATH=. $(PYTHON) project/scripts/show_promotion_readiness.py --review $$TARGET_DIR/benchmark_review.json --cert $$TARGET_DIR/benchmark_certification.json
+	@rm -rf /tmp/edgee_smoke_out
+	@echo "Benchmark maintenance smoke check PASSED."
+
+benchmark-maintenance:
+	@echo "Executing full benchmark maintenance cycle..."
+	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --execute 1
+	@echo "Maintenance cycle COMPLETE. Reviewing results:"
+	PYTHONPATH=. $(PYTHON) project/scripts/show_benchmark_review.py --path data/reports/benchmarks/latest/benchmark_review.json
+	PYTHONPATH=. $(PYTHON) project/scripts/show_promotion_readiness.py --review data/reports/benchmarks/latest/benchmark_review.json --cert data/reports/benchmarks/latest/benchmark_certification.json
 
 minimum-green-gate:
 	@echo "Running minimum green gate checks..."
@@ -241,15 +261,7 @@ compile:
 	$(PYTHON_COMPILE) -m compileall $(ROOT_DIR)/project
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".ruff_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	find . -type f -name ".coverage" -delete
-	find . -type d -name "htmlcov" -exec rm -rf {} +
+	$(CLEAN_SCRIPT) repo
 
 clean-runtime:
 	$(CLEAN_SCRIPT) runtime
@@ -257,18 +269,12 @@ clean-runtime:
 clean-all-data:
 	$(CLEAN_SCRIPT) all
 
-clean-repo:
-	$(CLEAN_SCRIPT) repo
+clean-repo: clean
 
 debloat: clean-repo
 
 check-hygiene:
 	bash $(ROOT_DIR)/project/scripts/check_repo_hygiene.sh
 
-clean-data:
-	$(PYTHON) $(ROOT_DIR)/project/scripts/clean_data.py --days 14
-
 clean-hygiene:
-	find $(ROOT_DIR) -type f \
-		\( -name '*:Zone.Identifier' -o -name '*#Uf03aZone.Identifier' -o -name '*#Uf03aZone.Identifier:Zone.Identifier' \) \
-		-print -delete
+	$(CLEAN_SCRIPT) hygiene

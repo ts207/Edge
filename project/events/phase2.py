@@ -73,4 +73,5 @@ PHASE2_EVENT_CHAIN: List[Tuple[str, str, List[str]]] = [
     ('COPULA_PAIRS_TRADING', 'analyze_events.py', ['--event_type', 'COPULA_PAIRS_TRADING']),
     ('FND_DISLOC', 'analyze_events.py', ['--event_type', 'FND_DISLOC', '--timeframe', '5m']),
     ('BASIS_DISLOC', 'analyze_events.py', ['--event_type', 'BASIS_DISLOC', '--timeframe', '5m']),
+    ('POST_DELEVERAGING_REBOUND', 'analyze_events.py', ['--event_type', 'POST_DELEVERAGING_REBOUND', '--timeframe', '5m']),
 ]

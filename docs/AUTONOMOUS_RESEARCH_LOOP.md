@@ -1,234 +1,187 @@
 # Autonomous Research Loop
 
+This document defines the default research loop for the repository.
+
+Use it when deciding what to do next, how much to run, and when to stop.
+
 ## Purpose
 
-The agent exists to turn market observations into constrained experiments, learn from the results, and improve the next experimental batch without drifting outside the repository's safety and contract boundaries.
+The repo is designed to convert one observation into one or more bounded research actions, then convert the result into durable memory.
 
-The system is not a chat bot with occasional analysis. It is an iterative research worker with memory, explicit hypotheses, bounded experimentation, artifact-driven evaluation, and reflective adaptation.
+The loop is:
 
-## Operating Cycle
+`observe -> retrieve memory -> define objective -> propose -> plan -> execute -> evaluate -> reflect -> adapt`
 
-The canonical loop is:
+## Loop Outputs
 
-1. Observe current state.
-2. Retrieve relevant prior memory.
-3. Form a research objective.
-4. Generate or refine hypotheses.
-5. Select the smallest useful experiment set.
-6. Execute the run.
-7. Evaluate outputs against statistical, operational, and governance gates.
-8. Write reflective memory.
-9. Decide whether to exploit, explore, repair, or stop.
+A complete loop leaves behind:
 
-Each loop must produce durable artifacts. If the loop does not leave behind a decision trace, it did not happen.
+- a bounded objective
+- a run or replay artifact set
+- an evaluation
+- a reflection
+- an explicit next action
 
-## Agent Responsibilities
+If any of those are missing, the loop is incomplete.
 
-- Maintain awareness of current repository contracts.
-- Use existing pipeline stages and registries instead of inventing side channels.
-- Prefer narrow, attributable runs over broad, ambiguous runs.
-- Treat failed runs as learning signals, not noise.
-- Convert repeated failure modes into explicit constraints or repair tasks.
-- Preserve comparability across runs by recording configuration, intent, and outcome.
+## Phase 1: Observe
 
-## Loop Phases
-
-### 1. Observe
-
-Collect:
+Collect the smallest evidence set that explains the current state:
 
 - latest run manifests
-- stage manifests
+- relevant stage manifests
+- stage logs when needed
 - discovery and promotion summaries
-- audit outputs
-- feature integrity reports
-- relevant prior experiment memories
+- quality and audit reports
+- generated diagnostics when ownership or registry questions matter
 
-The observation phase should answer:
+Key questions:
 
-- What was tried?
-- What failed?
-- What looked promising?
-- What was inconclusive?
-- What broke mechanically vs statistically?
+- what was tried
+- what failed mechanically
+- what looked statistically interesting
+- what is still ambiguous
 
-### 2. Retrieve Memory
+## Phase 2: Retrieve Memory
 
-Before proposing a new run, retrieve prior observations for:
+Before proposing a new run, retrieve prior memory for:
 
-- same symbol
-- same event or trigger family
-- same template
-- same context or regime
-- same failure class
+- the same event or family
+- the same template
+- the same symbol or timeframe
+- the same context
+- the same fail gate
 
-The agent should bias toward memory-backed iteration instead of repeating already-rejected regions.
+Do not rerun a region by default if memory already shows repeated clean failure with no material new condition.
 
-### 3. Form Objective
+## Phase 3: Define Objective
 
-An objective must be explicit and testable.
+The objective must be explicit and falsifiable.
 
-Good:
+Good examples:
 
-- test whether basis dislocation continuation under low liquidity survives costs
-- verify whether prior promotion failure was due to missing split counts or weak economics
-- isolate one regime-conditioned trigger with enough validation and test coverage
+- test whether a basis dislocation continuation survives costs in low-liquidity windows
+- verify whether a promotion rejection came from missing holdout support rather than weak economics
+- isolate whether high-confidence trend context improves a specific template
 
-Bad:
+Bad examples:
 
 - find alpha
-- run some experiments
-- explore more things
+- try more experiments
+- search more broadly
 
-### 4. Generate Hypotheses
+## Phase 4: Propose
 
-Hypotheses must be represented in repository-native terms:
+Translate the objective into repo-native terms:
 
-- trigger
-- direction
-- horizon
-- template
-- context
-- entry lag
+- trigger or event family
+- template set
+- context family
+- directions
+- horizons
+- entry lags
+- date and symbol scope
 
-The agent should favor hypotheses that are:
+Use the ontology-native surfaces. Do not invent free-form categories when the registry already has a canonical form.
 
-- explainable from artifacts
-- searchable by registry/spec
-- easy to compare against prior runs
-- narrow enough to falsify
+## Phase 5: Plan
 
-### 5. Select Experiment Batch
+Use `plan_only` before material runs.
 
-Batch selection must balance:
+Planning exists to verify:
 
-- exploitation of strongest prior signal
-- exploration of adjacent but meaningfully distinct regions
-- mechanical verification when the system changed
+- the requested stages are in scope
+- the event and template set are actually what you intended
+- the run is still narrow
+- unnecessary downstream work is not being pulled in
 
-Default batch composition:
+If the plan is broader than the objective, fix the proposal before running.
 
-- 1 exploit experiment
-- 1 adjacent exploration experiment
-- 1 repair or verification experiment if infrastructure changed
+## Phase 6: Execute
 
-Do not mix too many objectives in one batch.
+Default execution order:
 
-### 6. Execute
+1. targeted replay if code or contract changes must be verified
+2. narrow discovery slice
+3. broader expansion only after the narrow path reconciles
 
-Use repository entrypoints that preserve stage contracts and artifacts.
+The repository should answer one question per run whenever possible.
 
-Preferred execution order:
+## Phase 7: Evaluate
 
-- targeted stage replay for repair verification
-- narrow search-engine slice for hypothesis isolation
-- full pipeline run only when the path is mechanically stable
+Evaluate on three layers:
 
-### 7. Evaluate
-
-Every run must be evaluated on three axes:
-
-- statistical quality
-- execution quality
-- contract integrity
-
-Statistical quality includes:
-
-- sample counts by split
-- multiplicity-adjusted significance
-- after-cost expectancy
-- stress survival
-- robustness/regime stability
-
-Execution quality includes:
+### Mechanical
 
 - stage completion
-- absence of stale manifests
-- absence of missing artifact contracts
-- acceptable warning surface
+- artifact presence
+- manifest and log agreement
+- warning surface
 
-Contract integrity includes:
+### Statistical
 
-- input/output presence
-- field propagation
-- consistency between stage and top-level manifests
+- split counts
+- multiplicity-aware quality
+- post-cost expectancy
+- robustness across splits or conditions
 
-### 8. Reflect
+### Deployment Relevance
 
-Reflection is mandatory after material runs, fixes, or surprising failures.
+- friction feasibility
+- promotion eligibility
+- context stability
+- plausibility of live execution
 
-Reflection should answer:
+## Phase 8: Reflect
 
-- What belief was tested?
-- What changed in belief strength?
-- What was learned about the market?
-- What was learned about the system?
-- What should be tried next?
-- What should no longer be tried?
+After every meaningful run, answer:
 
-### 9. Adapt
+1. what belief was tested
+2. what evidence changed that belief
+3. what was market-driven versus system-driven
+4. what reusable rule should be remembered
+5. what exact next action is justified
 
-The agent must explicitly choose one outcome:
+## Phase 9: Adapt
 
-- exploit
-- explore
-- repair
-- hold
-- stop
+Choose one next action:
 
-That choice should be justified from memory and current evidence, not intuition alone.
-
-## Reinforcement Policy
-
-The agent reinforces actions that consistently lead to:
-
-- reproducible positive post-cost results
-- robust validation/test support
-- low orchestration friction
-- clear explanatory structure
-
-The agent penalizes actions that repeatedly lead to:
-
-- contract breakage
-- stale bookkeeping
-- duplicated search regions
-- statistically weak but operationally expensive runs
-- high warning noise with low informational value
+- `exploit`: narrow positive evidence deserves a confirmatory or adjacent strengthening run
+- `explore`: the result was informative, but the next move should test a nearby region
+- `repair`: system or contract issues dominate and must be fixed first
+- `hold`: evidence is too weak or ambiguous to justify more work now
+- `stop`: the idea or path is not worth continuing under current evidence
 
 ## Escalation Rules
 
 Escalate from narrow to broad only when:
 
-- the narrow path produced coherent outputs
-- the target has enough support to justify a larger run
-- the system path is mechanically stable
+- the narrow path is mechanically clean
+- the target claim is still coherent
+- there is enough support to justify more scope
 
 De-escalate to repair mode when:
 
 - manifests and logs disagree
-- promotion consumes malformed candidate contracts
-- split labeling or counts are suspect
-- warning floods obscure true failures
+- required artifacts are missing
+- candidate contracts are malformed
+- warnings obscure real failures
 
-## Definition Of Done For A Loop
+## Synthetic Branch
 
-A loop is complete only when all of the following exist:
+When the dataset is synthetic, the loop changes slightly:
 
-- a run or replay artifact set
-- a concrete evaluation
-- a written reflection
-- a next action choice
-- an updated memory record
+1. freeze the profile before evaluating outcomes
+2. keep the manifest and truth map with the run
+3. validate truth before interpreting misses
+4. compare across at least one additional profile before strengthening belief
+5. separate detector recovery from profitability claims
 
+## Definition Of Done
 
-## Synthetic Research Branch
+The loop is done only when:
 
-When the active dataset is synthetic, the loop changes slightly:
-
-1. freeze the generator profile and suite before inspecting results
-2. preserve the truth map and generation manifest with the run
-3. validate detector truth before interpreting discovery misses
-4. compare findings across at least one additional synthetic profile before strengthening belief
-5. separate detector recovery success from strategy profitability claims
-
-Agent-driven synthetic research should optimize for mechanism recovery, falsification, and promotion robustness, not just headline synthetic PnL.
+- the artifacts reconcile
+- the result is interpreted at the correct layer
+- the next action is explicit
+- memory has enough information to stop repeated rediscovery later

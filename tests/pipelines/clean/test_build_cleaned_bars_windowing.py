@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -154,6 +155,71 @@ def test_build_cleaned_warns_when_funding_window_does_not_overlap(monkeypatch, t
     assert rc == 0
     assert writes
     assert "Funding data for BTCUSDT does not overlap requested window" in caplog.text
+
+
+def test_build_cleaned_writes_data_quality_report(monkeypatch, tmp_path):
+    read_calls = {"i": 0}
+    writes: list[pd.DataFrame] = []
+    finalized: dict[str, object] = {}
+
+    def fake_list_parquet_files(_path):
+        return [Path("dummy.parquet")]
+
+    def fake_read_parquet(_files):
+        read_calls["i"] += 1
+        return _raw_frame() if read_calls["i"] == 1 else _funding_frame()
+
+    def fake_start_manifest(stage_name, run_id, params, inputs, outputs):
+        return {"stage": stage_name, "run_id": run_id, "params": params, "inputs": inputs, "outputs": outputs}
+
+    def fake_finalize_manifest(manifest, status, error=None, stats=None):
+        finalized["status"] = status
+        finalized["stats"] = stats
+        return manifest
+
+    def fake_write_parquet(df, path):
+        writes.append(df.copy())
+        return Path(path), "parquet"
+
+    monkeypatch.setattr(build_cleaned_bars, "get_data_root", lambda: tmp_path / "data")
+    monkeypatch.setattr(build_cleaned_bars, "list_parquet_files", fake_list_parquet_files)
+    monkeypatch.setattr(build_cleaned_bars, "read_parquet", fake_read_parquet)
+    monkeypatch.setattr(build_cleaned_bars, "start_manifest", fake_start_manifest)
+    monkeypatch.setattr(build_cleaned_bars, "finalize_manifest", fake_finalize_manifest)
+    monkeypatch.setattr(build_cleaned_bars, "write_parquet", fake_write_parquet)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_cleaned_bars.py",
+            "--run_id",
+            "r_quality",
+            "--symbols",
+            "BTCUSDT",
+            "--market",
+            "perp",
+            "--start",
+            "2026-01-01T00:00:00Z",
+            "--end",
+            "2026-01-01T00:15:00Z",
+            "--funding_scale",
+            "bps",
+        ],
+    )
+
+    rc = build_cleaned_bars.main()
+
+    assert rc == 0
+    assert writes
+    stats = finalized["stats"]["symbols"]["BTCUSDT"]
+    report_path = Path(stats["data_quality_report_path"])
+    assert report_path.exists()
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "data_quality_report_v1"
+    assert payload["symbol"] == "BTCUSDT"
+    assert payload["timeframe"] == "5m"
+    assert payload["overall"]["rows"] == 3
+    assert "2026-01" in payload["by_month"]
 
 
 def test_build_cleaned_prefers_run_scoped_raw_and_funding(monkeypatch, tmp_path):

@@ -51,3 +51,65 @@ def test_golden_synthetic_discovery_workflow_writes_summary(tmp_path: Path, monk
     assert summary["candidate_summary"]["candidate_rows"] == 1
     assert summary["search_engine_diagnostics"]["discovery_profile"] == "synthetic"
 
+
+def test_golden_synthetic_discovery_applies_narrowing_overrides(tmp_path: Path, monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_runner(*, data_root: Path, argv: list[str]):
+        captured["argv"] = list(argv)
+        run_id = argv[argv.index("--run_id") + 1]
+        out_dir = data_root / "reports" / "phase2" / run_id / "search_engine"
+        ensure_dir(out_dir)
+        write_parquet(pd.DataFrame(), out_dir / "phase2_candidates.parquet")
+        (out_dir / "phase2_diagnostics.json").write_text(
+            json.dumps({"discovery_profile": "synthetic", "search_budget": 32}, indent=2),
+            encoding="utf-8",
+        )
+        return _Completed(0)
+
+    monkeypatch.setattr(
+        "project.scripts.run_golden_synthetic_discovery.validate_detector_truth",
+        lambda **kwargs: {"passed": True, "event_reports": [{"event_type": "FND_DISLOC"}]},
+    )
+
+    config_path = tmp_path / "fast.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workflow_id: fast_test",
+                "run_id: fast_run",
+                "symbols: BTCUSDT",
+                "start_date: 2026-01-01",
+                "end_date: 2026-01-14",
+                "events: [FND_DISLOC]",
+                "templates: [continuation]",
+                "entry_lags: [0, 1]",
+                "search_budget: 32",
+                "required_outputs:",
+                "  - synthetic/{run_id}/synthetic_generation_manifest.json",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = run_golden_synthetic_discovery(
+        root=tmp_path,
+        config_path=config_path,
+        pipeline_runner=_fake_runner,
+        overrides={"search_min_n": 4},
+    )
+
+    argv = captured["argv"]
+    assert "--events" in argv
+    assert "FND_DISLOC" in argv
+    assert "--templates" in argv
+    assert "continuation" in argv
+    assert "--entry_lags" in argv
+    assert "--search_budget" in argv
+    assert "32" in argv
+    assert "--search_min_n" in argv
+    assert "4" in argv
+    assert payload["selection"]["events"] == ["FND_DISLOC"]
+    assert payload["selection"]["search_budget"] == 32
+    assert payload["required_outputs"] == ["synthetic/fast_run/synthetic_generation_manifest.json"]

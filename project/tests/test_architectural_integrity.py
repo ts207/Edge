@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import os
 from pathlib import Path
@@ -16,15 +17,15 @@ ALLOWED_DEPENDENCIES = {
     "project.runtime": ["project.core", "project.specs"],
     "project.events": ["project.core", "project.io", "project.specs", "project.spec_registry", "project.research", "project.features", "project.artifacts", "project.contracts", "project.domain"],
     "project.features": ["project.core", "project.io", "project.events", "project.spec_registry", "project.artifacts", "project.contracts"],
-    "project.strategy": ["project.compilers", "project.core", "project.strategies", "project.events", "project.domain", "project.engine", "project.schemas"],
-    "project.strategies": ["project.core", "project.strategy", "project.events", "project.compilers"],
-    "project.engine": ["project.core", "project.io", "project.events", "project.features", "project.strategies", "project.strategy", "project.portfolio"],
+    "project.strategy": ["project.compilers", "project.core", "project.strategy.runtime", "project.events", "project.domain", "project.engine", "project.schemas"],
+    "project.strategy.runtime": ["project.core", "project.strategy", "project.events", "project.compilers"],
+    "project.engine": ["project.core", "project.io", "project.events", "project.features", "project.strategy.runtime", "project.strategy", "project.portfolio"],
     "project.compilers": ["project.core", "project.specs", "project.events", "project.domain", "project.strategy", "project.schemas"],
     "project.portfolio": ["project.core", "project.specs", "project.strategy"],
     "project.research": [
         "project.core", "project.io", "project.specs", "project.runtime", 
         "project.events", "project.features", "project.strategy",
-        "project.strategies", "project.engine", "project.eval",
+        "project.strategy.runtime", "project.engine", "project.eval",
         "project.spec_registry",
         "project.artifacts", "project.schemas", "project.spec_validation", "project.contracts",
         "project.domain", "project.compilers", "project.portfolio"
@@ -115,6 +116,9 @@ def test_wrappers_are_pure_reexports():
     Ensures that compatibility wrappers are pure re-exports without local logic.
     """
     wrapper_dirs = [
+        PROJECT_ROOT / "apps",
+        PROJECT_ROOT / "execution",
+        PROJECT_ROOT / "infra",
         PROJECT_ROOT / "pipelines" / "eval",
     ]
     for d in wrapper_dirs:
@@ -137,6 +141,79 @@ def test_wrappers_are_pure_reexports():
                     
                     if "def " in content or "class " in content:
                         raise ImportError(f"Architectural Violation: {file_path} contains local logic (def/class)")
+
+
+def test_explicit_package_roots_stay_shallow() -> None:
+    strict_roots = [
+        PROJECT_ROOT / "artifacts" / "__init__.py",
+        PROJECT_ROOT / "compilers" / "__init__.py",
+        PROJECT_ROOT / "eval" / "__init__.py",
+        PROJECT_ROOT / "experiments" / "__init__.py",
+        PROJECT_ROOT / "live" / "__init__.py",
+        PROJECT_ROOT / "portfolio" / "__init__.py",
+        PROJECT_ROOT / "spec_validation" / "__init__.py",
+        PROJECT_ROOT / "research" / "clustering" / "__init__.py",
+        PROJECT_ROOT / "research" / "reports" / "__init__.py",
+        PROJECT_ROOT / "research" / "utils" / "__init__.py",
+    ]
+    lazy_roots = [
+        PROJECT_ROOT / "pipelines" / "clean" / "__init__.py",
+        PROJECT_ROOT / "pipelines" / "features" / "__init__.py",
+        PROJECT_ROOT / "pipelines" / "ingest" / "__init__.py",
+    ]
+
+    for path in strict_roots:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        defs = [
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        ]
+        assert not defs, f"Architectural Violation: {path.relative_to(PROJECT_ROOT.parent)} should remain a pure re-export surface, found {defs}"
+
+    for path in lazy_roots:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        defs = [
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        ]
+        assert defs == ["__getattr__"], (
+            f"Architectural Violation: {path.relative_to(PROJECT_ROOT.parent)} should only define __getattr__, found {defs}"
+        )
+
+
+def test_preferred_root_surfaces_replace_cross_domain_deep_imports() -> None:
+    preferred = {
+        "project.artifacts.catalog": ("project.artifacts", PROJECT_ROOT / "artifacts"),
+        "project.compilers.executable_strategy_spec": ("project.compilers", PROJECT_ROOT / "compilers"),
+        "project.portfolio.allocation_spec": ("project.portfolio", PROJECT_ROOT / "portfolio"),
+        "project.portfolio.sizing": ("project.portfolio", PROJECT_ROOT / "portfolio"),
+        "project.spec_validation.loaders": ("project.spec_validation", PROJECT_ROOT / "spec_validation"),
+        "project.spec_validation.ontology": ("project.spec_validation", PROJECT_ROOT / "spec_validation"),
+        "project.spec_validation.search": ("project.spec_validation", PROJECT_ROOT / "spec_validation"),
+        "project.eval.splits": ("project.eval", PROJECT_ROOT / "eval"),
+        "project.live.runner": ("project.live", PROJECT_ROOT / "live"),
+        "project.live.health_checks": ("project.live", PROJECT_ROOT / "live"),
+        "project.live.state": ("project.live", PROJECT_ROOT / "live"),
+    }
+    violations: list[str] = []
+    exemptions = {
+        PROJECT_ROOT / "scripts" / "run_live_engine.py",
+    }
+    for file_path in PROJECT_ROOT.rglob("*.py"):
+        if file_path in exemptions:
+            continue
+        content = file_path.read_text(encoding="utf-8")
+        for deep_module, (preferred_root, owner_root) in preferred.items():
+            if file_path.is_relative_to(owner_root):
+                continue
+            if re.search(rf"(?:from|import)\s+{re.escape(deep_module)}(?:\.|\s|$)", content):
+                violations.append(
+                    f"Architectural Violation: {file_path.relative_to(PROJECT_ROOT.parent)} imports {deep_module}; prefer {preferred_root}"
+                )
+    if violations:
+        pytest.fail("\n".join(sorted(set(violations))))
 
 def test_file_size_thresholds():
     """

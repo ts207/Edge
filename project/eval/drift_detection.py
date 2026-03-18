@@ -46,10 +46,16 @@ def detect_parameter_drift(old_manifest: Dict[str, Any], new_manifest: Dict[str,
 
     return drift_flags
 
-def detect_feature_drift(current_features_df: pd.DataFrame, reference_distributions_path: str = "", p_value_threshold: float = 0.05, reference_fraction: float = 0.5) -> List[Dict[str, Any]]:
+def detect_feature_drift(
+    current_features_df: pd.DataFrame, 
+    reference_distributions_path: str = "", 
+    p_value_threshold: float = 0.05, 
+    ks_threshold: float = 0.15,
+    reference_fraction: float = 0.5
+) -> List[Dict[str, Any]]:
     """
     Compares the latter portion of the features dataframe against the first portion using the Kolmogorov-Smirnov test.
-    Emits a warning/flag if the KS p-value < 0.05.
+    Emits a warning/flag if the KS p-value < 0.05 AND the KS statistic > ks_threshold.
     This rolling window approach prevents the need for static reference JSON files and adapts to slow regime drift.
     """
     drift_flags = []
@@ -63,8 +69,15 @@ def detect_feature_drift(current_features_df: pd.DataFrame, reference_distributi
     reference_df = current_features_df.iloc[:split_idx]
     recent_df = current_features_df.iloc[split_idx:]
 
+    SKIP_COLS = {
+        'timestamp', 'open', 'high', 'low', 'close', 'volume', 'enter_idx', 'exit_idx',
+        'quote_volume', 'taker_base_volume', 'taker_buy_quote_volume', 'trade_count',
+        'depth_usd', 'spot_close', 'spot_open', 'spot_high', 'spot_low',
+        'liquidation_notional', 'liquidation_count', 'oi_notional', 'funding_abs'
+    }
+
     for col in current_features_df.select_dtypes(include=[np.number]).columns:
-        if col in ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'enter_idx', 'exit_idx']:
+        if col in SKIP_COLS or col.endswith('_raw') or col.endswith('_count'):
             continue
 
         recent_data = recent_df[col].dropna().values
@@ -90,7 +103,7 @@ def detect_feature_drift(current_features_df: pd.DataFrame, reference_distributi
 
         stat, p_value = ks_2samp(recent_data, ref_data)
 
-        if p_value < p_value_threshold:
+        if p_value < p_value_threshold and stat > ks_threshold:
             flag = {
                 "feature": col,
                 "ks_statistic": float(stat),

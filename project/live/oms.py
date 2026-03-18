@@ -97,10 +97,11 @@ class LiveOrder:
 
 
 class OrderManager:
-    def __init__(self):
+    def __init__(self, exchange_client: Any | None = None):
         self.active_orders: Dict[str, LiveOrder] = {}  # client_order_id -> LiveOrder
         self.order_history: List[LiveOrder] = []
         self.execution_attribution: List[ExecutionAttributionRecord] = []
+        self.exchange_client = exchange_client
 
     def add_order(self, order: LiveOrder):
         self.active_orders[order.client_order_id] = order
@@ -150,6 +151,46 @@ class OrderManager:
             "client_order_id": order.client_order_id,
             "gate": gate,
         }
+
+    async def cancel_all_orders(self, symbol: Optional[str] = None):
+        """Cancel all active orders for a symbol or ALL symbols via exchange client."""
+        if not self.exchange_client:
+            LOGGER.warning("No exchange client configured; skipping cancel_all_orders.")
+            return
+
+        symbols_to_cancel = [symbol] if symbol else list(set(o.symbol for o in self.active_orders.values()))
+        for sym in symbols_to_cancel:
+            try:
+                await self.exchange_client.cancel_all_open_orders(sym)
+                LOGGER.info(f"Cancelled all open orders for {sym}")
+            except Exception as e:
+                LOGGER.error(f"Failed to cancel orders for {sym}: {e}")
+
+    async def flatten_all_positions(self, state_store: Any, symbol: Optional[str] = None):
+        """Submit reactive market orders to close all positions in the state store."""
+        if not self.exchange_client:
+            LOGGER.warning("No exchange client configured; skipping flatten_all_positions.")
+            return
+
+        positions = state_store.account.positions
+        symbols = [symbol.upper()] if symbol else list(positions.keys())
+
+        for sym in symbols:
+            pos = positions.get(sym)
+            if not pos or abs(pos.quantity) <= 1e-10:
+                continue
+
+            side = "SELL" if pos.side == "LONG" else "BUY"
+            try:
+                await self.exchange_client.create_market_order(
+                    symbol=sym,
+                    side=side,
+                    quantity=pos.quantity,
+                    reduce_only=True
+                )
+                LOGGER.info(f"Submitted flattening order for {sym}: {side} {pos.quantity}")
+            except Exception as e:
+                LOGGER.error(f"Failed to flatten position for {sym}: {e}")
 
     def on_order_update(self, client_order_id: str, status: OrderStatus, **kwargs):
         order = self.get_order(client_order_id)

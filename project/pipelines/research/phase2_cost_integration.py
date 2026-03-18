@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from project.engine.execution_model import estimate_transaction_cost_bps
+from project.core.execution_costs import estimate_transaction_cost_bps
 from project.pipelines.research.phase2_event_analyzer import ActionSpec
 
 COST_INPUT_COVERAGE_MIN = 0.80

@@ -1,23 +1,22 @@
 # Engine Layer (`project/engine`)
 
-The engine layer defines the core execution logic, matching logic (for replays), and risk enforcement.
+The engine layer owns execution mechanics, artifacts, and lower-level trading-state transitions used by replay and runtime surfaces.
 
-## 1. Ownership
-- **Order Execution Logic**: Sending and modifying orders.
-- **Risk Control**: Invariants for position limits and leverage.
-- **Backtest Engine**: Simulating venue matching behavior for offline replay.
+## Ownership
 
-## 2. Non-Ownership
-- **Research Policy**: It does not decide *why* to trade, only *how* to execute.
-- **Data Ingestion**: It operates on pre-cleaned data streams.
-- **High-Level Orchestration**: It is called by `runtime` but does not orchestrate the session.
+- order and fill state transitions
+- execution-side artifact generation
+- engine exceptions and low-level execution helpers
+- deterministic execution behavior that runtime and replay surfaces depend on
 
-## 3. Public Interfaces
-- **`OrderEngine`**: Core interface for order placement.
-- **`RiskEngine`**: Invariant enforcement for risk and compliance.
-- **`BacktestEngine`**: Matching simulation for historical traces.
+## Non-Ownership
 
-## 4. Constraints
-- **Bit-for-Bit Determinism**: Given identical inputs, the engine must produce identical outputs.
-- **Zero Allocations**: In performance-critical sections, minimize memory allocations.
-- **Minimal Dependencies**: The engine should not depend on large research libraries like Scipy.
+- research policy and signal selection
+- data cleaning and feature generation
+- top-level run orchestration
+
+## Constraints
+
+- identical inputs should yield identical execution state transitions
+- execution code should stay lean and avoid unnecessary research-layer dependencies
+- engine modules should describe how to execute, not whether a hypothesis deserves execution

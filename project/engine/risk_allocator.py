@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from project.core.constants import BARS_PER_YEAR_BY_TIMEFRAME
-from project.portfolio.allocation_spec import AllocationSpec
+from project.portfolio import AllocationSpec
 
 
 ALLOCATION_CONTRACT_SCHEMA_VERSION = "allocation_contract_v1"
@@ -20,39 +20,26 @@ ALLOCATION_DIAGNOSTICS_SCHEMA_VERSION = "allocation_diagnostics_v1"
 # implementation is used.  The function traverses an array of target
 # exposures and ensures that changes between consecutive elements do not
 # exceed the specified ``max_new`` threshold.
+def _clamp_positions_py(raw: np.ndarray, max_new: float) -> np.ndarray:
+    n = raw.size
+    out = np.empty_like(raw)
+    prior = 0.0
+    for i in range(n):
+        target = raw[i]
+        delta = target - prior
+        if delta > max_new:
+            delta = max_new
+        elif delta < -max_new:
+            delta = -max_new
+        out[i] = prior + delta
+        prior = out[i]
+    return out
+
 try:
     from numba import njit  # type: ignore
-
-    @njit(cache=True)
-    def _clamp_positions(raw: np.ndarray, max_new: float) -> np.ndarray:
-        n = raw.size
-        out = np.empty_like(raw)
-        prior = 0.0
-        for i in range(n):
-            target = raw[i]
-            delta = target - prior
-            if delta > max_new:
-                delta = max_new
-            elif delta < -max_new:
-                delta = -max_new
-            out[i] = prior + delta
-            prior = out[i]
-        return out
+    _clamp_positions = njit(cache=True)(_clamp_positions_py)
 except Exception:
-    def _clamp_positions(raw: np.ndarray, max_new: float) -> np.ndarray:
-        n = raw.size
-        out = np.empty_like(raw)
-        prior = 0.0
-        for i in range(n):
-            target = raw[i]
-            delta = target - prior
-            if delta > max_new:
-                delta = max_new
-            elif delta < -max_new:
-                delta = -max_new
-            out[i] = prior + delta
-            prior = out[i]
-        return out
+    _clamp_positions = _clamp_positions_py
 
 @dataclass(frozen=True)
 class RiskLimits:
@@ -397,7 +384,15 @@ def allocate_position_details(
             cov = diff.cov()
             if (cov.isnull().any().any()) or len(cov) != len(requested):
                 raise ValueError("invalid covariance for allocation")
-            inv_cov = np.linalg.inv(cov.values)
+            
+            # Audit 3.2: Add regularization (Shrinkage) to ensure numerical stability
+            # Simple constant shrinkage towards identity to prevent singular matrix
+            cov_vals = cov.values
+            n_assets = len(cov_vals)
+            shrinkage = 0.1
+            shrunk_cov = (1 - shrinkage) * cov_vals + shrinkage * np.eye(n_assets) * np.trace(cov_vals) / n_assets
+            
+            inv_cov = np.linalg.inv(shrunk_cov)
             ones = np.ones(len(inv_cov))
             weights = inv_cov @ ones
             weights = np.clip(weights, 0.0, None)
@@ -406,7 +401,7 @@ def allocate_position_details(
             for key, w in zip(ordered, weights):
                 requested[key] = requested[key] * float(w)
         except Exception:
-            pass
+            _LOG.warning("Correlation allocation failed, falling back to equal-weight", exc_info=True)
 
     allocated = {key: s.copy() for key, s in requested.items()}
 

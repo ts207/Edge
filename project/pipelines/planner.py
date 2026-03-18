@@ -38,7 +38,6 @@ DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
     ("build_features_{tf}", ["build_cleaned_{tf}", "ingest_binance_um_funding"]),
     ("build_features_{tf}_spot", ["build_cleaned_{tf}_spot"]),
     ("build_universe_snapshots", ["@CLEANED_STAGES"]),
-    ("build_context_features_{tf}", ["build_features_{tf}"]),
     ("build_market_context_{tf}", ["build_features_{tf}"]),
     ("build_microstructure_rollup_{tf}", ["build_features_{tf}"]),
     ("validate_feature_integrity_{tf}", ["build_features_{tf}"]),
@@ -49,8 +48,8 @@ DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
     ("run_oms_replay_validation", ["run_causal_lane_ticks"]),
     
     # Research Chain
-    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}", "build_context_features_{tf}"]),
-    ("analyze_events__{event}_{tf}", ["build_features_{tf}", "build_context_features_{tf}"]),
+    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}"]),
+    ("analyze_events__{event}_{tf}", ["build_features_{tf}"]),
     ("build_event_registry__{event}_{tf}", ["@ANALYZERS_FOR_EVENT"]),
     ("canonicalize_event_episodes__{event}_{tf}", ["build_event_registry__{event}_{tf}"]),
     ("phase2_conditional_hypotheses__{event}_{tf}", ["canonicalize_event_episodes__{event}_{tf}"]),
@@ -248,7 +247,6 @@ def build_pipeline_plan(
     stages_with_config_prefixes = (
         "build_cleaned_",
         "build_features",
-        "build_context_features",
         "build_market_context",
     )
     for name, stage in plan.items():
@@ -276,6 +274,31 @@ def build_pipeline_plan(
             if args.slippage_bps is not None: base_args.extend(["--slippage_bps", str(args.slippage_bps)])
             if args.cost_bps is not None: base_args.extend(["--cost_bps", str(args.cost_bps)])
 
+    # Audit 3.3: Explicit topological sort and cycle detection to validate the DAG
+    _validate_pipeline_dag(plan)
+
     # Return plain list for registry contract check but return plan for orchestration
     assert_stage_registry_contract([(s.name, s.script_path, s.args) for s in plan.values()], project_root)
     return plan
+
+def _validate_pipeline_dag(plan: Dict[str, StageDefinition]) -> None:
+    """Perform cycle detection and ensure a valid topological order exists."""
+    visited = set()
+    stack = set()
+
+    def has_cycle(u: str) -> bool:
+        visited.add(u)
+        stack.add(u)
+        for v in plan[u].depends_on:
+            if v not in visited:
+                if has_cycle(v):
+                    return True
+            elif v in stack:
+                return True
+        stack.remove(u)
+        return False
+
+    for node in plan:
+        if node not in visited:
+            if has_cycle(node):
+                raise ValueError(f"Pipeline dependency cycle detected involving stage: {node}")

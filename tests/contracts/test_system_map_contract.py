@@ -25,7 +25,7 @@ def test_system_map_markdown_labels_canonical_and_removed_compatibility() -> Non
     markdown = render_system_map_markdown(payload)
     assert "## Canonical Entrypoints" in markdown
     assert "## Compatibility Surfaces" in markdown
-    assert "project.pipelines.orchestration.run_all_service" in markdown
+    assert "project.pipelines.run_all" in markdown
     assert "Legacy wrapper surfaces have been removed." in markdown
 
 

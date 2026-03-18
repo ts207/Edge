@@ -16,10 +16,8 @@ import yaml
 import dataclasses
 
 from project import PROJECT_ROOT
-from project.artifacts.catalog import checklist_path, load_json_dict, phase2_candidates_path, run_manifest_path
-from project.compilers.executable_strategy_spec import (
-    ExecutableStrategySpec,
-)
+from project.artifacts import checklist_path, load_json_dict, phase2_candidates_path, run_manifest_path
+from project.compilers import ExecutableStrategySpec
 from project.domain.compiled_registry import get_domain_registry
 
 from project.core.coercion import safe_float, safe_int, as_bool
@@ -34,7 +32,7 @@ from project.research.utils.decision_safety import (
 
 from project.core.execution_costs import resolve_execution_costs
 from project.io.utils import ensure_dir, write_parquet
-from project.portfolio.allocation_spec import AllocationSpec
+from project.portfolio import AllocationSpec
 from project.specs.objective import (
     assert_low_capital_contract,
     resolve_objective_profile_contract,

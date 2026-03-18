@@ -22,9 +22,9 @@ This file records the current default research-quality calibration after the arc
 ### Sample-Quality Policy
 
 - `standard`
-  - `min_validation_n_obs = 2`
-  - `min_test_n_obs = 2`
-  - `min_total_n_obs = 10`
+  - `min_validation_n_obs = 10`  (raised from 2; TICKET-005)
+  - `min_test_n_obs = 10`        (raised from 2; TICKET-005)
+  - `min_total_n_obs = 30`       (raised from 10; TICKET-005)
 - `synthetic`
   - `min_validation_n_obs = 1`
   - `min_test_n_obs = 1`
@@ -195,6 +195,6 @@ Direction policy is now explicit for registry-style event discovery:
 
 Retune these defaults only after reviewing at least a few baseline-vs-candidate comparisons from real runs. If you change them:
 
-1. Update the constants in [`project/research/services/run_comparison_service.py`](/home/tstuv/workspace/trading/EDGEE/project/research/services/run_comparison_service.py) and [`project/research/services/candidate_discovery_service.py`](/home/tstuv/workspace/trading/EDGEE/project/research/services/candidate_discovery_service.py).
-2. Keep the parser defaults in [`project/pipelines/pipeline_planning.py`](/home/tstuv/workspace/trading/EDGEE/project/pipelines/pipeline_planning.py) in sync.
+1. Update the constants in `project/research/services/run_comparison_service.py` and `project/research/services/candidate_discovery_service.py`.
+2. Keep the parser defaults in `project/pipelines/pipeline_planning.py` in sync.
 3. Refresh the tests that pin the default calibration behavior.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -10,7 +11,19 @@ import numpy as np
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.core.context_quality import summarize_context_quality
+from project.core.feature_registry import ensure_market_context_feature_definitions_registered
 from project.core.feature_schema import feature_dataset_dir_name
+from project.features.context_states import (
+    calculate_ms_funding_probabilities,
+    calculate_ms_liq_probabilities,
+    calculate_ms_oi_probabilities,
+    calculate_ms_spread_probabilities,
+    calculate_ms_trend_probabilities,
+    calculate_ms_vol_probabilities,
+    encode_context_state_code,
+)
+from project.features.funding_persistence import build_funding_persistence_state
 from project.io.utils import (
     ensure_dir,
     read_parquet,
@@ -28,9 +41,46 @@ _SPREAD_ELEVATED_Z = 1.5
 _CROWDING_OI_DELTA_PCT = 0.05
 
 
+def _context_quality_report_path(
+    data_root: Path,
+    *,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+) -> Path:
+    return (
+        data_root
+        / "reports"
+        / "context_quality"
+        / run_id
+        / market
+        / symbol
+        / timeframe
+        / "context_quality_report_v1.json"
+    )
+
+
+def _write_context_quality_report(path: Path, payload: dict[str, object]) -> None:
+    ensure_dir(path.parent)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _normalize_percentile_scale(series: pd.Series) -> pd.Series:
+    out = pd.to_numeric(series, errors="coerce").astype(float)
+    non_null = out.dropna()
+    if not non_null.empty and float(non_null.abs().max()) <= 1.0:
+        out = out * 100.0
+    return out
+
+
 def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
+    ensure_market_context_feature_definitions_registered()
     if "funding_rate_scaled" not in features.columns:
         raise ValueError(f"missing funding_rate_scaled for {symbol}")
+    features["funding_rate_scaled"] = pd.to_numeric(
+        features["funding_rate_scaled"], errors="coerce"
+    ).astype(float)
     if features["funding_rate_scaled"].isna().any():
         missing_count = int(features["funding_rate_scaled"].isna().sum())
         total_rows = int(len(features))
@@ -56,40 +106,67 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
 
     # funding_rate_bps
     out["funding_rate_bps"] = out["funding_rate_scaled"] * 10_000.0
+    funding_probs = calculate_ms_funding_probabilities(out["funding_rate_bps"])
+    out = pd.concat([out, funding_probs], axis=1)
+
+    fp_state = build_funding_persistence_state(
+        out[["timestamp", "funding_rate_scaled"]],
+        symbol=symbol,
+    )
+    fp_cols = [col for col in fp_state.columns if col != "timestamp"]
+    out = out.merge(fp_state[["timestamp", *fp_cols]], on="timestamp", how="left")
 
     # carry_state_code: +1 positive funding, -1 negative
     out["carry_state_code"] = np.where(out["funding_rate_scaled"] >= 0, 1.0, -1.0)
 
-    funding_sign = np.sign(out["funding_rate_scaled"].fillna(0.0))
-    funding_sign = pd.Series(funding_sign, index=out.index, dtype=float)
-    funding_sign = funding_sign.where(funding_sign != 0.0, np.nan)
-    funding_run_id = (funding_sign != funding_sign.shift()).cumsum()
-    funding_streak = funding_sign.groupby(funding_run_id, dropna=False).cumcount() + 1
     out["funding_persistence_state"] = (
-        funding_sign.notna() & (funding_streak >= _FUNDING_PERSIST_WINDOW)
+        pd.to_numeric(out.get("fp_active", 0.0), errors="coerce").fillna(0.0) > 0
     ).astype(float)
 
     # vol regime: use rv_96 percentile if available, else rv_pct_17280
     if "rv_pct_17280" in out.columns:
-        out["high_vol_regime"] = (out["rv_pct_17280"] >= _HIGH_VOL_PCT / 100.0).astype(float)
-        out["low_vol_regime"] = (out["rv_pct_17280"] <= _LOW_VOL_PCT / 100.0).astype(float)
+        rv_pct = _normalize_percentile_scale(out["rv_pct_17280"])
+        vol_probs = calculate_ms_vol_probabilities(rv_pct)
+        out = pd.concat([out, vol_probs], axis=1)
+        out["high_vol_regime"] = (out["ms_vol_state"] >= 2.0).astype(float)
+        out["low_vol_regime"] = (out["ms_vol_state"] == 0.0).astype(float)
     else:
+        out["ms_vol_state"] = np.nan
+        out["prob_vol_low"] = np.nan
+        out["prob_vol_mid"] = np.nan
+        out["prob_vol_high"] = np.nan
+        out["prob_vol_shock"] = np.nan
+        out["ms_vol_confidence"] = np.nan
+        out["ms_vol_entropy"] = np.nan
         out["high_vol_regime"] = 0.0
         out["low_vol_regime"] = 0.0
 
     # spread_elevated_state
     if "spread_zscore" in out.columns:
-        out["spread_elevated_state"] = (out["spread_zscore"] > _SPREAD_ELEVATED_Z).astype(float)
+        spread_z = pd.to_numeric(out["spread_zscore"], errors="coerce").astype(float)
+        spread_probs = calculate_ms_spread_probabilities(spread_z)
+        out = pd.concat([out, spread_probs], axis=1)
+        out["spread_elevated_state"] = (out["ms_spread_state"] >= 1.0).astype(float)
     else:
+        out["ms_spread_state"] = np.nan
+        out["prob_spread_tight"] = np.nan
+        out["prob_spread_wide"] = np.nan
+        out["ms_spread_confidence"] = np.nan
+        out["ms_spread_entropy"] = np.nan
         out["spread_elevated_state"] = 0.0
 
-    # low_liquidity_state: high_vol OR spread_elevated
-    out["low_liquidity_state"] = (
-        (out["high_vol_regime"] > 0) | (out["spread_elevated_state"] > 0)
+    quote_volume = pd.to_numeric(
+        out.get("quote_volume", out.get("volume", pd.Series(np.nan, index=out.index)) * out.get("close", 1.0)),
+        errors="coerce",
     ).astype(float)
+    liq_probs = calculate_ms_liq_probabilities(quote_volume)
+    out = pd.concat([out, liq_probs], axis=1)
+    out["low_liquidity_state"] = (out["ms_liq_state"] == 0.0).astype(float)
 
     # refill_lag_state: oi_delta negative (de-risking)
     if "oi_delta_1h" in out.columns:
+        oi_probs = calculate_ms_oi_probabilities(pd.to_numeric(out["oi_delta_1h"], errors="coerce"))
+        out = pd.concat([out, oi_probs], axis=1)
         out["refill_lag_state"] = (out["oi_delta_1h"] < 0).astype(float)
         out["deleveraging_state"] = (
             out["oi_delta_1h"] < -out["oi_notional"].abs() * _CROWDING_OI_DELTA_PCT
@@ -97,6 +174,12 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
             else out["oi_delta_1h"] < 0
         ).astype(float)
     else:
+        out["ms_oi_state"] = np.nan
+        out["prob_oi_decel"] = np.nan
+        out["prob_oi_stable"] = np.nan
+        out["prob_oi_accel"] = np.nan
+        out["ms_oi_confidence"] = np.nan
+        out["ms_oi_entropy"] = np.nan
         out["refill_lag_state"] = 0.0
         out["deleveraging_state"] = 0.0
 
@@ -117,14 +200,31 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     else:
         out["crowding_state"] = 0.0
 
-    # trend regimes: use rolling log returns
+    # trend regimes: use canonical log returns when available, otherwise derive from close
     if "logret_1" in out.columns:
-        rolling_ret = out["logret_1"].rolling(96, min_periods=1).sum()
-        vol = out["logret_1"].rolling(96, min_periods=1).std() * np.sqrt(96)
-        out["bull_trend_regime"] = (rolling_ret > vol).astype(float)
-        out["bear_trend_regime"] = (rolling_ret < -vol).astype(float)
-        out["chop_regime"] = ((rolling_ret.abs() <= vol)).astype(float)
+        logret_1 = pd.to_numeric(out["logret_1"], errors="coerce").astype(float)
+    elif "close" in out.columns:
+        close = pd.to_numeric(out["close"], errors="coerce").astype(float)
+        logret_1 = np.log(close / close.shift(1))
+        out["logret_1"] = logret_1
     else:
+        logret_1 = pd.Series(np.nan, index=out.index, dtype=float)
+
+    if logret_1.notna().any():
+        rolling_ret = logret_1.rolling(96, min_periods=1).sum()
+        vol = logret_1.rolling(96, min_periods=1).std() * np.sqrt(96)
+        trend_probs = calculate_ms_trend_probabilities(rolling_ret, rv=vol)
+        out = pd.concat([out, trend_probs], axis=1)
+        out["bull_trend_regime"] = (out["ms_trend_state"] == 1.0).astype(float)
+        out["bear_trend_regime"] = (out["ms_trend_state"] == 2.0).astype(float)
+        out["chop_regime"] = (out["ms_trend_state"] == 0.0).astype(float)
+    else:
+        out["ms_trend_state"] = np.nan
+        out["prob_trend_chop"] = np.nan
+        out["prob_trend_bull"] = np.nan
+        out["prob_trend_bear"] = np.nan
+        out["ms_trend_confidence"] = np.nan
+        out["ms_trend_entropy"] = np.nan
         out["bull_trend_regime"] = 0.0
         out["bear_trend_regime"] = 0.0
         out["chop_regime"] = 0.0
@@ -135,6 +235,15 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
         out["ms_liquidation_state"] = (out["liquidation_notional"] > liq_q80).astype(float)
     else:
         out["ms_liquidation_state"] = 0.0
+
+    out["ms_context_state_code"] = encode_context_state_code(
+        out["ms_vol_state"],
+        out["ms_liq_state"],
+        out["ms_oi_state"],
+        out["ms_funding_state"],
+        out["ms_trend_state"],
+        out["ms_spread_state"],
+    )
 
     return out
 
@@ -176,6 +285,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, handlers=log_handlers, format="%(asctime)s %(levelname)s %(message)s")
 
     manifest = start_manifest("build_market_context", run_id, vars(args), [], [])
+    stats: dict[str, object] = {"symbols": {}}
 
     try:
         for symbol in symbols:
@@ -206,11 +316,33 @@ def main() -> int:
                     write_parquet(group, out_path)
                     logging.info(f"Wrote market context for {symbol} {year}-{month:02d} to {out_path}")
 
-        finalize_manifest(manifest, "success")
+                report_path = _context_quality_report_path(
+                    data_root,
+                    run_id=run_id,
+                    market=market,
+                    symbol=symbol,
+                    timeframe=tf,
+                )
+                quality_payload = {
+                    "schema_version": "context_quality_report_v1",
+                    "run_id": run_id,
+                    "market": market,
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "quality": summarize_context_quality(result),
+                }
+                _write_context_quality_report(report_path, quality_payload)
+                stats["symbols"][symbol] = {
+                    "rows": int(len(result)),
+                    "context_quality_report_path": str(report_path),
+                    "context_quality_summary": quality_payload["quality"],
+                }
+
+        finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as e:
         logging.exception("Market context building failed")
-        finalize_manifest(manifest, "failed", error=str(e))
+        finalize_manifest(manifest, "failed", error=str(e), stats=stats)
         return 1
 
 

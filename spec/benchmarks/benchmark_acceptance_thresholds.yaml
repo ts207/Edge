@@ -1,0 +1,33 @@
+# Maintained Benchmark Acceptance Thresholds
+# These define the minimum floor for a benchmark slice to be considered healthy.
+
+thresholds:
+  stat_disloc_zscore_stretch_live:
+    min_evaluated_rows: 5
+    required_status: informative
+    required_foundation: warn
+  
+  vol_transition_vol_shock_cont:
+    min_evaluated_rows: 5
+    required_status: informative
+    required_foundation: warn
+
+  trend_false_breakout_reversal:
+    min_evaluated_rows: 5
+    required_status: quality_boundary
+    required_foundation: warn
+
+  liq_disloc_gap_print_reversal:
+    min_evaluated_rows: 5
+    required_status: informative
+    required_foundation: warn
+
+  positioning_oi_spike_reversal:
+    min_evaluated_rows: 0  # Currently empty in live BTC Jan 2025
+    required_status: coverage_limited
+    required_foundation: warn
+
+  execution_spread_blowout_reversal:
+    min_evaluated_rows: 0  # Currently empty in live BTC Jan 2025
+    required_status: coverage_limited
+    required_foundation: warn

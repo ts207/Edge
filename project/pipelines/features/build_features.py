@@ -2,6 +2,7 @@ from __future__ import annotations
 from project.core.config import get_data_root
 
 import argparse
+import json
 import logging
 import math
 import re
@@ -13,14 +14,12 @@ import numpy as np
 import pandas as pd
 
 from project.core.validation import ts_ns_utc
+from project.core.feature_registry import ensure_core_feature_definitions_registered
+from project.core.feature_quality import summarize_feature_quality
 from project.core.feature_schema import feature_dataset_dir_name, normalize_feature_schema_version
 from project.core.timeframes import bars_dataset_name, funding_dataset_name, normalize_timeframe, timeframe_to_minutes
 from project.features.microstructure import (
-    calculate_amihud_illiquidity,
     calculate_imbalance,
-    calculate_kyle_lambda,
-    calculate_roll_spread_bps,
-    calculate_vpin_score,
 )
 from project.io.utils import (
     ensure_dir,
@@ -37,6 +36,62 @@ _OI_MAX_STALENESS_H = 4
 _ZSCORE_WINDOW = 96
 _BASE_WINDOW_MINUTES = 5  # legacy 5m semantic baseline, converted to active timeframe via _duration_to_bars
 _WARMUP_COL_PATTERN = re.compile(r"_\d+$")
+
+
+def _feature_quality_report_path(
+    data_root: Path,
+    *,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+    feature_schema_version: str,
+) -> Path:
+    return (
+        data_root
+        / "reports"
+        / "feature_quality"
+        / run_id
+        / market
+        / symbol
+        / timeframe
+        / f"feature_quality_{feature_schema_version}.json"
+    )
+
+
+def _write_feature_quality_report(path: Path, payload: dict[str, object]) -> None:
+    ensure_dir(path.parent)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_baseline_features(
+    *,
+    data_root: Path,
+    run_id: str,
+    market: str,
+    symbol: str,
+    timeframe: str,
+    feature_schema_version: str,
+) -> pd.DataFrame:
+    candidates = [
+        run_scoped_lake_path(
+            data_root,
+            run_id,
+            "features",
+            market,
+            symbol,
+            timeframe,
+            feature_dataset_dir_name(feature_schema_version),
+        ),
+        data_root / "lake" / "runs" / run_id / "features" / market / symbol / timeframe / feature_dataset_dir_name(feature_schema_version),
+    ]
+    path_dir = choose_partition_dir(candidates)
+    if not path_dir:
+        return pd.DataFrame()
+    files = list_parquet_files(path_dir)
+    if not files:
+        return pd.DataFrame()
+    return read_parquet(files)
 
 
 def _rolling_percentile(series: pd.Series, window: int = 96) -> pd.Series:
@@ -115,6 +170,8 @@ def _add_basis_features(
         out.loc[valid.values, "basis_bps"] = (
             (merged.loc[valid, "close"] / merged.loc[valid, "spot_close"] - 1.0) * 10_000.0
         ).values
+        # PIT safety: lag basis_bps by 1 bar so downstream consumers only see prior-bar values
+        out["basis_bps"] = out["basis_bps"].shift(1)
     else:
         out["basis_bps"] = np.nan
         out["basis_spot_coverage"] = 0.0
@@ -125,14 +182,21 @@ def _add_basis_features(
         timeframe=timeframe,
         min_bars=2,
     )
-    roll_mean = out["basis_bps"].rolling(zscore_window, min_periods=2).mean()
-    roll_std = out["basis_bps"].rolling(zscore_window, min_periods=2).std()
-    out["basis_zscore"] = (out["basis_bps"] - roll_mean) / roll_std.replace(0.0, np.nan)
+    
+    # SF-001: Replace Gaussian standard deviation with robust median absolute deviation (MAD)
+    # or direct quantile standardization to handle fat-tailed distributions smoothly.
+    roll_median = out["basis_bps"].rolling(zscore_window, min_periods=2).median()
+    roll_mad = (out["basis_bps"] - roll_median).abs().rolling(zscore_window, min_periods=2).median()
+    # Approx convert MAD to std equivalent (1.4826) to maintain existing signal scales
+    roll_robust_std = roll_mad * 1.4826 
+    out["basis_zscore"] = (out["basis_bps"] - roll_median) / roll_robust_std.replace(0.0, np.nan)
 
     if "spread_bps" in out.columns:
-        sm = out["spread_bps"].rolling(zscore_window, min_periods=2).mean()
-        ss = out["spread_bps"].rolling(zscore_window, min_periods=2).std()
-        out["spread_zscore"] = (out["spread_bps"] - sm) / ss.replace(0.0, np.nan)
+        sm = out["spread_bps"].rolling(zscore_window, min_periods=2).median()
+        # Same robust logic for spread to prevent extreme outliers skewing the denominator
+        s_mad = (out["spread_bps"] - sm).abs().rolling(zscore_window, min_periods=2).median()
+        s_robust_std = s_mad * 1.4826
+        out["spread_zscore"] = (out["spread_bps"] - sm) / s_robust_std.replace(0.0, np.nan)
     else:
         out["spread_zscore"] = np.nan
 
@@ -375,11 +439,23 @@ def _ensure_feature_contract_columns(frame: pd.DataFrame, *, timeframe: str) -> 
         np.maximum(total_volume.to_numpy() - buy_volume.to_numpy(), 0.0), index=out.index
     )
 
-    out["ms_roll_24"] = calculate_roll_spread_bps(close, window=24)
-    out["ms_amihud_24"] = calculate_amihud_illiquidity(close, total_volume, window=24)
-    out["ms_kyle_24"] = calculate_kyle_lambda(close, buy_volume, sell_volume, window=24)
-    out["ms_vpin_24"] = calculate_vpin_score(total_volume, buy_volume, window=24)
-    out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24)
+    out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24).shift(1)
+
+    # PIT safety verification: ensure key indicators that should be lagged are indeed shifted.
+    # This is a defensive check to prevent look-ahead bias during feature evolution.
+    _PIT_LAGGED_FEATURES = {
+        "rv_96", "rv_pct_17280", "funding_abs", "funding_abs_pct", 
+        "basis_bps", "basis_zscore", "ms_imbalance_24", "oi_delta_1h",
+        "range_med_2880", "spread_zscore", "cross_exchange_spread_z"
+    }
+    for feat in _PIT_LAGGED_FEATURES:
+        if feat in out.columns and len(out) > 5:
+            # Audit Pattern B: Heuristic check — a lagged rolling indicator MUST
+            # start with at least one NaN if correctly shifted.
+            if pd.notna(out[feat].iloc[0]):
+                logging.warning(f"PIT Violation Risk: Feature '{feat}' is not NaN at index 0. "
+                                "It may be missing a .shift(1) lag.")
+
     return out
 
 
@@ -392,6 +468,7 @@ def build_features(
     timeframe: str = "5m",
 ) -> pd.DataFrame:
     """Build the canonical feature set: merge funding, add basis/spread/OI/liquidation features."""
+    ensure_core_feature_definitions_registered()
     if data_root is None:
         from project.core.config import get_data_root
 
@@ -432,7 +509,7 @@ def build_features(
     )
 
     out["rv_96"] = out["logret_1"].rolling(rv_window, min_periods=rv_min_periods).std().shift(1)
-    out["rv_pct_17280"] = _rolling_percentile(out["rv_96"], window=rv_pct_window).shift(1).fillna(50.0)
+    out["rv_pct_17280"] = _rolling_percentile(out["rv_96"], window=rv_pct_window).shift(1)
     out["high_96"] = out["high"].rolling(rv_window, min_periods=1).max().shift(1)
     out["low_96"] = out["low"].rolling(rv_window, min_periods=1).min().shift(1)
     out["range_96"] = (out["high_96"] / out["low_96"].replace(0.0, np.nan) - 1.0).fillna(0.0)
@@ -507,6 +584,7 @@ def main() -> int:
     parser.add_argument("--start", default=None)
     parser.add_argument("--end", default=None)
     parser.add_argument("--log_path", default=None)
+    parser.add_argument("--baseline_run_id", default=None)
     args = parser.parse_args()
 
     run_id = args.run_id
@@ -516,6 +594,11 @@ def main() -> int:
     feature_schema_version = normalize_feature_schema_version(args.feature_schema_version)
     args.timeframe = tf
     args.feature_schema_version = feature_schema_version
+    baseline_run_id = (
+        str(args.baseline_run_id).strip()
+        if args.baseline_run_id is not None and str(args.baseline_run_id).strip().lower() != "none"
+        else ""
+    )
 
     from project.core.config import get_data_root
 
@@ -531,6 +614,7 @@ def main() -> int:
 
     params = vars(args)
     manifest = start_manifest(f"build_features_{tf}" + ("_spot" if market == "spot" else ""), run_id, params, [], [])
+    stats: dict[str, object] = {"symbols": {}}
 
     try:
         for symbol in symbols:
@@ -582,6 +666,16 @@ def main() -> int:
             if not out.empty:
                 out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
                 out["symbol"] = symbol
+                baseline_features = pd.DataFrame()
+                if baseline_run_id:
+                    baseline_features = _load_baseline_features(
+                        data_root=data_root,
+                        run_id=baseline_run_id,
+                        market=market,
+                        symbol=symbol,
+                        timeframe=tf,
+                        feature_schema_version=feature_schema_version,
+                    )
 
                 # Write to lake (partitioned by year/month)
                 out_root = run_scoped_lake_path(
@@ -601,11 +695,40 @@ def main() -> int:
                     write_parquet(group, out_path)
                     logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
 
-        finalize_manifest(manifest, "success")
+                report_path = _feature_quality_report_path(
+                    data_root,
+                    run_id=run_id,
+                    market=market,
+                    symbol=symbol,
+                    timeframe=tf,
+                    feature_schema_version=feature_schema_version,
+                )
+                quality_payload = {
+                    "schema_version": "feature_quality_report_v2",
+                    "run_id": run_id,
+                    "market": market,
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "feature_schema_version": feature_schema_version,
+                    "baseline_run_id": baseline_run_id or None,
+                    "quality": summarize_feature_quality(
+                        out,
+                        baseline_frame=baseline_features if not baseline_features.empty else None,
+                        baseline_label=baseline_run_id or None,
+                    ),
+                }
+                _write_feature_quality_report(report_path, quality_payload)
+                stats["symbols"][symbol] = {
+                    "rows": int(len(out)),
+                    "feature_quality_report_path": str(report_path),
+                    "feature_quality_summary": quality_payload["quality"],
+                }
+
+        finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as e:
         logging.exception("Feature building failed")
-        finalize_manifest(manifest, "failed", error=str(e))
+        finalize_manifest(manifest, "failed", error=str(e), stats=stats)
         return 1
 
 

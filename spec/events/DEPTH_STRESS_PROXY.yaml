@@ -8,9 +8,11 @@ reports_dir: liquidity_dislocation
 events_file: liquidity_dislocation_events.parquet
 signal_column: depth_stress_proxy_event
 parameters:
-  lookback_window: 288
-  z_threshold: 3.0
-  cooldown_bars: 12
+  window: 288
+  spread_quantile: 0.99
+  rv_quantile: 0.90
+  depth_quantile: 0.93
+  min_history_bars: 288
+  cooldown_bars: 96
   merge_gap_bars: 0
-  min_volume_quantile: 0.2
 canonical_family: LIQUIDITY_DISLOCATION

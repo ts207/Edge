@@ -17,7 +17,7 @@ def test_build_time_splits_basic():
         end="2024-01-10",
         train_frac=0.6,
         validation_frac=0.2,
-        embargo_days=0
+        embargo_days=0,
     )
     assert len(splits) == 3
     assert splits[0].label == "train"
@@ -115,3 +115,16 @@ def test_purge_shortens_validation_end():
     val_std = next(w for w in standard if w.label == "validation")
     # purged validation must end strictly before standard validation
     assert val_purged.end < val_std.end
+
+def test_default_embargo_is_nonzero():
+    """Regression: build_time_splits default embargo must be >= 5 days.
+    If this test fails, zero-embargo was re-introduced as the default.
+    """
+    import inspect
+    from project.eval.splits import build_time_splits
+    sig = inspect.signature(build_time_splits)
+    default_embargo = sig.parameters["embargo_days"].default
+    assert default_embargo >= 5, (
+        f"build_time_splits embargo_days default must be >= 5; got {default_embargo}. "
+        "Zero-default embargo allows temporal contamination between train/validation/test splits."
+    )

@@ -98,6 +98,7 @@ def _make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chunk_size", type=int, default=256)
     parser.add_argument("--min_t_stat", type=float, default=1.5)
     parser.add_argument("--min_n", type=int, default=30)
+    parser.add_argument("--use_context_quality", type=int, default=1)
     parser.add_argument(
         "--run_bridge_adapter",
         type=int,
@@ -163,6 +164,7 @@ def main() -> int:
                 features,
                 n_workers=n_workers,
                 chunk_size=args.chunk_size,
+                use_context_quality=bool(int(args.use_context_quality)),
             )
         except Exception as exc:  # pragma: no cover - defensive
             LOG.error("Distributed search failed: %s", exc)
@@ -194,6 +196,7 @@ def main() -> int:
         "rejection_reason_counts": dict(generation_audit.get("rejection_reason_counts", {})),
         "evaluated": int(len(metrics)) if not metrics.empty else 0,
         "passing_filter": passing,
+        "use_context_quality": bool(int(args.use_context_quality)),
     }
     (out_dir / "hypothesis_search_summary.json").write_text(
         json.dumps(summary, indent=2),

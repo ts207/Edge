@@ -223,6 +223,41 @@ def test_search_engine_synthetic_profile_resolves_search_spec_and_min_n(tmp_path
     assert diagnostics["min_t_stat"] == 0.25
 
 
+def test_search_engine_passes_search_budget_to_generator(tmp_path, monkeypatch):
+    import pandas as pd
+    import numpy as np
+    import project.pipelines.research.phase2_search_engine as stage
+
+    features = pd.DataFrame({
+        "timestamp": pd.date_range("2026-01-01", periods=24, freq="5min", tz="UTC"),
+        "close": np.linspace(100, 101, 24),
+    })
+    captured: dict[str, object] = {}
+
+    def _mock_generate(spec_name, **kwargs):
+        captured["search_spec"] = spec_name
+        captured["max_hypotheses"] = kwargs.get("max_hypotheses")
+        return [], {"counts": {"generated": 0, "feasible": 0, "rejected": 0}, "rejection_reason_counts": {}}
+
+    monkeypatch.setattr(stage, "load_features", lambda *a, **kw: features)
+    monkeypatch.setattr("project.events.event_flags.load_registry_flags", lambda *a, **kw: pd.DataFrame())
+    monkeypatch.setattr(stage, "generate_hypotheses_with_audit", _mock_generate)
+
+    rc = stage.run(
+        run_id="search_budget_run",
+        symbols="BTCUSDT",
+        data_root=tmp_path,
+        out_dir=tmp_path / "output",
+        search_budget=12,
+    )
+
+    assert rc == 0
+    assert captured["search_spec"] == "full"
+    assert captured["max_hypotheses"] == 12
+    diagnostics = json.loads((tmp_path / "output" / "phase2_diagnostics.json").read_text(encoding="utf-8"))
+    assert diagnostics["search_budget"] == 12
+
+
 def test_search_engine_run_uses_explicit_registry_root(tmp_path, monkeypatch):
     import project.pipelines.research.phase2_search_engine as stage
 

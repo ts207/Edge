@@ -14,7 +14,6 @@ from project.spec_registry import ONTOLOGY_SPEC_RELATIVE_PATHS, ontology_spec_pa
 # market_context_v1. This keeps planner/state filtering and audit behavior
 # deterministic and spec-driven.
 MATERIALIZED_STATE_COLUMNS_BY_ID: Dict[str, str] = {
-    "LOW_LIQUIDITY_STATE": "low_liquidity_state",
     "REFILL_LAG_STATE": "refill_lag_state",
     "LIQUIDITY_ABSENCE_STATE": "liquidity_absence_state",
     "POST_SWEEP_STATE": "post_sweep_state",

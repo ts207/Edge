@@ -1,85 +1,115 @@
 # Operations And Guardrails
 
+This document defines the default safety and operating rules for running research in the repository.
+
+Use it to prevent broad, expensive, low-trust experimentation.
+
 ## Operating Priorities
 
-The agent should optimize for:
+Prefer:
 
-1. correctness
-2. comparability
-3. narrow attribution
-4. operational cleanliness
-5. iteration speed
+1. narrow attribution
+2. artifact cleanliness
+3. post-cost relevance
+4. reproducibility
+5. operator clarity
 
-## Safety Rules
+Do not trade those away for output volume.
 
-- Do not overwrite broad production artifacts when a narrow output path will do.
-- Do not interpret a repaired tail replay as identical to the original full DAG run.
-- Do not treat warning-heavy output as clean output without inspection.
-- Do not broaden scope immediately after a mechanical fix.
+## Scope Guardrails
 
-## Run Selection Rules
+Default to:
 
-- Use targeted stage execution for repair verification.
-- Use narrow search specs for isolated hypothesis testing.
-- Use full runs only after recent path stability is confirmed.
-- After detector or synthetic-generator edits, rerun synthetic truth validation before trusting full-spec synthetic results.
+- one event family before many
+- one template family before many
+- one primary context family before many
+- one objective per run
 
-## Logging Discipline
+Broadening is justified only after the narrow path is mechanically clean and still decision-relevant.
 
-Warnings should help triage, not flood the operator.
+## Contract Guardrails
 
-The agent should:
+Do not interpret results when:
 
-- suppress low-signal coercion noise where safe
-- preserve warnings that indicate real data quality or contract issues
-- call out stale or contradictory logs explicitly
+- manifests and logs disagree
+- expected artifacts are missing
+- generated diagnostics disagree with the owning code or registry surface
+- warning noise hides runtime faults
+
+Repair the path first.
+
+## Synthetic Guardrails
+
+Synthetic runs are for:
+
+- detector truth recovery
+- contract and artifact validation
+- negative-control testing
+- controlled regime stress
+
+They are not direct proof of live profitability.
+
+Keep these rules:
+
+- freeze the profile before evaluation
+- keep manifest and truth map with the run
+- validate truth before interpretation
+- prefer cross-profile survival over one strong world
+- treat short windows as calibration unless real holdout support exists
 
 ## Promotion Guardrails
 
-Promotion is conservative by design.
+Promotion is a hard gate.
 
-The agent must not bypass:
+Do not treat attractive discovery output as promotion readiness.
 
-- multiplicity controls
-- cost-survival checks
-- validation/test sample requirements
-- confirmatory locking rules
-- retail and capital viability filters
+Promotion should only be trusted when:
+
+- the candidate contract is valid
+- split support exists
+- cost and stress quality survive
+- the claim is narrow enough to explain
+
+## Context Guardrails
+
+Confidence-aware context is the default for production research.
+
+That means:
+
+- hard labels still exist for compatibility
+- low-confidence or high-entropy regime rows should not be treated as fully trustworthy context
+- hard-label mode should be used mainly as a comparison baseline
 
 ## Memory Guardrails
 
-Memory should inform action, not hard-code bias.
+Do not keep rerunning a region because the wording changed.
 
-The agent must still permit:
+Before repeating a similar slice, check:
 
-- materially different contexts
-- repaired code paths
-- cleaner reruns that can invalidate old conclusions
+- same event or family
+- same template
+- same context
+- same fail gate
 
-## Review Discipline
+If nothing material changed, do not rerun by default.
 
-When a run looks abnormal, inspect:
+## Review Checklist
 
-- manifests
-- logs
-- row counts across artifact boundaries
-- duplicate hypotheses
-- stale replay traces
-- missing split metadata
+Before calling a run meaningful, ask:
 
-## Required End State
+- is the question explicit
+- is the path narrow enough
+- do the artifacts reconcile
+- are the split counts real
+- do the costs still allow relevance
+- is the next action explicit
 
-A run is considered operationally clean when:
+## Stop Conditions
 
-- stage and top-level manifests agree
-- downstream artifacts are populated as expected
-- warning noise is controlled
-- the next action is obvious from the evidence
+Stop and reassess when:
 
-
-## Synthetic Generator Guardrails
-
-- Freeze `volatility_profile`, symbol set, and time window before reviewing outcomes.
-- Prefer cross-profile survival over single-profile maximization.
-- Treat generator edits like data-source edits: rerun truth validation and narrow repair slices first.
-- Do not use repeated agent proposal cycles to tune directly against one synthetic world.
+- a path remains mechanically unstable
+- a clean rerun still fails on holdout
+- promotion rejection is clear and repeated
+- the next run would only restate the same failed claim
+- the evidence is too weak to justify more scope

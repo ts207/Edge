@@ -7,12 +7,10 @@ import pandas as pd
 
 from project.events.detectors.threshold import ThresholdDetector
 from project.events.detectors.composite import CompositeDetector
+from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.events.thresholding import rolling_mean_std_zscore
 from project.research.analyzers import run_analyzer_suite
-
-def past_quantile(series: pd.Series, q: float, window: int = 2880) -> pd.Series:
-    return series.rolling(window, min_periods=window//10).quantile(q).shift(1)
 
 class IndexComponentDivergenceDetector(CompositeDetector):
     event_type = 'INDEX_COMPONENT_DIVERGENCE'
@@ -23,8 +21,12 @@ class IndexComponentDivergenceDetector(CompositeDetector):
         ret_abs = close.pct_change(1).abs()
         basis_z = df.get('basis_zscore', df.get('cross_exchange_spread_z', pd.Series(0.0, index=df.index)))
         basis_abs = basis_z.abs()
-        basis_q93 = past_quantile(basis_abs, 0.93)
-        ret_q75 = past_quantile(ret_abs, 0.75)
+        basis_q93 = lagged_rolling_quantile(
+            basis_abs, window=2880, quantile=0.93, min_periods=max(2880 // 10, 1)
+        )
+        ret_q75 = lagged_rolling_quantile(
+            ret_abs, window=2880, quantile=0.75, min_periods=max(2880 // 10, 1)
+        )
         return {'basis_abs': basis_abs, 'ret_abs': ret_abs, 'basis_q93': basis_q93, 'ret_q75': ret_q75}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -40,7 +42,9 @@ class LeadLagBreakDetector(ThresholdDetector):
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         basis_z = df.get('basis_zscore', df.get('cross_exchange_spread_z', pd.Series(0.0, index=df.index)))
         basis_diff_abs = basis_z.diff().abs()
-        basis_diff_q99 = past_quantile(basis_diff_abs, 0.99)
+        basis_diff_q99 = lagged_rolling_quantile(
+            basis_diff_abs, window=2880, quantile=0.99, min_periods=max(2880 // 10, 1)
+        )
         return {'basis_diff_abs': basis_diff_abs, 'basis_diff_q99': basis_diff_q99}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:

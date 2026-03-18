@@ -128,10 +128,14 @@ def test_update_campaign_memory_materializes_memory_and_compat_outputs(monkeypat
     campaign_dir = data_root / "artifacts" / "experiments" / program_id
     summary = json.loads((campaign_dir / "campaign_summary.json").read_text(encoding="utf-8"))
     frontier = json.loads((campaign_dir / "search_frontier.json").read_text(encoding="utf-8"))
+    rollup = json.loads((campaign_dir / "campaign_memory_rollup.json").read_text(encoding="utf-8"))
     assert summary["program_id"] == program_id
     assert "candidate_next_moves" in frontier
     assert len(summary["top_performing_regions"]) == 1
     assert len(frontier["untested_registry_events"]) == 1
+    assert rollup["program_id"] == program_id
+    assert rollup["totals"]["tested_region_rows"] == 1
+    assert len(rollup["top_events"]) == 1
 
     belief_state = json.loads((memory_root / "belief_state.json").read_text(encoding="utf-8"))
     next_actions = json.loads((memory_root / "next_actions.json").read_text(encoding="utf-8"))

@@ -502,6 +502,9 @@ events:
     parameters:
       funding_extreme_quantile: 0.99
       oi_change_z_threshold: 3.0
+      min_flip_abs: 0.00025
+      persistence_bars: 2
+      min_spacing: 24
       cooldown_bars: 24
       merge_gap_bars: 0
     templates:
@@ -789,9 +792,11 @@ events:
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: momentum_divergence_trigger_event
     parameters:
+      slow_trend_quantile: 0.7
+      max_trend_persistence_bars: 72
       liquidation_spike_z_threshold: 3.0
       cascade_window_bars: 12
-      cooldown_bars: 24
+      cooldown_bars: 96
       merge_gap_bars: 0
     templates:
     - mean_reversion
@@ -1083,9 +1088,12 @@ events:
     events_file: execution_friction_events.parquet
     signal_column: spread_regime_widening_event
     parameters:
-      spread_z_threshold: 3.0
-      slippage_z_threshold: 3.0
-      cooldown_bars: 12
+      trend_window: 24
+      lookback_window: 2880
+      min_periods: 288
+      low_volume_quantile: 0.25
+      min_spacing: 48
+      cooldown_bars: 48
       merge_gap_bars: 0
     templates:
     - slippage_aware_filter
@@ -1142,8 +1150,9 @@ events:
     events_file: trend_structure_events.parquet
     signal_column: trend_acceleration_event
     parameters:
-      trend_window: 288
+      trend_window: 96
       breakout_z_threshold: 2.5
+      min_spacing: 192
       cooldown_bars: 12
       merge_gap_bars: 0
     templates:
@@ -1184,9 +1193,11 @@ events:
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: trend_exhaustion_trigger_event
     parameters:
+      trend_window: 96
+      min_trend_duration_bars: 72
       liquidation_spike_z_threshold: 3.0
       cascade_window_bars: 12
-      cooldown_bars: 24
+      cooldown_bars: 96
       merge_gap_bars: 0
     templates:
     - mean_reversion

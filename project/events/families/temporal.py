@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 
 from project.events.detectors.threshold import ThresholdDetector
+from project.features.context_guards import state_at_least
+from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.research.analyzers import run_analyzer_suite
 from project.spec_registry import load_event_spec
@@ -99,24 +101,23 @@ class ScheduledNewsDetector(ThresholdDetector):
         return {'ts': ts, 'news_mask_col': news_mask, 'intensity': intensity}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        if features['news_mask_col'].any():
-            return features['news_mask_col']
-            
+        # Always evaluate spec windows — do not short-circuit on column presence.
         ts = features['ts']
         hh = ts.dt.hour
         mm = ts.dt.minute
         spec = load_event_spec(self.event_type)
         spec_params = spec.get('parameters', {}) if isinstance(spec, dict) else {}
         windows = spec_params.get('windows_utc', [])
-        mask = pd.Series(False, index=df.index, dtype=bool)
+        spec_mask = pd.Series(False, index=df.index, dtype=bool)
         for win in windows:
             if not isinstance(win, dict): continue
             hour = int(win.get('hour', -1))
             m_start = int(win.get('minute_start', 25))
             m_end = int(win.get('minute_end', 35))
             if hour != -1:
-                mask = mask | ((hh == hour) & mm.between(m_start, m_end))
-        return mask.fillna(False)
+                spec_mask = spec_mask | ((hh == hour) & mm.between(m_start, m_end))
+        # Merge column-based mask with spec windows via OR.
+        return (spec_mask | features['news_mask_col']).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['intensity']
@@ -124,7 +125,8 @@ class ScheduledNewsDetector(ThresholdDetector):
 class SpreadRegimeWideningDetector(ThresholdDetector):
     """Detects sustained spread widening with positive regime acceleration."""
     event_type = 'SPREAD_REGIME_WIDENING_EVENT'
-    required_columns = ('timestamp',)
+    required_columns = ('timestamp', 'volume')
+    min_spacing = 48
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         if 'spread_zscore' in df.columns:
@@ -133,20 +135,61 @@ class SpreadRegimeWideningDetector(ThresholdDetector):
             spread = pd.to_numeric(df['spread_bps'], errors='coerce').abs().astype(float)
         else:
             spread = pd.Series(0.0, index=df.index)
+        volume = pd.to_numeric(df['volume'], errors='coerce').astype(float)
         trend_window = int(params.get('trend_window', 24))
         lookback_window = int(params.get('lookback_window', 2880))
         min_periods = int(params.get('min_periods', 288))
+        low_volume_quantile = float(params.get('low_volume_quantile', 0.25))
         
         spread_avg = spread.rolling(trend_window, min_periods=max(4, trend_window // 4)).mean()
-        spread_q85 = spread.rolling(lookback_window, min_periods=min_periods).quantile(0.85).shift(1)
+        spread_q85 = lagged_rolling_quantile(
+            spread,
+            window=lookback_window,
+            quantile=0.85,
+            min_periods=min_periods,
+        )
         accel = spread_avg - spread_avg.shift(trend_window // 2 or 1)
-        accel_q75 = accel.abs().rolling(lookback_window, min_periods=min_periods).quantile(0.75).shift(1)
-        return {'spread': spread, 'spread_avg': spread_avg, 'spread_q85': spread_q85, 'accel': accel, 'accel_q75': accel_q75}
+        accel_q75 = lagged_rolling_quantile(
+            accel.abs(),
+            window=lookback_window,
+            quantile=0.75,
+            min_periods=min_periods,
+        )
+        volume_low_q = lagged_rolling_quantile(
+            volume,
+            window=lookback_window,
+            quantile=low_volume_quantile,
+            min_periods=min_periods,
+        )
+        history_ready = spread_q85.notna() & accel_q75.notna() & volume_low_q.notna()
+        canonical_wide = state_at_least(
+            df,
+            'ms_spread_state',
+            1.0,
+            min_confidence=float(params.get('context_min_confidence', 0.55)),
+            max_entropy=float(params.get('context_max_entropy', 0.90)),
+        )
+        return {
+            'spread': spread,
+            'spread_avg': spread_avg,
+            'spread_q85': spread_q85,
+            'accel': accel,
+            'accel_q75': accel_q75,
+            'volume': volume,
+            'volume_low_q': volume_low_q,
+            'history_ready': history_ready,
+            'canonical_wide': canonical_wide,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        del df, params
         return (
-            (features['spread_avg'] >= features['spread_q85']).fillna(False)
+            features['history_ready']
+            & features['canonical_wide']
+            & (features['spread_avg'] >= features['spread_q85']).fillna(False)
+            & (features['accel'] > 0).fillna(False)
             & (features['accel'] >= features['accel_q75']).fillna(False)
+            & (features['volume'] <= features['volume_low_q']).fillna(False)
         ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -170,9 +213,19 @@ class SlippageSpikeDetector(ThresholdDetector):
         lookback_window = int(params.get('lookback_window', 2880))
         min_periods = int(params.get('min_periods', 288))
         
-        slip_q99 = slippage.rolling(lookback_window, min_periods=min_periods).quantile(0.99).shift(1)
+        slip_q99 = lagged_rolling_quantile(
+            slippage,
+            window=lookback_window,
+            quantile=0.99,
+            min_periods=min_periods,
+        )
         slippage_ratio = slippage / spread_proxy.replace(0.0, np.nan)
-        ratio_q90 = slippage_ratio.rolling(lookback_window, min_periods=min_periods).quantile(0.90).shift(1)
+        ratio_q90 = lagged_rolling_quantile(
+            slippage_ratio,
+            window=lookback_window,
+            quantile=0.90,
+            min_periods=min_periods,
+        )
         return {'slippage': slippage, 'slip_q99': slip_q99, 'slippage_ratio': slippage_ratio, 'ratio_q90': ratio_q90}
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -189,6 +242,7 @@ class FeeRegimeChangeDetector(ThresholdDetector):
     """Detects discrete fee regime steps that persist beyond one bar."""
     event_type = 'FEE_REGIME_CHANGE_EVENT'
     required_columns = ('timestamp',)
+    causal = False
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         if 'fee_bps' in df.columns:
@@ -199,8 +253,17 @@ class FeeRegimeChangeDetector(ThresholdDetector):
             lookback_window = int(params.get('lookback_window', 2880))
             min_periods = int(params.get('min_periods', 288))
             
-            fee_q95 = fee_change.rolling(lookback_window, min_periods=min_periods).quantile(0.95).shift(1)
-            persistent_shift = (fee != fee.shift(1)) & (fee.shift(-1) == fee)
+            fee_q95 = lagged_rolling_quantile(
+                fee_change,
+                window=lookback_window,
+                quantile=0.95,
+                min_periods=min_periods,
+            )
+            persistent_shift = (
+                fee.shift(2).notna()
+                & (fee == fee.shift(1))
+                & (fee != fee.shift(2))
+            )
         else:
             fee_change = pd.Series(0.0, index=df.index)
             fee_baseline = pd.Series(0.0, index=df.index)
@@ -215,8 +278,13 @@ class FeeRegimeChangeDetector(ThresholdDetector):
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
+        # Audit LT-003: fee_change (diff at T) must be shifted to match 
+        # persistent_shift (confirmation at T+1).
+        magnitude_at_confirmation = features['fee_change'].shift(1)
+        threshold_at_confirmation = features['fee_q95'].shift(1)
+        
         return (
-            (features['fee_change'] >= features['fee_q95']).fillna(False)
+            (magnitude_at_confirmation >= threshold_at_confirmation).fillna(False)
             & features['persistent_shift']
         ).fillna(False)
 
@@ -248,8 +316,18 @@ class CopulaPairsTradingDetector(ThresholdDetector):
         lookback_window = int(params.get('lookback_window', 2880))
         min_periods = int(params.get('min_periods', 288))
         
-        z_q95 = zscore_abs.rolling(lookback_window, min_periods=min_periods).quantile(0.95).shift(1)
-        spread_q75 = spread_proxy.rolling(lookback_window, min_periods=min_periods).quantile(0.75).shift(1)
+        z_q95 = lagged_rolling_quantile(
+            zscore_abs,
+            window=lookback_window,
+            quantile=0.95,
+            min_periods=min_periods,
+        )
+        spread_q75 = lagged_rolling_quantile(
+            spread_proxy,
+            window=lookback_window,
+            quantile=0.75,
+            min_periods=min_periods,
+        )
         return {
             'zscore': zscore,
             'zscore_abs': zscore_abs,
@@ -275,7 +353,7 @@ class CopulaPairsTradingDetector(ThresholdDetector):
         return 'down' if zscore > 0 else 'up' if zscore < 0 else 'non_directional'
 
 
-from project.events.detectors.registry import register_detector
+from project.events.detectors.registry import get_detector, register_family_detectors
 
 _DETECTORS = {
     'SESSION_OPEN_EVENT': SessionOpenDetector,
@@ -288,14 +366,13 @@ _DETECTORS = {
     'COPULA_PAIRS_TRADING': CopulaPairsTradingDetector,
 }
 
-for et, cls in _DETECTORS.items():
-    register_detector(et, cls)
+register_family_detectors(_DETECTORS)
 
 def detect_temporal_family(df: pd.DataFrame, symbol: str, event_type: str = 'SESSION_OPEN_EVENT', **params: Any) -> pd.DataFrame:
-    detector_cls = _DETECTORS.get(event_type)
-    if detector_cls is None:
+    detector = get_detector(event_type)
+    if detector is None:
         raise ValueError(f"Unknown temporal event type: {event_type}")
-    return detector_cls().detect(df, symbol=symbol, **params)
+    return detector.detect(df, symbol=symbol, **params)
 
 def analyze_temporal_family(df: pd.DataFrame, symbol: str, event_type: str = 'SESSION_OPEN_EVENT', **params: Any) -> tuple[pd.DataFrame, dict[str, Any]]:
     events = detect_temporal_family(df, symbol, event_type=event_type, **params)

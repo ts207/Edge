@@ -35,25 +35,74 @@ class _CanonicalProxyBase(ThresholdDetector):
         }
 
 
+def _require_columns(df: pd.DataFrame, *, event_type: str, required: tuple[str, ...]) -> None:
+    missing = [column for column in required if column not in df.columns]
+    if missing:
+        names = ", ".join(missing)
+        raise ValueError(f"{event_type} requires columns: {names}")
+
+
 class PriceVolImbalanceProxyDetector(_CanonicalProxyBase):
     event_type = 'PRICE_VOL_IMBALANCE_PROXY'
     source_event_type = 'ORDERFLOW_IMBALANCE_SHOCK'
+    required_columns = _CanonicalProxyBase.required_columns + ('volume', 'rv_96')
+    min_spacing = 24
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         close = pd.to_numeric(df['close'], errors='coerce').astype(float)
+        volume = pd.to_numeric(df['volume'], errors='coerce').astype(float)
         rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
         ret_abs = close.pct_change(1).abs()
-        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('rv_window', 288)))
-        ret_q = rolling_quantile_threshold(ret_abs, quantile=float(params.get('ret_quantile', 0.99)), window=int(params.get('ret_window', 288)))
-        rv_q = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('rv_window', 288)))
-        return {'signal': ret_abs / ret_q.replace(0.0, np.nan), 'ret_abs': ret_abs, 'rv_z': rv_z, 'rv_q': rv_q}
+        ret_window = int(params.get('ret_window', 288))
+        rv_window = int(params.get('rv_window', 288))
+        vol_window = int(params.get('vol_window', 288))
+        min_history_bars = int(params.get('min_history_bars', 288))
+
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=rv_window)
+        ret_q = rolling_quantile_threshold(
+            ret_abs,
+            quantile=float(params.get('ret_quantile', 0.995)),
+            window=ret_window,
+        )
+        rv_q = rolling_quantile_threshold(
+            rv_z,
+            quantile=float(params.get('rv_quantile', 0.9)),
+            window=rv_window,
+        )
+        vol_q = rolling_quantile_threshold(
+            volume,
+            quantile=float(params.get('volume_quantile', 0.9)),
+            window=vol_window,
+        )
+        history_ready = pd.Series(np.arange(len(df)) >= min_history_bars, index=df.index, dtype=bool)
+        signal = (
+            (ret_abs / ret_q.replace(0.0, np.nan)).fillna(0.0)
+            + (rv_z / rv_q.replace(0.0, np.nan)).fillna(0.0)
+            + (volume / vol_q.replace(0.0, np.nan)).fillna(0.0)
+        ) / 3.0
+        return {
+            'signal': signal,
+            'ret_abs': ret_abs,
+            'rv_z': rv_z,
+            'volume': volume,
+            'ret_q': ret_q,
+            'rv_q': rv_q,
+            'vol_q': vol_q,
+            'history_ready': history_ready,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return ((features['ret_abs'] >= rolling_quantile_threshold(features['ret_abs'], quantile=float(params.get('ret_quantile', 0.99)), window=int(params.get('ret_window', 288)))).fillna(False)
-                & (features['rv_z'] >= features['rv_q']).fillna(False)).fillna(False)
+        del df, params
+        return (
+            features['history_ready']
+            & (features['ret_abs'] >= features['ret_q']).fillna(False)
+            & (features['rv_z'] >= features['rv_q']).fillna(False)
+            & (features['volume'] >= features['vol_q']).fillna(False)
+        ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return (features['signal'].fillna(0.0) + (features['rv_z'] / features['rv_q'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+        del df, params
+        return features['signal'].fillna(0.0)
 
 
 class WickReversalProxyDetector(_CanonicalProxyBase):
@@ -83,39 +132,87 @@ class WickReversalProxyDetector(_CanonicalProxyBase):
 class AbsorptionProxyDetector(_CanonicalProxyBase):
     event_type = 'ABSORPTION_PROXY'
     source_event_type = 'ABSORPTION_EVENT'
+    min_spacing = 96
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        close = pd.to_numeric(df['close'], errors='coerce').astype(float)
-        spread = pd.to_numeric(df.get('spread_zscore'), errors='coerce').astype(float)
-        rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
-        ret_abs = close.pct_change(1).abs()
-        ret_low = rolling_quantile_threshold(ret_abs, quantile=float(params.get('ret_quantile', 0.35)), window=int(params.get('window', 288)))
-        spread_hi = rolling_quantile_threshold(spread, quantile=float(params.get('spread_quantile', 0.8)), window=int(params.get('window', 288)))
-        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('window', 288)))
-        rv_hi = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('window', 288)))
-        return {'ret_abs': ret_abs, 'ret_low': ret_low, 'spread': spread, 'spread_hi': spread_hi, 'rv_z': rv_z, 'rv_hi': rv_hi}
+        _require_columns(df, event_type=self.event_type, required=('spread_zscore', 'rv_96', 'imbalance'))
+        spread = pd.to_numeric(df['spread_zscore'], errors='coerce').astype(float)
+        rv = pd.to_numeric(df['rv_96'], errors='coerce').astype(float)
+        imbalance_abs = pd.to_numeric(df['imbalance'], errors='coerce').astype(float).abs()
+        window = int(params.get('window', 288))
+        min_history_bars = int(params.get('min_history_bars', 288))
+        spread_hi = rolling_quantile_threshold(spread.ffill(), quantile=float(params.get('spread_quantile', 0.965)), window=window)
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=window)
+        rv_hi = rolling_quantile_threshold(rv_z.ffill(), quantile=float(params.get('rv_quantile', 0.90)), window=window)
+        imbalance_low = rolling_quantile_threshold(
+            imbalance_abs.ffill(),
+            quantile=float(params.get('imbalance_abs_quantile', 0.25)),
+            window=window,
+        )
+        history_ready = pd.Series(np.arange(len(df)) >= min_history_bars, index=df.index, dtype=bool)
+        return {
+            'spread': spread,
+            'spread_hi': spread_hi,
+            'rv_z': rv_z,
+            'rv_hi': rv_hi,
+            'imbalance_abs': imbalance_abs,
+            'imbalance_low': imbalance_low,
+            'history_ready': history_ready,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return ((features['ret_abs'] <= features['ret_low']).fillna(False) & (features['spread'] >= features['spread_hi']).fillna(False) & (features['rv_z'] >= features['rv_hi']).fillna(False)).fillna(False)
+        return (
+            features['history_ready']
+            & (features['spread'] >= features['spread_hi']).fillna(False)
+            & (features['rv_z'] >= features['rv_hi']).fillna(False)
+            & (features['imbalance_abs'] <= features['imbalance_low']).fillna(False)
+        ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return ((features['spread'] / features['spread_hi'].replace(0.0, np.nan)).fillna(0.0) + (features['rv_z'] / features['rv_hi'].replace(0.0, np.nan)).fillna(0.0)) / 2.0
+        return (
+            (features['spread'] / features['spread_hi'].replace(0.0, np.nan)).fillna(0.0)
+            + (features['rv_z'] / features['rv_hi'].replace(0.0, np.nan)).fillna(0.0)
+        ) / 2.0
 
 
 class DepthStressProxyDetector(_CanonicalProxyBase):
     event_type = 'DEPTH_STRESS_PROXY'
     source_event_type = 'DEPTH_COLLAPSE'
+    min_spacing = 96
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        spread = pd.to_numeric(df.get('spread_zscore'), errors='coerce').astype(float)
-        rv = pd.to_numeric(df.get('rv_96'), errors='coerce').astype(float)
-        spread_q = rolling_quantile_threshold(spread, quantile=float(params.get('spread_quantile', 0.9)), window=int(params.get('window', 288)))
-        rv_z = rolling_mean_std_zscore(rv.ffill(), window=int(params.get('window', 288)))
-        rv_q = rolling_quantile_threshold(rv_z, quantile=float(params.get('rv_quantile', 0.7)), window=int(params.get('window', 288)))
-        return {'spread': spread, 'spread_q': spread_q, 'rv_z': rv_z, 'rv_q': rv_q}
+        _require_columns(df, event_type=self.event_type, required=('spread_zscore', 'rv_96', 'micro_depth_depletion'))
+        spread = pd.to_numeric(df['spread_zscore'], errors='coerce').astype(float)
+        rv = pd.to_numeric(df['rv_96'], errors='coerce').astype(float)
+        depth_depletion = pd.to_numeric(df['micro_depth_depletion'], errors='coerce').astype(float)
+        window = int(params.get('window', 288))
+        min_history_bars = int(params.get('min_history_bars', 288))
+        spread_q = rolling_quantile_threshold(spread.ffill(), quantile=float(params.get('spread_quantile', 0.99)), window=window)
+        rv_z = rolling_mean_std_zscore(rv.ffill(), window=window)
+        rv_q = rolling_quantile_threshold(rv_z.ffill(), quantile=float(params.get('rv_quantile', 0.90)), window=window)
+        depth_q = rolling_quantile_threshold(
+            depth_depletion.ffill(),
+            quantile=float(params.get('depth_quantile', 0.93)),
+            window=window,
+        )
+        history_ready = pd.Series(np.arange(len(df)) >= min_history_bars, index=df.index, dtype=bool)
+        return {
+            'spread': spread,
+            'spread_q': spread_q,
+            'rv_z': rv_z,
+            'rv_q': rv_q,
+            'depth_depletion': depth_depletion,
+            'depth_q': depth_q,
+            'history_ready': history_ready,
+        }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
-        return ((features['spread'] >= features['spread_q']).fillna(False) & (features['rv_z'] >= features['rv_q']).fillna(False)).fillna(False)
+        return (
+            features['history_ready']
+            & (features['spread'] >= features['spread_q']).fillna(False)
+            & (features['rv_z'] >= features['rv_q']).fillna(False)
+            & (features['depth_depletion'] >= features['depth_q']).fillna(False)
+        ).fillna(False)
 
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return ((features['spread'] / features['spread_q'].replace(0.0, np.nan)).fillna(0.0) + (features['rv_z'] / features['rv_q'].replace(0.0, np.nan)).fillna(0.0)) / 2.0

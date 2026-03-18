@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow_funding_timestamp_rounding", type=int, default=0)
     parser.add_argument("--run_ingest_liquidation_snapshot", type=int, default=0)
     parser.add_argument("--run_ingest_open_interest_hist", type=int, default=0)
-    parser.add_argument("--open_interest_period", default="5m")
+    # LT-002: Hardcoded Open Interest to only use 5m archive to prevent API trailing gaps and distribution mismatches
     parser.add_argument(
         "--timeframes", default="5m", help="Comma-separated list of timeframes (e.g., '1m,5m,15m')"
     )
@@ -149,7 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--performance_mode", type=int, default=0)
     parser.add_argument("--enable_event_stage_cache", type=int, default=1)
     parser.add_argument("--resume_from_failed_stage", type=int, default=0)
-    parser.add_argument("--feature_schema_version", default="v2", choices=["v2"])
+    parser.add_argument("--feature_schema_version", default="", help="Leave empty for canonical default.")
 
     # Strategy / Promotion Flags
     parser.add_argument("--run_candidate_promotion", type=int, default=1)

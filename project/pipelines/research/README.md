@@ -1,28 +1,28 @@
 # Research Pipelines
 
-This directory contains research-facing CLI entrypoints and stage scripts.
+This directory contains research-facing CLI entrypoints, stage scripts, and adapter code used by `run_all`.
 
-The current rule is simple:
+## Ownership Rules
 
 - orchestration and CLI wiring can live here
 - reusable workflow logic should live in `project/research/services/`
-- stable helper APIs for tests/scripts should live in `project/research/compat/`
 - parser construction and `argv -> config` translation should live in `project/pipelines/research/cli/`
+- thin entrypoint wrappers are acceptable when they only adapt args and stage metadata
 
 ## Important Entry Points
 
-- `phase2_candidate_discovery.py`: thin wrapper over the Phase 2 CLI adapter
-- `promote_candidates.py`: thin wrapper over the promotion CLI adapter
-- `analyze_events.py`: canonical detector execution entrypoint for single-event family runs
-- `generic_detector_task.py`: generic detector runner, including sequence-detector event-stream loading and CLI override parsing
-- `cli/candidate_discovery_cli.py`: candidate discovery parser and `argv -> CandidateDiscoveryConfig`
-- `cli/promotion_cli.py`: promotion parser and `argv -> PromotionConfig`
-- `build_event_registry.py`: builds event registries from analyzer output
-- `canonicalize_event_episodes.py`: merges event rows into episode-level artifacts
+- `phase2_candidate_discovery.py`: phase-2 discovery entrypoint
+- `promote_candidates.py`: promotion entrypoint
 - `phase2_search_engine.py`: canonical search-backed discovery stage
 - `bridge_evaluate_phase2.py`: bridge validation stage
+- `export_edge_candidates.py`: normalized edge export stage
+- `update_edge_registry.py`: registry update stage
+- `update_campaign_memory.py`: memory update stage
+- `analyze_events.py`: detector execution entrypoint for event-family runs
+- `build_event_registry.py`: registry materialization from analyzer output
+- `canonicalize_event_episodes.py`: event-to-episode normalization
 
-## Naming
+## Canonical Event Discovery Chain
 
 Current stage naming is:
 
@@ -36,7 +36,7 @@ Current stage naming is:
 
 - service code importing CLI modules
 - duplicated workflow implementations between `project/pipelines/research` and `project/research/services`
-- tests or scripts importing helper logic from `project/pipelines/research/*` when a `project.research.compat.*` module exists
+- removed compatibility layers such as `project.research.compat`
 - implicit detector registration through package import side effects
 - generic detector tasks loading bar features for detectors that actually require registry event streams
 - CLI detector overrides being parsed but then ignored at execution time

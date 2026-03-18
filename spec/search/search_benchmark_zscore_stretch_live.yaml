@@ -1,0 +1,25 @@
+version: 1
+kind: search_spec
+metadata:
+  phase: benchmark
+  description: "Maintained live benchmark search spec for ZSCORE_STRETCH statistical-dislocation context comparison."
+search_mode: subset
+
+triggers:
+  events:
+    - ZSCORE_STRETCH
+
+contexts:
+  vol_regime: high
+
+templates:
+  - mean_reversion
+horizons:
+  - 15m
+directions:
+  - long
+  - short
+entry_lag:
+  - 1
+cost_profiles:
+  - standard

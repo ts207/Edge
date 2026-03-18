@@ -19,7 +19,6 @@ from typing import Optional
 import pandas as pd
 
 from project import PROJECT_ROOT
-from project.specs.ontology import MATERIALIZED_STATE_COLUMNS_BY_ID
 from project.specs.gates import load_gates_spec, select_phase2_gate_spec
 from project.research.search.profile import resolve_search_profile
 from project.research.search.generator import generate_hypotheses_with_audit
@@ -27,10 +26,13 @@ from project.research.search.evaluator import evaluate_hypothesis_batch, evaluat
 from project.research.search.bridge_adapter import hypotheses_to_bridge_candidates, split_bridge_candidates
 from project.io.utils import ensure_dir, write_parquet
 from project.research.search.distributed_runner import run_distributed_search
-from project.pipelines.research._family_event_utils import load_features
+from project.pipelines.research._family_event_utils import load_features as load_features
+from project.research.search.search_feature_utils import (
+    normalize_search_feature_columns,
+    prepare_search_features_for_symbol,
+)
 from project.research.services.phase2_diagnostics import build_search_engine_diagnostics
 from project.research.services.reporting_service import write_json_report
-from project.research.validation import assign_split_labels
 
 log = logging.getLogger(__name__)
 
@@ -75,39 +77,7 @@ def _write_evaluation_artifacts(out_dir: Path, symbol: str, metrics: pd.DataFram
 
 
 def _normalize_search_feature_columns(features: pd.DataFrame) -> pd.DataFrame:
-    if features.empty:
-        return features
-
-    out = features.copy()
-
-    # Materialize canonical state ids as direct search columns when market_context
-    # already exposes a concrete source column for them.
-    for state_id, source_col in MATERIALIZED_STATE_COLUMNS_BY_ID.items():
-        canonical_col = str(state_id).strip().lower()
-        if canonical_col in out.columns or source_col not in out.columns:
-            continue
-        out[canonical_col] = pd.to_numeric(out[source_col], errors="coerce").fillna(0.0)
-
-    # carry_state contexts are defined in the domain registry as funding_pos/neg,
-    # while market_context exposes a signed carry_state_code.
-    if "carry_state_code" in out.columns:
-        carry_code = pd.to_numeric(out["carry_state_code"], errors="coerce").fillna(0.0)
-        if "funding_positive" not in out.columns:
-            out["funding_positive"] = (carry_code > 0).astype(float)
-        if "funding_negative" not in out.columns:
-            out["funding_negative"] = (carry_code < 0).astype(float)
-
-    # Trend structure states are emitted as bull/bear/chop regimes in market_context.
-    if "chop_state" not in out.columns and "chop_regime" in out.columns:
-        out["chop_state"] = pd.to_numeric(out["chop_regime"], errors="coerce").fillna(0.0)
-    if "trending_state" not in out.columns:
-        bull_source = out["bull_trend_regime"] if "bull_trend_regime" in out.columns else pd.Series(0.0, index=out.index)
-        bear_source = out["bear_trend_regime"] if "bear_trend_regime" in out.columns else pd.Series(0.0, index=out.index)
-        bull = pd.to_numeric(bull_source, errors="coerce").fillna(0.0)
-        bear = pd.to_numeric(bear_source, errors="coerce").fillna(0.0)
-        out["trending_state"] = ((bull > 0) | (bear > 0)).astype(float)
-
-    return out
+    return normalize_search_feature_columns(features)
 
 
 def run(
@@ -123,8 +93,10 @@ def run(
     chunk_size: int = 500,
     min_t_stat: float = 1.5,
     min_n: int = 30,
+    search_budget: Optional[int] = None,
     experiment_config: Optional[str] = None,
     registry_root: str | Path = "project/configs/registries",
+    use_context_quality: bool = True,
 ) -> int:
     """
     Core logic. Returns exit code (0=success, 1=failure).
@@ -182,45 +154,26 @@ def run(
     for symbol in symbols_requested:
         log.info("Processing symbol %s...", symbol)
         
-        # 1a. Load features
-        features = load_features(run_id, symbol, timeframe=timeframe, data_root=data_root)
+        # 1a. Load and prepare search feature frame
+        features = prepare_search_features_for_symbol(
+            run_id=run_id,
+            symbol=symbol,
+            timeframe=timeframe,
+            data_root=data_root,
+            load_features_fn=load_features,
+        )
         if features.empty:
             log.warning("Empty feature table for %s", symbol)
             continue
-        features = _normalize_search_feature_columns(features)
             
         log.info("Loaded features for %s: %d rows, %d columns", symbol, len(features), len(features.columns))
         max_feature_columns = max(max_feature_columns, int(len(features.columns)))
-
-        # 1b. Merge event flags from registry
-        from project.events.event_flags import load_registry_flags
-        log.info("Loading event flags for %s from registry...", symbol)
-        event_flags = load_registry_flags(data_root=data_root, run_id=run_id)
-        sym_flags = pd.DataFrame()
-        if not event_flags.empty:
-            # Filter for current symbol
-            sym_flags = event_flags[event_flags["symbol"] == symbol].copy()
-            if not sym_flags.empty:
-                log.info("Merging %d event flag columns for %s", len(sym_flags.columns) - 2, symbol)
-                max_event_flag_columns_merged = max(
-                    max_event_flag_columns_merged,
-                    max(0, int(len(sym_flags.columns) - 2)),
-                )
-                features = pd.merge(
-                    features,
-                    sym_flags,
-                    on=["timestamp", "symbol"],
-                    how="left"
-                )
-                # Fill NAs with False for the new boolean flag columns
-                flag_cols = [c for c in sym_flags.columns if c not in ["timestamp", "symbol"]]
-                features[flag_cols] = features[flag_cols].fillna(False)
-
-        if "split_label" not in features.columns:
-            features = assign_split_labels(features, time_col="timestamp")
+        sym_flags = features[[c for c in features.columns if c.endswith(("_event", "_active", "_signal"))]].copy()
+        if not sym_flags.empty:
+            max_event_flag_columns_merged = max(max_event_flag_columns_merged, int(len(sym_flags.columns)))
 
         total_feature_rows += int(len(features))
-        total_event_flag_rows += int(len(sym_flags))
+        total_event_flag_rows += int(len(features)) if not sym_flags.empty else 0
 
         # 2. Generate hypotheses
         if experiment_plan:
@@ -231,6 +184,7 @@ def run(
             log.info("Generating hypotheses from spec for %s: %s", symbol, resolved_search_spec)
             hypotheses, generation_audit = generate_hypotheses_with_audit(
                 resolved_search_spec,
+                max_hypotheses=int(search_budget) if search_budget is not None else None,
                 features=features,
             )
             _write_hypothesis_audit_artifacts(out_dir, symbol, generation_audit)
@@ -270,6 +224,8 @@ def run(
                     multiplicity_discoveries=0,
                     min_t_stat=resolved_min_t_stat,
                     min_n=resolved_min_n,
+                    search_budget=search_budget,
+                    use_context_quality=use_context_quality,
                 )
             )
             continue
@@ -280,7 +236,8 @@ def run(
             hypotheses, 
             features, 
             chunk_size=chunk_size,
-            min_sample_size=resolved_min_n
+            min_sample_size=resolved_min_n,
+            use_context_quality=use_context_quality,
         )
         
         if metrics.empty:
@@ -311,6 +268,8 @@ def run(
                     multiplicity_discoveries=0,
                     min_t_stat=resolved_min_t_stat,
                     min_n=resolved_min_n,
+                    search_budget=search_budget,
+                    use_context_quality=use_context_quality,
                 )
             )
             continue
@@ -373,6 +332,8 @@ def run(
                 multiplicity_discoveries=0, # Computed globally
                 min_t_stat=resolved_min_t_stat,
                 min_n=resolved_min_n,
+                search_budget=search_budget,
+                use_context_quality=use_context_quality,
             )
         )
 
@@ -421,6 +382,8 @@ def run(
         multiplicity_discoveries=0,
         min_t_stat=resolved_min_t_stat,
         min_n=resolved_min_n,
+        search_budget=search_budget,
+        use_context_quality=use_context_quality,
     )
     if symbol_diagnostics:
         main_diag["symbol_diagnostics"] = symbol_diagnostics
@@ -451,6 +414,8 @@ def main(argv=None) -> int:
     parser.add_argument("--chunk_size", type=int, default=500)
     parser.add_argument("--min_t_stat", type=float, default=1.5)
     parser.add_argument("--min_n", type=int, default=30)
+    parser.add_argument("--search_budget", type=int, default=None)
+    parser.add_argument("--use_context_quality", type=int, default=1)
     parser.add_argument("--experiment_config", default=None, help="Path to experiment config for tracking.")
     parser.add_argument("--program_id", default=None, help="Program ID for experiment tracking.")
     parser.add_argument("--registry_root", default="project/configs/registries", help="Root for event registries.")
@@ -478,6 +443,8 @@ def main(argv=None) -> int:
         chunk_size=args.chunk_size,
         min_t_stat=args.min_t_stat,
         min_n=args.min_n,
+        search_budget=args.search_budget,
+        use_context_quality=bool(int(args.use_context_quality)),
         experiment_config=args.experiment_config,
         registry_root=args.registry_root,
     )

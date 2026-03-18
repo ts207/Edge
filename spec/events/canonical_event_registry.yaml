@@ -212,3 +212,25 @@ implementation_status_by_event:
   COPULA_PAIRS_TRADING: implemented
   FND_DISLOC: implemented
   BASIS_DISLOC: implemented
+
+event_metadata:
+  ABSORPTION_EVENT:
+    evidence_tier: proxy
+    proxy_detector: ABSORPTION_PROXY
+    disclosure: "Resolved via proxy detector; canonical direct detector not yet implemented."
+  DEPTH_COLLAPSE:
+    evidence_tier: proxy
+    proxy_detector: DEPTH_STRESS_PROXY
+    disclosure: "Resolved via proxy detector; canonical direct detector not yet implemented."
+  ORDERFLOW_IMBALANCE_SHOCK:
+    evidence_tier: proxy
+    proxy_detector: PRICE_VOL_IMBALANCE_PROXY
+    disclosure: "Resolved via proxy detector; canonical direct detector not yet implemented."
+  SWEEP_STOPRUN:
+    evidence_tier: proxy
+    proxy_detector: WICK_REVERSAL_PROXY
+    disclosure: "Resolved via proxy detector; canonical direct detector not yet implemented."
+  FORCED_FLOW_EXHAUSTION:
+    evidence_tier: proxy
+    proxy_detector: FLOW_EXHAUSTION_PROXY
+    disclosure: "Resolved via proxy detector; canonical direct detector not yet implemented."

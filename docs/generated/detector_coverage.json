@@ -418,6 +418,22 @@
       ]
     },
     {
+      "class_name": "LiquidationExhaustionReversalDetector",
+      "event_type": "LIQUIDATION_EXHAUSTION_REVERSAL",
+      "family": "extended_detectors",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.extended_detectors",
+      "path": "project/events/detectors/extended_detectors.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close",
+        "rv_96",
+        "oi_delta_1h",
+        "liquidation_notional"
+      ]
+    },
+    {
       "class_name": "LiquidityGapDetector",
       "event_type": "LIQUIDITY_GAP_PRINT",
       "family": "liquidity",
@@ -561,7 +577,9 @@
         "timestamp",
         "close",
         "high",
-        "low"
+        "low",
+        "volume",
+        "rv_96"
       ]
     },
     {
@@ -606,7 +624,9 @@
         "timestamp",
         "close",
         "high",
-        "low"
+        "low",
+        "volume",
+        "rv_96"
       ]
     },
     {
@@ -735,7 +755,8 @@
       "path": "project/events/families/temporal.py",
       "registered": true,
       "required_columns": [
-        "timestamp"
+        "timestamp",
+        "volume"
       ]
     },
     {
@@ -930,108 +951,120 @@
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: BASIS_SNAPBACK",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: CROSS_VENUE_CATCHUP",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: DEPTH_RECOVERY_EVENT",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: FUNDING_EXTREME_BREAKOUT",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: FUNDING_EXTREME_STAGNATION",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: IMBALANCE_ABSORPTION_REVERSAL",
-      "path": "project/events/detectors/legacy_aliases.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_untracked",
-      "message": "Registered detector has no active event spec: LIQUIDATION_EXHAUSTION_REVERSAL",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: OI_VOL_COMPRESSION_BUILDUP",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: OI_VOL_DIVERGENCE",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: SEQ_FND_EXTREME_THEN_BREAKOUT",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: SEQ_LIQ_CASCADE_THEN_EXHAUST",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: SEQ_VOL_COMP_THEN_BREAKOUT",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
       "message": "Registered detector has no active event spec: VOL_COMPRESSION_BREAKOUT",
-      "path": "project/events/detectors/legacy_aliases.py",
+      "path": "project/events/detectors/extended_detectors.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_hardcoded_params",
+      "message": "Detector implementation has hardcoded numerical thresholds: CROSS_VENUE_DESYNC",
+      "path": "project/events/families/basis.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_hardcoded_params",
+      "message": "Detector implementation has hardcoded numerical thresholds: ORDERFLOW_IMBALANCE_SHOCK",
+      "path": "project/events/families/canonical_proxy.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_hardcoded_params",
+      "message": "Detector implementation has hardcoded numerical thresholds: PRICE_VOL_IMBALANCE_PROXY",
+      "path": "project/events/families/canonical_proxy.py",
       "severity": "warning"
     }
   ],
   "summary": {
-    "active_event_count": 65,
+    "active_event_count": 66,
     "error_count": 0,
-    "issue_count": 15,
+    "issue_count": 17,
     "maturity_counts": {
       "production": 6,
       "proxy": 11,
       "specialized": 3,
-      "standard": 45
+      "standard": 46
     },
     "registered_detector_entry_count": 81,
-    "registered_event_count": 65,
+    "registered_event_count": 66,
     "schema_version": "detector_coverage_audit_v2",
     "status": "passed",
-    "warning_count": 15
+    "warning_count": 17
   }
 }

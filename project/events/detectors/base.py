@@ -10,10 +10,14 @@ from project.events.shared import emit_event, format_event_id, EVENT_COLUMNS
 
 
 class BaseEventDetector(ABC):
+    """
+    Abstract base class for all event detectors.
+    """
     event_type: str = "UNKNOWN"
     required_columns: tuple[str, ...] = ("timestamp",)
     timeframe_minutes: int = 5
     default_severity: str = "moderate"
+    causal: bool = True
 
     def check_required_columns(self, df: pd.DataFrame) -> None:
         missing = [column for column in self.required_columns if column not in df.columns]
@@ -21,13 +25,16 @@ class BaseEventDetector(ABC):
             raise ValueError(f"{self.__class__.__name__} missing required columns: {missing}")
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> Mapping[str, pd.Series]:
+        """Prepare any intermediate features needed for detection."""
         return {}
 
     @abstractmethod
     def compute_raw_mask(self, df: pd.DataFrame, *, features: Mapping[str, pd.Series], **params: Any) -> pd.Series:
+        """Compute a boolean mask where True indicates an event trigger."""
         raise NotImplementedError
 
     def compute_intensity(self, df: pd.DataFrame, *, features: Mapping[str, pd.Series], **params: Any) -> pd.Series:
+        """Compute numeric intensity for each event fire."""
         mask = self.compute_raw_mask(df, features=features, **params)
         return pd.Series(mask.fillna(False).astype(float), index=df.index, dtype=float)
 
@@ -70,10 +77,14 @@ class BaseEventDetector(ABC):
         features: Mapping[str, pd.Series],
         **params: Any,
     ) -> list[int]:
+        """Return list of integer indices where events occur."""
         mask = self.compute_raw_mask(df, features=features, **params)
         return np.flatnonzero(mask.fillna(False).to_numpy()).astype(int).tolist()
 
     def detect(self, df: pd.DataFrame, *, symbol: str, **params: Any) -> pd.DataFrame:
+        """
+        Execute the full detection pipeline on the provided market data.
+        """
         self.check_required_columns(df)
         if df.empty:
             return pd.DataFrame(columns=EVENT_COLUMNS)
@@ -96,7 +107,7 @@ class BaseEventDetector(ABC):
             current_event_type = self.compute_event_type(idx, features)
             severity = self.compute_severity(idx, intensity, features, **params)
             direction = self.compute_direction(idx, features, **params)
-            meta = self.compute_metadata(idx, features, **params)
+            meta = {"causal": bool(self.causal), **dict(self.compute_metadata(idx, features, **params))}
             
             row = emit_event(
                 event_type=current_event_type,
@@ -107,7 +118,7 @@ class BaseEventDetector(ABC):
                 severity=severity,
                 timeframe_minutes=self.timeframe_minutes,
                 direction=direction,
-                sign=1 if direction == "up" else -1 if direction == "down" else 0,
+                causal=self.causal,
                 metadata={
                     "event_idx": int(idx),
                     **meta
@@ -124,3 +135,27 @@ class BaseEventDetector(ABC):
                 events["duration_bars"] = 1
                 
         return events
+
+
+class MarketEventDetector(BaseEventDetector):
+    """
+    Standard base for detectors that require market price data 
+    and provide common return-based direction logic.
+    """
+    required_columns = ("timestamp", "close")
+
+    def compute_direction(
+        self,
+        idx: int,
+        features: Mapping[str, pd.Series],
+        **params: Any,
+    ) -> str:
+        """
+        Default price-return based direction. 
+        Requires 'close_ret' to be present in features.
+        """
+        if "close_ret" in features:
+            ret = float(features["close_ret"].iloc[idx])
+            if ret > 0: return "up"
+            if ret < 0: return "down"
+        return "neutral"

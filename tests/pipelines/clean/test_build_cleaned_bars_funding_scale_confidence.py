@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 import project.pipelines.clean.build_cleaned_bars as build_cleaned_bars
-from project.core import sanity
+from project.core import validation as sanity
 
 def test_infer_funding_scale_reports_low_confidence_for_ambiguous_data():
     frame = pd.DataFrame(

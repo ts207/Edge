@@ -125,3 +125,83 @@ def test_metrics_mae_mfe_consistent_with_forward_returns():
         assert metrics.iloc[0]["mae_mean_bps"] <= 0 or True  # May be positive for strong trends
         # MFE should exist
         assert not np.isnan(metrics.iloc[0]["mfe_mean_bps"])
+
+
+def test_evaluator_context_filter_rejects_low_confidence_regime_rows(monkeypatch):
+    import project.research.search.evaluator_utils as utils
+    import project.research.search.feasibility as feasibility
+
+    monkeypatch.setattr(utils, "_CACHED_CONTEXT_MAP", {("vol", "high"): "vol_high"})
+    monkeypatch.setattr(feasibility, "load_context_state_map", lambda: {("vol", "high"): "vol_high"})
+
+    features = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2023-01-01", periods=12, freq="15min"),
+            "close": np.linspace(100.0, 111.0, 12),
+            "event_vol_spike": [True] * 12,
+            "state_vol_high": [1] * 12,
+            "ms_vol_confidence": [0.40] * 12,
+            "ms_vol_entropy": [0.20] * 12,
+        }
+    )
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("vol_spike"),
+        direction="long",
+        horizon="15m",
+        template_id="continuation",
+        context={"vol": "high"},
+        entry_lag=0,
+    )
+
+    metrics = evaluate_hypothesis_batch([spec], features, min_sample_size=2)
+
+    assert bool(metrics.iloc[0]["valid"]) is False
+    assert metrics.iloc[0]["invalid_reason"] == "no_trigger_hits"
+
+
+def test_evaluator_context_quality_toggle_changes_conditioned_sample_count(monkeypatch):
+    import project.research.search.evaluator_utils as utils
+    import project.research.search.feasibility as feasibility
+
+    monkeypatch.setattr(utils, "_CACHED_CONTEXT_MAP", {("vol", "high"): "vol_high"})
+    monkeypatch.setattr(feasibility, "load_context_state_map", lambda: {("vol", "high"): "vol_high"})
+
+    features = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2023-01-01", periods=20, freq="15min"),
+            "close": np.linspace(100.0, 120.0, 20),
+            "event_vol_spike": [True] * 20,
+            "state_vol_high": [1] * 20,
+            "ms_vol_confidence": [0.40] * 10 + [0.80] * 10,
+            "ms_vol_entropy": [0.20] * 20,
+        }
+    )
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("vol_spike"),
+        direction="long",
+        horizon="15m",
+        template_id="continuation",
+        context={"vol": "high"},
+        entry_lag=0,
+    )
+
+    hard_label_metrics = evaluate_hypothesis_batch(
+        [spec],
+        features,
+        min_sample_size=2,
+        use_context_quality=False,
+    )
+    quality_aware_metrics = evaluate_hypothesis_batch(
+        [spec],
+        features,
+        min_sample_size=2,
+        use_context_quality=True,
+    )
+
+    assert bool(hard_label_metrics.iloc[0]["valid"]) is True
+    assert bool(quality_aware_metrics.iloc[0]["valid"]) is True
+    assert int(hard_label_metrics.iloc[0]["n"]) > int(quality_aware_metrics.iloc[0]["n"])
+    assert int(hard_label_metrics.iloc[0]["n"]) == 17
+    assert int(quality_aware_metrics.iloc[0]["n"]) == 7
