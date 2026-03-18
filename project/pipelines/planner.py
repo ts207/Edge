@@ -274,6 +274,31 @@ def build_pipeline_plan(
             if args.slippage_bps is not None: base_args.extend(["--slippage_bps", str(args.slippage_bps)])
             if args.cost_bps is not None: base_args.extend(["--cost_bps", str(args.cost_bps)])
 
+    # Audit 3.3: Explicit topological sort and cycle detection to validate the DAG
+    _validate_pipeline_dag(plan)
+
     # Return plain list for registry contract check but return plan for orchestration
     assert_stage_registry_contract([(s.name, s.script_path, s.args) for s in plan.values()], project_root)
     return plan
+
+def _validate_pipeline_dag(plan: Dict[str, StageDefinition]) -> None:
+    """Perform cycle detection and ensure a valid topological order exists."""
+    visited = set()
+    stack = set()
+
+    def has_cycle(u: str) -> bool:
+        visited.add(u)
+        stack.add(u)
+        for v in plan[u].depends_on:
+            if v not in visited:
+                if has_cycle(v):
+                    return True
+            elif v in stack:
+                return True
+        stack.remove(u)
+        return False
+
+    for node in plan:
+        if node not in visited:
+            if has_cycle(node):
+                raise ValueError(f"Pipeline dependency cycle detected involving stage: {node}")

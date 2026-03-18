@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **HISTORICAL ARCHIVE**: This document is preserved for architectural context and represents a completed research milestone. See `docs/TECHNICAL_DEBT_AUDIT.md` for the current system state.
+
 # Detector Stabilization Plan
 
 Goal: Improve detector precision (reduce noise) and recall (reduce silence) using the patterns identified in High-Fidelity detectors.

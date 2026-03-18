@@ -13,16 +13,24 @@ from project.features.rolling_thresholds import lagged_rolling_quantile
 from project.research.analyzers import run_analyzer_suite
 
 
-class BaseOIShockDetector(ThresholdDetector):
+from project.events.detectors.base import MarketEventDetector
+
+class BaseOIShockDetector(ThresholdDetector, MarketEventDetector):
     """Base logic for Open Interest (OI) shock detectors."""
     required_columns = ('timestamp', 'oi_notional', 'close')
-    timeframe_minutes = 5
-    default_severity = 'moderate'
 
-    def compute_direction(self, idx: int, features: dict[str, pd.Series], **params: Any) -> str:
-        del params
-        ret = features['close_ret'].iloc[idx]
-        return 'up' if ret > 0 else 'down' if ret < 0 else 'non_directional'
+    def _compute_oi_z(self, df: pd.DataFrame, **params: Any) -> tuple[pd.Series, pd.Series, pd.Series]:
+        """Shared logic for computing OI z-score and related metrics."""
+        window = int(params.get('oi_window', 96))
+        min_periods = int(params.get('min_periods', max(24, window // 4)))
+        oi = pd.to_numeric(df['oi_notional'], errors='coerce').replace(0.0, np.nan).astype(float)
+        oi_log_delta = np.log(oi).diff()
+        baseline = oi_log_delta.shift(1)
+        mean = baseline.rolling(window=window, min_periods=min_periods).mean()
+        std = baseline.rolling(window=window, min_periods=min_periods).std()
+        oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
+        close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(periods=1)
+        return oi_z, close_ret, oi.pct_change(periods=1)
 
     def compute_metadata(self, idx: int, features: dict[str, pd.Series], **params: Any) -> dict[str, Any]:
         del params
@@ -38,15 +46,7 @@ class OISpikePositiveDetector(BaseOIShockDetector):
     event_type = 'OI_SPIKE_POSITIVE'
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        window = int(params.get('oi_window', 96))
-        min_periods = int(params.get('min_periods', max(24, window // 4)))
-        oi = pd.to_numeric(df['oi_notional'], errors='coerce').replace(0.0, np.nan).astype(float)
-        oi_log_delta = np.log(oi).diff()
-        baseline = oi_log_delta.shift(1)
-        mean = baseline.rolling(window=window, min_periods=min_periods).mean()
-        std = baseline.rolling(window=window, min_periods=min_periods).std()
-        oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
-        close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(periods=1)
+        oi_z, close_ret, oi_pct_change = self._compute_oi_z(df, **params)
         spike_z_th = float(params.get('spike_z_th', params.get('threshold', 2.0)))
         mask = (oi_z >= spike_z_th) & (close_ret > 0)
         canonical_oi_accel = state_at_least(
@@ -60,7 +60,7 @@ class OISpikePositiveDetector(BaseOIShockDetector):
         return {
             'oi_z': oi_z, 
             'close_ret': close_ret, 
-            'oi_pct_change': oi.pct_change(periods=1),
+            'oi_pct_change': oi_pct_change,
             'canonical_oi_accel': canonical_oi_accel,
             'mask': mask.fillna(False)
         }
@@ -77,15 +77,7 @@ class OISpikeNegativeDetector(BaseOIShockDetector):
     event_type = 'OI_SPIKE_NEGATIVE'
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        window = int(params.get('oi_window', 96))
-        min_periods = int(params.get('min_periods', max(24, window // 4)))
-        oi = pd.to_numeric(df['oi_notional'], errors='coerce').replace(0.0, np.nan).astype(float)
-        oi_log_delta = np.log(oi).diff()
-        baseline = oi_log_delta.shift(1)
-        mean = baseline.rolling(window=window, min_periods=min_periods).mean()
-        std = baseline.rolling(window=window, min_periods=min_periods).std()
-        oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
-        close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(periods=1)
+        oi_z, close_ret, oi_pct_change = self._compute_oi_z(df, **params)
         spike_z_th = float(params.get('spike_z_th', params.get('threshold', 2.5)))
         mask = (oi_z >= spike_z_th) & (close_ret < 0)
         canonical_oi_accel = state_at_least(
@@ -99,7 +91,7 @@ class OISpikeNegativeDetector(BaseOIShockDetector):
         return {
             'oi_z': oi_z, 
             'close_ret': close_ret, 
-            'oi_pct_change': oi.pct_change(periods=1),
+            'oi_pct_change': oi_pct_change,
             'canonical_oi_accel': canonical_oi_accel,
             'mask': mask.fillna(False)
         }
@@ -116,17 +108,7 @@ class OIFlushDetector(BaseOIShockDetector):
     event_type = 'OI_FLUSH'
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        window = int(params.get('oi_window', 96))
-        min_periods = int(params.get('min_periods', max(24, window // 4)))
-        oi = pd.to_numeric(df['oi_notional'], errors='coerce').replace(0.0, np.nan).astype(float)
-        oi_pct_change = oi.pct_change(periods=1)
-        close_ret = pd.to_numeric(df['close'], errors='coerce').astype(float).pct_change(periods=1)
-        oi_log_delta = np.log(oi).diff()
-        baseline = oi_log_delta.shift(1)
-        mean = baseline.rolling(window=window, min_periods=min_periods).mean()
-        std = baseline.rolling(window=window, min_periods=min_periods).std()
-        oi_z = (oi_log_delta - mean) / std.where(std > 0.0, 1e-12)
-        
+        oi_z, close_ret, oi_pct_change = self._compute_oi_z(df, **params)
         flush_pct_th = float(params.get('flush_pct_th', -0.005))
         mask = (oi_pct_change <= flush_pct_th)
         canonical_oi_decel = state_at_most(
@@ -159,17 +141,23 @@ class OIShockDetector(BaseOIShockDetector):
     threshold = 2.5
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        pos = OISpikePositiveDetector().prepare_features(df, **params)
-        neg = OISpikeNegativeDetector().prepare_features(df, **params)
-        flush = OIFlushDetector().prepare_features(df, **params)
+        oi_z, close_ret, oi_pct_change = self._compute_oi_z(df, **params)
+        
+        spike_pos_th = float(params.get('spike_pos_th', 2.0))
+        spike_neg_th = float(params.get('spike_neg_th', 2.5))
+        flush_pct_th = float(params.get('flush_pct_th', -0.005))
+        
+        is_spike_pos = (oi_z >= spike_pos_th) & (close_ret > 0)
+        is_spike_neg = (oi_z >= spike_neg_th) & (close_ret < 0)
+        is_flush = (oi_pct_change <= flush_pct_th)
         
         return {
-            'oi_z': pos['oi_z'], 
-            'close_ret': pos['close_ret'], 
-            'oi_pct_change': pos['oi_pct_change'],
-            'is_spike_pos': pos['mask'],
-            'is_spike_neg': neg['mask'],
-            'is_flush': flush['mask']
+            'oi_z': oi_z, 
+            'close_ret': close_ret, 
+            'oi_pct_change': oi_pct_change,
+            'is_spike_pos': is_spike_pos.fillna(False),
+            'is_spike_neg': is_spike_neg.fillna(False),
+            'is_flush': is_flush.fillna(False)
         }
 
     def compute_raw_mask(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
@@ -233,7 +221,7 @@ class DeleveragingWaveDetector(ThresholdDetector):
     def compute_intensity(self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any) -> pd.Series:
         return features['rv_z'].abs().fillna(0.0)
 
-from project.events.detectors.registry import register_detector
+from project.events.detectors.registry import get_detector, register_family_detectors
 
 _DETECTORS = {
     'OI_SPIKE_POSITIVE': OISpikePositiveDetector,
@@ -242,12 +230,14 @@ _DETECTORS = {
     'DELEVERAGING_WAVE': DeleveragingWaveDetector,
 }
 
-for et, cls in _DETECTORS.items():
-    register_detector(et, cls)
+register_family_detectors(_DETECTORS)
 
 def detect_oi_family(df: pd.DataFrame, symbol: str, event_type: str = 'OI_SPIKE_POSITIVE', **params: Any) -> pd.DataFrame:
-    detector_cls = _DETECTORS.get(event_type, OIShockDetector)
-    return detector_cls().detect(df, symbol=symbol, **params)
+    detector = get_detector(event_type)
+    if detector is None:
+        # Fallback for legacy polymorphic detector if not registered
+        return OIShockDetector().detect(df, symbol=symbol, **params)
+    return detector.detect(df, symbol=symbol, **params)
 
 
 def analyze_oi_family(df: pd.DataFrame, symbol: str, event_type: str = 'OI_SPIKE_POSITIVE', **params: Any) -> tuple[pd.DataFrame, dict[str, Any]]:

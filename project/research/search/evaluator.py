@@ -253,14 +253,11 @@ def evaluate_hypothesis_batch(
         event_weights = weights[mask].loc[event_returns.index]
         
         # ── Refined Statistical Estimators ──
-        # 1. Effective Sample Size with Overlap Correction
+        # Effective Sample Size from time-decay weights
         # n_eff_w = (sum w)^2 / (sum w^2)
         n_eff_w = float(_effective_sample_size(event_weights))
-        
-        # Simple overlap correction: n_eff = n_eff_w / (1 + (hbars-1) * overlap_density)
-        # where overlap_density = n / dataset_len
-        overlap_density = n / len(features)
-        n_eff = n_eff_w / (1.0 + (hbars - 1) * overlap_density)
+        # NOTE: Overlap correction is handled entirely by the Newey-West
+        # variance estimator below — no separate n_eff deflation is needed.
         
         signed = event_returns * direction_sign
         
@@ -323,8 +320,8 @@ def evaluate_hypothesis_batch(
         stress_evals = evaluate_stress_scenarios(spec, features, horizon_bars=hbars, min_n=5, stress_masks=stress_masks)
         if not stress_evals.empty and stress_evals["valid"].any():
             valid_stress = stress_evals[stress_evals["valid"]]
-            # Stress score is fraction of survived scenarios (t_stat > 0)
-            stress_survived = (valid_stress["t_stat"] > 0).sum()
+            # Stress score is fraction of survived scenarios (t_stat > 1.0, a meaningful threshold)
+            stress_survived = (valid_stress["t_stat"] > 1.0).sum()
             stress_score = float(stress_survived / len(valid_stress))
         else:
             stress_score = 0.0
@@ -350,6 +347,7 @@ def evaluate_hypothesis_batch(
         
         # Strategy Sharpe (Scaling by realized trades per year)
         trades_per_year = n * (ann / len(features))
+        trades_per_year = min(trades_per_year, ann)  # Cap at theoretical max to avoid sparse-trigger Sharpe inflation
         sharpe = (weighted_mean / weighted_std) * np.sqrt(trades_per_year)
         hit_rate = float((signed > 0).mean())
         mean_bps = weighted_mean * 10_000.0

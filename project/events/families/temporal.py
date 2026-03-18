@@ -348,7 +348,7 @@ class CopulaPairsTradingDetector(ThresholdDetector):
         return 'down' if zscore > 0 else 'up' if zscore < 0 else 'non_directional'
 
 
-from project.events.detectors.registry import register_detector
+from project.events.detectors.registry import get_detector, register_family_detectors
 
 _DETECTORS = {
     'SESSION_OPEN_EVENT': SessionOpenDetector,
@@ -361,14 +361,13 @@ _DETECTORS = {
     'COPULA_PAIRS_TRADING': CopulaPairsTradingDetector,
 }
 
-for et, cls in _DETECTORS.items():
-    register_detector(et, cls)
+register_family_detectors(_DETECTORS)
 
 def detect_temporal_family(df: pd.DataFrame, symbol: str, event_type: str = 'SESSION_OPEN_EVENT', **params: Any) -> pd.DataFrame:
-    detector_cls = _DETECTORS.get(event_type)
-    if detector_cls is None:
+    detector = get_detector(event_type)
+    if detector is None:
         raise ValueError(f"Unknown temporal event type: {event_type}")
-    return detector_cls().detect(df, symbol=symbol, **params)
+    return detector.detect(df, symbol=symbol, **params)
 
 def analyze_temporal_family(df: pd.DataFrame, symbol: str, event_type: str = 'SESSION_OPEN_EVENT', **params: Any) -> tuple[pd.DataFrame, dict[str, Any]]:
     events = detect_temporal_family(df, symbol, event_type=event_type, **params)

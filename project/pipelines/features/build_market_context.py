@@ -162,10 +162,6 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     liq_probs = calculate_ms_liq_probabilities(quote_volume)
     out = pd.concat([out, liq_probs], axis=1)
 
-    # low_liquidity_state: high_vol OR spread_elevated
-    out["low_liquidity_state"] = (
-        (out["high_vol_regime"] > 0) | (out["spread_elevated_state"] > 0)
-    ).astype(float)
 
     # refill_lag_state: oi_delta negative (de-risking)
     if "oi_delta_1h" in out.columns:

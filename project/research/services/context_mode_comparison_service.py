@@ -6,7 +6,7 @@ from typing import Any, Dict, Sequence
 
 import pandas as pd
 
-from project.pipelines.research.search_feature_frame import load_search_feature_frame
+from project.research.search.search_feature_utils import load_search_feature_frame
 from project.research.search.generator import generate_hypotheses_with_audit
 from project.research.search.evaluator import evaluate_hypothesis_batch
 

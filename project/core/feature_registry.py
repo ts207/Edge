@@ -496,14 +496,6 @@ def ensure_market_context_feature_definitions_registered() -> None:
             owner="project.pipelines.features.build_market_context",
         ),
         FeatureDefinition(
-            name="low_liquidity_state",
-            definition="Composite low-liquidity indicator from high volatility or elevated spread conditions.",
-            dependencies=("high_vol_regime", "spread_elevated_state"),
-            units="flag",
-            source_stage="build_market_context",
-            owner="project.pipelines.features.build_market_context",
-        ),
-        FeatureDefinition(
             name="refill_lag_state",
             definition="Indicator that open interest is falling and liquidity refill is lagging.",
             dependencies=("oi_delta_1h",),

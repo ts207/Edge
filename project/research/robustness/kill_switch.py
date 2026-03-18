@@ -67,11 +67,6 @@ def detect_kill_switches(
     if candidates is None:
         candidates = KILL_SWITCH_CANDIDATE_FEATURES
 
-    # LT-001: Resolve structural redundancy
-    # 'low_liquidity_state' structurally overlaps with 'aftershock_state' 
-    # (high vol OR elevated spread vs high vol AND elevated spread) and causes noise in kill switches
-    if 'low_liquidity_state' in candidates:
-        candidates = [c for c in candidates if c != 'low_liquidity_state']
 
     if features.empty or "close" not in features.columns:
         return pd.DataFrame()

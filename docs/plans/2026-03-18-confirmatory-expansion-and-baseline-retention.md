@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **HISTORICAL ARCHIVE**: This document is preserved for architectural context and represents a completed research milestone. See `docs/TECHNICAL_DEBT_AUDIT.md` for the current system state.
+
 # Confirmatory Expansion and Baseline Retention Implementation Plan
 
 > **For Gemini:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

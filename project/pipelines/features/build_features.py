@@ -170,6 +170,8 @@ def _add_basis_features(
         out.loc[valid.values, "basis_bps"] = (
             (merged.loc[valid, "close"] / merged.loc[valid, "spot_close"] - 1.0) * 10_000.0
         ).values
+        # PIT safety: lag basis_bps by 1 bar so downstream consumers only see prior-bar values
+        out["basis_bps"] = out["basis_bps"].shift(1)
     else:
         out["basis_bps"] = np.nan
         out["basis_spot_coverage"] = 0.0
@@ -437,7 +439,23 @@ def _ensure_feature_contract_columns(frame: pd.DataFrame, *, timeframe: str) -> 
         np.maximum(total_volume.to_numpy() - buy_volume.to_numpy(), 0.0), index=out.index
     )
 
-    out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24)
+    out["ms_imbalance_24"] = calculate_imbalance(buy_volume, sell_volume, window=24).shift(1)
+
+    # PIT safety verification: ensure key indicators that should be lagged are indeed shifted.
+    # This is a defensive check to prevent look-ahead bias during feature evolution.
+    _PIT_LAGGED_FEATURES = {
+        "rv_96", "rv_pct_17280", "funding_abs", "funding_abs_pct", 
+        "basis_bps", "basis_zscore", "ms_imbalance_24", "oi_delta_1h",
+        "range_med_2880", "spread_zscore", "cross_exchange_spread_z"
+    }
+    for feat in _PIT_LAGGED_FEATURES:
+        if feat in out.columns and len(out) > 5:
+            # Audit Pattern B: Heuristic check — a lagged rolling indicator MUST
+            # start with at least one NaN if correctly shifted.
+            if pd.notna(out[feat].iloc[0]):
+                logging.warning(f"PIT Violation Risk: Feature '{feat}' is not NaN at index 0. "
+                                "It may be missing a .shift(1) lag.")
+
     return out
 
 
@@ -491,7 +509,7 @@ def build_features(
     )
 
     out["rv_96"] = out["logret_1"].rolling(rv_window, min_periods=rv_min_periods).std().shift(1)
-    out["rv_pct_17280"] = _rolling_percentile(out["rv_96"], window=rv_pct_window).shift(1).fillna(50.0)
+    out["rv_pct_17280"] = _rolling_percentile(out["rv_96"], window=rv_pct_window).shift(1)
     out["high_96"] = out["high"].rolling(rv_window, min_periods=1).max().shift(1)
     out["low_96"] = out["low"].rolling(rv_window, min_periods=1).min().shift(1)
     out["range_96"] = (out["high_96"] / out["low_96"].replace(0.0, np.nan) - 1.0).fillna(0.0)

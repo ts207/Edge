@@ -19,7 +19,7 @@ from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.io.url_utils import join_url
 from project.core.validation import ensure_utc_timestamp
-from project.core.sanity import assert_monotonic_utc_timestamp
+from project.core.validation import assert_monotonic_utc_timestamp
 
 ARCHIVE_BASE = "https://data.binance.vision/data/futures/um"
 DEFAULT_API_BASE = "https://fapi.binance.com"

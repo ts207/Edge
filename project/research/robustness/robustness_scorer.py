@@ -27,20 +27,7 @@ def compute_robustness_score(
     """
     Compute composite robustness score from per-regime evaluation results.
 
-    Parameters
-    ----------
-    regime_results : DataFrame from evaluate_by_regime(), columns:
-        regime, n, mean_return_bps, t_stat, hit_rate, valid
-    overall_direction : +1 for long hypothesis, -1 for short
-    weight_sign : weight for sign consistency component
-    weight_min_t : weight for worst-regime t-stat component
-    weight_coverage : weight for coverage in supporting regimes
-    min_t_floor : t-stat mapped to score=0 for min_t component
-    min_t_target : t-stat mapped to score=1 for min_t component
-
-    Returns
-    -------
-    float in [0, 1]
+    Audit 1.5: Improved calibration and regime-count-aware weighting.
     """
     if regime_results.empty:
         return 0.0
@@ -55,16 +42,26 @@ def compute_robustness_score(
 
     # ── Component 1: Regime sign consistency ──
     # Fraction of valid regimes where t_stat has the correct sign
+    # Audit 1.5: Penalize heavily if only 1 valid regime exists (cannot measure robustness)
     correct_sign = (t_stats * overall_direction > 0).sum()
     sign_consistency = float(correct_sign / n_valid)
+    if n_valid < 2:
+        sign_consistency *= 0.5
 
     # ── Component 2: Minimum regime t-stat (normalized) ──
     if len(t_stats) > 0:
         signed_t = t_stats * overall_direction
         min_signed_t = float(signed_t.min())
-        # Linearly map [min_t_floor, min_t_target] → [0, 1]
-        t_range = min_t_target - min_t_floor
-        min_t_score = (min_signed_t - min_t_floor) / t_range if t_range > 0 else 0.0
+        
+        # Audit 1.5: Use non-linear mapping or multi-segment to distinguish 
+        # "slightly negative" from "structural reversal"
+        if min_signed_t < 0:
+            # Reversal gets 0-0.3 score
+            min_t_score = 0.3 * (1.0 - min_signed_t / min_t_floor) if min_signed_t > min_t_floor else 0.0
+        else:
+            # Positive min_t gets 0.3-1.0 score
+            min_t_score = 0.3 + 0.7 * (min_signed_t / min_t_target) if min_signed_t < min_t_target else 1.0
+            
         min_t_score = float(np.clip(min_t_score, 0.0, 1.0))
     else:
         min_t_score = 0.0

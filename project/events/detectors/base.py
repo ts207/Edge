@@ -16,6 +16,14 @@ class BaseEventDetector(ABC):
     default_severity: str = "moderate"
     causal: bool = True
 
+
+class MarketEventDetector(BaseEventDetector):
+    """
+    Standard base for detectors that require market price data 
+    and provide common return-based direction logic.
+    """
+    required_columns = ("timestamp", "close")
+
     def check_required_columns(self, df: pd.DataFrame) -> None:
         missing = [column for column in self.required_columns if column not in df.columns]
         if missing:

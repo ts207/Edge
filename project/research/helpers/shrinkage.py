@@ -1,6 +1,6 @@
 """
 Hierarchical James-Stein shrinkage and time-decay weighting.
-Public API facade for backward compatibility.
+Public API facade with backward compatibility for legacy private-prefix imports.
 """
 
 from __future__ import annotations
@@ -16,13 +16,6 @@ from project.research.helpers.parameter_normalization import (
     _optional_token,
     _event_direction_from_joined_row,
     _asymmetric_tau_days,
-    _SHRINKAGE_LOCK,
-    _TAU_BY_FAMILY_DAYS,
-    _VOL_REGIME_MULTIPLIER,
-    _LIQUIDITY_STATE_MULTIPLIER,
-    _DIRECTIONAL_ASYMMETRY_BY_FAMILY,
-    _EVENT_DIRECTION_NUMERIC_COLS,
-    _EVENT_DIRECTION_TEXT_COLS,
 )
 
 from project.research.helpers.estimation_kernels import (
@@ -38,8 +31,31 @@ from project.research.helpers.diagnostics import (
     _refresh_phase2_metrics_after_shrinkage,
 )
 
+# New Public API Names
+ensure_shrinkage_parameters_loaded = _ensure_shrinkage_parameters_loaded
+resolve_tau_days = _resolve_tau_days
+regime_conditioned_tau_days = _regime_conditioned_tau_days
+direction_sign = _direction_sign
+compute_time_decay_weights = _time_decay_weights
+compute_effective_sample_size = _effective_sample_size
+estimate_adaptive_lambda = _estimate_adaptive_lambda
+compute_loso_stability = _compute_loso_stability
+apply_hierarchical_shrinkage = _apply_hierarchical_shrinkage
+refresh_phase2_metrics = _refresh_phase2_metrics_after_shrinkage
+
 __all__ = [
     "update_shrinkage_parameters_from_spec",
+    "ensure_shrinkage_parameters_loaded",
+    "resolve_tau_days",
+    "regime_conditioned_tau_days",
+    "direction_sign",
+    "compute_time_decay_weights",
+    "compute_effective_sample_size",
+    "estimate_adaptive_lambda",
+    "compute_loso_stability",
+    "apply_hierarchical_shrinkage",
+    "refresh_phase2_metrics",
+    # Legacy Compatibility
     "_ensure_shrinkage_parameters_loaded",
     "_resolve_tau_days",
     "_normalize_vol_regime",

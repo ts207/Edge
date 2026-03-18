@@ -45,6 +45,16 @@ def _write_json(path: Path, payload: Dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _gate_rank(val: Any) -> int:
+    """Standardized ranking for gate statuses."""
+    val = str(val).strip().lower()
+    if val in ("pass", "true", "1", "1.0"):
+        return 2
+    if val in ("fail", "false", "0", "0.0"):
+        return 1
+    return 0
+
+
 def _build_belief_state(
     *,
     tested_regions: pd.DataFrame,
@@ -56,12 +66,6 @@ def _build_belief_state(
 ) -> Dict[str, Any]:
     promising_regions = []
     if not tested_regions.empty:
-        def _gate_rank(val) -> int:
-            val = str(val).strip().lower()
-            if val in ("pass", "true", "1", "1.0"): return 2
-            if val in ("fail", "false", "0", "0.0"): return 1
-            return 0
-        
         ranked = tested_regions.copy()
         if "gate_promo_statistical" in ranked.columns:
             ranked["_gate_rank"] = ranked["gate_promo_statistical"].apply(_gate_rank)
@@ -108,12 +112,6 @@ def _build_next_actions(
 ) -> Dict[str, Any]:
     exploit = []
     if not tested_regions.empty:
-        def _gate_rank(val) -> int:
-            val = str(val).strip().lower()
-            if val in ("pass", "true", "1", "1.0"): return 2
-            if val in ("fail", "false", "0", "0.0"): return 1
-            return 0
-            
         ranked_df = tested_regions.copy()
         if "gate_promo_statistical" in ranked_df.columns:
             ranked_df["_gate_rank"] = ranked_df["gate_promo_statistical"].apply(_gate_rank)

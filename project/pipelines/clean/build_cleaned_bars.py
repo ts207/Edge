@@ -26,7 +26,7 @@ from project.specs.manifest import (
     start_manifest,
     validate_input_provenance,
 )
-from project.core.sanity import (
+from project.core.validation import (
     FUNDING_SCALE_NAME_TO_MULTIPLIER,
     assert_funding_event_grid,
     assert_funding_sane,
