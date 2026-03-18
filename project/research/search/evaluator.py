@@ -268,15 +268,42 @@ def evaluate_hypothesis_batch(
         w_sum = event_weights.sum()
         weighted_mean = float((signed * event_weights).sum() / w_sum)
         
-        # 3. Weighted Standard Deviation (Sample)
-        # Var_w = sum(w * (x - mean_w)^2) / [((V1^2 - V2) / V1)] where V1=sum w, V2=sum w^2
-        # For simplicity and robustness, use the reliability weights version:
+        # SF-003: Newey-West robust variance (handling overlap serial correlation).
+        # We manually calculate an approximated AR(hbars) overlapping variance for t-stats,
+        # integrating the reliability weights.
         v1 = w_sum
         v2 = (event_weights**2).sum()
         denom = v1 - (v2 / v1)
+        
         if denom > 0:
+            # Base sample weighted variance
             weighted_var = ((event_weights * (signed - weighted_mean)**2).sum()) / denom
-            weighted_std = np.sqrt(max(0.0, float(weighted_var)))
+            
+            # Newey-West overlap correction
+            # Lags up to (hbars - 1)
+            nw_var = weighted_var
+            n_samples = len(signed)
+            
+            if hbars > 1 and n_samples > hbars:
+                signed_demeaned = (signed - weighted_mean).values
+                w_arr = event_weights.values
+                
+                # Approximate sum of autocorrelations out to hbars - 1 lag
+                cov_sum = 0.0
+                for lag in range(1, hbars):
+                    # Bartlett kernel weight: 1 - lag / hbars
+                    kernel = 1.0 - (lag / hbars)
+                    
+                    # Weighted auto-covariance at this lag
+                    w_lag = w_arr[lag:] * w_arr[:-lag]
+                    x_lag = signed_demeaned[lag:] * signed_demeaned[:-lag]
+                    cov_lag = (w_lag * x_lag).sum() / denom
+                    
+                    cov_sum += 2.0 * kernel * cov_lag
+                
+                nw_var += cov_sum
+                
+            weighted_std = np.sqrt(max(0.0, float(nw_var)))
         else:
             weighted_std = 0.0
 
@@ -316,8 +343,10 @@ def evaluate_hypothesis_batch(
         if "volume" in features.columns:
             capacity = float(features["volume"][mask].median())
 
-        # T-stat using weighted sample std and overlap-aware n_eff
-        t_stat = weighted_mean / (weighted_std / np.sqrt(max(1.0, n_eff)))
+        # T-stat using Newey-West weighted standard error. 
+        # Overlap density adjustment is already captured structurally by NW variance above, 
+        # so we use raw sqrt(n_eff_w) for the denominator to prevent double-penalizing.
+        t_stat = weighted_mean / (weighted_std / np.sqrt(max(1.0, n_eff_w)))
         
         # Strategy Sharpe (Scaling by realized trades per year)
         trades_per_year = n * (ann / len(features))
