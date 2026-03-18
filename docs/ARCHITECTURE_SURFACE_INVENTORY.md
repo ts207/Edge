@@ -39,6 +39,8 @@ These package roots now exist as deliberate import surfaces rather than implicit
   Live runner, kill-switch, and runtime health helpers.
 - `project.portfolio`
   Allocation, sizing, and risk-budget helpers.
+- `project.spec_registry`
+  Read-only YAML spec loaders and blueprint policy defaults. Import from the package root only (not from `.loaders` or `.policy` directly). `loaders.py` holds all `load_*()` functions; `policy.py` holds `_DEFAULT_BLUEPRINT_POLICY`. `__init__.py` is thin re-exports.
 - `project.spec_validation`
   Ontology, grammar, loader, and search-spec validation helpers.
 
