@@ -8,9 +8,11 @@ import subprocess
 from pathlib import Path
 from typing import List
 
+from project import PROJECT_ROOT
 
-def run_script(script_path: str, args: List[str]):
-    cmd = [sys.executable, script_path] + args
+
+def run_script(script_path: Path, args: List[str]):
+    cmd = [sys.executable, str(script_path)] + args
     logging.info("Running: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=False)
     if result.returncode != 0:
@@ -18,14 +20,14 @@ def run_script(script_path: str, args: List[str]):
         sys.exit(result.returncode)
 
 
-def run_parallel(scripts: List[tuple[str, List[str]]]):
-    processes: list[tuple[str, subprocess.Popen]] = []
+def run_parallel(scripts: List[tuple[Path, List[str]]]):
+    processes: list[tuple[Path, subprocess.Popen]] = []
     for script_path, args in scripts:
-        cmd = [sys.executable, script_path] + args
+        cmd = [sys.executable, str(script_path)] + args
         logging.info("Starting Parallel: %s", " ".join(cmd))
         processes.append((script_path, subprocess.Popen(cmd)))
 
-    failed: dict[str, int] = {}
+    failed: dict[Path, int] = {}
     for script_path, process in processes:
         rc = int(process.wait())
         if rc != 0:
@@ -58,12 +60,12 @@ def main():
     run_parallel(
         [
             (
-                "project/pipelines/ingest/ingest_binance_um_ohlcv.py",
+                PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_ohlcv.py",
                 common_args + time_args + ["--timeframe", "5m"],
             ),
-            ("project/pipelines/ingest/ingest_binance_spot_ohlcv_5m.py", common_args + time_args),
+            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_spot_ohlcv_5m.py", common_args + time_args),
             (
-                "project/pipelines/ingest/ingest_binance_um_mark_price_5m.py",
+                PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_mark_price_5m.py",
                 common_args + time_args,
             ),
         ]
@@ -71,15 +73,15 @@ def main():
 
     # 2. Heavy Ingestion (Sequential/Internal Parallelism)
     logging.info("--- Starting Book Ticker Ingestion (Heavy) ---")
-    run_script("project/pipelines/ingest/ingest_binance_um_book_ticker.py", common_args + time_args)
+    run_script(PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_book_ticker.py", common_args + time_args)
 
     # 3. Remaining Ingestion
     logging.info("--- Starting Remaining Ingestion ---")
     run_parallel(
         [
-            ("project/pipelines/ingest/ingest_binance_um_funding.py", common_args + time_args),
+            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_funding.py", common_args + time_args),
             (
-                "project/pipelines/ingest/ingest_binance_um_open_interest_hist.py",
+                PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_open_interest_hist.py",
                 common_args + time_args,
             ),
         ]
@@ -90,11 +92,11 @@ def main():
     run_parallel(
         [
             (
-                "project/pipelines/clean/build_cleaned_bars.py",
+                PROJECT_ROOT / "pipelines/clean/build_cleaned_bars.py",
                 common_args + ["--market", "perp", "--force", str(args.force)],
             ),
             (
-                "project/pipelines/clean/build_cleaned_bars.py",
+                PROJECT_ROOT / "pipelines/clean/build_cleaned_bars.py",
                 common_args + ["--market", "spot", "--force", str(args.force)],
             ),
         ]
@@ -103,19 +105,19 @@ def main():
     # 5. ToB & Basis Processing
     logging.info("--- Starting ToB & Basis Processing ---")
     run_script(
-        "project/pipelines/clean/build_tob_snapshots_1s.py",
+        PROJECT_ROOT / "pipelines/clean/build_tob_snapshots_1s.py",
         common_args + ["--force", str(args.force)],
     )
     run_script(
-        "project/pipelines/clean/build_tob_5m_agg.py", common_args + ["--force", str(args.force)]
+        PROJECT_ROOT / "pipelines/clean/build_tob_5m_agg.py", common_args + ["--force", str(args.force)]
     )
     run_script(
-        "project/pipelines/clean/build_basis_state_5m.py",
+        PROJECT_ROOT / "pipelines/clean/build_basis_state_5m.py",
         common_args + ["--force", str(args.force)],
     )
 
     # 6. QA Report
-    run_script("project/pipelines/report/qa_data_layer.py", common_args)
+    run_script(PROJECT_ROOT / "pipelines/report/qa_data_layer.py", common_args)
 
     logging.info("Slice 1 Data Layer Pipeline completed successfully.")
 

@@ -1,1 +1,6 @@
-from project.research.summarize_discovery_quality import *  # noqa: F401,F403
+from __future__ import annotations
+import sys
+from project.research.summarize_discovery_quality import main
+
+if __name__ == '__main__':
+    sys.exit(main())
