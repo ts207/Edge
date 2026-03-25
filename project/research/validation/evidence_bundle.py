@@ -1,0 +1,616 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Dict, Sequence
+
+import numpy as np
+import pandas as pd
+
+from project.core.coercion import as_bool, safe_float, safe_int
+from project.domain.promotion.promotion_policy import PromotionPolicy
+from project.research.validation.falsification import evaluate_negative_controls
+from project.research.validation.regime_tests import build_stability_result_from_row
+from project.research.validation.schemas import EvidenceBundle, PromotionDecision
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (np.floating, np.integer)):
+        return value.item()
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    return value
+
+
+def _event_family(event_type: str) -> str:
+    token = str(event_type or "").strip()
+    return token.split("_")[0] if token else ""
+
+
+def _bool_gate_value(row: Dict[str, Any], key: str, default: bool = True) -> bool:
+    if key not in row:
+        return bool(default)
+    return bool(as_bool(row.get(key, default)))
+
+
+def _row_value(row: Dict[str, Any], *keys: str, default: Any = None) -> Any:
+    for key in keys:
+        if key in row:
+            return row[key]
+    return default
+
+
+def _normalize_bundle_row_aliases(row: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = dict(row)
+    alias_map = {
+        "gate_delay_robustness": ("delay_robustness_pass",),
+        "gate_timeframe_consensus": ("gate_promo_timeframe_consensus", "timeframe_consensus_pass"),
+        "gate_bridge_microstructure": ("microstructure_pass",),
+        "gate_regime_stability": ("regime_stability_pass",),
+    }
+    for canonical, aliases in alias_map.items():
+        if canonical in normalized:
+            continue
+        for alias in aliases:
+            if alias in normalized:
+                normalized[canonical] = normalized[alias]
+                break
+    return normalized
+
+
+def _looks_like_evidence_bundle(payload: Dict[str, Any]) -> bool:
+    required = {
+        "candidate_id",
+        "event_type",
+        "sample_definition",
+        "effect_estimates",
+        "uncertainty_estimates",
+        "stability_tests",
+        "falsification_results",
+        "cost_robustness",
+        "multiplicity_adjustment",
+    }
+    return required.issubset(payload.keys())
+
+
+def _optional_bool_gate(row: Dict[str, Any], *keys: str) -> bool | None:
+    value = _row_value(row, *keys, default=None)
+    if value is None:
+        return None
+    if isinstance(value, float) and not np.isfinite(value):
+        return None
+    return bool(as_bool(value))
+
+
+def build_evidence_bundle(
+    row: Dict[str, Any],
+    *,
+    control_rate: float | None = None,
+    max_negative_control_pass_rate: float = 0.01,
+    allow_missing_negative_controls: bool = False,
+    policy_version: str = "phase4_pr5_v1",
+    bundle_version: str = "phase4_bundle_v1",
+) -> Dict[str, Any]:
+    row = _normalize_bundle_row_aliases(row)
+    candidate_id = str(row.get("candidate_id", "")).strip()
+    event_type = str(row.get("event_type", row.get("event", ""))).strip()
+    run_id = str(row.get("run_id", "")).strip()
+    stability = build_stability_result_from_row(row)
+    falsification = evaluate_negative_controls(
+        row=row,
+        control_rate=control_rate,
+        max_negative_control_pass_rate=max_negative_control_pass_rate,
+        allow_missing_negative_controls=allow_missing_negative_controls,
+    )
+    tob_coverage = safe_float(row.get("tob_coverage", np.nan), np.nan)
+    tob_gate_default = bool(np.isfinite(tob_coverage) and tob_coverage >= 0.0)
+    microstructure_pass = _optional_bool_gate(
+        row, "gate_bridge_microstructure", "microstructure_pass"
+    )
+    gate_delay_robustness = _optional_bool_gate(
+        row, "gate_delay_robustness", "delay_robustness_pass"
+    )
+    gate_timeframe_consensus = _optional_bool_gate(
+        row,
+        "gate_timeframe_consensus",
+        "gate_promo_timeframe_consensus",
+        "timeframe_consensus_pass",
+    )
+    gate_bridge_microstructure = _optional_bool_gate(
+        row, "gate_bridge_microstructure", "microstructure_pass"
+    )
+    gate_regime_stability = _optional_bool_gate(
+        row, "gate_regime_stability", "regime_stability_pass"
+    )
+    gate_structural_break = _optional_bool_gate(
+        row, "gate_structural_break", "structural_break_pass"
+    )
+    returns_oos_combined = row.get("returns_oos_combined")
+    has_realized_oos_path = False
+    if isinstance(returns_oos_combined, str):
+        try:
+            returns_oos_combined = json.loads(returns_oos_combined)
+        except Exception:
+            returns_oos_combined = []
+    if isinstance(returns_oos_combined, (list, tuple, np.ndarray, pd.Series)):
+        has_realized_oos_path = bool(len(returns_oos_combined) >= 10)
+    bundle = EvidenceBundle(
+        candidate_id=candidate_id,
+        event_family=_event_family(event_type),
+        event_type=event_type,
+        run_id=run_id,
+        sample_definition={
+            "n_events": int(safe_int(row.get("n_events", row.get("sample_size", 0)), 0)),
+            "validation_samples": int(safe_int(row.get("validation_samples", 0), 0)),
+            "test_samples": int(safe_int(row.get("test_samples", 0), 0)),
+            "symbol": str(row.get("symbol", "")).strip(),
+        },
+        split_definition={
+            "split_scheme_id": str(row.get("split_scheme_id", "")).strip(),
+            "purge_bars": int(safe_int(row.get("purge_bars_used", 0), 0)),
+            "embargo_bars": int(safe_int(row.get("embargo_bars_used", 0), 0)),
+            "bar_duration_minutes": int(safe_int(row.get("bar_duration_minutes", 5), 5)),
+        },
+        effect_estimates={
+            "estimate": safe_float(
+                row.get("estimate", row.get("effect_shrunk_state", row.get("expectancy", np.nan))),
+                np.nan,
+            ),
+            "estimate_bps": safe_float(
+                row.get(
+                    "estimate_bps",
+                    row.get(
+                        "bridge_validation_after_cost_bps", row.get("net_expectancy_bps", np.nan)
+                    ),
+                ),
+                np.nan,
+            ),
+            "stderr": safe_float(row.get("stderr", np.nan), np.nan),
+            "stderr_bps": safe_float(row.get("stderr_bps", np.nan), np.nan),
+        },
+        uncertainty_estimates={
+            "ci_low": safe_float(row.get("ci_low", np.nan), np.nan),
+            "ci_high": safe_float(row.get("ci_high", np.nan), np.nan),
+            "ci_low_bps": safe_float(row.get("ci_low_bps", np.nan), np.nan),
+            "ci_high_bps": safe_float(row.get("ci_high_bps", np.nan), np.nan),
+            "p_value_raw": safe_float(row.get("p_value_raw", row.get("p_value", np.nan)), np.nan),
+            "q_value": safe_float(row.get("q_value", row.get("p_value_adj", np.nan)), np.nan),
+            "q_value_by": safe_float(
+                row.get("q_value_by", row.get("p_value_adj_by", np.nan)), np.nan
+            ),
+            "q_value_cluster": safe_float(
+                row.get("q_value_cluster", row.get("p_value_adj_holm", np.nan)), np.nan
+            ),
+            "n_obs": int(safe_int(row.get("n_obs", row.get("n_events", 0)), 0)),
+            "n_clusters": int(safe_int(row.get("n_clusters", 0), 0)),
+        },
+        stability_tests=stability.to_dict(),
+        falsification_results=falsification.to_dict(),
+        cost_robustness={
+            "cost_survival_ratio": safe_float(row.get("cost_survival_ratio", np.nan), np.nan),
+            "net_expectancy_bps": safe_float(
+                row.get("net_expectancy_bps", row.get("bridge_validation_after_cost_bps", np.nan)),
+                np.nan,
+            ),
+            "effective_cost_bps": safe_float(row.get("effective_cost_bps", np.nan), np.nan),
+            "turnover_proxy_mean": safe_float(row.get("turnover_proxy_mean", np.nan), np.nan),
+            "tob_coverage": tob_coverage,
+            "tob_coverage_pass": _bool_gate_value(row, "gate_promo_tob_coverage", tob_gate_default),
+            "stressed_cost_pass": _bool_gate_value(row, "gate_after_cost_stressed_positive", True),
+            "retail_net_expectancy_pass": _bool_gate_value(
+                row, "gate_promo_retail_net_expectancy", True
+            ),
+            "retail_cost_budget_pass": _bool_gate_value(row, "gate_promo_retail_cost_budget", True),
+            "retail_turnover_pass": _bool_gate_value(row, "gate_promo_retail_turnover", True),
+        },
+        multiplicity_adjustment={
+            "correction_family_id": str(
+                row.get("correction_family_id", row.get("q_value_family", ""))
+            ),
+            "correction_method": str(row.get("correction_method", "bh")),
+            "p_value_adj": safe_float(row.get("p_value_adj", row.get("q_value", np.nan)), np.nan),
+            "p_value_adj_by": safe_float(
+                row.get("p_value_adj_by", row.get("q_value_by", np.nan)), np.nan
+            ),
+            "p_value_adj_holm": safe_float(
+                row.get("p_value_adj_holm", row.get("q_value_cluster", np.nan)), np.nan
+            ),
+            "q_value_program": safe_float(row.get("q_value_program", np.nan), np.nan),
+        },
+        metadata={
+            "plan_row_id": str(row.get("plan_row_id", "")).strip(),
+            "tob_coverage": tob_coverage,
+            "event_is_descriptive": bool(as_bool(row.get("event_is_descriptive", False))),
+            "event_is_trade_trigger": bool(as_bool(row.get("event_is_trade_trigger", True))),
+            "is_reduced_evidence": bool(as_bool(row.get("is_reduced_evidence", False))),
+            "bridge_certified": bool(as_bool(row.get("bridge_certified", False))),
+            "has_realized_oos_path": bool(has_realized_oos_path),
+            "repeated_fold_consistency": safe_float(
+                row.get("repeated_fold_consistency", np.nan), np.nan
+            ),
+            "structural_robustness_score": safe_float(
+                row.get("structural_robustness_score", np.nan), np.nan
+            ),
+            "robustness_panel_complete": bool(as_bool(row.get("robustness_panel_complete", False))),
+            "num_regimes_supported": int(safe_int(row.get("num_regimes", 0), 0)),
+            "gate_stability": _bool_gate_value(row, "gate_stability", True),
+            "gate_after_cost_stressed_positive": _bool_gate_value(
+                row, "gate_after_cost_stressed_positive", True
+            ),
+            "gate_delayed_entry_stress": _bool_gate_value(row, "gate_delayed_entry_stress", True),
+            "gate_promo_hypothesis_audit": _bool_gate_value(
+                row, "gate_promo_hypothesis_audit", True
+            ),
+            "gate_promo_oos_validation": _bool_gate_value(row, "gate_promo_oos_validation", True),
+            "gate_promo_retail_viability": _bool_gate_value(
+                row, "gate_promo_retail_viability", True
+            ),
+            "gate_promo_low_capital_viability": _bool_gate_value(
+                row, "gate_promo_low_capital_viability", True
+            ),
+            "gate_promo_negative_control": _bool_gate_value(
+                row, "gate_promo_negative_control", bool(falsification.negative_control_pass)
+            ),
+            "gate_promo_falsification": _bool_gate_value(
+                row, "gate_promo_falsification", bool(falsification.passes_control)
+            ),
+            "gate_promo_baseline_beats_complexity": _bool_gate_value(
+                row, "gate_promo_baseline_beats_complexity", True
+            ),
+            "gate_promo_placebo_controls": _bool_gate_value(
+                row,
+                "gate_promo_placebo_controls",
+                bool(
+                    falsification.shift_placebo_pass
+                    and falsification.random_placebo_pass
+                    and falsification.direction_reversal_pass
+                ),
+            ),
+            "gate_promo_tob_coverage": _bool_gate_value(
+                row, "gate_promo_tob_coverage", tob_gate_default
+            ),
+            "gate_promo_dsr": _bool_gate_value(row, "gate_promo_dsr", True),
+            "gate_promo_robustness": _bool_gate_value(row, "gate_promo_robustness", True),
+            "gate_promo_regime": _bool_gate_value(row, "gate_promo_regime", True),
+            "gate_promo_multiplicity_confirmatory": _bool_gate_value(
+                row, "gate_promo_multiplicity_confirmatory", True
+            ),
+            "promotion_track_hint": "standard"
+            if _bool_gate_value(row, "gate_promo_tob_coverage", tob_gate_default)
+            else "fallback_only",
+        },
+        policy_version=policy_version,
+        bundle_version=bundle_version,
+    )
+    if microstructure_pass is not None:
+        bundle.cost_robustness["microstructure_pass"] = microstructure_pass
+    else:
+        bundle.cost_robustness.pop("microstructure_pass", None)
+    if gate_delay_robustness is not None:
+        bundle.metadata["gate_delay_robustness"] = gate_delay_robustness
+    else:
+        bundle.metadata.pop("gate_delay_robustness", None)
+    if gate_timeframe_consensus is not None:
+        bundle.metadata["gate_timeframe_consensus"] = gate_timeframe_consensus
+    else:
+        bundle.metadata.pop("gate_timeframe_consensus", None)
+    if gate_bridge_microstructure is not None:
+        bundle.metadata["gate_bridge_microstructure"] = gate_bridge_microstructure
+    else:
+        bundle.metadata.pop("gate_bridge_microstructure", None)
+    if gate_regime_stability is not None:
+        bundle.metadata["gate_regime_stability"] = gate_regime_stability
+    else:
+        bundle.metadata.pop("gate_regime_stability", None)
+    if gate_structural_break is not None:
+        bundle.metadata["gate_structural_break"] = gate_structural_break
+    else:
+        bundle.metadata.pop("gate_structural_break", None)
+    return bundle.to_dict()
+
+
+def validate_evidence_bundle(bundle: Dict[str, Any]) -> None:
+    required = [
+        "candidate_id",
+        "event_type",
+        "sample_definition",
+        "effect_estimates",
+        "uncertainty_estimates",
+        "stability_tests",
+        "falsification_results",
+        "cost_robustness",
+        "multiplicity_adjustment",
+    ]
+    missing = [k for k in required if k not in bundle]
+    if missing:
+        raise ValueError(f"Missing evidence bundle keys: {missing}")
+
+
+def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -> Dict[str, Any]:
+    if not _looks_like_evidence_bundle(bundle):
+        bundle = build_evidence_bundle(
+            bundle,
+            max_negative_control_pass_rate=policy.max_negative_control_pass_rate,
+            allow_missing_negative_controls=policy.allow_missing_negative_controls,
+            policy_version=policy.policy_version,
+            bundle_version=policy.bundle_version,
+        )
+    validate_evidence_bundle(bundle)
+    sample = bundle["sample_definition"]
+    uncertainty = bundle["uncertainty_estimates"]
+    stability = bundle["stability_tests"]
+    falsification = bundle["falsification_results"]
+    cost = bundle["cost_robustness"]
+    meta = bundle.get("metadata", {})
+    n_events = int(safe_int(sample.get("n_events", 0), 0))
+    q_value = safe_float(uncertainty.get("q_value", np.nan), np.nan)
+    q_value_by = safe_float(uncertainty.get("q_value_by", np.nan), np.nan)
+    q_value_cluster = safe_float(uncertainty.get("q_value_cluster", np.nan), np.nan)
+    tob_coverage = safe_float(cost.get("tob_coverage", meta.get("tob_coverage", np.nan)), np.nan)
+    if not np.isfinite(tob_coverage):
+        tob_coverage = safe_float(bundle.get("tob_coverage", np.nan), np.nan)
+
+    negative_control_pass = bool(
+        as_bool(
+            meta.get(
+                "gate_promo_negative_control", falsification.get("negative_control_pass", False)
+            )
+        )
+    )
+    placebo_controls_pass = bool(as_bool(meta.get("gate_promo_placebo_controls", False)))
+    falsification_pass = bool(
+        as_bool(meta.get("gate_promo_falsification", falsification.get("passes_control", False)))
+    )
+    if "gate_promo_falsification" not in meta:
+        falsification_pass = bool(placebo_controls_pass and negative_control_pass)
+
+    gate_results = {}
+
+    # helper for 3-state boolean gates
+    def _gate_state(row_val: Any, default_if_missing: str = "missing_evidence") -> str:
+        if row_val is None:
+            return default_if_missing
+        if isinstance(row_val, float) and not np.isfinite(row_val):
+            return default_if_missing
+        return "pass" if as_bool(row_val) else "fail"
+
+    def _range_gate(val: float, threshold: float, mode: str = "ge") -> str:
+        if not np.isfinite(val):
+            return "missing_evidence"
+        if mode == "ge":
+            return "pass" if val >= threshold else "fail"
+        return "pass" if val <= threshold else "fail"
+
+    gate_results = {
+        "statistical": (
+            "pass"
+            if (
+                np.isfinite(q_value)
+                and q_value <= float(policy.max_q_value)
+                and n_events >= int(policy.min_events)
+            )
+            else ("fail" if np.isfinite(q_value) else "missing_evidence")
+        ),
+        "multiplicity_diagnostics": (
+            "pass"
+            if (not policy.require_multiplicity_diagnostics)
+            or (np.isfinite(q_value_by) and np.isfinite(q_value_cluster))
+            else "missing_evidence"
+        ),
+        "multiplicity_confirmatory": _gate_state(
+            meta.get("gate_promo_multiplicity_confirmatory"), "pass"
+        ),
+        "stability": (
+            "pass"
+            if (
+                safe_float(stability.get("stability_score", np.nan), np.nan)
+                >= float(policy.min_stability_score)
+                and safe_float(stability.get("sign_consistency", np.nan), np.nan)
+                >= float(policy.min_sign_consistency)
+                and as_bool(meta.get("gate_stability", True))
+                and as_bool(stability.get("delay_robustness_pass", True))
+            )
+            else (
+                "missing_evidence"
+                if not np.isfinite(safe_float(stability.get("stability_score", np.nan), np.nan))
+                else "fail"
+            )
+        ),
+        "negative_control": _gate_state(
+            meta.get("gate_promo_negative_control", falsification.get("negative_control_pass"))
+        ),
+        "falsification": _gate_state(
+            meta.get("gate_promo_falsification", falsification.get("passes_control"))
+        ),
+        "cost_survival": _range_gate(
+            safe_float(cost.get("cost_survival_ratio", np.nan), np.nan),
+            float(policy.min_cost_survival_ratio),
+        ),
+        "microstructure": _gate_state(cost.get("microstructure_pass"), "missing_evidence"),
+        "stressed_cost_survival": _gate_state(
+            meta.get("gate_after_cost_stressed_positive", cost.get("stressed_cost_pass")),
+            "missing_evidence",
+        ),
+        "delayed_entry_stress": _gate_state(
+            meta.get("gate_delayed_entry_stress"), "missing_evidence"
+        ),
+        "baseline_beats_complexity": _gate_state(
+            meta.get("gate_promo_baseline_beats_complexity"),
+            "pass" if not policy.enforce_baseline_beats_complexity else "missing_evidence",
+        ),
+        "placebo_controls": _gate_state(
+            meta.get("gate_promo_placebo_controls", falsification.get("placebo_pass")),
+            "missing_evidence",
+        ),
+        "timeframe_consensus": _gate_state(
+            stability.get("timeframe_consensus_pass", meta.get("gate_timeframe_consensus")),
+            "missing_evidence",
+        ),
+        "oos_validation": _gate_state(meta.get("gate_promo_oos_validation"), "missing_evidence"),
+        "hypothesis_audit": (
+            "pass"
+            if (not policy.require_hypothesis_audit)
+            or as_bool(meta.get("gate_promo_hypothesis_audit", False))
+            else ("fail" if "gate_promo_hypothesis_audit" in meta else "missing_evidence")
+        ),
+        "retail_viability": (
+            "pass"
+            if (not policy.require_retail_viability)
+            or as_bool(meta.get("gate_promo_retail_viability", False))
+            else ("fail" if "gate_promo_retail_viability" in meta else "missing_evidence")
+        ),
+        "low_capital_viability": (
+            "pass"
+            if (not policy.require_low_capital_viability)
+            or as_bool(meta.get("gate_promo_low_capital_viability", False))
+            else ("fail" if "gate_promo_low_capital_viability" in meta else "missing_evidence")
+        ),
+        "event_discipline": (
+            "pass"
+            if (
+                (not as_bool(meta.get("event_is_descriptive", False)))
+                and as_bool(meta.get("event_is_trade_trigger", True))
+            )
+            else "fail"
+        ),
+        "tob_coverage": _range_gate(tob_coverage, float(policy.min_tob_coverage))
+        if np.isfinite(tob_coverage)
+        else "missing_evidence",
+        "dsr": _gate_state(meta.get("gate_promo_dsr"), "missing_evidence"),
+        "robustness": _gate_state(meta.get("gate_promo_robustness"), "missing_evidence"),
+        "regime": _gate_state(meta.get("gate_promo_regime"), "missing_evidence"),
+    }
+    required_for_eligibility = [
+        "statistical",
+        "multiplicity_diagnostics",
+        "multiplicity_confirmatory",
+        "stability",
+        "falsification",
+        "cost_survival",
+        "baseline_beats_complexity",
+        "timeframe_consensus",
+        "oos_validation",
+        "microstructure",
+        "stressed_cost_survival",
+        "delayed_entry_stress",
+        "hypothesis_audit",
+        "event_discipline",
+        "dsr",
+        "robustness",
+        "regime",
+    ]
+    if policy.require_retail_viability:
+        required_for_eligibility.append("retail_viability")
+    if policy.require_low_capital_viability:
+        required_for_eligibility.append("low_capital_viability")
+    if (
+        not policy.enforce_baseline_beats_complexity
+        and "baseline_beats_complexity" in required_for_eligibility
+    ):
+        required_for_eligibility.remove("baseline_beats_complexity")
+    if not policy.enforce_placebo_controls and "falsification" in required_for_eligibility:
+        required_for_eligibility.remove("falsification")
+    if not policy.enforce_timeframe_consensus and "timeframe_consensus" in required_for_eligibility:
+        required_for_eligibility.remove("timeframe_consensus")
+    if not policy.enforce_regime_stability and "regime" in required_for_eligibility:
+        required_for_eligibility.remove("regime")
+    promoted = bool(all(gate_results.get(name) == "pass" for name in required_for_eligibility))
+    reasons = [name for name in required_for_eligibility if gate_results.get(name) != "pass"]
+    track = "standard" if (promoted and gate_results["tob_coverage"] == "pass") else "fallback_only"
+    score_axes = [
+        "statistical",
+        "stability",
+        "cost_survival",
+        "falsification",
+        "timeframe_consensus",
+        "oos_validation",
+        "microstructure",
+        "baseline_beats_complexity",
+    ]
+    scores = [
+        1.0 if gate_results.get(name) == "pass" else 0.0
+        for name in score_axes
+        if name in gate_results
+    ]
+    rank_score = float(np.mean(scores)) if scores else 0.0
+    decision = PromotionDecision(
+        eligible=promoted,
+        promotion_status="promoted" if promoted else "rejected",
+        promotion_track=track,
+        rank_score=rank_score,
+        rejection_reasons=reasons,
+        gate_results=gate_results,
+        policy_version=policy.policy_version,
+        bundle_version=policy.bundle_version,
+    )
+    return decision.to_dict()
+
+
+def bundle_to_flat_record(bundle: Dict[str, Any]) -> Dict[str, Any]:
+    stability = bundle.get("stability_tests", {})
+    falsification = bundle.get("falsification_results", {})
+    cost = bundle.get("cost_robustness", {})
+    uncertainty = bundle.get("uncertainty_estimates", {})
+    decision = bundle.get("promotion_decision", {})
+    meta = bundle.get("metadata", {})
+    return {
+        "candidate_id": bundle.get("candidate_id", ""),
+        "event_type": bundle.get("event_type", ""),
+        "run_id": bundle.get("run_id", ""),
+        "n_events": safe_int(bundle.get("sample_definition", {}).get("n_events", 0), 0),
+        "estimate_bps": safe_float(
+            bundle.get("effect_estimates", {}).get("estimate_bps", np.nan), np.nan
+        ),
+        "q_value": safe_float(uncertainty.get("q_value", np.nan), np.nan),
+        "q_value_by": safe_float(uncertainty.get("q_value_by", np.nan), np.nan),
+        "q_value_cluster": safe_float(uncertainty.get("q_value_cluster", np.nan), np.nan),
+        "q_value_program": safe_float(
+            bundle.get("multiplicity_adjustment", {}).get("q_value_program", np.nan), np.nan
+        ),
+        "stability_score": safe_float(stability.get("stability_score", np.nan), np.nan),
+        "sign_consistency": safe_float(stability.get("sign_consistency", np.nan), np.nan),
+        "regime_flip_flag": bool(as_bool(stability.get("regime_flip_flag", False))),
+        "cross_symbol_sign_consistency": safe_float(
+            stability.get("cross_symbol_sign_consistency", np.nan), np.nan
+        ),
+        "rolling_instability_score": safe_float(
+            stability.get("rolling_instability_score", np.nan), np.nan
+        ),
+        "passes_control": bool(as_bool(falsification.get("passes_control", False))),
+        "control_pass_rate": safe_float(falsification.get("control_pass_rate", np.nan), np.nan),
+        "negative_control_pass_rate": safe_float(
+            falsification.get("control_pass_rate", np.nan), np.nan
+        ),
+        "cost_survival_ratio": safe_float(cost.get("cost_survival_ratio", np.nan), np.nan),
+        "plan_row_id": str(meta.get("plan_row_id", "")).strip(),
+        "bridge_certified": bool(as_bool(meta.get("bridge_certified", False))),
+        "has_realized_oos_path": bool(as_bool(meta.get("has_realized_oos_path", False))),
+        "repeated_fold_consistency": safe_float(
+            meta.get("repeated_fold_consistency", np.nan), np.nan
+        ),
+        "structural_robustness_score": safe_float(
+            meta.get("structural_robustness_score", np.nan), np.nan
+        ),
+        "robustness_panel_complete": bool(as_bool(meta.get("robustness_panel_complete", False))),
+        "gate_regime_stability": _bool_gate_value(meta, "gate_regime_stability", False),
+        "gate_structural_break": _bool_gate_value(meta, "gate_structural_break", False),
+        "num_regimes_supported": safe_int(meta.get("num_regimes_supported", 0), 0),
+        "promotion_decision": decision.get("promotion_status", ""),
+        "promotion_track": decision.get("promotion_track", ""),
+        "rank_score": safe_float(decision.get("rank_score", np.nan), np.nan),
+        "is_reduced_evidence": bool(bundle.get("metadata", {}).get("is_reduced_evidence", False)),
+        "rejection_reasons": "|".join(map(str, decision.get("rejection_reasons", []))),
+        "policy_version": bundle.get("policy_version", ""),
+        "bundle_version": bundle.get("bundle_version", ""),
+    }
+
+
+def serialize_evidence_bundles(bundles: Sequence[Dict[str, Any]], out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as fh:
+        for bundle in bundles:
+            fh.write(json.dumps(_json_safe(bundle), sort_keys=True) + "\n")

@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-03-23",
+  "metrics": {
+    "project.research.compat_importers": 0,
+    "project.strategy_dsl_importers": 0,
+    "project.strategy_templates_importers": 0,
+    "run_all_coordinator_lines": 0,
+    "module_coupling_count": 2413,
+    "cross_boundary_import_count": 1661,
+    "circular_dependency_count": 0,
+    "test_coverage_ratio": 0.3835016193560678
+  }
+}

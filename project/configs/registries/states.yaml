@@ -1,0 +1,65 @@
+version: 1
+
+states:
+  HIGH_VOL_REGIME:
+    state_engine: VolatilityRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [volatility]
+    description: "Market is in a high volatility state."
+
+  LOW_VOL_REGIME:
+    state_engine: VolatilityRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [volatility]
+    description: "Market is in a low volatility state."
+
+  BULL_TREND_REGIME:
+    state_engine: TrendRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [trend]
+    description: "Market is trending upwards."
+
+  BEAR_TREND_REGIME:
+    state_engine: TrendRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [trend]
+    description: "Market is trending downwards."
+
+  CHOP_REGIME:
+    state_engine: TrendRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [sideways]
+    description: "Market is range-bound or choppy."
+
+  OVERBOUGHT_STATE:
+    state_engine: MomentumRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [momentum]
+    description: "Momentum signals overbought conditions."
+
+  OVERSOLD_STATE:
+    state_engine: MomentumRegimeEngine
+    enabled: true
+    instrument_classes: [crypto, equities, futures]
+    tags: [momentum]
+    description: "Momentum signals oversold conditions."
+
+  CROWDING_STATE:
+    state_engine: MarketStateEngine
+    enabled: true
+    instrument_classes: [crypto]
+    tags: [positioning]
+    description: "High OI and extreme funding."
+
+  MS_LIQUIDATION_STATE:
+    state_engine: MarketStateEngine
+    enabled: true
+    instrument_classes: [crypto]
+    tags: [liquidity]
+    description: "Elevated liquidation pressure."

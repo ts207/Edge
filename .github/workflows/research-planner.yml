@@ -1,0 +1,69 @@
+name: Autonomous Research Planner
+
+on:
+  schedule:
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+    inputs:
+      program_id:
+        description: Campaign program identifier
+        required: false
+        default: btc_campaign
+      symbols:
+        description: Comma-separated symbols
+        required: false
+        default: BTCUSDT
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan-and-execute:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run campaign planner
+        env:
+          PROGRAM_ID: ${{ github.event.inputs.program_id || vars.RESEARCH_PROGRAM_ID || 'btc_campaign' }}
+          REGISTRY_ROOT: project/configs/registries
+          DATA_ROOT: ${{ vars.BACKTEST_DATA_ROOT }}
+          SEARCH_SPACE_PATH: ${{ vars.SEARCH_SPACE_PATH || 'spec/search_space.yaml' }}
+          SYMBOLS: ${{ github.event.inputs.symbols || vars.RESEARCH_SYMBOLS || 'BTCUSDT' }}
+        run: |
+          DATA_ARG=()
+          if [[ -n "${DATA_ROOT:-}" ]]; then
+            DATA_ARG+=(--data_root "${DATA_ROOT}")
+          fi
+          SEARCH_ARG=()
+          if [[ -n "${SEARCH_SPACE_PATH:-}" ]]; then
+            SEARCH_ARG+=(--search_space_path "${SEARCH_SPACE_PATH}")
+          fi
+          python -m project.research.agent_io.campaign_planner \
+            --program_id "${PROGRAM_ID}" \
+            --registry_root "${REGISTRY_ROOT}" \
+            "${DATA_ARG[@]}" \
+            "${SEARCH_ARG[@]}" \
+            --symbols "${SYMBOLS}" \
+            --execute 1
