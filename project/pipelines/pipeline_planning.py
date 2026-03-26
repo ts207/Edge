@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--funding_scale", choices=["auto", "decimal", "percent", "bps"], default="auto"
     )
-    parser.add_argument("--enable_cross_venue_spot_pipeline", type=int, default=1)
+    parser.add_argument("--enable_cross_venue_spot_pipeline", type=int, default=0)
     parser.add_argument("--allow_missing_funding", type=int, default=0)
     parser.add_argument("--allow_constant_funding", type=int, default=0)
     parser.add_argument("--allow_funding_timestamp_rounding", type=int, default=0)
@@ -89,7 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hypothesis_max_fused", type=int, default=24)
 
     # Phase 2 Flags
-    parser.add_argument("--run_phase2_conditional", type=int, default=0)
+    parser.add_argument("--run_phase2_conditional", type=int, default=1)
     parser.add_argument("--phase2_event_type", default="VOL_SHOCK")
     parser.add_argument("--events", nargs="+", help="Explicit subset of event IDs to run.")
     parser.add_argument(
@@ -189,7 +189,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--run_recommendations_checklist", type=int, default=1)
     parser.add_argument("--run_expectancy_analysis", type=int, default=0)
     parser.add_argument("--run_expectancy_robustness", type=int, default=0)
-    parser.add_argument("--run_strategy_builder", type=int, default=0)
+    parser.add_argument("--run_strategy_builder", type=int, default=1)
     parser.add_argument("--strategy_builder_top_k_per_event", type=int, default=2)
     parser.add_argument("--strategy_builder_max_candidates", type=int, default=20)
     parser.add_argument("--strategy_builder_include_alpha_bundle", type=int, default=1)
@@ -216,7 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--campaign_memory_frontier_untested_top_k", type=int, default=3)
     parser.add_argument("--campaign_memory_frontier_repair_top_k", type=int, default=2)
     parser.add_argument("--campaign_memory_exhausted_failure_threshold", type=int, default=3)
-    parser.add_argument("--run_edge_candidate_universe", type=int, default=0)
+    parser.add_argument("--run_edge_candidate_universe", type=int, default=1)
     parser.add_argument("--strict_recommendations_checklist", type=int, default=0)
     parser.add_argument("--auto_continue_on_keep_research", type=int, default=0)
     parser.add_argument("--ci_fail_on_non_production_overrides", type=int, default=0)

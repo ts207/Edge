@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from src.scoring.normalize import SignalNormalizer, NormalizedSignal
+from project.synthetic_truth.tools.scoring.normalize import SignalNormalizer, NormalizedSignal
 
 
 @dataclass

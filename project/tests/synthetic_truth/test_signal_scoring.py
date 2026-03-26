@@ -4,12 +4,12 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from src.scoring.normalize import (
+from project.synthetic_truth.tools.scoring.normalize import (
     NormalizationBounds,
     NormalizedSignal,
     SignalNormalizer,
 )
-from src.scoring.aggregate import (
+from project.synthetic_truth.tools.scoring.aggregate import (
     DetectorWeight,
     AggregatedSignal,
     SignalAggregator,

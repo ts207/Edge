@@ -45,15 +45,15 @@ All events belong to one of 9 canonical families. Templates are only legal for t
 
 ---
 
-## Operating Principles   ?clarity and reasoning for these principles and improve depth
+## Operating Principles
 
 The platform enforces a strict research discipline:
 
 1. **Artifacts are the source of truth.** Exit codes alone are not sufficient. Run manifests must reconcile.
 2. **`plan_only` before material runs.** Scope must be verified before execution.
-3. **Synthetic runs are calibration, not proof.** Synthetic profitability is not live-market evidence.
-4. **Promotion is a gate.** Attractive discovery output is not promotion readiness.
-5. **Narrow before broad.** One family, one template, one context per run by default. ?review rule, as it restricts research flexibility and potential alphas
+3. **Synthetic runs are calibration, not proof.** Synthetic profitability is not evidence of live edge.
+4. **Promotion is a gate.** Attractive numbers are not promotion readiness.
+5. **Narrow first.** One family, one template, one context per run.
 
 ---
 

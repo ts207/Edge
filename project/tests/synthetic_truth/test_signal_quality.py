@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from src.metrics.signal_quality import (
+from project.synthetic_truth.tools.metrics.signal_quality import (
     SignalQualityMetrics,
     SignalQualityAnalyzer,
 )

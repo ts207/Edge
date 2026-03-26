@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import pandas as pd
 
-from src.validation.conflicts import (
+from project.synthetic_truth.tools.validation.conflicts import (
     ConflictAnalysis,
     ConflictReport,
     register_mutually_exclusive,

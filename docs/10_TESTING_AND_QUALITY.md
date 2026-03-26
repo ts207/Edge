@@ -130,6 +130,18 @@ End-to-end minimal run smoke tests.
 
 Baseline artifact integrity (golden snapshots).
 
+### Synthetic Truth Tests (`tests/synthetic_truth/`)
+
+Validates the system against ground-truth synthetic datasets:
+
+| Test File | What It Validates |
+|---|---|
+| `test_truth_infrastructure.py` | Synthetic generation engine |
+| `test_signal_scoring.py` | Normalized score aggregation |
+| `test_signal_quality.py` | Firing frequency and clustering |
+| `test_event_chain.py` | Temporal sequence detection |
+| `test_conflicts.py` | Mutually exclusive event enforcement |
+
 ---
 
 ## CI Gate Tiers

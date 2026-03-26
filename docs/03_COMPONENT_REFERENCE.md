@@ -303,3 +303,18 @@ Loads YAML definitions from `spec/` into Python objects at startup. Key registri
 | `tests/replays/` | OMS and causal lane replay tests |
 | `tests/pit/` | Point-in-time correctness tests |
 | `tests/unit/` | General unit tests |
+
+---
+
+## Synthetic Truth Tools (`project/synthetic_truth/tools/`)
+
+Utility package for synthetic market data generation and ground-truth validation.
+
+| Module | Role |
+|---|---|
+| `tools/metrics/signal_quality.py` | Statistical signal quality metrics |
+| `tools/scoring/normalize.py` | Signal score normalization |
+| `tools/scoring/aggregate.py` | Weighted signal aggregation |
+| `tools/temporal/event_chain.py` | Sequential event chain state machine |
+| `tools/validation/conflicts.py` | Mutually exclusive event conflict detection |
+

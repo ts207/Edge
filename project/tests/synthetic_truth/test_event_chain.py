@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.temporal.event_chain import (
+from project.synthetic_truth.tools.temporal.event_chain import (
     ChainState,
     ChainStep,
     ChainProgress,
