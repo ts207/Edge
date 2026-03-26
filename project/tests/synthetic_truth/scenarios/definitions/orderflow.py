@@ -99,6 +99,30 @@ ORDERFLOW_SCENARIOS = {
         tags=["orderflow", "climax"],
         difficulty="easy",
     ),
+    "WICK_REVERSAL_PROXY_positive": ScenarioSpec(
+        name="WICK_REVERSAL_PROXY_positive",
+        event_type="WICK_REVERSAL_PROXY",
+        polarity="positive",
+        generator_type="price_series",
+        injection_method="inject_volatility_spike",
+        injection_params={"vol_mult": 4.0, "wick_mult": 3.0},
+        expected_events={"WICK_REVERSAL_PROXY": True},
+        excluded_events={},
+        tags=["orderflow", "wick_reversal"],
+        difficulty="medium",
+    ),
+    "WICK_REVERSAL_PROXY_negative": ScenarioSpec(
+        name="WICK_REVERSAL_PROXY_negative",
+        event_type="WICK_REVERSAL_PROXY",
+        polarity="negative",
+        generator_type="price_series",
+        injection_method="inject_trending",
+        injection_params={"direction": "up", "magnitude_pct": 1.0},
+        expected_events={"WICK_REVERSAL_PROXY": False},
+        excluded_events={},
+        tags=["orderflow", "wick_reversal"],
+        difficulty="easy",
+    ),
 }
 
 __all__ = ["ORDERFLOW_SCENARIOS"]

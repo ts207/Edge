@@ -2,7 +2,7 @@
 version: 1
 kind: event
 event_type: VOL_REGIME_SHIFT_EVENT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: regime_transition
 events_file: regime_transition_events.parquet
 signal_column: vol_regime_shift_event

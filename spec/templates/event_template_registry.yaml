@@ -12,6 +12,9 @@ defaults:
   - continuation
   - trend_continuation
   - pullback_entry
+  - cross_asset_mean_reversion
+  - lead_lag_continuation
+  - relative_value_basket
   horizons:
   - 5m
   - 15m
@@ -123,6 +126,9 @@ families:
     - lead_lag_follow
     - divergence_continuation
     - basis_convergence
+    - cross_asset_mean_reversion
+    - lead_lag_continuation
+    - relative_value_basket
   TEMPORAL_STRUCTURE:
     templates:
     - mean_reversion
@@ -750,6 +756,22 @@ events:
     - 15m
     - 60m
     max_candidates_per_run: 500
+  CROSS_ASSET_DESYNC_EVENT:
+    canonical_family: INFORMATION_DESYNC
+    templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    - cross_asset_mean_reversion
+    - lead_lag_continuation
+    - relative_value_basket
+    horizons:
+    - 5m
+    - 15m
+    - 60m
+    max_candidates_per_run: 600
   SESSION_OPEN_EVENT:
     canonical_family: TEMPORAL_STRUCTURE
     templates:

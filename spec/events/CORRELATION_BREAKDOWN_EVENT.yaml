@@ -1,5 +1,5 @@
 event_type: CORRELATION_BREAKDOWN_EVENT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: regime_transition
 events_file: regime_transition_events.parquet
 signal_column: correlation_breakdown_event

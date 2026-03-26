@@ -1,5 +1,5 @@
 event_type: SUPPORT_RESISTANCE_BREAK
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: trend_structure
 events_file: trend_structure_events.parquet
 signal_column: support_resistance_break_event

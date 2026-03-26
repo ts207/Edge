@@ -2,7 +2,7 @@ version: 1
 kind: event
 event_type: WICK_REVERSAL_PROXY
 maturity: standard
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 active: true
 status: validated
 description: Explicit proxy replacement for legacy sweep or stop-run labeling.

@@ -12,7 +12,7 @@ class ContextGenerator(BaseGenerator):
     """Generates synthetic microstructure context states."""
 
     def required_columns(self) -> tuple[str, ...]:
-        return ("timestamp", "ms_spread_state", "vol_regime", "carry_state")
+        return ("timestamp", "ms_spread_state", "vol_regime", "carry_state", "fee_state", "fee_state_confidence", "fee_state_entropy")
 
     def generate_base(self, config: GeneratorConfig) -> pd.DataFrame:
         rng = np.random.default_rng(config.seed)
@@ -29,6 +29,9 @@ class ContextGenerator(BaseGenerator):
                 "carry_state": np.full(n, 1.0),
                 "carry_state_confidence": np.full(n, 0.75),
                 "carry_state_entropy": np.full(n, 0.3),
+                "fee_state": np.full(n, 1.0),
+                "fee_state_confidence": np.full(n, 0.75),
+                "fee_state_entropy": np.full(n, 0.3),
             }
         )
         df = self._ensure_timestamp(df, config)
@@ -97,4 +100,35 @@ class ContextGenerator(BaseGenerator):
         arr = self._smooth_transition(arr, ip, dur, target)
         df["carry_state"] = arr
 
+        return df
+
+    def inject_fee_regime_shift(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        target_regime: Literal["low", "mid", "high"] = "high",
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        state_map = {"low": 0.0, "mid": 1.0, "high": 2.0}
+        target = state_map.get(target_regime, 1.0)
+
+        arr = df["fee_state"].to_numpy().copy()
+        arr = self._smooth_transition(arr, ip, dur, target)
+        df["fee_state"] = arr
+        df["fee_state_confidence"] = np.where(
+            (np.arange(len(df)) >= ip) & (np.arange(len(df)) < ip + dur),
+            0.85,
+            0.75,
+        )
+
+        return df
+
+    def inject_stable_fee(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+    ) -> pd.DataFrame:
         return df

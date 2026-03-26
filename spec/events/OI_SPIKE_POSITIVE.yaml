@@ -1,5 +1,5 @@
 event_type: OI_SPIKE_POSITIVE
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: oi_shocks
 events_file: oi_shock_events.parquet
 signal_column: oi_spike_pos_event

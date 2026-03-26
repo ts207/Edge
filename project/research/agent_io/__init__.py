@@ -4,7 +4,17 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from project.research.agent_io.broad_discovery import (
+        BroadDiscoveryConfig,
+        BroadDiscoveryRunner,
+        BroadDiscoveryResult,
+        EventAttribution,
+        FamilyDiscoveryResult,
+        FamilyEventConfig,
+        run_broad_discovery,
+    )
     from project.research.agent_io.campaign_planner import CampaignPlanResult, CampaignPlanner, CampaignPlannerConfig, run_campaign_planner_cycle
+    from project.research.agent_io.closed_loop import CycleConfig, CycleResult, CampaignCycleRunner, run_autonomous_cycle
     from project.research.agent_io.execute_proposal import build_run_all_command, execute_proposal
     from project.research.agent_io.issue_proposal import generate_run_id, issue_proposal
     from project.research.agent_io.proposal_schema import AgentProposal, load_agent_proposal
@@ -16,10 +26,21 @@ if TYPE_CHECKING:
 
 _EXPORTS = {
     "AgentProposal": ("project.research.agent_io.proposal_schema", "AgentProposal"),
+    "BroadDiscoveryConfig": ("project.research.agent_io.broad_discovery", "BroadDiscoveryConfig"),
+    "BroadDiscoveryRunner": ("project.research.agent_io.broad_discovery", "BroadDiscoveryRunner"),
+    "BroadDiscoveryResult": ("project.research.agent_io.broad_discovery", "BroadDiscoveryResult"),
+    "FamilyDiscoveryResult": ("project.research.agent_io.broad_discovery", "FamilyDiscoveryResult"),
+    "EventAttribution": ("project.research.agent_io.broad_discovery", "EventAttribution"),
+    "FamilyEventConfig": ("project.research.agent_io.broad_discovery", "FamilyEventConfig"),
+    "run_broad_discovery": ("project.research.agent_io.broad_discovery", "run_broad_discovery"),
     "CampaignPlanResult": ("project.research.agent_io.campaign_planner", "CampaignPlanResult"),
     "CampaignPlanner": ("project.research.agent_io.campaign_planner", "CampaignPlanner"),
     "CampaignPlannerConfig": ("project.research.agent_io.campaign_planner", "CampaignPlannerConfig"),
     "run_campaign_planner_cycle": ("project.research.agent_io.campaign_planner", "run_campaign_planner_cycle"),
+    "CycleConfig": ("project.research.agent_io.closed_loop", "CycleConfig"),
+    "CycleResult": ("project.research.agent_io.closed_loop", "CycleResult"),
+    "CampaignCycleRunner": ("project.research.agent_io.closed_loop", "CampaignCycleRunner"),
+    "run_autonomous_cycle": ("project.research.agent_io.closed_loop", "run_autonomous_cycle"),
     "build_run_all_command": (
         "project.research.agent_io.execute_proposal",
         "build_run_all_command",
@@ -44,10 +65,21 @@ _EXPORTS = {
 
 __all__ = [
     "AgentProposal",
+    "BroadDiscoveryConfig",
+    "BroadDiscoveryRunner",
+    "BroadDiscoveryResult",
+    "FamilyDiscoveryResult",
+    "EventAttribution",
+    "FamilyEventConfig",
+    "run_broad_discovery",
     "CampaignPlanResult",
     "CampaignPlanner",
     "CampaignPlannerConfig",
     "run_campaign_planner_cycle",
+    "CycleConfig",
+    "CycleResult",
+    "CampaignCycleRunner",
+    "run_autonomous_cycle",
     "build_run_all_command",
     "build_run_all_overrides",
     "execute_proposal",

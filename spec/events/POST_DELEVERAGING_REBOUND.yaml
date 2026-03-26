@@ -1,5 +1,5 @@
 event_type: POST_DELEVERAGING_REBOUND
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: forced_flow_and_exhaustion
 events_file: forced_flow_and_exhaustion_events.parquet
 signal_column: post_deleveraging_rebound_event

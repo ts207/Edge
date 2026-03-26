@@ -1,5 +1,5 @@
 event_type: GAP_OVERSHOOT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: statistical_dislocation
 events_file: statistical_dislocation_events.parquet
 signal_column: gap_overshoot_event

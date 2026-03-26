@@ -8,7 +8,7 @@ import pandas as pd
 
 from project.events.detectors.base import BaseEventDetector
 from project.events.detectors.registry import get_detector
-from project.spec_validation.loaders import load_ontology_events
+from project.spec_validation import load_ontology_events
 
 log = logging.getLogger(__name__)
 

@@ -16,7 +16,6 @@ from project.events.detectors.liquidity import (
     OrderflowImbalanceDetector,
     ProxyLiquidityStressDetector,
     SpreadBlowoutDetector,
-    StopRunDetector,
 )
 from project.events.registries.liquidity import ensure_liquidity_detectors_registered
 
@@ -36,7 +35,6 @@ __all__ = [
     "OrderflowImbalanceDetector",
     "ProxyLiquidityStressDetector",
     "SpreadBlowoutDetector",
-    "StopRunDetector",
     "detect_liquidity_family",
     "analyze_liquidity_family",
 ]

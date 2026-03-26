@@ -2,17 +2,19 @@ from __future__ import annotations
 
 from project.events.detectors.liquidity import (
     LIQUIDITY_FAMILY_DETECTORS,
+    AbsorptionDetector,
+    DepthCollapseDetector,
     DirectLiquidityStressDetector,
     LiquidityGapDetector,
     LiquidityStressDetector,
     LiquidityVacuumDetector,
+    OrderflowImbalanceDetector,
     ProxyLiquidityStressDetector,
     SpreadBlowoutDetector,
 )
 from project.events.detectors.registry import register_detector
 
 
-# Preserve existing registry behavior: only this subset was registered at import time.
 LIQUIDITY_REGISTERED_DETECTORS = {
     "LIQUIDITY_SHOCK": LiquidityStressDetector,
     "LIQUIDITY_STRESS_DIRECT": DirectLiquidityStressDetector,
@@ -20,6 +22,9 @@ LIQUIDITY_REGISTERED_DETECTORS = {
     "LIQUIDITY_VACUUM": LiquidityVacuumDetector,
     "LIQUIDITY_GAP_PRINT": LiquidityGapDetector,
     "SPREAD_BLOWOUT": SpreadBlowoutDetector,
+    "DEPTH_COLLAPSE": DepthCollapseDetector,
+    "ABSORPTION_EVENT": AbsorptionDetector,
+    "ORDERFLOW_IMBALANCE_SHOCK": OrderflowImbalanceDetector,
 }
 
 

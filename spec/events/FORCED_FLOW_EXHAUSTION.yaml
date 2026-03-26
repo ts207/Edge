@@ -1,6 +1,6 @@
 event_type: FORCED_FLOW_EXHAUSTION
 maturity: standard
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: directional_exhaustion_after_forced_flow
 events_file: directional_exhaustion_after_forced_flow_events.parquet
 signal_column: forced_flow_exhaustion_event

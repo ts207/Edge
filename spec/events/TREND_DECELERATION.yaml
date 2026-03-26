@@ -1,5 +1,5 @@
 event_type: TREND_DECELERATION
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: trend_structure
 events_file: trend_structure_events.parquet
 signal_column: trend_deceleration_event

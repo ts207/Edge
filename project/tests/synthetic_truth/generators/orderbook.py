@@ -86,3 +86,22 @@ class OrderbookGenerator(BaseGenerator):
 
     def inject_normal_market(self, df: pd.DataFrame, config: GeneratorConfig) -> pd.DataFrame:
         return df
+
+    def inject_liquidity_shock(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        depth_drop: float = 0.85,
+        spread_mult: float = 4.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        df["depth_usd"] = self._smooth_transition(
+            df["depth_usd"].to_numpy(), ip, dur, df["depth_usd"].iloc[ip] * (1 - depth_drop)
+        )
+        df["spread_bps"] = self._smooth_transition(
+            df["spread_bps"].to_numpy(), ip, dur, df["spread_bps"].iloc[ip] * spread_mult
+        )
+        return df

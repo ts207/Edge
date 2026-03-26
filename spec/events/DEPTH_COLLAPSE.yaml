@@ -1,6 +1,6 @@
 event_type: DEPTH_COLLAPSE
 maturity: standard
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: liquidity_dislocation
 events_file: liquidity_dislocation_events.parquet
 signal_column: depth_collapse_event

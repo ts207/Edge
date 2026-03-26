@@ -16,7 +16,7 @@ from project.events.families.temporal import detect_temporal_family, analyze_tem
 from project.events.families.desync import detect_desync_family, analyze_desync_family
 
 
-def create_mock_df(periods: int = 500) -> pd.DataFrame:
+def create_mock_df(periods: int = 3500) -> pd.DataFrame:
     ts = pd.date_range("2024-01-01", periods=periods, freq="5min", tz="UTC")
     close = 100.0 * (1.0 + np.cumsum(np.random.normal(0, 0.001, periods)))
     df = pd.DataFrame(
@@ -32,6 +32,12 @@ def create_mock_df(periods: int = 500) -> pd.DataFrame:
             "spread_zscore": np.random.normal(0, 1, periods),
             "basis_zscore": np.random.normal(0, 1, periods),
             "cross_exchange_spread_z": np.random.normal(0, 1, periods),
+            "ms_vol_state": pd.Series([2.0] * periods),
+            "ms_vol_confidence": pd.Series([0.9] * periods),
+            "ms_vol_entropy": pd.Series([0.1] * periods),
+            "ms_spread_state": pd.Series([2.0] * periods),
+            "ms_spread_confidence": pd.Series([0.9] * periods),
+            "ms_spread_entropy": pd.Series([0.1] * periods),
         }
     )
     return df
@@ -70,7 +76,7 @@ def test_liquidity_hardening():
     df.loc[400:405, "spread_zscore"] = 10.0
     events = detect_liquidity_family(df, "TEST", event_type="SPREAD_BLOWOUT")
     assert not events.empty
-    assert "SPREAD_STRESS_PROXY" in events["event_type"].values
+    assert "SPREAD_BLOWOUT" in events["event_type"].values
 
 
 def test_regime_hardening():

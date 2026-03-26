@@ -13,7 +13,7 @@ def test_milestone_registry_loads_generated_yaml():
 
 
 def test_event_aliases_resolve_before_registry_lookup():
-    assert resolve_event_alias("depth_collapse") == "DEPTH_STRESS_PROXY"
+    assert resolve_event_alias("basis_dislocation") == "BASIS_DISLOC"
     assert resolve_event_alias("vol_regime_shift") == "VOL_REGIME_SHIFT_EVENT"
     assert get_event_definition("BASIS_DISLOC")["event_type"] == "BASIS_DISLOC"
 

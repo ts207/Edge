@@ -1,5 +1,5 @@
 event_type: TREND_TO_CHOP_SHIFT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: regime_transition
 events_file: regime_transition_events.parquet
 signal_column: trend_to_chop_shift_event

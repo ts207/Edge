@@ -17,7 +17,7 @@ from project.tests.conftest import REPO_ROOT
 _REPO_ROOT = REPO_ROOT
 # Add any new promotion CLI entrypoints here to keep the policy guard comprehensive.
 _PROMOTION_CLI_PATHS = [
-    "project/pipelines/research/cli/promotion_cli.py",
+    "project/research/cli/promotion_cli.py",
 ]
 # 0.5 is the Bailey & Lopez de Prado DSR literature floor for post-selection strategies.
 # Lower values weaken multiple-testing protection; do not reduce without documented justification.

@@ -383,55 +383,6 @@ class OrderflowImbalanceDetector(CompositeDetector):
         return features["ret_abs"] * bp_scale
 
 
-class StopRunDetector(CompositeDetector):
-    event_type = "SWEEP_STOPRUN"
-    required_columns = ("timestamp", "close", "high", "low")
-
-    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        close = df["close"]
-        high = df["high"]
-        low = df["low"]
-        open_proxy = close.shift(1).fillna(close)
-        wick_up = high - np.maximum(open_proxy, close)
-        wick_down = np.minimum(open_proxy, close) - low
-        wick = (wick_up + wick_down) / close.replace(0.0, np.nan)
-        ret_abs = close.pct_change(1).abs()
-
-        lookback = int(params.get("lookback_window", 288))
-        threshold_window = int(params.get("threshold_window", 2880))
-        q_wick = float(params.get("wick_quantile", 0.97))
-        q_ret = float(params.get("ret_quantile", 0.90))
-
-        wick_q97 = lagged_rolling_quantile(
-            wick.astype(float),
-            window=threshold_window,
-            quantile=q_wick,
-            min_periods=lookback,
-        )
-        ret_q90 = lagged_rolling_quantile(
-            ret_abs,
-            window=threshold_window,
-            quantile=q_ret,
-            min_periods=lookback,
-        )
-        return {"wick": wick, "ret_abs": ret_abs, "wick_q97": wick_q97, "ret_q90": ret_q90}
-
-    def compute_raw_mask(
-        self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
-    ) -> pd.Series:
-        del df, params
-        return (
-            (features["wick"] >= features["wick_q97"]).fillna(False)
-            & (features["ret_abs"] >= features["ret_q90"]).fillna(False)
-        ).fillna(False)
-
-    def compute_intensity(
-        self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
-    ) -> pd.Series:
-        del df, params
-        return features["wick"].abs() * 100.0
-
-
 class AbsorptionDetector(CompositeDetector):
     event_type = "ABSORPTION_EVENT"
     required_columns = ("timestamp", "close", "spread_zscore", "rv_96")
@@ -561,7 +512,6 @@ LIQUIDITY_FAMILY_DETECTORS = {
     "DEPTH_COLLAPSE": DepthCollapseDetector,
     "SPREAD_BLOWOUT": SpreadBlowoutDetector,
     "ORDERFLOW_IMBALANCE_SHOCK": OrderflowImbalanceDetector,
-    "SWEEP_STOPRUN": StopRunDetector,
     "ABSORPTION_EVENT": AbsorptionDetector,
     "LIQUIDITY_GAP_PRINT": LiquidityGapDetector,
     "LIQUIDITY_VACUUM": LiquidityVacuumDetector,
@@ -580,5 +530,4 @@ __all__ = [
     "OrderflowImbalanceDetector",
     "ProxyLiquidityStressDetector",
     "SpreadBlowoutDetector",
-    "StopRunDetector",
 ]

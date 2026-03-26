@@ -80,11 +80,70 @@ class LeadLagBreakDetector(ThresholdDetector):
         return features["basis_diff_abs"]
 
 
+class CrossAssetDesyncDetector(ThresholdDetector):
+    """Detects price desynchronization between correlated asset pairs.
+    
+    Triggered when the spread between two historically correlated assets
+    (e.g., BTC and ETH, or SOL and ETH) deviates significantly from its 
+    rolling mean, suggesting a lead-lag opportunity or relative value dislocation.
+    """
+    event_type = "CROSS_ASSET_DESYNC_EVENT"
+    required_columns = ("timestamp", "close")
+
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        close = pd.to_numeric(df["close"], errors="coerce").astype(float)
+        paired_close = pd.to_numeric(
+            df.get("pair_close", df.get("close_pair", pd.Series(np.nan, index=df.index))),
+            errors="coerce"
+        ).astype(float)
+        
+        # Fallback if paired close is missing — use return z-score of main asset
+        if paired_close.isna().all():
+             ret = np.log(close / close.shift(1)).fillna(0.0)
+             window = int(params.get("lookback_window", 2880))
+             z = (ret - ret.rolling(window).mean()) / ret.rolling(window).std().replace(0.0, np.nan)
+             return {"desync_z": z.abs().fillna(0.0), "threshold": pd.Series(float(params.get("threshold_z", 3.0)), index=df.index)}
+             
+        # Calculate log returns and basis (spread)
+        ret = np.log(close / close.shift(1)).fillna(0.0)
+        paired_ret = np.log(paired_close / paired_close.shift(1)).fillna(0.0)
+        basis = ret - paired_ret
+        
+        window = int(params.get("lookback_window", 2880))
+        min_periods = max(window // 10, 1)
+        
+        basis_mean = basis.rolling(window, min_periods=min_periods).mean()
+        basis_std = basis.rolling(window, min_periods=min_periods).std().replace(0.0, np.nan)
+        desync_z = (basis - basis_mean) / basis_std
+        
+        threshold = float(params.get("threshold_z", 3.0))
+        return {
+            "desync_z": desync_z.abs().fillna(0.0),
+            "threshold": pd.Series(threshold, index=df.index),
+            "basis": basis
+        }
+
+    def compute_raw_mask(
+        self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
+    ) -> pd.Series:
+        return (features["desync_z"] >= features["threshold"]).fillna(False)
+
+    def compute_intensity(
+        self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
+    ) -> pd.Series:
+        return features["desync_z"]
+
+    def compute_direction(self, idx: int, features: dict[str, pd.Series], **params: Any) -> str:
+        basis = float(features["basis"].iloc[idx]) if "basis" in features else 0.0
+        return "down" if basis > 0 else "up" if basis < 0 else "non_directional"
+
+
 from project.events.detectors.registry import register_detector
 
 _DETECTORS = {
     "INDEX_COMPONENT_DIVERGENCE": IndexComponentDivergenceDetector,
     "LEAD_LAG_BREAK": LeadLagBreakDetector,
+    "CROSS_ASSET_DESYNC_EVENT": CrossAssetDesyncDetector,
 }
 
 for et, cls in _DETECTORS.items():

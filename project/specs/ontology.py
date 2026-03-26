@@ -80,6 +80,13 @@ MATERIALIZED_STATE_COLUMNS_BY_ID: Dict[str, str] = {
     "MS_SPREAD_STATE": "ms_spread_state",
     "MS_LIQUIDATION_STATE": "ms_liquidation_state",
     "MS_CONTEXT_STATE_CODE": "ms_context_state_code",
+    "BETA_SPIKE_STATE": "beta_spike_state",
+    "FEE_REGIME_STATE": "fee_regime_state",
+    "FUNDING_FLIP_STATE": "funding_flip_state",
+    "LOW_LIQUIDITY_STATE": "low_liquidity_state",
+    "MS_BASIS_STATE": "ms_basis_state",
+    "OI_CONTRACTION_STATE": "oi_contraction_state",
+    "POST_CASCADE_RECOVERY_STATE": "post_cascade_recovery_state",
 }
 
 

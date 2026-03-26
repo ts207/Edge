@@ -12,7 +12,7 @@ class PriceSeriesGenerator(BaseGenerator):
     """Generates synthetic OHLCV price series for trend/volatility scenarios."""
 
     def required_columns(self) -> tuple[str, ...]:
-        return ("timestamp", "close", "high", "low", "open", "volume")
+        return ("timestamp", "close", "high", "low", "open", "volume", "open_interest", "basis_zscore", "spread_zscore", "slippage")
 
     def generate_base(self, config: GeneratorConfig) -> pd.DataFrame:
         rng = np.random.default_rng(config.seed)
@@ -25,6 +25,10 @@ class PriceSeriesGenerator(BaseGenerator):
         high = np.maximum(close, open_arr) * (1 + rng.uniform(0.0003, 0.001, n))
         low = np.minimum(close, open_arr) * (1 - rng.uniform(0.0003, 0.001, n))
         volume = rng.uniform(800, 1200, n).astype(float)
+        open_interest = rng.uniform(50000, 100000, n).astype(float)
+        basis_zscore = rng.normal(0, 1, n).astype(float)
+        spread_zscore = rng.normal(0, 1, n).astype(float)
+        slippage = rng.uniform(0.0001, 0.0005, n).astype(float)
 
         df = pd.DataFrame(
             {
@@ -33,6 +37,10 @@ class PriceSeriesGenerator(BaseGenerator):
                 "high": high,
                 "low": low,
                 "volume": volume,
+                "open_interest": open_interest,
+                "basis_zscore": basis_zscore,
+                "spread_zscore": spread_zscore,
+                "slippage": slippage,
             }
         )
         df = self._ensure_timestamp(df, config)
@@ -127,4 +135,265 @@ class PriceSeriesGenerator(BaseGenerator):
         df["high"] = high_arr
         df["low"] = low_arr
 
+        return df
+
+    def inject_zscore_stretch(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        zscore_mult: float = 4.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        arr = df["basis_zscore"].to_numpy().copy()
+        arr = self._smooth_transition(arr, ip, dur, zscore_mult * 3.0)
+        df["basis_zscore"] = arr
+
+        return df
+
+    def inject_band_break(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        break_magnitude: float = 3.5,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        arr = df["basis_zscore"].to_numpy().copy()
+        arr = self._smooth_transition(arr, ip, dur, break_magnitude * 2.0)
+        df["basis_zscore"] = arr
+
+        return df
+
+    def inject_slippage_spike(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        slippage_mult: float = 5.0,
+        spread_mult: float = 3.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        df["slippage"] = self._smooth_transition(
+            df["slippage"].to_numpy(), ip, dur, df["slippage"].iloc[ip] * slippage_mult
+        )
+        df["spread_zscore"] = self._smooth_transition(
+            df["spread_zscore"].to_numpy(), ip, dur, spread_mult * 3.0
+        )
+
+        return df
+
+    def inject_oi_spike(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        direction: Literal["positive", "negative"] = "positive",
+        spike_mult: float = 4.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_oi = df["open_interest"].iloc[ip]
+        if direction == "positive":
+            target = base_oi * spike_mult
+        else:
+            target = base_oi / spike_mult
+        df["open_interest"] = self._smooth_transition(
+            df["open_interest"].to_numpy(), ip, dur, target
+        )
+
+        return df
+
+    def inject_oi_flush(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        flush_pct: float = 0.10,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_oi = df["open_interest"].iloc[ip]
+        df["open_interest"] = self._smooth_transition(
+            df["open_interest"].to_numpy(), ip, dur, base_oi * (1 - flush_pct)
+        )
+
+        return df
+
+    def inject_liquidation_cascade(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        cascade_depth_pct: float = 15.0,
+        volume_mult: float = 5.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_price = df["close"].iloc[ip]
+        target_price = base_price * (1 - cascade_depth_pct / 100)
+        df["close"] = self._smooth_transition(df["close"].to_numpy(), ip, dur, target_price)
+
+        df["volume"] = self._smooth_transition(
+            df["volume"].to_numpy(), ip, dur, df["volume"].iloc[ip] * volume_mult
+        )
+
+        return df
+
+    def inject_gap_overshoot(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        gap_pct: float = 3.0,
+        overshoot_pct: float = 2.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_close = df["close"].iloc[ip]
+        gap_price = base_close * (1 + gap_pct / 100)
+        overshoot_price = base_close * (1 + (gap_pct + overshoot_pct) / 100)
+        df["close"] = self._smooth_transition(df["close"].to_numpy(), ip, dur, gap_price)
+        df.loc[ip + dur:ip + dur + 5, "close"] = overshoot_price
+
+        return df
+
+    def inject_overshoot_after_shock(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        shock_pct: float = 5.0,
+        overshoot_pct: float = 2.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_close = df["close"].iloc[ip]
+        shock_price = base_close * (1 + shock_pct / 100)
+        df["close"] = self._smooth_transition(df["close"].to_numpy(), ip, dur, shock_price)
+        overshoot_price = base_close * (1 + (shock_pct + overshoot_pct) / 100)
+        df.loc[ip + dur:ip + dur + 5, "close"] = overshoot_price
+
+        return df
+
+    def inject_rebound(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        rebound_pct: float = 8.0,
+        prior_decline_pct: float = 20.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_price = df["close"].iloc[ip]
+        decline_price = base_price * (1 - prior_decline_pct / 100)
+        df.loc[:ip, "close"] = self._smooth_transition(
+            df["close"].iloc[:ip].to_numpy(), 0, ip, decline_price
+        )
+        rebound_price = base_price * (1 + rebound_pct / 100)
+        df["close"] = self._smooth_transition(df["close"].to_numpy(), ip, dur, rebound_price)
+
+        return df
+
+    def inject_sr_break(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        break_pct: float = 2.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_close = df["close"].iloc[ip]
+        target_price = base_close * (1 + break_pct / 100)
+        df["close"] = self._smooth_transition(df["close"].to_numpy(), ip, dur, target_price)
+
+        return df
+
+    def inject_lead_lag_break(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        lag_bps: int = 50,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        lag_factor = 1 + lag_bps / 10000
+        df["close"] = self._smooth_transition(
+            df["close"].to_numpy(), ip, dur, df["close"].iloc[ip] * lag_factor
+        )
+
+        return df
+
+    def inject_index_divergence(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        divergence_pct: float = 5.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        basis_target = divergence_pct / 100
+        df["basis_zscore"] = self._smooth_transition(
+            df["basis_zscore"].to_numpy(), ip, dur, basis_target * 3.0
+        )
+
+        return df
+
+    def inject_news_volatility(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        vol_mult: float = 3.0,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        base_vol = df["volume"].iloc[ip]
+        df["volume"] = self._smooth_transition(
+            df["volume"].to_numpy(), ip, dur, base_vol * vol_mult
+        )
+
+        return df
+
+    def inject_pairs_divergence(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+        spread_zscore: float = 3.5,
+    ) -> pd.DataFrame:
+        df = df.copy()
+        ip = config.injection_point
+        dur = config.injection_duration
+
+        df["basis_zscore"] = self._smooth_transition(
+            df["basis_zscore"].to_numpy(), ip, dur, spread_zscore
+        )
+
+        return df
+
+    def inject_stable_market(
+        self,
+        df: pd.DataFrame,
+        config: GeneratorConfig,
+    ) -> pd.DataFrame:
         return df

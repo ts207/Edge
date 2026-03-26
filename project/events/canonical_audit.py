@@ -10,13 +10,7 @@ from project.events.registry import get_event_definition
 from project.research.analyzers.overlap import OverlapAnalyzer
 
 
-AUDITED_PROXY_EVENTS = {
-    "ORDERFLOW_IMBALANCE_SHOCK": "PRICE_VOL_IMBALANCE_PROXY",
-    "SWEEP_STOPRUN": "WICK_REVERSAL_PROXY",
-    "ABSORPTION_EVENT": "ABSORPTION_PROXY",
-    "DEPTH_COLLAPSE": "DEPTH_STRESS_PROXY",
-    "FORCED_FLOW_EXHAUSTION": "FLOW_EXHAUSTION_PROXY",
-}
+AUDITED_PROXY_EVENTS = {}
 
 
 @dataclass(frozen=True)

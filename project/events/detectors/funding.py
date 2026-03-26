@@ -74,7 +74,7 @@ class BaseFundingDetector(ThresholdDetector, MarketEventDetector):
         **params: Any,
     ) -> str:
         del idx, features
-        threshold = float(params.get("severity_major_threshold", self.severity_major_threshold))
+        threshold = float(params.get("severity_major_threshold", self.default_severity_major_threshold))
         return "major" if intensity >= threshold else "moderate"
 
     def compute_metadata(

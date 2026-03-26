@@ -1,5 +1,5 @@
 event_type: SESSION_CLOSE_EVENT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: temporal_structure
 events_file: temporal_structure_events.parquet
 signal_column: session_close_event

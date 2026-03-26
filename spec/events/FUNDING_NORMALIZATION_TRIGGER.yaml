@@ -1,5 +1,5 @@
 event_type: FUNDING_NORMALIZATION_TRIGGER
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: funding_events
 events_file: funding_episode_events.parquet
 signal_column: funding_normalization_event

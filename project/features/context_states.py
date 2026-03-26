@@ -408,3 +408,62 @@ def encode_context_state_code(
         + spread.fillna(0) * 1
     )
     return code.astype(float)
+
+
+def calculate_ms_cross_asset_probabilities(
+    correlation: pd.Series,
+    relative_vol_pct: pd.Series,
+) -> pd.DataFrame:
+    """
+    Cross-Asset Dimension:
+    
+    Correlation (BTC/ETH proxy):
+    0: LOW (fragmented discovery)
+    1: MID (normal coupling)
+    2: HIGH (index-driven regime)
+    
+    Relative Vol (Asset vs Benchmark):
+    0: LOW (idiosyncratic compression)
+    1: NORMAL (beta-matched)
+    2: HIGH (idiosyncratic expansion)
+    """
+    # Correlation probabilities
+    corr_probs = _proximity_softmax(
+        correlation,
+        centers={
+            "prob_corr_low": 0.15,
+            "prob_corr_mid": 0.50,
+            "prob_corr_high": 0.85,
+        },
+        scale=0.2,
+    )
+    
+    # Relative Vol probabilities (percentile rank 0-100)
+    rel_vol_probs = _proximity_softmax(
+        relative_vol_pct,
+        centers={
+            "prob_rel_vol_low": 10.0,
+            "prob_rel_vol_normal": 50.0,
+            "prob_rel_vol_high": 90.0,
+        },
+        scale=20.0,
+    )
+    
+    out = pd.concat([corr_probs, rel_vol_probs], axis=1)
+    
+    out["ms_corr_state"] = _state_from_probabilities(
+        out,
+        order=["prob_corr_low", "prob_corr_mid", "prob_corr_high"],
+        labels={"prob_corr_low": 0.0, "prob_corr_mid": 1.0, "prob_corr_high": 2.0}
+    )
+    
+    out["ms_rel_vol_state"] = _state_from_probabilities(
+        out,
+        order=["prob_rel_vol_low", "prob_rel_vol_normal", "prob_rel_vol_high"],
+        labels={"prob_rel_vol_low": 0.0, "prob_rel_vol_normal": 1.0, "prob_rel_vol_high": 2.0}
+    )
+    
+    out = pd.concat([out, _confidence_and_entropy(corr_probs, "ms_corr")], axis=1)
+    out = pd.concat([out, _confidence_and_entropy(rel_vol_probs, "ms_rel_vol")], axis=1)
+    
+    return out

@@ -1,5 +1,5 @@
 event_type: RANGE_BREAKOUT
-synthetic_coverage: uncovered
+synthetic_coverage: covered
 reports_dir: trend_structure
 events_file: trend_structure_events.parquet
 signal_column: range_breakout_event

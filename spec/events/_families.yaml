@@ -21,3 +21,5 @@ families:
     parameters: {}
   EXECUTION_FRICTION:
     parameters: {}
+  CROSS_ASSET_INTERACTION:
+    parameters: {}
