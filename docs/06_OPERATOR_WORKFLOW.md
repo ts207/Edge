@@ -62,7 +62,7 @@ directions: [long, short]
 entry_lags: [0, 1, 2]
 ```
 
-**Rules:**  ?review rules optimize and should be flexible
+**Rules:**  
 
 - One event family or narrow trigger set per run
 - One template family per run
@@ -128,13 +128,13 @@ edge-run-all \
 ### Targeted Discovery (single event)
 
 ```bash
-make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK    ?what does it discover and test exactly
+make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK    
 ```
 
 ### Full Discovery (all events)
 
 ```bash
-make discover-edges      ?what does it discover and test exactly
+make discover-edges     
 ```
 
 ```

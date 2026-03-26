@@ -46,14 +46,24 @@ def distribution_stats(returns: np.ndarray) -> Dict[str, float]:
 
     nw = newey_west_t_stat_for_mean(clean)
     t_stat = float(nw.t_stat) if np.isfinite(nw.t_stat) else mean / (std / np.sqrt(len(clean)))
-    p_value = two_sided_p_from_t(t_stat, df=max(len(clean) - 1, 1))
+    p_value = one_sided_p_from_t(t_stat, df=max(len(clean) - 1, 1))
     return {"mean": mean, "std": std, "t_stat": t_stat, "p_value": p_value}
 
 
-def two_sided_p_from_t(t_stat: float, df: int) -> float:
+def one_sided_p_from_t(t_stat: float, df: int) -> float:
+    """Compute right-tail (one-sided) p-value. Large negative t-stat -> p close to 1.0."""
     if df < 1:
         return 1.0
-    return float(2.0 * stats.t.sf(np.abs(t_stat), df=df))
+    return float(stats.t.sf(t_stat, df=df))
+
+
+def two_sided_p_from_t(t_stat: float, df: int) -> float:
+    """
+    DEPRECATED: Now aliased to one_sided_p_from_t to ensure all directional hypotheses
+    are gated correctly in the research pipeline. Large negative t-stats will now
+    receive high p-values (approaching 1.0) rather than low p-values.
+    """
+    return one_sided_p_from_t(t_stat, df=df)
 
 
 def horizon_to_bars(horizon: str) -> int:
