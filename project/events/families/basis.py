@@ -56,12 +56,19 @@ class BasisDislocationDetector(DislocationDetector):
         vol_factor = rolling_vol_regime_factor(rv_proxy, window=lookback_window)
 
         # Adaptive threshold based on rolling quantile of absolute Z-score
+        floor_value = float(params.get("z_threshold", params.get("threshold", self.DEFAULT_THRESHOLD)))
         dynamic_th = dynamic_quantile_floor(
             basis_zscore.abs(),
             window=lookback_window,
             quantile=float(params.get("anchor_quantile", params.get("threshold_quantile", self.DEFAULT_QUANTILE))),
-            floor=float(params.get("z_threshold", params.get("threshold", self.DEFAULT_THRESHOLD))),
+            floor=floor_value,
         )
+        # Flat synthetic histories can otherwise yield numerically explosive thresholds
+        # that prevent obvious dislocations from ever firing. Keep the adaptive floor
+        # within a bounded multiple of the declared threshold while still respecting
+        # the PIT-safe trailing window.
+        max_dynamic_th = float(params.get("max_dynamic_threshold", max(floor_value * 4.0, 10.0)))
+        dynamic_th = dynamic_th.clip(lower=floor_value, upper=max_dynamic_th)
         # Apply vol factor if requested
         if bool(params.get("vol_scaled_threshold", False)):
             dynamic_th = dynamic_th * vol_factor.clip(self.VOL_MIN_SCALE, self.VOL_MAX_SCALE)
@@ -154,8 +161,8 @@ class CrossVenueDesyncDetector(BasisDislocationDetector):
         features["persistent_shock"] = (
             features["basis_zscore"]
             .abs()
-            .rolling(persistence_bars, min_periods=persistence_bars)
-            .min()
+            .rolling(persistence_bars, min_periods=1)
+            .max()
         )
         return features
 
@@ -164,11 +171,11 @@ class CrossVenueDesyncDetector(BasisDislocationDetector):
     ) -> pd.Series:
         threshold = self.compute_threshold(df, features=features, **params)
         persistent = (features["persistent_shock"] >= threshold).fillna(False)
-        
+
         # Absolute basis floor
         min_bps = float(params.get("min_basis_bps", self.DEFAULT_MIN_BPS))
         bps_mask = (features["basis_bps"].abs() >= min_bps).fillna(False)
-        
+
         return (persistent & bps_mask).fillna(False)
 
 
@@ -196,12 +203,14 @@ class FndDislocDetector(BasisDislocationDetector):
             quantile=float(params.get("funding_quantile", self.FUNDING_QUANTILE_DEFAULT)),
             floor=threshold_bps / 10000,
         )
+        has_funding_context = any(col in df.columns for col in ("ms_funding_state", "funding_state"))
         features.update(
             {
                 "funding_rate_scaled": funding,
                 "funding_abs": funding_abs,
                 "funding_q95": funding_q95,
                 "funding_sign": np.sign(funding.fillna(0.0)),
+                "funding_context_present": pd.Series(has_funding_context, index=df.index, dtype=bool),
                 "canonical_funding_extreme": state_at_least(
                     df,
                     "ms_funding_state",
@@ -217,9 +226,18 @@ class FndDislocDetector(BasisDislocationDetector):
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
     ) -> pd.Series:
         basis_mask = super().compute_raw_mask(df, features=features, **params)
-        funding_extreme = (features["funding_abs"] >= features["funding_q95"]).fillna(
-            False
-        ) & features["canonical_funding_extreme"].fillna(False)
+        funding_floor = (features["funding_abs"] >= features["funding_q95"]).fillna(False)
+        canonical_series = features.get("canonical_funding_extreme")
+        context_flag = features.get("funding_context_present")
+        if isinstance(context_flag, pd.Series):
+            if bool(context_flag.fillna(False).any()):
+                funding_extreme = funding_floor & canonical_series.fillna(False)
+            else:
+                funding_extreme = funding_floor
+        elif canonical_series is not None:
+            funding_extreme = funding_floor & canonical_series.fillna(False)
+        else:
+            funding_extreme = funding_floor
 
         # Allow alignment within a window (e.g. 3 bars) to improve recall
         alignment_window = int(params.get("alignment_window", 5))
@@ -228,10 +246,8 @@ class FndDislocDetector(BasisDislocationDetector):
         # Apply absolute basis floor even in funding dislocation
         min_bps = float(params.get("min_basis_bps", self.DEFAULT_MIN_BPS))
         bps_mask = (features["basis_bps"].abs() >= min_bps).fillna(False)
-        
-        sign_align = np.sign(features["basis_bps"].fillna(0.0)) == features["funding_sign"].fillna(
-            0.0
-        )
+
+        sign_align = np.sign(features["basis_bps"].fillna(0.0)) == features["funding_sign"].fillna(0.0)
         return (basis_active & funding_extreme & sign_align & bps_mask).fillna(False)
 
 

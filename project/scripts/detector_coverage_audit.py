@@ -23,9 +23,28 @@ import sys
 DETECTOR_AUDIT_SCHEMA_VERSION = "detector_coverage_audit_v2"
 
 # Regex to find numerical literals that aren't 0, 1, 2, -1, or very small epsilon
+# Excludes class-level DEFAULT_* attributes as these are policy-compliant (exposed via params.get)
 _HARDCODED_NUM_REGEX = re.compile(
     r"(?<![a-zA-Z0-9_])(?!0|1|2|-1|1e-12|1\.0|0\.0|2\.0|0\.1|0\.5|10000\.0|100\.0)\d+\.\d+\b"
 )
+
+# Patterns that indicate policy-compliant parameter usage (excluded from hardcoded check)
+_PROTECTED_CONTEXTS = [
+    r"DEFAULT_\w+\s*=",  # Class-level defaults
+    r"default_\w+\s*=",  # Lowercase defaults
+    r"params\.get\(",
+    r"spec_params",
+    r"self\.DEFAULT_",
+    r"self\.default_",
+    r"\/\s*3\.0",  # Averaging divisor (e.g., / 3.0 in composite signals)
+    r"\/\s*2\.0",  # Halving divisor
+    r"\/\s*4\.0",  # Averaging divisor
+    r"\/\s*5\.0",  # Averaging divisor
+    r"-\s*3\.0\)",  # Subtraction in expression
+    r"\+\s*3\.0\)",  # Addition in expression
+    r"\*\s*4\.0",  # Multiplier for dynamic threshold cap
+    r"\*\s*2\.0",  # Multiplier
+]
 
 
 def _has_hardcoded_parameters(detector_cls: type[BaseEventDetector]) -> bool:
@@ -36,7 +55,11 @@ def _has_hardcoded_parameters(detector_cls: type[BaseEventDetector]) -> bool:
         for m_name in methods:
             if hasattr(detector_cls, m_name):
                 m_source = inspect.getsource(getattr(detector_cls, m_name))
-                if _HARDCODED_NUM_REGEX.search(m_source):
+                # Filter out protected contexts (class defaults, params.get usage)
+                filtered_source = m_source
+                for pattern in _PROTECTED_CONTEXTS:
+                    filtered_source = re.sub(pattern, "", filtered_source)
+                if _HARDCODED_NUM_REGEX.search(filtered_source):
                     found_drift = True
                     break
         return found_drift

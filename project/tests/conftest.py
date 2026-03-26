@@ -12,3 +12,8 @@ from pathlib import Path
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 PROJECT_ROOT: Path = REPO_ROOT / "project"
 SPEC_ROOT: Path = REPO_ROOT / "spec"
+
+
+from project.io.parquet_compat import patch_pandas_parquet_fallback
+
+patch_pandas_parquet_fallback()

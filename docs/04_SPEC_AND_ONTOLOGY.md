@@ -8,7 +8,7 @@ All research primitives in EDGEE are defined declaratively in `spec/` as YAML fi
 
 ## 1. Events (`spec/events/`)
 
-69 active event specs are currently registered, each assigned to one of 9 canonical families. The ontology audit currently reconciles 69 implemented events, 60 canonical entries, and 70 taxonomy entries, with `ABSORPTION_EVENT` remaining as the single planned backlog item.
+69 active event specs are currently registered, each assigned to one of 10 canonical families. The ontology audit currently reconciles 69 implemented events, 60 canonical entries, and 70 taxonomy entries, with `ABSORPTION_EVENT` remaining as the single planned backlog item.
 
 ### Event YAML Schema
 
@@ -17,7 +17,7 @@ event_type: VOL_SHOCK                      # Unique event identifier
 synthetic_coverage: uncovered  ?what does it do            # covered | uncovered
 active: true
 status: validated   ?how and why                       # validated | experimental | deprecated
-canonical_family: VOLATILITY_TRANSITION    # One of the 9 canonical families
+canonical_family: VOLATILITY_TRANSITION    # One of the 10 canonical families
 reports_dir: vol_shock_relaxation          # Output directory
 events_file: vol_shock_relaxation_events.parquet
 signal_column: vol_shock_relaxation_event  # Boolean column name in output
@@ -70,6 +70,22 @@ The family list below is maintained for navigation; exact counts are tracked in 
 
 **TEMPORAL_STRUCTURE**
 `FEE_REGIME_CHANGE_EVENT`, `NO_FEE_IMPACT`, `SCHEDULED_NEWS_WINDOW_EVENT`, `SESSION_CLOSE_EVENT`, `SESSION_OPEN_EVENT`, and others.
+
+**EXECUTION_FRICTION**
+`FEE_REGIME_CHANGE_EVENT`, `SLIPPAGE_SPIKE_EVENT`, `SPREAD_REGIME_WIDENING_EVENT`, and others.
+
+### Shared Detector Constraint
+
+Proxy-tier events intentionally share detector implementations across multiple event types. This is a deliberate design choice to maintain a narrow attribution surface at the detection layer:
+
+| Detector Class | Events Covered |
+| --- | --- |
+| `PriceVolImbalanceProxyDetector` | `ORDERFLOW_IMBALANCE_SHOCK`, `PRICE_VOL_IMBALANCE_PROXY` |
+| `WickReversalProxyDetector` | `SWEEP_STOPRUN`, `WICK_REVERSAL_PROXY` |
+| `DepthStressProxyDetector` | `DEPTH_COLLAPSE`, `DEPTH_STRESS_PROXY` |
+| `FlowExhaustionDetector` | `FLOW_EXHAUSTION_PROXY`, `FORCED_FLOW_EXHAUSTION` |
+
+This means these events are not independently distinguishable at the detection layer. Research attribution must account for this shared implementation constraint.
 
 ---
 
@@ -201,11 +217,23 @@ Templates constrain what strategy shapes are legal for each event family: | Fami
 
 ### Named Event Sequences (`sequence_registry.yaml`)  ?explain the logic and instructions as it is most important alpha source
 
-Multi-event temporal patterns that can be used as composite triggers: | Sequence | Events (ordered) | Max Gaps (bars) | Mode |
+Multi-event temporal patterns that can be used as composite triggers:
+
+| Sequence | Events (ordered) | Max Gaps (bars) | Mode |
 |---|---|---|---|
 | `crowding_unwind` | `FUNDING_EXTREME_ONSET` → `OI_FLUSH` → `LIQUIDATION_CASCADE` | [6, 12] | ordered_strict |
 | `compression_breakout` | `RANGE_COMPRESSION_END` → `BREAKOUT_TRIGGER` → `FALSE_BREAKOUT` | [12, 6] | ordered_strict |
 | `liquidity_stress_repair` | `SPREAD_BLOWOUT` → `ABSORPTION_EVENT` | [6] | ordered_strict |
+
+#### Sequence Detector Implementation Status
+
+Four sequence event types exist as spec entries:
+- `SEQ_FND_EXTREME_THEN_BREAKOUT`
+- `SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY`
+- `SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE`
+- `SEQ_VOL_COMP_THEN_BREAKOUT`
+
+These are currently implemented as stubs via the generic `EventSequenceDetector` wrapper class. They are registered and will run, but use a generic composite pattern rather than specialized detection logic. They are marked as `experimental` status in the spec.
 
 ---
 

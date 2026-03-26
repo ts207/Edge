@@ -234,6 +234,12 @@ def compose_config(
     conditioning_cols = _to_str_tuple(_get_field("conditioning_cols", ()))
     max_candidates = int(_get_field("max_candidates_per_run", 1000))
 
+    # Sequence detectors are analyzer-only contracts; they should not be blocked
+    # by template discovery compatibility rules that apply to event families used
+    # in strategy generation.
+    if normalized.startswith("SEQ_"):
+        templates = ()
+
     # Validation
     operators = _operator_registry()
     for t_name in templates:

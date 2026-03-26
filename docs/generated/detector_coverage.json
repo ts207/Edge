@@ -159,7 +159,7 @@
       ]
     },
     {
-      "class_name": "DepthStressProxyDetector",
+      "class_name": "DepthCollapseDetector",
       "event_type": "DEPTH_COLLAPSE",
       "family": "canonical_proxy",
       "maturity_tier": "proxy",
@@ -261,10 +261,10 @@
       ]
     },
     {
-      "class_name": "FlowExhaustionDetector",
+      "class_name": "ForcedFlowExhaustionDetector",
       "event_type": "FORCED_FLOW_EXHAUSTION",
       "family": "exhaustion",
-      "maturity_tier": "proxy",
+      "maturity_tier": "standard",
       "module": "project.events.detectors.exhaustion",
       "path": "project/events/detectors/exhaustion.py",
       "registered": true,
@@ -551,7 +551,7 @@
       ]
     },
     {
-      "class_name": "PriceVolImbalanceProxyDetector",
+      "class_name": "OrderflowImbalanceShockDetector",
       "event_type": "ORDERFLOW_IMBALANCE_SHOCK",
       "family": "canonical_proxy",
       "maturity_tier": "proxy",
@@ -669,40 +669,52 @@
       ]
     },
     {
-      "class_name": "",
+      "class_name": "EventSequenceDetector",
       "event_type": "SEQ_FND_EXTREME_THEN_BREAKOUT",
-      "family": "",
-      "maturity_tier": "missing",
-      "module": "",
-      "registered": false,
-      "required_columns": []
+      "family": "sequence",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.sequence",
+      "path": "project/events/detectors/sequence.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
     },
     {
-      "class_name": "",
+      "class_name": "EventSequenceDetector",
       "event_type": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
-      "family": "",
-      "maturity_tier": "missing",
-      "module": "",
-      "registered": false,
-      "required_columns": []
+      "family": "sequence",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.sequence",
+      "path": "project/events/detectors/sequence.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
     },
     {
-      "class_name": "",
+      "class_name": "EventSequenceDetector",
       "event_type": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
-      "family": "",
-      "maturity_tier": "missing",
-      "module": "",
-      "registered": false,
-      "required_columns": []
+      "family": "sequence",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.sequence",
+      "path": "project/events/detectors/sequence.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
     },
     {
-      "class_name": "",
+      "class_name": "EventSequenceDetector",
       "event_type": "SEQ_VOL_COMP_THEN_BREAKOUT",
-      "family": "",
-      "maturity_tier": "missing",
-      "module": "",
-      "registered": false,
-      "required_columns": []
+      "family": "sequence",
+      "maturity_tier": "standard",
+      "module": "project.events.detectors.sequence",
+      "path": "project/events/detectors/sequence.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp"
+      ]
     },
     {
       "class_name": "SessionCloseDetector",
@@ -794,7 +806,7 @@
       ]
     },
     {
-      "class_name": "WickReversalProxyDetector",
+      "class_name": "SweepStopRunDetector",
       "event_type": "SWEEP_STOPRUN",
       "family": "canonical_proxy",
       "maturity_tier": "proxy",
@@ -970,63 +982,32 @@
   ],
   "issues": [
     {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: BASIS_DISLOC",
-      "path": "project/events/families/basis.py",
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: ABSORPTION_EVENT",
+      "path": "project/events/detectors/liquidity.py",
       "severity": "warning"
     },
     {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: CROSS_VENUE_DESYNC",
-      "path": "project/events/families/basis.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: FND_DISLOC",
-      "path": "project/events/families/basis.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: ORDERFLOW_IMBALANCE_SHOCK",
-      "path": "project/events/families/canonical_proxy.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: PRICE_VOL_IMBALANCE_PROXY",
-      "path": "project/events/families/canonical_proxy.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: SESSION_CLOSE_EVENT",
-      "path": "project/events/families/temporal.py",
-      "severity": "warning"
-    },
-    {
-      "check_id": "detector_hardcoded_params",
-      "message": "Detector implementation has hardcoded numerical thresholds: SESSION_OPEN_EVENT",
-      "path": "project/events/families/temporal.py",
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: CROSS_ASSET_DESYNC_EVENT",
+      "path": "project/events/families/desync.py",
       "severity": "warning"
     }
   ],
   "summary": {
     "active_event_count": 69,
     "error_count": 0,
-    "issue_count": 7,
+    "issue_count": 2,
     "maturity_counts": {
-      "missing": 4,
       "production": 6,
-      "proxy": 10,
+      "proxy": 9,
       "specialized": 3,
-      "standard": 46
+      "standard": 51
     },
-    "registered_detector_entry_count": 66,
+    "registered_detector_entry_count": 72,
     "registered_event_count": 69,
     "schema_version": "detector_coverage_audit_v2",
     "status": "passed",
-    "warning_count": 7
+    "warning_count": 2
   }
 }

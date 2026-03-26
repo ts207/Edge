@@ -97,7 +97,7 @@ PIPELINE (8 stages)
   strategy_packaging  → Blueprints → Executable strategy specs → live engine
 
 RESEARCH PRIMITIVES
-  69 active event specs across 9 canonical families
+  69 active event specs across 10 canonical families
   34 feature families  from microstructure to ML signals
   19 market states    tied to source events and families
   Legal templates     per family (7–8 templates each)

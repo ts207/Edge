@@ -138,12 +138,14 @@ def read_parquet(
                 # If some columns are missing in CSV, fallback or handled by pandas
                 frames.append(pd.read_csv(file_path))
         else:
-            if not HAS_PYARROW:
-                raise ImportError("pyarrow is required to read parquet files")
-            # Use ParquetFile for single-file reads to avoid memory usage
-            # when only subset of columns is needed.
-            pf = pq.ParquetFile(file_path)
-            frames.append(pf.read(columns=columns).to_pandas())
+            if HAS_PYARROW:
+                # Use ParquetFile for single-file reads to avoid memory usage
+                # when only subset of columns is needed.
+                pf = pq.ParquetFile(file_path)
+                frames.append(pf.read(columns=columns).to_pandas())
+            else:
+                frame = pd.read_parquet(file_path, columns=columns)
+                frames.append(frame)
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)

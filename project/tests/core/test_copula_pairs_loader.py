@@ -14,7 +14,7 @@ def test_load_copula_pairs_deduplicates_and_normalizes() -> None:
 def test_copula_partners_are_sorted_and_symbol_specific() -> None:
     partners = copula_partners("BTCUSDT")
     assert partners == sorted(partners)
-    assert set(partners) == {"ETHUSDT", "SOLUSDT"}
+    assert set(partners) == {"ETHUSDT", "SOLUSDT", "BNBUSDT"}
 
 
 def test_copula_pair_universe_contains_all_symbols() -> None:

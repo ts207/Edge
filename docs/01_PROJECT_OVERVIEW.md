@@ -27,9 +27,9 @@ This is what gets evaluated, stored in memory, and gated in promotion — not ag
 
 ---
 
-## The 9 Canonical Event Families
+## The 10 Canonical Event Families
 
-All events belong to one of 9 canonical families. Templates are only legal for their matching family.
+All events belong to one of 10 canonical families. Templates are only legal for their matching family.
 
 | Family | Description |
 | --- | --- |
@@ -42,6 +42,7 @@ All events belong to one of 9 canonical families. Templates are only legal for t
 | `REGIME_TRANSITION` | Macro or microstructure regime changes |
 | `TEMPORAL_STRUCTURE` | Session-based, scheduled, or time-of-day effects |
 | `INFORMATION_DESYNC` | Cross-venue lead-lag breaks, index divergence, desync |
+| `EXECUTION_FRICTION` | Spread/widden slippage, fee regime changes, execution quality degradation |
 
 ---
 

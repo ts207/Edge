@@ -124,7 +124,7 @@ def test_run_engine_applies_allocator_before_final_pnl(
     assert s2.loc[bar, "allocation_scale"] == pytest.approx(0.5)
     assert s1.loc[bar, "executed_position"] == pytest.approx(0.5)
     assert s2.loc[bar, "executed_position"] == pytest.approx(0.5)
-    assert "max_portfolio_gross" in s1.loc[bar, "allocation_clip_reason"]
+    assert "max_symbol_gross" in s1.loc[bar, "allocation_clip_reason"]
 
     diag = result["allocation_diagnostics"].set_index("timestamp")
     assert diag.loc[bar, "allocated_gross"] == pytest.approx(1.0)

@@ -3,19 +3,20 @@
 - Status: `passed`
 - Active event specs: `69`
 - Registered detectors: `69`
-- Raw registered detector entries: `70`
-- Issues: `0`
+- Raw registered detector entries: `72`
+- Issues: `2`
 
 ## Maturity Counts
 
 - `production`: 6
-- `proxy`: 10
+- `proxy`: 9
 - `specialized`: 3
-- `standard`: 50
+- `standard`: 51
 
 ## Issues
 
-- None
+- [warning] Registered detector has no active event spec: ABSORPTION_EVENT (project/events/detectors/liquidity.py)
+- [warning] Registered detector has no active event spec: CROSS_ASSET_DESYNC_EVENT (project/events/families/desync.py)
 
 ## Detector Inventory
 
@@ -30,14 +31,14 @@
 - `CORRELATION_BREAKDOWN_EVENT`: `standard` via `CorrelationBreakdownDetector`
 - `CROSS_VENUE_DESYNC`: `standard` via `CrossVenueDesyncDetector`
 - `DELEVERAGING_WAVE`: `standard` via `DeleveragingWaveDetector`
-- `DEPTH_COLLAPSE`: `proxy` via `DepthStressProxyDetector`
+- `DEPTH_COLLAPSE`: `proxy` via `DepthCollapseDetector`
 - `DEPTH_STRESS_PROXY`: `proxy` via `DepthStressProxyDetector`
 - `FAILED_CONTINUATION`: `standard` via `FailedContinuationDetector`
 - `FALSE_BREAKOUT`: `standard` via `FalseBreakoutDetector`
 - `FEE_REGIME_CHANGE_EVENT`: `standard` via `FeeRegimeChangeDetector`
 - `FLOW_EXHAUSTION_PROXY`: `proxy` via `FlowExhaustionDetector`
 - `FND_DISLOC`: `production` via `FndDislocDetector`
-- `FORCED_FLOW_EXHAUSTION`: `proxy` via `FlowExhaustionDetector`
+- `FORCED_FLOW_EXHAUSTION`: `standard` via `ForcedFlowExhaustionDetector`
 - `FUNDING_EXTREME_ONSET`: `standard` via `FundingExtremeOnsetDetector`
 - `FUNDING_FLIP`: `standard` via `FundingFlipDetector`
 - `FUNDING_NORMALIZATION_TRIGGER`: `standard` via `FundingNormalizationDetector`
@@ -57,7 +58,7 @@
 - `OI_FLUSH`: `standard` via `OIFlushDetector`
 - `OI_SPIKE_NEGATIVE`: `standard` via `OISpikeNegativeDetector`
 - `OI_SPIKE_POSITIVE`: `standard` via `OISpikePositiveDetector`
-- `ORDERFLOW_IMBALANCE_SHOCK`: `proxy` via `PriceVolImbalanceProxyDetector`
+- `ORDERFLOW_IMBALANCE_SHOCK`: `proxy` via `OrderflowImbalanceShockDetector`
 - `OVERSHOOT_AFTER_SHOCK`: `standard` via `OvershootDetector`
 - `POST_DELEVERAGING_REBOUND`: `standard` via `PostDeleveragingReboundDetector`
 - `PRICE_VOL_IMBALANCE_PROXY`: `proxy` via `PriceVolImbalanceProxyDetector`
@@ -76,7 +77,7 @@
 - `SPREAD_BLOWOUT`: `standard` via `SpreadBlowoutDetector`
 - `SPREAD_REGIME_WIDENING_EVENT`: `standard` via `SpreadRegimeWideningDetector`
 - `SUPPORT_RESISTANCE_BREAK`: `standard` via `SREventDetector`
-- `SWEEP_STOPRUN`: `proxy` via `WickReversalProxyDetector`
+- `SWEEP_STOPRUN`: `proxy` via `SweepStopRunDetector`
 - `TREND_ACCELERATION`: `standard` via `TrendAccelerationDetector`
 - `TREND_DECELERATION`: `standard` via `TrendDecelerationDetector`
 - `TREND_EXHAUSTION_TRIGGER`: `standard` via `TrendExhaustionDetector`

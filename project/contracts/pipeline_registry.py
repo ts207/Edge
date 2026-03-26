@@ -510,7 +510,7 @@ STAGE_ARTIFACT_REGISTRY: tuple[StageArtifactContract, ...] = (
     ),
     StageArtifactContract(
         stage_patterns=("build_strategy_candidates",),
-        inputs=("strategy.blueprints",),
+        optional_inputs=("research.recommendations_checklist", "strategy.blueprints"),
         outputs=("strategy.candidates",),
     ),
     StageArtifactContract(

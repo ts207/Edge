@@ -37,7 +37,7 @@ detector_ownership:
   OI_FLUSH: OIFlushDetector
   OI_SPIKE_NEGATIVE: OISpikeNegativeDetector
   OI_SPIKE_POSITIVE: OISpikePositiveDetector
-  ORDERFLOW_IMBALANCE_SHOCK: OrderflowImbalanceDetector
+  ORDERFLOW_IMBALANCE_SHOCK: OrderflowImbalanceShockDetector
   OVERSHOOT_AFTER_SHOCK: OvershootDetector
   POST_DELEVERAGING_REBOUND: PostDeleveragingReboundDetector
   PRICE_VOL_IMBALANCE_PROXY: PriceVolImbalanceProxyDetector
