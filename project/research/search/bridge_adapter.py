@@ -74,7 +74,9 @@ def hypotheses_to_bridge_candidates(
     # Only filter pure regime-label STATE_ events - ones that have very high event counts
     # (appearing on >50% of bars = >280 bars in 3-day window)
     # Keep legitimate events like VOL_SHOCK even if they have STATE_ prefix
-    high_frequency_mask = out["n_events"] > (577 * 0.5)  # More than 50% of bars
+    # Use filtered["n"] as source (n_events gets assigned from n later on line 95)
+    n_events_arr = filtered["n"].values
+    high_frequency_mask = n_events_arr > (577 * 0.5)  # More than 50% of bars
     state_mask = out["event_type"].str.startswith(("STATE_", "TRANSITION_"))
     
     # Remove only STATE_/TRANSITION_ events that are high-frequency (regime labels)
