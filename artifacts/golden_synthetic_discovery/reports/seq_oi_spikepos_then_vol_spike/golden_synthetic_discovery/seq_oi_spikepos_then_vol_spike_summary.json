@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
-  "rows": 488,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/seq_oi_spikepos_then_vol_spike/golden_synthetic_discovery/seq_oi_spikepos_then_vol_spike_events.parquet"
-}

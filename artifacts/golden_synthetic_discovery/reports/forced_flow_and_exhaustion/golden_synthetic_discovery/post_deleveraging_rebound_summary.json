@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "POST_DELEVERAGING_REBOUND",
-  "rows": 11,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/forced_flow_and_exhaustion/golden_synthetic_discovery/forced_flow_and_exhaustion_events.parquet"
-}

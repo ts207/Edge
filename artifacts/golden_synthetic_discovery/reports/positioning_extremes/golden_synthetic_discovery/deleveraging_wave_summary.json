@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "DELEVERAGING_WAVE",
-  "rows": 454,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/positioning_extremes/golden_synthetic_discovery/positioning_extremes_events.parquet"
-}

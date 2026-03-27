@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SESSION_CLOSE_EVENT",
-  "rows": 348,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/temporal_structure/golden_synthetic_discovery/temporal_structure_events.parquet"
-}

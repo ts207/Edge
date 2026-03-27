@@ -1,28 +1,28 @@
 {
-  "event_flag_rows": 10130,
+  "event_flag_rows": 0,
   "event_flags_path": "/home/irene/Edge/artifacts/golden_synthetic_discovery/events/golden_synthetic_discovery/event_flags.parquet",
-  "event_rows": 18695,
+  "event_rows": 18732,
   "events_path": "/home/irene/Edge/artifacts/golden_synthetic_discovery/events/golden_synthetic_discovery/events.parquet",
-  "incoming_event_rows": 1572,
+  "incoming_event_rows": 0,
   "incoming_per_family_counts": {
-    "ZSCORE_STRETCH": 1572
+    "OI_FLUSH": 0
   },
   "per_family_counts": {
     "ABSORPTION_PROXY": 10,
-    "BAND_BREAK": 1293,
+    "BAND_BREAK": 1317,
     "BASIS_DISLOC": 0,
-    "BETA_SPIKE_EVENT": 82,
-    "BREAKOUT_TRIGGER": 34,
+    "BETA_SPIKE_EVENT": 81,
+    "BREAKOUT_TRIGGER": 35,
     "CHOP_TO_TREND_SHIFT": 0,
-    "CLIMAX_VOLUME_BAR": 72,
+    "CLIMAX_VOLUME_BAR": 74,
     "COPULA_PAIRS_TRADING": 2155,
-    "CORRELATION_BREAKDOWN_EVENT": 560,
+    "CORRELATION_BREAKDOWN_EVENT": 568,
     "CROSS_VENUE_DESYNC": 0,
-    "DELEVERAGING_WAVE": 454,
+    "DELEVERAGING_WAVE": 450,
     "DEPTH_COLLAPSE": 8,
     "DEPTH_STRESS_PROXY": 8,
-    "FAILED_CONTINUATION": 9,
-    "FALSE_BREAKOUT": 6,
+    "FAILED_CONTINUATION": 10,
+    "FALSE_BREAKOUT": 9,
     "FEE_REGIME_CHANGE_EVENT": 0,
     "FLOW_EXHAUSTION_PROXY": 13,
     "FND_DISLOC": 20,
@@ -32,13 +32,13 @@
     "FUNDING_NORMALIZATION_TRIGGER": 111,
     "FUNDING_PERSISTENCE_TRIGGER": 1344,
     "FUNDING_TIMESTAMP_EVENT": 350,
-    "GAP_OVERSHOOT": 327,
+    "GAP_OVERSHOOT": 328,
     "INDEX_COMPONENT_DIVERGENCE": 611,
     "INT_DEPTH_VACUUM_CONFIRM": 0,
-    "LEAD_LAG_BREAK": 356,
+    "LEAD_LAG_BREAK": 357,
     "LIQUIDATION_CASCADE": 8,
     "LIQUIDATION_EXHAUSTION_REVERSAL": 11,
-    "LIQUIDITY_GAP_PRINT": 327,
+    "LIQUIDITY_GAP_PRINT": 328,
     "LIQUIDITY_SHOCK": 0,
     "LIQUIDITY_STRESS_DIRECT": 289,
     "LIQUIDITY_STRESS_PROXY": 87,
@@ -83,6 +83,6 @@
   "registry_root": "/home/irene/Edge/artifacts/golden_synthetic_discovery/events/golden_synthetic_discovery",
   "run_id": "golden_synthetic_discovery",
   "selected_event_types": [
-    "ZSCORE_STRETCH"
+    "OI_FLUSH"
   ]
 }

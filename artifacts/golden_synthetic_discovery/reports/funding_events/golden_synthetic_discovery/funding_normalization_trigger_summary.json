@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "FUNDING_NORMALIZATION_TRIGGER",
-  "rows": 111,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/funding_events/golden_synthetic_discovery/funding_episode_events.parquet"
-}

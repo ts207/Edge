@@ -194,10 +194,10 @@ def resolve_regime_offsets(symbol: str) -> Dict[str, List[Tuple[int, int, int, f
         }
     return {
         "basis_desync": [
-            (6, 12, -1, 35.0),
-            (21, 10, 1, 40.0),
-            (37, 14, -1, 45.0),
-            (51, 10, 1, 39.0),
+            (6, 12, -1, 45.0),
+            (21, 10, 1, 50.0),
+            (37, 14, -1, 55.0),
+            (51, 10, 1, 49.0),
         ],
         "funding_dislocation": [
             (9, 16, -1, 1.7),
@@ -205,8 +205,8 @@ def resolve_regime_offsets(symbol: str) -> Dict[str, List[Tuple[int, int, int, f
             (41, 16, -1, 1.9),
             (55, 12, 1, 1.6),
         ],
-        "trend_acceleration_exhaustion": [(13, 18, -1, 1.0), (29, 18, 1, 1.1), (45, 18, -1, 0.95)],
-        "breakout_failure": [(17, 10, -1, 1.2), (33, 10, 1, 1.25), (48, 10, -1, 1.35)],
+        "trend_acceleration_exhaustion": [(13, 18, -1, 1.2), (29, 18, 1, 1.3), (45, 18, -1, 1.15)],
+        "breakout_failure": [(17, 10, -1, 1.4), (33, 10, 1, 1.45), (48, 10, -1, 1.55)],
         "liquidity_stress": [(22, 8, 1, 1.0), (38, 8, -1, 1.0), (53, 8, 1, 1.0)],
         "deleveraging_burst": [
             (11, 8, -1, 1.0),

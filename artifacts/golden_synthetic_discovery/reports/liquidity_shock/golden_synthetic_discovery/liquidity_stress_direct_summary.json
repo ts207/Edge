@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "LIQUIDITY_STRESS_DIRECT",
-  "rows": 289,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/liquidity_shock/golden_synthetic_discovery/liquidity_shock_events.parquet"
-}

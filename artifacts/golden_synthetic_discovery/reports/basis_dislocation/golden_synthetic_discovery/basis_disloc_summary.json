@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "BASIS_DISLOC",
-  "rows": 156,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/basis_dislocation/golden_synthetic_discovery/basis_dislocation_events.parquet"
-}

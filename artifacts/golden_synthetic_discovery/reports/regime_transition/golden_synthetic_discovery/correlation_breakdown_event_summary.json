@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "CORRELATION_BREAKDOWN_EVENT",
-  "rows": 560,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/regime_transition/golden_synthetic_discovery/regime_transition_events.parquet"
-}

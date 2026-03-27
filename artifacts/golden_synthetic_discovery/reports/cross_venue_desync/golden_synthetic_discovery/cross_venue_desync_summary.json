@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "CROSS_VENUE_DESYNC",
-  "rows": 126,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/cross_venue_desync/golden_synthetic_discovery/cross_venue_desync_events.parquet"
-}

@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "BAND_BREAK",
-  "rows": 1293,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/statistical_dislocation/golden_synthetic_discovery/statistical_dislocation_events.parquet"
-}

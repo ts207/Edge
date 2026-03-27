@@ -12,7 +12,7 @@ parameters:
   revert_z: 0.5
   basis_lookback: 96
   persistence_bars: 2
-  min_basis_bps: 5.0
+  min_basis_bps: 10.0
 detector:
   signal_definition: 'Detects cross-venue price desynchronization: spot-perp basis
     (or inter-exchange basis) exceeds its extreme quantile, indicating one venue is

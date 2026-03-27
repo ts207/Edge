@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "VOL_SPIKE",
-  "rows": 874,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/volatility_transition/golden_synthetic_discovery/volatility_transition_events.parquet"
-}

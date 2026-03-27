@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/seq_liq_vacuum_then_depth_recovery/golden_synthetic_discovery/seq_liq_vacuum_then_depth_recovery_events.parquet"
-}

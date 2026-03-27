@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "ORDERFLOW_IMBALANCE_SHOCK",
-  "rows": 19,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/liquidity_dislocation/golden_synthetic_discovery/liquidity_dislocation_events.parquet"
-}

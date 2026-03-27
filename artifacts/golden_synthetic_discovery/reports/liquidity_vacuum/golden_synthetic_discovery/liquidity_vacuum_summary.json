@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "LIQUIDITY_VACUUM",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/liquidity_vacuum/golden_synthetic_discovery/liquidity_vacuum_events.parquet"
-}

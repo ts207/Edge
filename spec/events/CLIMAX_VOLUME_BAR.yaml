@@ -6,7 +6,7 @@ signal_column: climax_volume_bar_event
 parameters:
   liquidation_spike_z_threshold: 3.0
   cascade_window_bars: 12
-  cooldown_bars: 24
+  cooldown_bars: 48
   merge_gap_bars: 0
 canonical_family: FORCED_FLOW_AND_EXHAUSTION
 trigger: Detector triggers on climax volume bar pattern

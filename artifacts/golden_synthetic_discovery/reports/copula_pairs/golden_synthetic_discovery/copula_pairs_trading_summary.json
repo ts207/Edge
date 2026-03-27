@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "COPULA_PAIRS_TRADING",
-  "rows": 2155,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/copula_pairs/golden_synthetic_discovery/copula_pairs_events.parquet"
-}

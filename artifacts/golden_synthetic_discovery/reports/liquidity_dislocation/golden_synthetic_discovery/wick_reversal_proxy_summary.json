@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "WICK_REVERSAL_PROXY",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/liquidity_dislocation/golden_synthetic_discovery/liquidity_dislocation_events.parquet"
-}

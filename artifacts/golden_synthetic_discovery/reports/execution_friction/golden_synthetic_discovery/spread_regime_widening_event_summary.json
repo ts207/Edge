@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SPREAD_REGIME_WIDENING_EVENT",
-  "rows": 31,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/execution_friction/golden_synthetic_discovery/execution_friction_events.parquet"
-}

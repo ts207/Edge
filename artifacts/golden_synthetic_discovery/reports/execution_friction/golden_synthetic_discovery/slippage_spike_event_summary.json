@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SLIPPAGE_SPIKE_EVENT",
-  "rows": 751,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/execution_friction/golden_synthetic_discovery/execution_friction_events.parquet"
-}

@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "SEQ_VOL_COMP_THEN_BREAKOUT",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/seq_vol_comp_then_breakout/golden_synthetic_discovery/seq_vol_comp_then_breakout_events.parquet"
-}

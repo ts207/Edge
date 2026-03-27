@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "RANGE_BREAKOUT",
-  "rows": 403,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/trend_structure/golden_synthetic_discovery/trend_structure_events.parquet"
-}

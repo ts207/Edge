@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "FORCED_FLOW_EXHAUSTION",
-  "rows": 25,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/directional_exhaustion_after_forced_flow/golden_synthetic_discovery/directional_exhaustion_after_forced_flow_events.parquet"
-}

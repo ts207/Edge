@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "LIQUIDATION_CASCADE",
-  "rows": 8,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/liquidation_cascade/golden_synthetic_discovery/liquidation_cascade_events.parquet"
-}

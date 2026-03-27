@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "TREND_TO_CHOP_SHIFT",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/regime_transition/golden_synthetic_discovery/regime_transition_events.parquet"
-}

@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "INDEX_COMPONENT_DIVERGENCE",
-  "rows": 611,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/information_desync/golden_synthetic_discovery/information_desync_events.parquet"
-}

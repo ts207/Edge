@@ -9,7 +9,7 @@ parameters:
   vol_lookback_window: 288
   compression_ratio_max: 0.8
   compression_window: 6
-  min_breakout_distance: 0.0025
+  min_breakout_distance: 0.0015
   expansion_quantile: 0.85
   cooldown_bars: 12
   merge_gap_bars: 0

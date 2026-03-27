@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "VOL_SHOCK",
-  "rows": 456,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/vol_shock_relaxation/golden_synthetic_discovery/vol_shock_relaxation_events.parquet"
-}

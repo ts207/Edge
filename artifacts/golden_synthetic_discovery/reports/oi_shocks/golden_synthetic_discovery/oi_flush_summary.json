@@ -1,6 +1,0 @@
-{
-  "run_id": "golden_synthetic_discovery",
-  "event_type": "OI_FLUSH",
-  "rows": 0,
-  "events_file": "/home/irene/Edge/artifacts/golden_synthetic_discovery/reports/oi_shocks/golden_synthetic_discovery/oi_shock_events.parquet"
-}
