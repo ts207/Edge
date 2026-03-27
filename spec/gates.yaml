@@ -4,6 +4,7 @@ gate_e1:
   min_join_rate: 0.99
   max_clustering_5b: 0.20
 gate_v1_phase2:
+  q_value_mechanism_column: q_value_mechanism  # Operative FDR gate (mechanism-group BH)
   max_q_value: 0.05
   min_after_cost_expectancy_bps: 0.1
   conservative_cost_multiplier: 1.5
@@ -35,6 +36,7 @@ gate_v1_phase2:
 # Confirmatory promotion criteria (P3)
 promotion_confirmatory_gates:
   deployable:
+    q_value_mechanism_column: q_value_mechanism
     max_q_value: 0.05
     min_oos_ess: 50
     min_oos_event_count: 50
@@ -48,6 +50,7 @@ promotion_confirmatory_gates:
     min_ess_per_regime: 20
     require_regime_stability: true
   shadow:
+    q_value_mechanism_column: q_value_mechanism
     max_q_value: 0.10
     min_oos_ess: 20
     min_oos_event_count: 20
@@ -72,6 +75,7 @@ promotion_modes:
 # - promotion: strict defaults for production/certification
 gate_v1_phase2_profiles:
   discovery:
+    q_value_mechanism_column: q_value_mechanism
     max_q_value: 0.15
     min_after_cost_expectancy_bps: -0.5
     conservative_cost_multiplier: 1.1

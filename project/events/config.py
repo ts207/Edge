@@ -240,6 +240,10 @@ def compose_config(
     if normalized.startswith("SEQ_"):
         templates = ()
 
+    # FORCED_FLOW_AND_EXHAUSTION family events are post-hoc patterns that don't
+    # support standard template-based discovery - treat as analyzer-only.
+    if family_name == "FORCED_FLOW_AND_EXHAUSTION" or normalized.startswith("POST_DELEVERAGING"):
+        templates = ()
     # Validation
     operators = _operator_registry()
     for t_name in templates:

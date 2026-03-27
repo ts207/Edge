@@ -4,7 +4,8 @@ event_type: LIQUIDITY_STRESS_DIRECT
 synthetic_coverage: covered
 active: true
 status: validated
-description: High-fidelity liquidity stress detection using explicit L2/L3 depth and spread observables.
+description: High-fidelity liquidity stress detection using explicit L2/L3 depth and
+  spread observables.
 reports_dir: liquidity_shock
 events_file: liquidity_shock_events.parquet
 signal_column: liquidity_stress_direct_event
@@ -13,3 +14,13 @@ parameters:
   spread_spike_th: 3.0
   median_window: 288
 canonical_family: LIQUIDITY_DISLOCATION
+trigger: Detector triggers on liquidity stress direct pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 1-12
+  invalidation_conditions:
+  - Volume returns above median within 1-2 bars
+  - Spread compresses back to baseline
+  disabled_regimes:
+  - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
+cluster_id: untagged

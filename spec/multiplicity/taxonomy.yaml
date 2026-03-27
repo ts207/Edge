@@ -1,6 +1,132 @@
 schema_version: 3
 ontology_model: event_state_template
 
+# Mechanism clusters for FDR grouping (q_value_mechanism gate)
+# Maps primary mechanism tag -> cluster description
+# Synchronized with tags in project/configs/registries/events.yaml
+mechanism_clusters:
+  funding_crowding:
+    description: "Funding rate extremes, carry persistence, funding normalization dynamics"
+    events:
+      - "FUNDING_EXTREME_ONSET"
+      - "FUNDING_FLIP"
+      - "FUNDING_NORMALIZATION_TRIGGER"
+      - "FUNDING_PERSISTENCE_TRIGGER"
+      - "SEQ_FND_EXTREME_THEN_BREAKOUT"
+  oi_dynamic:
+    description: "Open interest spikes, flushes, and OI/vol compression breakouts"
+    events:
+      - "OI_FLUSH"
+      - "OI_SPIKE_POSITIVE"
+      - "OI_SPIKE_NEGATIVE"
+      - "VOL_COMPRESSION_BREAKOUT"
+      - "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE"
+  forced_liquidation:
+    description: "Liquidation cascades, deleveraging waves, exhaustion reversals"
+    events:
+      - "LIQUIDATION_CASCADE"
+      - "LIQUIDATION_EXHAUSTION_REVERSAL"
+      - "DELEVERAGING_WAVE"
+      - "SEQ_LIQ_CASCADE_THEN_EXHAUST"
+  liquidity_stress:
+    description: "Liquidity vacuum, shock, depth collapse, spread blowout, gap prints"
+    events:
+      - "LIQUIDITY_VACUUM"
+      - "LIQUIDITY_SHOCK"
+      - "DEPTH_COLLAPSE"
+      - "SPREAD_BLOWOUT"
+      - "LIQUIDITY_GAP_PRINT"
+      - "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY"
+  orderflow_imbalance:
+    description: "Orderflow shock, sweep/stop-run dynamics"
+    events:
+      - "ORDERFLOW_IMBALANCE_SHOCK"
+      - "SWEEP_STOPRUN"
+  absorption_recovery:
+    description: "Absorption events and post-stress recovery signals"
+    events:
+      - "ABSORPTION_EVENT"
+  basis_dislocation:
+    description: "Basis disloc, snapback, cross-venue catchup, funding disloc"
+    events:
+      - "BASIS_DISLOC"
+      - "BASIS_SNAPBACK"
+      - "CROSS_VENUE_CATCHUP"
+      - "FND_DISLOC"
+      - "COPULA_PAIRS_TRADING"
+  statistical_stretch:
+    description: "Z-score stretch, band break, gap overshoot, overshoot after shock"
+    events:
+      - "BAND_BREAK"
+      - "ZSCORE_STRETCH"
+      - "GAP_OVERSHOOT"
+      - "OVERSHOOT_AFTER_SHOCK"
+  vol_regime:
+    description: "Vol shock, spike, relaxation start, cluster shift, compression end"
+    events:
+      - "VOL_SHOCK"
+      - "VOL_SPIKE"
+      - "VOL_RELAXATION_START"
+      - "VOL_CLUSTER_SHIFT"
+      - "RANGE_COMPRESSION_END"
+      - "BREAKOUT_TRIGGER"
+      - "SEQ_VOL_COMP_THEN_BREAKOUT"
+  trend_momentum:
+    description: "Trend acceleration, deceleration, breakout, pullback pivot, S/R break"
+    events:
+      - "TREND_ACCELERATION"
+      - "TREND_DECELERATION"
+      - "RANGE_BREAKOUT"
+      - "PULLBACK_PIVOT"
+      - "SUPPORT_RESISTANCE_BREAK"
+      - "BREAKOUT_TRIGGER"
+      - "CHOP_TO_TREND_SHIFT"
+      - "TREND_TO_CHOP_SHIFT"
+      - "TREND_EXHAUSTION_TRIGGER"
+  exhaustion:
+    description: "Climax volume, failed continuation, momentum/trend exhaustion"
+    events:
+      - "CLIMAX_VOLUME_BAR"
+      - "FAILED_CONTINUATION"
+      - "MOMENTUM_DIVERGENCE_TRIGGER"
+      - "TREND_EXHAUSTION_TRIGGER"
+      - "FORCED_FLOW_EXHAUSTION"
+  regime_shift:
+    description: "Regime transitions: vol, trend/chop, beta, correlation"
+    events:
+      - "BETA_SPIKE_EVENT"
+      - "CHOP_TO_TREND_SHIFT"
+      - "CORRELATION_BREAKDOWN_EVENT"
+      - "TREND_TO_CHOP_SHIFT"
+      - "VOL_REGIME_SHIFT_EVENT"
+  desync:
+    description: "Cross-venue desync, lead-lag break, spot/perp basis shock"
+    events:
+      - "CROSS_VENUE_DESYNC"
+      - "INDEX_COMPONENT_DIVERGENCE"
+      - "LEAD_LAG_BREAK"
+      - "SPOT_PERP_BASIS_SHOCK"
+  temporal_anchor:
+    description: "Session open/close, funding timestamp, scheduled news"
+    events:
+      - "SESSION_OPEN_EVENT"
+      - "SESSION_CLOSE_EVENT"
+      - "FUNDING_TIMESTAMP_EVENT"
+      - "SCHEDULED_NEWS_WINDOW_EVENT"
+  execution_cost:
+    description: "Fee regime changes, slippage spikes, spread regime widening"
+    events:
+      - "FEE_REGIME_CHANGE_EVENT"
+      - "SLIPPAGE_SPIKE_EVENT"
+      - "SPREAD_REGIME_WIDENING_EVENT"
+  proxy:
+    description: "Proxy/derived signals for absorption and related mechanics"
+    events:
+      - "ABSORPTION_EVENT"
+  untagged:
+    description: "Events without assigned mechanism tags"
+    events: []
+
 # Lifecycle states for all events:
 #   active       - spec + implementation + taxonomy all present; covered by validate_synthetic_detector_truth
 #   experimental - implemented but under evaluation; not yet production-qualified
@@ -34,6 +160,9 @@ families:
       - event_id: "SWEEP_STOPRUN"
         lifecycle: active
         maturity: standard
+      - event_id: "DEPTH_RECOVERY_EVENT"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - DirectLiquidityStressDetector produces LIQUIDITY_STRESS_DIRECT, not recovery"
       - event_id: "ABSORPTION_EVENT"
         lifecycle: deprecated
         deprecation_note: "Superseded by ABSORPTION_PROXY."
@@ -116,6 +245,12 @@ families:
     events:
       - event_id: "FUNDING_EXTREME_ONSET"
         lifecycle: active
+      - event_id: "FUNDING_EXTREME_BREAKOUT"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - no detector produces this event_type"
+      - event_id: "FUNDING_EXTREME_STAGNATION"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - no detector produces this event_type"
       - event_id: "FUNDING_FLIP"
         lifecycle: active
       - event_id: "FUNDING_PERSISTENCE_TRIGGER"
@@ -128,12 +263,21 @@ families:
         lifecycle: active
       - event_id: "OI_FLUSH"
         lifecycle: active
+      - event_id: "OI_VOL_COMPRESSION_BUILDUP"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - OIShockDetector produces SPIKE/FLUSH, not compression"
+      - event_id: "OI_VOL_DIVERGENCE"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - OIShockDetector produces SPIKE/FLUSH, not divergence"
       - event_id: "LIQUIDATION_CASCADE"
         lifecycle: active
       - event_id: "DELEVERAGING_WAVE"
         lifecycle: active
       - event_id: "LIQUIDATION_EXHAUSTION_REVERSAL"
         lifecycle: experimental
+      - event_id: "IMBALANCE_ABSORPTION_REVERSAL"
+        lifecycle: deprecated
+        deprecation_note: "Orphaned - DirectLiquidityStressDetector produces LIQUIDITY_STRESS_DIRECT, not reversal"
       - event_id: "POST_DELEVERAGING_REBOUND"
         lifecycle: experimental
     states:

@@ -181,6 +181,7 @@ def build_agent_knob_rows() -> List[Dict[str, Any]]:
                 "phase2_gate_profile",
                 "search_spec",
                 "search_min_n",
+                "use_context_quality",
             ),
         )
     )

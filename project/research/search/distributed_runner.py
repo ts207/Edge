@@ -121,7 +121,18 @@ def run_distributed_search(
     if not non_empty_parts:
         return pd.DataFrame(columns=METRICS_COLUMNS)
 
-    combined = pd.concat(non_empty_parts, ignore_index=True)
+    normalized_parts = []
+    for p in non_empty_parts:
+        expected_cols = set(METRICS_COLUMNS)
+        if p.columns.tolist() != list(METRICS_COLUMNS):
+            for col in expected_cols - set(p.columns):
+                p = p.copy()
+                p[col] = None
+            p = p[list(METRICS_COLUMNS)]
+        p.attrs = {}
+        normalized_parts.append(p)
+
+    combined = pd.concat(normalized_parts, ignore_index=True)
     if "hypothesis_id" in combined.columns:
         combined = combined.drop_duplicates(subset=["hypothesis_id"]).reset_index(drop=True)
     return combined

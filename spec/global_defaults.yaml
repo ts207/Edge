@@ -8,5 +8,7 @@ defaults:
     funding_bps: ["extreme_pos", "extreme_neg"]
     ms_trend_state: ["0", "1", "2"]
     ms_spread_state: ["0", "1"]
+    ms_liq_state: ["THIN", "NORMAL", "FLUSH"]
+    ms_oi_state: ["DECEL", "STABLE", "ACCEL"]
     severity_bucket: ["minor", "moderate", "extreme"]
-  conditioning_cols: ["vol_regime", "carry_state", "funding_bps", "ms_trend_state", "ms_spread_state", "severity_bucket"]
+  conditioning_cols: ["vol_regime", "carry_state", "funding_bps", "ms_trend_state", "ms_spread_state", "ms_liq_state", "ms_oi_state", "severity_bucket"]

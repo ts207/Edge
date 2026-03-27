@@ -12,3 +12,13 @@ parameters:
   cooldown_bars: 48
   merge_gap_bars: 0
 canonical_family: EXECUTION_FRICTION
+trigger: Detector triggers on spread regime widening event pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 0-4
+  invalidation_conditions:
+  - Fees return to baseline
+  - Slippage normalizes
+  disabled_regimes:
+  - 'Market closed: execution data unavailable'
+cluster_id: execution_cost

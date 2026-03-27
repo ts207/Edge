@@ -10,11 +10,21 @@ class InteractionOp:
     EXCLUDE = "exclude"
 
 
+def _within_lag(l_ts: pd.Timestamp, r_ts: pd.Timestamp, lag: any) -> bool:
+    """Check if r_ts is within lag of l_ts."""
+    if isinstance(lag, pd.Timedelta):
+        return pd.Timedelta(0) < (r_ts - l_ts) <= lag
+    else:
+        diff = (r_ts - l_ts).total_seconds() / 60
+        return 0 < diff <= lag
+
+
 def detect_interactions(
-    df: pd.DataFrame, left_id: str, right_id: str, op: str, lag: int, interaction_name: str
+    df: pd.DataFrame, left_id: str, right_id: str, op: str, lag: any, interaction_name: str
 ) -> pd.DataFrame:
     """
     Detect intersections between two mechanisms (events/states).
+    lag can be int (minutes) or pd.Timedelta.
     """
     results = []
 
@@ -29,30 +39,32 @@ def detect_interactions(
 
         if op == InteractionOp.AND:
             for l_ts in left_ts:
-                if any(abs(r_ts - l_ts) <= lag for r_ts in right_ts):
-                    results.append(
-                        {
-                            "symbol": symbol,
-                            "interaction_id": interaction_name,
-                            "signal_ts": l_ts,
-                        }
-                    )
+                for r_ts in right_ts:
+                    if _within_lag(l_ts, r_ts, lag):
+                        results.append(
+                            {
+                                "symbol": symbol,
+                                "interaction_id": interaction_name,
+                                "signal_ts": l_ts,
+                            }
+                        )
+                        break
         elif op == InteractionOp.CONFIRM:
-            zero_td = pd.Timedelta(0) if isinstance(lag, pd.Timedelta) else 0
             for l_ts in left_ts:
-                matching_rights = [r_ts for r_ts in right_ts if zero_td < (r_ts - l_ts) <= lag]
-                if matching_rights:
-                    trigger_ts = matching_rights[0]
-                    results.append(
-                        {
-                            "symbol": symbol,
-                            "interaction_id": interaction_name,
-                            "signal_ts": trigger_ts,
-                        }
-                    )
+                for r_ts in right_ts:
+                    if _within_lag(l_ts, r_ts, lag):
+                        results.append(
+                            {
+                                "symbol": symbol,
+                                "interaction_id": interaction_name,
+                                "signal_ts": r_ts,
+                            }
+                        )
+                        break
         elif op == InteractionOp.EXCLUDE:
             for l_ts in left_ts:
-                if not any(abs(r_ts - l_ts) <= lag for r_ts in right_ts):
+                has_right = any(_within_lag(l_ts, r_ts, lag) for r_ts in right_ts)
+                if not has_right:
                     results.append(
                         {
                             "symbol": symbol,
@@ -60,5 +72,14 @@ def detect_interactions(
                             "signal_ts": l_ts,
                         }
                     )
+        elif op == InteractionOp.OR:
+            for l_ts in left_ts:
+                results.append(
+                    {"symbol": symbol, "interaction_id": interaction_name, "signal_ts": l_ts}
+                )
+            for r_ts in right_ts:
+                results.append(
+                    {"symbol": symbol, "interaction_id": interaction_name, "signal_ts": r_ts}
+                )
 
     return pd.DataFrame(results)

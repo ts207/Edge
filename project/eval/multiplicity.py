@@ -78,8 +78,49 @@ def benjamini_yekutieli(
     return reject.tolist(), np.asarray(q_values, dtype=float).tolist()
 
 
+def _load_mechanism_group_map() -> Dict[str, str]:
+    """Return a mapping of event_type -> primary mechanism tag (first tag in list).
+
+    Loads from the live events registry so the FDR grouping stays in sync with
+    tag assignments in events.yaml.  Falls back to an empty dict on any IO error
+    so callers degrade gracefully rather than raising.
+    """
+    try:
+        import yaml as _yaml
+        from pathlib import Path as _Path
+
+        candidates = [
+            _Path(__file__).resolve().parents[2] / "project" / "configs" / "registries" / "events.yaml",
+            _Path(__file__).resolve().parents[1] / "configs" / "registries" / "events.yaml",
+        ]
+        registry_path = next((p for p in candidates if p.exists()), None)
+        if registry_path is None:
+            return {}
+
+        with open(registry_path) as fh:
+            data = _yaml.safe_load(fh)
+
+        mapping: Dict[str, str] = {}
+        for event_type, cfg in data.get("events", {}).items():
+            tags = cfg.get("tags") or []
+            if tags:
+                mapping[str(event_type)] = str(tags[0])
+        return mapping
+    except Exception:
+        return {}
+
+
 def compute_multiplicity_metrics(df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFrame:
-    """Compute multiple q-value variants: Global, Family, Cluster-adjusted, BY."""
+    """Compute multiple q-value variants: Global, Mechanism, Family, Cluster-adjusted, BY.
+
+    Layer hierarchy
+    ---------------
+    1. Global     - all hypotheses pooled (most conservative)
+    2. Mechanism  - grouped by primary mechanism tag from events.yaml; operative FDR gate
+    3. Family     - legacy registry family grouping retained for audit / backward compat
+    4. Cluster    - behavior-signature hash groups (finest grain)
+    5. BY         - Benjamini-Yekutieli diagnostic under arbitrary dependence
+    """
     if df.empty:
         return df
     out = df.copy()
@@ -87,21 +128,31 @@ def compute_multiplicity_metrics(df: pd.DataFrame, alpha: float = 0.05) -> pd.Da
     # 1. Global Q (BH)
     _, out["q_value_global"] = benjamini_hochberg(out["p_value"].fillna(1.0).tolist(), alpha)
 
-    # 2. Family Q (BH per family_id)
+    # 2. Mechanism Q (BH per primary mechanism tag) -- operative FDR gate
+    mechanism_map = _load_mechanism_group_map()
+    if "mechanism_group" not in out.columns and "event_type" in out.columns:
+        out["mechanism_group"] = out["event_type"].map(mechanism_map).fillna("untagged")
+    if "mechanism_group" in out.columns:
+        out["q_value_mechanism"] = 1.0
+        for mgrp, group in out.groupby("mechanism_group"):
+            _, qvals = benjamini_hochberg(group["p_value"].fillna(1.0).tolist(), alpha)
+            out.loc[group.index, "q_value_mechanism"] = qvals
+
+    # 3. Family Q (BH per family_id) -- legacy audit column, no longer drives promotion
     if "family_id" in out.columns:
         out["q_value_family"] = 1.0
         for fid, group in out.groupby("family_id"):
             _, qvals = benjamini_hochberg(group["p_value"].fillna(1.0).tolist(), alpha)
             out.loc[group.index, "q_value_family"] = qvals
 
-    # 3. Cluster-adjusted Q (BH per cluster_id)
+    # 4. Cluster-adjusted Q (BH per cluster_id)
     if "cluster_id" in out.columns:
         out["q_value_cluster"] = 1.0
         for cid, group in out.groupby("cluster_id"):
             _, qvals = benjamini_hochberg(group["p_value"].fillna(1.0).tolist(), alpha)
             out.loc[group.index, "q_value_cluster"] = qvals
 
-    # 4. BY Diagnostic Q
+    # 5. BY Diagnostic Q
     _, out["q_value_by"] = benjamini_yekutieli(out["p_value"].fillna(1.0).tolist(), alpha)
 
     return out
@@ -170,8 +221,15 @@ def apply_program_multiplicity_control(
 
 
 def formalize_ids(df: pd.DataFrame) -> pd.DataFrame:
-    """M1: Formalize family and cluster assignment rules."""
+    """M1: Formalize family, cluster, and mechanism group assignment rules."""
     out = df.copy()
+
+    # Mechanism Group = Primary mechanism tag from events.yaml
+    if "mechanism_group" not in out.columns:
+        mechanism_map = _load_mechanism_group_map()
+        if "event_type" in out.columns:
+            out["mechanism_group"] = out["event_type"].map(mechanism_map).fillna("untagged")
+
     if "family_id" not in out.columns:
         # Family = Event Type + Horizon
         out["family_id"] = out.apply(

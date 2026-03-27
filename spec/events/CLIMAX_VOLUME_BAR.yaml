@@ -9,3 +9,13 @@ parameters:
   cooldown_bars: 24
   merge_gap_bars: 0
 canonical_family: FORCED_FLOW_AND_EXHAUSTION
+trigger: Detector triggers on climax volume bar pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 2-12
+  invalidation_conditions:
+  - Volume normalizes
+  - Momentum diverges further
+  disabled_regimes:
+  - 'Low volume: flow signals unreliable'
+cluster_id: exhaustion

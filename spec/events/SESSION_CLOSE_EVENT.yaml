@@ -8,6 +8,20 @@ parameters:
   cooldown_bars: 12
   merge_gap_bars: 0
   intensity_scale: 60
-  hours_utc: [0, 8, 16]
+  hours_utc:
+  - 0
+  - 8
+  - 16
   minute_close_start: 55
+  session_range_quantile: 0.0
+  session_vol_z_min: null
 canonical_family: TEMPORAL_STRUCTURE
+trigger: Detector triggers on session close event pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 0-4
+  invalidation_conditions:
+  - Session closes without price action
+  disabled_regimes:
+  - 'Weekend/holiday: session timing unreliable'
+cluster_id: temporal_anchor

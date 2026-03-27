@@ -255,7 +255,7 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
         ),
         script_patterns=(
             "pipelines/research/compile_strategy_blueprints.py",
-            "pipelines/research/build_strategy_candidates.py",
+            "research/build_strategy_candidates.py",
             "pipelines/research/select_profitable_strategies.py",
         ),
     ),

@@ -35,3 +35,13 @@ parameters:
   interaction_min_rows_per_year: 150
   min_hazard_events: 50
 canonical_family: POSITIONING_EXTREMES
+trigger: Detector triggers on funding normalization trigger pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 4-24
+  invalidation_conditions:
+  - Position unwinds within expected horizon
+  - Funding reverses sign
+  disabled_regimes:
+  - 'Low liquidity regime: OI/vol signals unreliable'
+cluster_id: funding_crowding

@@ -47,13 +47,6 @@ families:
     parameters: {}
   FORCED_FLOW_AND_EXHAUSTION:
     parameters: {}
-    templates:
-    - mean_reversion
-    - exhaustion_reversal
-    - momentum_fade
-    - range_reversion
-    - only_if_trend
-    - drawdown_filter
   INFORMATION_DESYNC:
     parameters: {}
     templates:
@@ -1939,3 +1932,15 @@ events:
     - 15m
     - 60m
     max_candidates_per_run: 350
+  CROSS_ASSET_DESYNC_EVENT:
+    active: false
+    canonical_family: INFORMATION_DESYNC
+    parameters:
+      lookback_window: 2880
+      threshold_z: 3.0
+      revert_z: 0.5
+      window_end: 12
+    reports_dir: cross_asset_desync
+    events_file: cross_asset_desync_events.parquet
+    signal_column: cross_asset_desync_event
+    synthetic_coverage: covered

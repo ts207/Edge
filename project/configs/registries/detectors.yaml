@@ -17,7 +17,7 @@ detector_ownership:
   FALSE_BREAKOUT: FalseBreakoutDetector
   FEE_REGIME_CHANGE_EVENT: FeeRegimeChangeDetector
   FND_DISLOC: FndDislocDetector
-  FORCED_FLOW_EXHAUSTION: FlowExhaustionDetector
+  FORCED_FLOW_EXHAUSTION: ForcedFlowExhaustionDetector
   FLOW_EXHAUSTION_PROXY: FlowExhaustionDetector
   FUNDING_EXTREME_ONSET: FundingExtremeOnsetDetector
   FUNDING_FLIP: FundingFlipDetector

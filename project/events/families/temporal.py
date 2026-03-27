@@ -20,7 +20,26 @@ class SessionOpenDetector(ThresholdDetector):
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
-        return {"ts": ts}
+        features = {"ts": ts}
+
+        spec = load_event_spec(self.event_type)
+        spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
+        range_q = float(params.get("session_range_quantile", spec_params.get("session_range_quantile", 0.0)))
+        vol_z_min = params.get("session_vol_z_min", spec_params.get("session_vol_z_min"))
+
+        if range_q > 0 and "session_range_pct" in df.columns:
+            window = int(params.get("range_window", 20))
+            rolling_q = df["session_range_pct"].rolling(window, min_periods=1).quantile(range_q)
+            features["range_gate"] = df["session_range_pct"] >= rolling_q
+        else:
+            features["range_gate"] = pd.Series(True, index=df.index)
+
+        if vol_z_min is not None and "session_vol_z" in df.columns:
+            features["vol_gate"] = df["session_vol_z"] >= float(vol_z_min)
+        else:
+            features["vol_gate"] = pd.Series(True, index=df.index)
+
+        return features
 
     def compute_raw_mask(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
@@ -29,7 +48,10 @@ class SessionOpenDetector(ThresholdDetector):
         spec = load_event_spec(self.event_type)
         spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
         hours = spec_params["hours_utc"]
-        return ((ts.dt.minute == 0) & ts.dt.hour.isin(hours)).fillna(False)
+        minute_open = int(params.get("minute_open", spec_params.get("minute_open", 0)))
+
+        time_mask = ((ts.dt.minute == minute_open) & ts.dt.hour.isin(hours)).fillna(False)
+        return (time_mask & features["range_gate"] & features["vol_gate"]).fillna(False)
 
     def compute_intensity(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
@@ -49,7 +71,26 @@ class SessionCloseDetector(ThresholdDetector):
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
-        return {"ts": ts}
+        features = {"ts": ts}
+
+        spec = load_event_spec(self.event_type)
+        spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
+        range_q = float(params.get("session_range_quantile", spec_params.get("session_range_quantile", 0.0)))
+        vol_z_min = params.get("session_vol_z_min", spec_params.get("session_vol_z_min"))
+
+        if range_q > 0 and "session_range_pct" in df.columns:
+            window = int(params.get("range_window", 20))
+            rolling_q = df["session_range_pct"].rolling(window, min_periods=1).quantile(range_q)
+            features["range_gate"] = df["session_range_pct"] >= rolling_q
+        else:
+            features["range_gate"] = pd.Series(True, index=df.index)
+
+        if vol_z_min is not None and "session_vol_z" in df.columns:
+            features["vol_gate"] = df["session_vol_z"] >= float(vol_z_min)
+        else:
+            features["vol_gate"] = pd.Series(True, index=df.index)
+
+        return features
 
     def compute_raw_mask(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
@@ -58,7 +99,10 @@ class SessionCloseDetector(ThresholdDetector):
         spec = load_event_spec(self.event_type)
         spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
         hours = spec_params["hours_utc"]
-        return ((ts.dt.minute >= 55) & ts.dt.hour.isin(hours)).fillna(False)
+        minute_close_start = int(params.get("minute_close_start", spec_params.get("minute_close_start", 55)))
+
+        time_mask = ((ts.dt.minute >= minute_close_start) & ts.dt.hour.isin(hours)).fillna(False)
+        return (time_mask & features["range_gate"] & features["vol_gate"]).fillna(False)
 
     def compute_intensity(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
@@ -85,14 +129,35 @@ class FundingTimestampDetector(ThresholdDetector):
         )
         return {"ts": ts, "funding": funding}
 
+    def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
+        ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
+        funding = df["funding_rate_scaled"].fillna(0.0) if "funding_rate_scaled" in df.columns else pd.Series(0.0, index=df.index)
+        features = {"ts": ts, "funding": funding}
+
+        spec = load_event_spec(self.event_type)
+        spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
+        abs_q = float(params.get("funding_abs_quantile", spec_params.get("funding_abs_quantile", 0.0)))
+
+        if abs_q > 0 and "funding_rate_scaled" in df.columns:
+            window = int(params.get("funding_window", 20))
+            funding_abs = funding.abs()
+            rolling_q = funding_abs.rolling(window, min_periods=1).quantile(abs_q)
+            features["funding_gate"] = funding_abs >= rolling_q
+        else:
+            features["funding_gate"] = pd.Series(True, index=df.index)
+
+        return features
+
     def compute_raw_mask(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any
     ) -> pd.Series:
         ts = features["ts"]
         spec = load_event_spec(self.event_type)
         spec_params = spec.get("parameters", {}) if isinstance(spec, dict) else {}
-        hours = spec_params["hours_utc"]
-        return ((ts.dt.minute == 0) & ts.dt.hour.isin(hours)).fillna(False)
+        hours = spec_params.get("hours_utc", [0, 8, 16])
+
+        time_mask = ((ts.dt.minute == 0) & ts.dt.hour.isin(hours)).fillna(False)
+        return (time_mask & features["funding_gate"]).fillna(False)
 
     def compute_intensity(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any

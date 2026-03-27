@@ -51,9 +51,15 @@ def hypotheses_to_bridge_candidates(
     *,
     min_t_stat: float = 1.5,
     min_n: int = 30,
+    min_events: int = 5,
 ) -> pd.DataFrame:
     """
     Map evaluator metrics to the production schema.
+    
+    Args:
+        min_events: Minimum number of events required. STATE_ regime features
+            generate candidates on every bar, creating noise. Default 5 filters
+            out regime-label candidates that fire on >50% of bars.
     """
     filtered, _ = split_bridge_candidates(metrics_df, min_t_stat=min_t_stat, min_n=min_n)
     if filtered.empty:
@@ -62,7 +68,23 @@ def hypotheses_to_bridge_candidates(
     # Core Mappings
     out = pd.DataFrame()
     out["candidate_id"] = filtered["hypothesis_id"].astype(str)
-    out["event_type"] = [_sanitize_event_type(row) for _, row in filtered.iterrows()]
+    event_types = [_sanitize_event_type(row) for _, row in filtered.iterrows()]
+    out["event_type"] = event_types
+    
+    # Only filter pure regime-label STATE_ events - ones that have very high event counts
+    # (appearing on >50% of bars = >280 bars in 3-day window)
+    # Keep legitimate events like VOL_SHOCK even if they have STATE_ prefix
+    high_frequency_mask = out["n_events"] > (577 * 0.5)  # More than 50% of bars
+    state_mask = out["event_type"].str.startswith(("STATE_", "TRANSITION_"))
+    
+    # Remove only STATE_/TRANSITION_ events that are high-frequency (regime labels)
+    noise_mask = state_mask & high_frequency_mask
+    if noise_mask.any():
+        filtered = filtered[~noise_mask].copy()
+        out = out[~noise_mask].copy()
+    
+    if filtered.empty:
+        return pd.DataFrame()
     out["direction"] = filtered["direction"].astype(str)
     out["rule_template"] = filtered["template_id"].astype(str)
     out["template_verb"] = out["rule_template"]

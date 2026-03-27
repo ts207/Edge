@@ -10,3 +10,13 @@ parameters:
   cooldown_bars: 12
   merge_gap_bars: 0
 canonical_family: VOLATILITY_TRANSITION
+trigger: Detector triggers on vol cluster shift pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 8-48
+  invalidation_conditions:
+  - Vol re-expands above threshold within horizon
+  - Second shock occurs before resolution
+  disabled_regimes:
+  - 'Low volume: vol computation noise-dominated'
+cluster_id: vol_regime

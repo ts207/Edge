@@ -177,6 +177,40 @@ def query_adjacent_regions(
     return {"adjacent_regions": filtered.head(limit).to_dict(orient="records")}
 
 
+def query_dynamic_weights(
+    *,
+    program_id: str,
+    data_root: Path | None = None,
+) -> Dict[str, Any]:
+    """Query dynamic quality weights computed from campaign promotion history."""
+    resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
+    memory_files = memory_paths(program_id, data_root=resolved_data_root)
+
+    tested_regions = pd.DataFrame()
+    if memory_files.tested_regions.exists():
+        tested_regions = pd.read_parquet(memory_files.tested_regions)
+
+    if tested_regions.empty:
+        return {"error": "No tested regions in campaign memory", "program_id": program_id}
+
+    from project.research.search_intelligence import _build_dynamic_quality_weights
+
+    static_weights = {
+        "HIGH": 3.0,
+        "MODERATE": 2.0,
+        "LOW": 1.0,
+        "DEFAULT": 1.0,
+    }
+
+    dynamic = _build_dynamic_quality_weights(tested_regions, static_weights, alpha=0.4)
+
+    return {
+        "program_id": program_id,
+        "static_weights": static_weights,
+        "dynamic_weights": dynamic,
+    }
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Query static and campaign memory artifacts.")
     parser.add_argument("--data_root", default=None)
@@ -211,6 +245,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     adjacent_parser.add_argument("--template", default="")
     adjacent_parser.add_argument("--limit", type=int, default=20)
 
+    dynamic_parser = subparsers.add_parser("dynamic_weights")
+    dynamic_parser.add_argument("--program_id", required=True)
+
     args = parser.parse_args(list(argv) if argv is not None else None)
     data_root = Path(args.data_root) if args.data_root else None
 
@@ -242,6 +279,11 @@ def main(argv: Iterable[str] | None = None) -> int:
             template_id=args.template_id,
             failure_class=args.failure_class,
             limit=args.limit,
+        )
+    elif args.command == "dynamic_weights":
+        payload = query_dynamic_weights(
+            program_id=args.program_id,
+            data_root=data_root,
         )
     else:
         payload = query_adjacent_regions(

@@ -64,7 +64,7 @@ def build_evaluation_stages(
         stages.append(
             (
                 "build_strategy_candidates",
-                project_root / "pipelines" / "research" / "build_strategy_candidates.py",
+                project_root / "research" / "build_strategy_candidates.py",
                 [
                     "--run_id",
                     run_id,

@@ -8,7 +8,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - absorption_recovery
+    - proxy
   BAND_BREAK:
     detector: BandBreakDetector
     enabled: true
@@ -18,7 +20,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - statistical_stretch
   BASIS_DISLOC:
     detector: BasisDislocationDetector
     enabled: true
@@ -28,7 +31,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - basis_dislocation
   BASIS_SNAPBACK:
     detector: BasisDislocationDetector
     enabled: true
@@ -38,7 +42,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - basis_dislocation
   BETA_SPIKE_EVENT:
     detector: BetaSpikeDetector
     enabled: true
@@ -48,7 +53,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - regime_shift
   BREAKOUT_TRIGGER:
     detector: BreakoutTriggerDetector
     enabled: true
@@ -58,7 +64,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
+    - trend_momentum
   CHOP_TO_TREND_SHIFT:
     detector: ChopToTrendDetector
     enabled: true
@@ -68,7 +76,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - regime_shift
+    - trend_momentum
   CLIMAX_VOLUME_BAR:
     detector: ClimaxVolumeDetector
     enabled: true
@@ -78,7 +88,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - exhaustion
+    - high_urgency
   COPULA_PAIRS_TRADING:
     detector: CopulaPairsTradingDetector
     enabled: true
@@ -88,7 +100,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - basis_dislocation
   CORRELATION_BREAKDOWN_EVENT:
     detector: CorrelationBreakdownDetector
     enabled: true
@@ -98,7 +111,19 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - regime_shift
+  CROSS_ASSET_DESYNC_EVENT:
+    detector: CrossAssetDesyncDetector
+    enabled: true
+    family: INFORMATION_DESYNC
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
+    tags:
+    - desync
   CROSS_VENUE_CATCHUP:
     detector: BasisDislocationDetector
     enabled: true
@@ -108,7 +133,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - basis_dislocation
+    - desync
   CROSS_VENUE_DESYNC:
     detector: CrossVenueDesyncDetector
     enabled: true
@@ -118,7 +145,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - desync
   DELEVERAGING_WAVE:
     detector: DeleveragingWaveDetector
     enabled: true
@@ -128,7 +156,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - forced_liquidation
+    - oi_dynamic
   DEPTH_COLLAPSE:
     detector: DepthCollapseDetector
     enabled: true
@@ -138,17 +168,19 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - liquidity_stress
   DEPTH_RECOVERY_EVENT:
     detector: DirectLiquidityStressDetector
-    enabled: true
+    enabled: false
     family: LIQUIDITY_DISLOCATION
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - absorption_recovery
   FAILED_CONTINUATION:
     detector: FailedContinuationDetector
     enabled: true
@@ -158,7 +190,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - exhaustion
   FALSE_BREAKOUT:
     detector: FalseBreakoutDetector
     enabled: true
@@ -168,7 +201,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
+    - exhaustion
   FEE_REGIME_CHANGE_EVENT:
     detector: FeeRegimeChangeDetector
     enabled: true
@@ -178,7 +213,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - execution_cost
   FND_DISLOC:
     detector: FndDislocDetector
     enabled: true
@@ -188,9 +224,10 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - basis_dislocation
   FORCED_FLOW_EXHAUSTION:
-    detector: FlowExhaustionDetector
+    detector: ForcedFlowExhaustionDetector
     enabled: true
     family: FORCED_FLOW_AND_EXHAUSTION
     instrument_classes:
@@ -198,17 +235,20 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - exhaustion
+    - forced_liquidation
   FUNDING_EXTREME_BREAKOUT:
     detector: FundingDetector
-    enabled: true
+    enabled: false
     family: POSITIONING_EXTREMES
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
   FUNDING_EXTREME_ONSET:
     detector: FundingExtremeOnsetDetector
     enabled: true
@@ -218,17 +258,19 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
   FUNDING_EXTREME_STAGNATION:
     detector: FundingDetector
-    enabled: true
+    enabled: false
     family: POSITIONING_EXTREMES
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
   FUNDING_FLIP:
     detector: FundingFlipDetector
     enabled: true
@@ -238,7 +280,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
+    - high_urgency
   FUNDING_NORMALIZATION_TRIGGER:
     detector: FundingNormalizationDetector
     enabled: true
@@ -248,7 +292,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
   FUNDING_PERSISTENCE_TRIGGER:
     detector: FundingPersistenceDetector
     enabled: true
@@ -258,7 +303,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - funding_crowding
   FUNDING_TIMESTAMP_EVENT:
     detector: FundingTimestampDetector
     enabled: true
@@ -268,7 +314,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - temporal_anchor
+    - funding_crowding
   GAP_OVERSHOOT:
     detector: GapOvershootDetector
     enabled: true
@@ -278,17 +326,20 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - statistical_stretch
   IMBALANCE_ABSORPTION_REVERSAL:
     detector: DirectLiquidityStressDetector
-    enabled: true
+    enabled: false
     family: POSITIONING_EXTREMES
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - forced_liquidation
+    - absorption_recovery
   INDEX_COMPONENT_DIVERGENCE:
     detector: IndexComponentDivergenceDetector
     enabled: true
@@ -298,7 +349,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - desync
   LEAD_LAG_BREAK:
     detector: LeadLagBreakDetector
     enabled: true
@@ -308,7 +360,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - desync
   LIQUIDATION_CASCADE:
     detector: LiquidationCascadeDetector
     enabled: true
@@ -318,7 +371,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - forced_liquidation
+    - high_urgency
   LIQUIDATION_EXHAUSTION_REVERSAL:
     detector: PostDeleveragingReboundDetector
     enabled: true
@@ -328,7 +383,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - forced_liquidation
   LIQUIDITY_GAP_PRINT:
     detector: LiquidityGapDetector
     enabled: true
@@ -338,7 +394,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - liquidity_stress
   LIQUIDITY_SHOCK:
     detector: LiquidityStressDetector
     enabled: true
@@ -348,7 +405,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - liquidity_stress
+    - high_urgency
   LIQUIDITY_VACUUM:
     detector: LiquidityVacuumDetector
     enabled: true
@@ -358,7 +417,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - liquidity_stress
+    - high_urgency
   MOMENTUM_DIVERGENCE_TRIGGER:
     detector: MomentumDivergenceDetector
     enabled: true
@@ -368,7 +429,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - exhaustion
   OI_FLUSH:
     detector: OIFlushDetector
     enabled: true
@@ -378,7 +440,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
+    - high_urgency
   OI_SPIKE_NEGATIVE:
     detector: OISpikeNegativeDetector
     enabled: true
@@ -388,7 +452,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
   OI_SPIKE_POSITIVE:
     detector: OISpikePositiveDetector
     enabled: true
@@ -398,27 +463,32 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
   OI_VOL_COMPRESSION_BUILDUP:
     detector: OIShockDetector
-    enabled: true
+    enabled: false
     family: POSITIONING_EXTREMES
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
+    - vol_regime
   OI_VOL_DIVERGENCE:
     detector: OIShockDetector
-    enabled: true
+    enabled: false
     family: POSITIONING_EXTREMES
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
+    - vol_regime
   ORDERFLOW_IMBALANCE_SHOCK:
     detector: OrderflowImbalanceDetector
     enabled: true
@@ -428,7 +498,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - orderflow_imbalance
   OVERSHOOT_AFTER_SHOCK:
     detector: OvershootDetector
     enabled: true
@@ -438,7 +509,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - statistical_stretch
   PULLBACK_PIVOT:
     detector: PullbackPivotDetector
     enabled: true
@@ -448,7 +520,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
   RANGE_BREAKOUT:
     detector: RangeBreakoutDetector
     enabled: true
@@ -458,7 +531,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
   RANGE_COMPRESSION_END:
     detector: RangeCompressionDetector
     enabled: true
@@ -468,7 +542,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
   SCHEDULED_NEWS_WINDOW_EVENT:
     detector: ScheduledNewsDetector
     enabled: true
@@ -478,7 +553,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - temporal_anchor
   SEQ_FND_EXTREME_THEN_BREAKOUT:
     detector: EventSequenceDetector
     enabled: true
@@ -488,7 +564,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: false
-    tags: []
+    tags:
+    - funding_crowding
+    - sequence
   SEQ_LIQ_CASCADE_THEN_EXHAUST:
     detector: EventSequenceDetector
     enabled: true
@@ -498,7 +576,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: false
-    tags: []
+    tags:
+    - forced_liquidation
+    - sequence
   SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
     detector: EventSequenceDetector
     enabled: true
@@ -508,7 +588,10 @@ events:
     - futures
     requires_features: []
     sequence_eligible: false
-    tags: []
+    tags:
+    - liquidity_stress
+    - absorption_recovery
+    - sequence
   SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
     detector: EventSequenceDetector
     enabled: true
@@ -518,7 +601,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: false
-    tags: []
+    tags:
+    - oi_dynamic
+    - sequence
   SEQ_VOL_COMP_THEN_BREAKOUT:
     detector: EventSequenceDetector
     enabled: true
@@ -528,7 +613,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: false
-    tags: []
+    tags:
+    - vol_regime
+    - sequence
   SESSION_CLOSE_EVENT:
     detector: SessionCloseDetector
     enabled: true
@@ -538,7 +625,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - temporal_anchor
   SESSION_OPEN_EVENT:
     detector: SessionOpenDetector
     enabled: true
@@ -548,7 +636,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - temporal_anchor
   SLIPPAGE_SPIKE_EVENT:
     detector: SlippageSpikeDetector
     enabled: true
@@ -558,7 +647,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - execution_cost
+    - high_urgency
   SPOT_PERP_BASIS_SHOCK:
     detector: SpotPerpBasisShockDetector
     enabled: true
@@ -568,7 +659,10 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - desync
+    - basis_dislocation
+    - high_urgency
   SPREAD_BLOWOUT:
     detector: SpreadBlowoutDetector
     enabled: true
@@ -578,7 +672,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - liquidity_stress
+    - execution_cost
   SPREAD_REGIME_WIDENING_EVENT:
     detector: SpreadRegimeWideningDetector
     enabled: true
@@ -588,7 +684,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - execution_cost
+    - liquidity_stress
   SUPPORT_RESISTANCE_BREAK:
     detector: SREventDetector
     enabled: true
@@ -598,7 +696,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
   SWEEP_STOPRUN:
     detector: StopRunDetector
     enabled: true
@@ -608,7 +707,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - orderflow_imbalance
+    - high_urgency
   TREND_ACCELERATION:
     detector: TrendAccelerationDetector
     enabled: true
@@ -621,7 +722,8 @@ events:
       trend_window: 96
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
   TREND_DECELERATION:
     detector: TrendDecelerationDetector
     enabled: true
@@ -631,7 +733,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - trend_momentum
   TREND_EXHAUSTION_TRIGGER:
     detector: TrendExhaustionDetector
     enabled: true
@@ -641,7 +744,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - exhaustion
+    - trend_momentum
   TREND_TO_CHOP_SHIFT:
     detector: TrendToChopDetector
     enabled: true
@@ -651,7 +756,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - regime_shift
+    - trend_momentum
   VOL_CLUSTER_SHIFT:
     detector: VolClusterShiftDetector
     enabled: true
@@ -661,17 +768,20 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
   VOL_COMPRESSION_BREAKOUT:
     detector: RangeCompressionDetector
     enabled: true
-    family: POSITIONING_EXTREMES
+    family: VOLATILITY_TRANSITION
     instrument_classes:
     - crypto
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - oi_dynamic
+    - vol_regime
   VOL_REGIME_SHIFT_EVENT:
     detector: VolRegimeShiftDetector
     enabled: true
@@ -681,7 +791,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - regime_shift
+    - vol_regime
   VOL_RELAXATION_START:
     detector: VolRelaxationDetector
     enabled: true
@@ -691,7 +803,8 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
   VOL_SHOCK:
     detector: VolShockRelaxationDetector
     enabled: true
@@ -701,7 +814,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
+    - high_urgency
   VOL_SPIKE:
     detector: VolSpikeDetector
     enabled: true
@@ -711,7 +826,9 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - vol_regime
+    - high_urgency
   ZSCORE_STRETCH:
     detector: ZScoreStretchDetector
     enabled: true
@@ -721,5 +838,6 @@ events:
     - futures
     requires_features: []
     sequence_eligible: true
-    tags: []
+    tags:
+    - statistical_stretch
 version: 1

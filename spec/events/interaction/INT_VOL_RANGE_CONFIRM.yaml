@@ -1,0 +1,9 @@
+event_type: INT_VOL_RANGE_CONFIRM
+synthetic_coverage: experimental
+description: "VOL_SHOCK confirmed by RANGE_COMPRESSION_END within 72 bars — volatility shock then market digestion"
+parameters:
+  left_event: VOL_SHOCK
+  right_event: RANGE_COMPRESSION_END
+  op: confirm
+  max_gap_bars: 72
+canonical_family: VOLATILITY_TRANSITION

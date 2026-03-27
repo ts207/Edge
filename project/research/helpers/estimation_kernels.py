@@ -100,6 +100,7 @@ def _estimate_adaptive_lambda(
     lambda_max: float,
     eps: float,
     min_total_samples: int,
+    min_samples_for_adaptive_lambda: int = 30,
     previous_lambda_by_parent: Optional[Dict[Tuple[Any, ...], float]] = None,
     lambda_smoothing_alpha: float = 0.1,
     lambda_shock_cap_pct: float = 0.5,
@@ -160,6 +161,13 @@ def _estimate_adaptive_lambda(
                 / max(float((n - 1.0).clip(lower=0.0).sum()), 1.0)
             )
             sigma_between = 0.0
+        elif total_n < float(min_samples_for_adaptive_lambda):
+            # Rare event: insufficient data for reliable adaptive lambda estimation.
+            # Use conservative fixed lambda instead of adaptive estimate.
+            lam = float(fixed_lambda)
+            status = "rare_event_fixed"
+            sigma_within = np.nan
+            sigma_between = np.nan
         else:
             mean_global = float((n * mean).sum() / max(total_n, 1.0))
             denom_within = float((n - 1.0).clip(lower=0.0).sum())
@@ -469,6 +477,7 @@ def _apply_hierarchical_shrinkage(
         lambda_max=float(adaptive_lambda_max),
         eps=float(adaptive_lambda_eps),
         min_total_samples=int(adaptive_lambda_min_total_samples),
+        min_samples_for_adaptive_lambda=30,
         previous_lambda_by_parent=(previous_lambda_maps or {}).get("family"),
         lambda_smoothing_alpha=float(lambda_smoothing_alpha),
         lambda_shock_cap_pct=float(lambda_shock_cap_pct),
@@ -537,6 +546,7 @@ def _apply_hierarchical_shrinkage(
         lambda_max=float(adaptive_lambda_max),
         eps=float(adaptive_lambda_eps),
         min_total_samples=int(adaptive_lambda_min_total_samples),
+        min_samples_for_adaptive_lambda=30,
         previous_lambda_by_parent=(previous_lambda_maps or {}).get("event"),
         lambda_smoothing_alpha=float(lambda_smoothing_alpha),
         lambda_shock_cap_pct=float(lambda_shock_cap_pct),
@@ -606,6 +616,7 @@ def _apply_hierarchical_shrinkage(
         lambda_max=float(adaptive_lambda_max),
         eps=float(adaptive_lambda_eps),
         min_total_samples=int(adaptive_lambda_min_total_samples),
+        min_samples_for_adaptive_lambda=30,
         previous_lambda_by_parent=(previous_lambda_maps or {}).get("state"),
         lambda_smoothing_alpha=float(lambda_smoothing_alpha),
         lambda_shock_cap_pct=float(lambda_shock_cap_pct),
@@ -675,6 +686,7 @@ def _apply_hierarchical_shrinkage(
         lambda_max=float(adaptive_lambda_max),
         eps=float(adaptive_lambda_eps),
         min_total_samples=int(adaptive_lambda_min_total_samples),
+        min_samples_for_adaptive_lambda=30,
         previous_lambda_by_parent=None,
         lambda_smoothing_alpha=float(lambda_smoothing_alpha),
         lambda_shock_cap_pct=float(lambda_shock_cap_pct),
@@ -712,6 +724,11 @@ def _apply_hierarchical_shrinkage(
     )
 
     out["shrinkage_factor"] = 1.0 - out["shrinkage_weight_state"]
+
+    # Rare event flag: indicate when sample size is too small for reliable adaptive shrinkage
+    # This helps distinguish "truly no edge" from "edge obscured by shrinkage"
+    RARE_EVENT_THRESHOLD = 50
+    out["rare_event_flag"] = (out["_n"] < RARE_EVENT_THRESHOLD).astype(bool)
 
     # S2: LOSO Stability and Diagnostics
     out["shrinkage_loso_stable"] = _compute_loso_stability(

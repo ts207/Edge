@@ -1,0 +1,9 @@
+event_type: INT_LIQ_OI_CONFIRM
+synthetic_coverage: experimental
+description: "LIQUIDATION_CASCADE confirmed by OI_FLUSH within 12 bars — forced selling followed by OI normalization"
+parameters:
+  left_event: LIQUIDATION_CASCADE
+  right_event: OI_FLUSH
+  op: confirm
+  max_gap_bars: 12
+canonical_family: POSITIONING_EXTREMES

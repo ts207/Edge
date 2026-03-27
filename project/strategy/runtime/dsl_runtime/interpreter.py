@@ -292,7 +292,12 @@ class DslInterpreterV1:
             entry_sides[:] = 1
         elif blueprint.direction == "short":
             entry_sides[:] = -1
-        elif blueprint.direction in ("conditional", "both"):
+        elif blueprint.direction == "both":
+            # NOTE: "both" policy creates two separate evaluation frames in the search
+            # pipeline, not a single merged frame. This fallback uses bias but the
+            # authoritative "both" resolution happens at hypothesis generation time.
+            entry_sides[:] = bias if bias != 0 else 1
+        elif blueprint.direction == "conditional":
             # Check if there is a specific sign or direction feature attached to the event
             if "sign" in frame.columns:
                 entry_sides[:] = np.sign(_to_float_arr(frame["sign"].values))

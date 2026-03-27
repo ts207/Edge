@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Callable
 
+import pandas as pd
+
 from project.live.health_checks import evaluate_pretrade_microstructure_gate
 from project.live.state import LiveStateStore
 from project.live.oms import LiveOrder, OrderSide, OrderType
@@ -45,6 +47,10 @@ class KillSwitchStatus:
 
 
 class KillSwitchManager:
+    TIER1_FEATURES = ["vol_regime", "ms_spread_state", "funding_abs_pct"]
+    PSI_ERROR_THRESHOLD = 0.50
+    PSI_WARN_THRESHOLD = 0.25
+
     def __init__(self, state_store: LiveStateStore, *, microstructure_recovery_streak: int = 3):
         self.state_store = state_store
         self.status = KillSwitchStatus()
@@ -265,6 +271,56 @@ class KillSwitchManager:
             gate["recovery_streak"] = int(self.status.recovery_streak)
             gate["required_recovery_streak"] = int(self.microstructure_recovery_streak)
         return gate
+
+    def check_feature_drift(
+        self,
+        research_features: pd.DataFrame,
+        live_features: pd.DataFrame,
+        threshold: float = 0.50,
+    ) -> Dict[str, Any]:
+        """
+        Check for feature drift between research baseline and live features.
+        Triggers kill-switch if PSI exceeds threshold on any tier-1 feature.
+        """
+        drift_results: Dict[str, Any] = {
+            "drifted_features": [],
+            "psi_scores": {},
+            "triggered": False,
+        }
+
+        for feature in self.TIER1_FEATURES:
+            if feature not in research_features.columns or feature not in live_features.columns:
+                continue
+
+            research_samples = research_features[feature].dropna()
+            live_samples = live_features[feature].dropna()
+
+            if research_samples.empty or live_samples.empty:
+                continue
+
+            from project.live.drift import calculate_feature_drift
+            drift = calculate_feature_drift(
+                research_samples,
+                live_samples,
+                threshold=self.PSI_WARN_THRESHOLD,
+            )
+
+            psi = drift.get("psi", 0.0)
+            drift_results["psi_scores"][feature] = psi
+
+            if psi > threshold:
+                drift_results["drifted_features"].append(feature)
+
+        if drift_results["drifted_features"]:
+            drift_results["triggered"] = True
+            features_str = ", ".join(drift_results["drifted_features"])
+            psi_str = ", ".join(f"{k}={v:.3f}" for k, v in drift_results["psi_scores"].items())
+            self.trigger(
+                KillSwitchReason.FEATURE_DRIFT,
+                f"Feature drift detected: {features_str} (PSI: {psi_str})",
+            )
+
+        return drift_results
 
 
 class UnwindOrchestrator:

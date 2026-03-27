@@ -132,3 +132,33 @@ def summarize_execution_attribution_by(
 
 def record_to_dict(record: ExecutionAttributionRecord) -> Dict[str, Any]:
     return asdict(record)
+
+
+def write_attribution_summary(
+    records: List[ExecutionAttributionRecord],
+    output_path: str,
+) -> None:
+    """Write aggregated attribution summaries to parquet for research feedback loop."""
+    import pandas as pd
+    from pathlib import Path
+
+    if not records:
+        return
+
+    df = pd.DataFrame([record_to_dict(r) for r in records])
+
+    by_key = {}
+    for key in ["symbol", "volatility_regime", "microstructure_regime"]:
+        by_key[key] = summarize_execution_attribution_by(records, key)
+
+    summaries = []
+    for key, group_dict in by_key.items():
+        for group_value, stats in group_dict.items():
+            row = {"group_key": key, "group_value": group_value}
+            row.update(stats)
+            summaries.append(row)
+
+    if summaries:
+        summary_df = pd.DataFrame(summaries)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        summary_df.to_parquet(output_path, index=False)

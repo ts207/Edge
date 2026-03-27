@@ -10,3 +10,13 @@ signal_column: seq_oi_spikepos_then_vol_spike_event
 parameters:
   max_gap_bars: 48
   cooldown_bars: 24
+trigger: Detector triggers on seq oi spikepos then vol spike pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 4-24
+  invalidation_conditions:
+  - Position unwinds within expected horizon
+  - Funding reverses sign
+  disabled_regimes:
+  - 'Low liquidity regime: OI/vol signals unreliable'
+cluster_id: oi_dynamic

@@ -4,14 +4,15 @@ event_type: LIQUIDATION_EXHAUSTION_REVERSAL
 synthetic_coverage: covered
 active: true
 status: implemented
-description: Canonical rebound phase after a forced deleveraging cluster cools, liquidation pressure fades, and price reverses against the prior cluster direction.
+description: Canonical rebound phase after a forced deleveraging cluster cools, liquidation
+  pressure fades, and price reverses against the prior cluster direction.
 reports_dir: forced_flow_and_exhaustion
 events_file: forced_flow_and_exhaustion_events.parquet
 signal_column: liquidation_exhaustion_reversal_event
 parameters:
   rebound_window_bars: 12
   rebound_window: 6
-  rebound_return_min: 0.0010
+  rebound_return_min: 0.001
   rv_peak_decay_ratio: 1.01
   liq_cooldown_ratio: 0.55
   liquidation_cooldown_abs_max: 100000.0
@@ -19,5 +20,16 @@ parameters:
   cooldown_bars: 24
   merge_gap_bars: 0
 notes:
-  - This detector is evaluated on bar features and depends on a prior forced-flow cluster being present in recent history.
+- This detector is evaluated on bar features and depends on a prior forced-flow cluster
+  being present in recent history.
 canonical_family: FORCED_FLOW_AND_EXHAUSTION
+trigger: Detector triggers on liquidation exhaustion reversal pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 2-12
+  invalidation_conditions:
+  - Volume normalizes
+  - Momentum diverges further
+  disabled_regimes:
+  - 'Low volume: flow signals unreliable'
+cluster_id: forced_liquidation
