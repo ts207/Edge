@@ -45,7 +45,9 @@ def test_run_regime_shakeout_matrix_writes_manifest(tmp_path, monkeypatch):
     manifest = out_dir / "regime_shakeout_manifest.json"
     assert manifest.exists()
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    assert payload["planned_runs"] == 24
+    assert payload["planned_runs"] == 88
     assert payload["failures"] == 0
-    assert len(payload["results"]) == 24
+    assert len(payload["results"]) == 88
+    assert any(row["slice_type"] == "regime_first" for row in payload["results"])
+    assert any(row["slice_type"] == "raw_control" for row in payload["results"])
     assert payload["results"][0]["validated_plan"]["estimated_hypothesis_count"] >= 0

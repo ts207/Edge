@@ -13,6 +13,7 @@ from project.research.services.regime_shakeout_service import (
     load_regime_shakeout_matrix,
     materialize_regime_shakeout_slices,
     run_regime_shakeout_matrix,
+    summarize_shakeout_run_group,
     summarize_shakeout_run,
 )
 from project.research.services.run_comparison_service import research_diagnostics_paths
@@ -79,12 +80,14 @@ def test_materialize_regime_shakeout_slices_expands_pairs():
 
     slices = materialize_regime_shakeout_slices(matrix)
 
-    assert len(slices) == 24
+    assert len(slices) > 24
     regime_slices = [row for row in slices if row.slice_type == "regime_first"]
     raw_slices = [row for row in slices if row.slice_type == "raw_control"]
     assert len(regime_slices) == 12
-    assert len(raw_slices) == 12
+    assert len(raw_slices) > 12
     assert all(row.raw_control_events for row in raw_slices)
+    assert all(len(row.raw_control_events) == 1 for row in raw_slices)
+    assert all(row.baseline_event_type for row in raw_slices)
 
 
 def test_build_shakeout_proposal_payload_switches_trigger_surface():
@@ -100,7 +103,7 @@ def test_build_shakeout_proposal_payload_switches_trigger_surface():
 
     assert regime_payload["trigger_space"]["canonical_regimes"] == [regime_slice.canonical_regime]
     assert regime_payload["trigger_space"]["events"] == {}
-    assert raw_payload["trigger_space"]["events"]["include"] == list(raw_slice.raw_control_events)
+    assert raw_payload["trigger_space"]["events"]["include"] == [raw_slice.baseline_event_type]
     assert raw_payload["trigger_space"]["canonical_regimes"] == []
 
 
@@ -198,7 +201,7 @@ def test_build_shakeout_audit_pairs_regime_and_raw_runs(tmp_path):
     assert len(audit["pairs"]) == 1
     pair = audit["pairs"][0]
     assert pair["regime_run_id"] == regime_run.run_id
-    assert pair["raw_control_run_id"] == raw_run.run_id
+    assert pair["raw_control_run_ids"] == [raw_run.run_id]
     assert pair["delta"]["promoted_count"] == 1
 
 
@@ -268,6 +271,53 @@ def test_summarize_shakeout_run_prefers_edge_candidate_surface(tmp_path):
     assert summary["candidate_surface"] == "edge_candidates"
     assert summary["candidate_count"] == 1
     assert summary["unique_canonical_regimes_represented"] == 1
+
+
+def test_summarize_shakeout_run_group_aggregates_raw_controls(tmp_path):
+    common = {
+        "canonical_regime": "BASIS_FUNDING_DISLOCATION",
+        "recommended_bucket": "trade_generating",
+        "regime_bucket": "trade_generating",
+        "routing_profile_id": "routing_v1",
+    }
+    _seed_run(
+        tmp_path,
+        "raw_a",
+        phase2_rows=[
+            {
+                "candidate_id": "a1",
+                "event_type": "BASIS_DISLOC",
+                "subtype": "basis_dislocation",
+                "phase": "shock",
+                "evidence_mode": "statistical",
+                **common,
+            }
+        ],
+        promoted_rows=[],
+    )
+    _seed_run(
+        tmp_path,
+        "raw_b",
+        phase2_rows=[
+            {
+                "candidate_id": "b1",
+                "event_type": "FND_DISLOC",
+                "subtype": "funding_dislocation",
+                "phase": "shock",
+                "evidence_mode": "direct",
+                **common,
+            }
+        ],
+        promoted_rows=[],
+    )
+
+    summary = summarize_shakeout_run_group(data_root=tmp_path, run_ids=["raw_a", "raw_b"])
+
+    assert summary["candidate_surface"] == "edge_candidates"
+    assert summary["candidate_count"] == 2
+    assert summary["unique_raw_events_represented"] == 2
+    assert summary["unique_canonical_regimes_represented"] == 1
+    assert summary["contract_health"]["passed"] is True
 
 
 def test_summarize_shakeout_run_empty_candidate_surface_is_not_contract_failure(tmp_path):
@@ -342,7 +392,7 @@ def test_run_regime_shakeout_matrix_reuses_successful_rows(tmp_path, monkeypatch
 
     manifest = json.loads((out_dir / "regime_shakeout_manifest.json").read_text(encoding="utf-8"))
     reused = next(row for row in manifest["results"] if row["run_id"].endswith("_regime"))
-    rerun = next(row for row in manifest["results"] if row["run_id"].endswith("_raw"))
+    rerun = next(row for row in manifest["results"] if "_raw_" in row["run_id"])
 
     assert result["planned_runs"] == 2
     assert reused["reused_result"] is True

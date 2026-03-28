@@ -16,6 +16,7 @@ import yaml
 from project import PROJECT_ROOT
 from project.core.config import get_data_root
 from project.domain.compiled_registry import get_domain_registry
+from project.events.config import compose_event_config
 from project.io.utils import ensure_dir, read_parquet
 from project.research.agent_io.execute_proposal import build_run_all_command
 from project.research.agent_io.proposal_schema import _proposal_settable_knobs, load_agent_proposal
@@ -45,6 +46,7 @@ DEFAULT_AUDIT_THRESHOLDS: Dict[str, float] = {
 }
 
 _PROPOSAL_SETTABLE_KNOBS = _proposal_settable_knobs()
+_SEARCH_LIMITS_PATH = PROJECT_ROOT / "configs" / "registries" / "search_limits.yaml"
 
 
 @dataclass(frozen=True)
@@ -59,6 +61,7 @@ class ShakeoutSlice:
     end: str
     templates: tuple[str, ...]
     raw_control_events: tuple[str, ...]
+    baseline_event_type: str
     subtypes: tuple[str, ...]
     phases: tuple[str, ...]
     evidence_modes: tuple[str, ...]
@@ -189,6 +192,20 @@ def _routing_templates_for_regime(canonical_regime: str) -> list[str]:
     return templates or list(registry.default_templates() or ("mean_reversion",))
 
 
+def _max_templates_per_run() -> int:
+    if not _SEARCH_LIMITS_PATH.exists():
+        return 6
+    try:
+        payload = yaml.safe_load(_SEARCH_LIMITS_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return 6
+    limits = payload.get("limits", {}) if isinstance(payload, Mapping) else {}
+    try:
+        return max(int(limits.get("max_templates_per_run", 6)), 1)
+    except (TypeError, ValueError):
+        return 6
+
+
 def _raw_control_events_for_regime(canonical_regime: str, raw: Mapping[str, Any]) -> list[str]:
     explicit = _as_str_list(raw.get("raw_control_events"))
     if explicit:
@@ -197,6 +214,29 @@ def _raw_control_events_for_regime(canonical_regime: str, raw: Mapping[str, Any]
     if auto:
         return list(auto)
     raise ValueError(f"No executable raw control events found for regime {canonical_regime}.")
+
+
+def _native_templates_for_event(event_type: str) -> list[str]:
+    registry = get_domain_registry()
+    allowed_templates = set(registry.template_operator_definitions.keys())
+    max_templates = _max_templates_per_run()
+    cfg = compose_event_config(str(event_type).strip().upper())
+    templates = [template for template in cfg.templates if template in allowed_templates]
+    if templates:
+        return templates[:max_templates]
+    family = str(cfg.legacy_family or "").strip().upper()
+    family_templates = [
+        template
+        for template in (list(registry.family_execution_templates(family)) if family else [])
+        if template in allowed_templates
+    ]
+    if family_templates:
+        return family_templates[:max_templates]
+    return [
+        template
+        for template in (registry.default_templates() or ("mean_reversion",))
+        if template in allowed_templates
+    ][:max_templates]
 
 
 def materialize_regime_shakeout_slices(matrix: Mapping[str, Any]) -> list[ShakeoutSlice]:
@@ -233,6 +273,7 @@ def materialize_regime_shakeout_slices(matrix: Mapping[str, Any]) -> list[Shakeo
                     end=str(window["end"]),
                     templates=tuple(templates),
                     raw_control_events=tuple(raw_control_events),
+                    baseline_event_type="",
                     subtypes=tuple(subtypes),
                     phases=tuple(phases),
                     evidence_modes=tuple(evidence_modes),
@@ -245,13 +286,29 @@ def materialize_regime_shakeout_slices(matrix: Mapping[str, Any]) -> list[Shakeo
                         **common,
                     )
                 )
-                slices.append(
-                    ShakeoutSlice(
-                        run_id=f"shakeout_{regime_slug}_{symbol_slug}_{_slug(window_label)}_raw",
-                        slice_type="raw_control",
-                        **common,
+                for event_type in raw_control_events:
+                    slices.append(
+                        ShakeoutSlice(
+                            run_id=(
+                                f"shakeout_{regime_slug}_{symbol_slug}_{_slug(window_label)}_raw_"
+                                f"{_slug(event_type)}"
+                            ),
+                            slice_type="raw_control",
+                            pair_id=pair_id,
+                            canonical_regime=canonical_regime,
+                            symbol=symbol,
+                            window_label=window_label,
+                            start=str(window["start"]),
+                            end=str(window["end"]),
+                            templates=tuple(_native_templates_for_event(event_type)),
+                            raw_control_events=(str(event_type).strip().upper(),),
+                            baseline_event_type=str(event_type).strip().upper(),
+                            subtypes=(),
+                            phases=(),
+                            evidence_modes=(),
+                            contexts=dict(contexts),
+                        )
                     )
-                )
     return slices
 
 
@@ -262,7 +319,10 @@ def build_shakeout_proposal_payload(
 ) -> Dict[str, Any]:
     defaults = dict(matrix.get("defaults", {}))
     proposal_knobs, _runtime_overrides = _split_knobs(defaults.get("knobs", {}))
-    program_id = str(defaults.get("program_id", matrix.get("matrix_id", "regime_shakeout"))).strip()
+    base_program_id = str(
+        defaults.get("program_id", matrix.get("matrix_id", "regime_shakeout"))
+    ).strip()
+    program_id = f"{_slug(base_program_id)}__{slice_def.run_id}"
     payload: Dict[str, Any] = {
         "program_id": program_id,
         "objective_name": str(defaults.get("objective_name", "retail_profitability")).strip()
@@ -298,7 +358,12 @@ def build_shakeout_proposal_payload(
     if slice_def.slice_type == "regime_first":
         payload["trigger_space"]["canonical_regimes"] = [slice_def.canonical_regime]
     else:
-        payload["trigger_space"]["events"] = {"include": list(slice_def.raw_control_events)}
+        include = (
+            [slice_def.baseline_event_type]
+            if str(slice_def.baseline_event_type).strip()
+            else list(slice_def.raw_control_events)
+        )
+        payload["trigger_space"]["events"] = {"include": include}
         payload["trigger_space"]["subtypes"] = []
         payload["trigger_space"]["phases"] = []
         payload["trigger_space"]["evidence_modes"] = []
@@ -372,6 +437,13 @@ def _safe_read_parquet(path: Path) -> pd.DataFrame:
         return read_parquet(path)
     except FileNotFoundError:
         return pd.DataFrame()
+
+
+def _candidate_surface_frame(data_root: Path, run_id: str) -> tuple[pd.DataFrame, str]:
+    edge_candidates_path = _edge_candidates_path(data_root, run_id)
+    if edge_candidates_path.exists():
+        return _safe_read_parquet(edge_candidates_path), "edge_candidates"
+    return _safe_read_parquet(_phase2_path(data_root, run_id)), "phase2_search_engine"
 
 
 def _phase2_path(data_root: Path, run_id: str) -> Path:
@@ -461,13 +533,7 @@ def summarize_shakeout_run(
     run_id: str,
     thresholds: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    edge_candidates_path = _edge_candidates_path(data_root, run_id)
-    if edge_candidates_path.exists():
-        phase2 = _safe_read_parquet(edge_candidates_path)
-        candidate_surface = "edge_candidates"
-    else:
-        phase2 = _safe_read_parquet(_phase2_path(data_root, run_id))
-        candidate_surface = "phase2_search_engine"
+    phase2, candidate_surface = _candidate_surface_frame(data_root, run_id)
     promoted = _safe_read_parquet(_promoted_path(data_root, run_id))
     promotion_decisions = _safe_read_parquet(_promotion_decisions_path(data_root, run_id))
     regime_summary = _safe_read_json(
@@ -590,6 +656,161 @@ def summarize_shakeout_run(
     return summary
 
 
+def summarize_shakeout_run_group(
+    *,
+    data_root: Path,
+    run_ids: Iterable[str],
+    thresholds: Mapping[str, Any] | None = None,
+) -> Dict[str, Any]:
+    run_id_list = [str(run_id).strip() for run_id in run_ids if str(run_id).strip()]
+    candidate_frames: list[pd.DataFrame] = []
+    candidate_surfaces: list[str] = []
+    promoted_frames: list[pd.DataFrame] = []
+    promotion_frames: list[pd.DataFrame] = []
+    regime_summaries: list[Dict[str, Any]] = []
+    for run_id in run_id_list:
+        frame, surface = _candidate_surface_frame(data_root, run_id)
+        candidate_frames.append(frame)
+        candidate_surfaces.append(surface)
+        promoted_frames.append(_safe_read_parquet(_promoted_path(data_root, run_id)))
+        promotion_frames.append(_safe_read_parquet(_promotion_decisions_path(data_root, run_id)))
+        regime_summaries.append(
+            _safe_read_json(research_diagnostics_paths(data_root=data_root, run_id=run_id)["regime_effectiveness"])
+        )
+    phase2 = pd.concat(candidate_frames, ignore_index=True) if candidate_frames else pd.DataFrame()
+    if not phase2.empty and "candidate_id" in phase2.columns:
+        phase2 = phase2.drop_duplicates(subset=["candidate_id"], keep="first")
+    promoted = pd.concat(promoted_frames, ignore_index=True) if promoted_frames else pd.DataFrame()
+    if not promoted.empty and "candidate_id" in promoted.columns:
+        promoted = promoted.drop_duplicates(subset=["candidate_id"], keep="first")
+    promotion_decisions = (
+        pd.concat(promotion_frames, ignore_index=True) if promotion_frames else pd.DataFrame()
+    )
+    candidate_surface = (
+        candidate_surfaces[0]
+        if candidate_surfaces and len(set(candidate_surfaces)) == 1
+        else "grouped_mixed"
+    )
+    scorecard_rows = sum(int(summary.get("scorecard_rows", 0) or 0) for summary in regime_summaries)
+    representative_summary = next((summary for summary in regime_summaries if summary), {})
+    candidate_rates = _field_non_null_rates(phase2)
+    promoted_rates = _field_non_null_rates(promoted)
+    candidate_count = int(len(phase2))
+    promoted_count = int(len(promoted))
+    represented_regimes = (
+        phase2.get("canonical_regime", pd.Series(dtype="object")).astype(str).str.strip()
+    )
+    represented_regimes = represented_regimes[represented_regimes != ""]
+    represented_events = phase2.get("event_type", pd.Series(dtype="object")).astype(str).str.strip()
+    represented_events = represented_events[represented_events != ""]
+    represented_subtypes = phase2.get("subtype", pd.Series(dtype="object")).astype(str).str.strip()
+    represented_subtypes = represented_subtypes[represented_subtypes != ""]
+    represented_phases = phase2.get("phase", pd.Series(dtype="object")).astype(str).str.strip()
+    represented_phases = represented_phases[represented_phases != ""]
+    represented_modes = phase2.get("evidence_mode", pd.Series(dtype="object")).astype(str).str.strip()
+    represented_modes = represented_modes[represented_modes != ""]
+    bucket_agreement_rate = 0.0
+    if not phase2.empty and {"recommended_bucket", "regime_bucket"}.issubset(phase2.columns):
+        lhs = phase2["recommended_bucket"].astype(str).str.strip()
+        rhs = phase2["regime_bucket"].astype(str).str.strip()
+        comparable = (lhs != "") & (rhs != "")
+        if comparable.any():
+            bucket_agreement_rate = float((lhs[comparable] == rhs[comparable]).mean())
+    summary = {
+        "run_id": "+".join(run_id_list),
+        "candidate_surface": candidate_surface,
+        "candidate_count": candidate_count,
+        "promoted_count": promoted_count,
+        "promotion_rate": float(promoted_count / max(candidate_count, 1)),
+        "unique_raw_events_represented": int(represented_events.nunique()),
+        "unique_canonical_regimes_represented": int(represented_regimes.nunique()),
+        "unique_subtypes_represented": int(represented_subtypes.nunique()),
+        "unique_phases_represented": int(represented_phases.nunique()),
+        "unique_evidence_modes_represented": int(represented_modes.nunique()),
+        "candidate_regime_distribution": _distribution(
+            phase2.get("canonical_regime", pd.Series(dtype="object"))
+        ),
+        "routing_profile_usage_distribution": _distribution(
+            phase2.get("routing_profile_id", pd.Series(dtype="object"))
+        ),
+        "promoted_routing_profile_usage_distribution": _distribution(
+            promoted.get("routing_profile_id", pd.Series(dtype="object"))
+        ),
+        "candidate_regime_max_share": _max_share(
+            phase2.get("canonical_regime", pd.Series(dtype="object"))
+        ),
+        "candidate_routing_profile_max_share": _max_share(
+            phase2.get("routing_profile_id", pd.Series(dtype="object"))
+        ),
+        "promoted_routing_profile_max_share": _max_share(
+            promoted.get("routing_profile_id", pd.Series(dtype="object"))
+        ),
+        "subtype_entropy": _entropy(represented_subtypes.tolist()),
+        "evidence_mode_entropy": _entropy(represented_modes.tolist()),
+        "candidate_field_coverage": candidate_rates,
+        "promoted_field_coverage": promoted_rates,
+        "unknown_regime_rate": (
+            float(1.0 - candidate_rates.get("canonical_regime", 0.0)) if candidate_count > 0 else 0.0
+        ),
+        "raw_event_to_canonical_collapse_ratio": float(
+            int(represented_events.nunique()) / max(int(represented_regimes.nunique()), 1)
+        )
+        if candidate_count > 0
+        else 0.0,
+        "bucket_agreement_rate": bucket_agreement_rate,
+        "recommended_bucket_distribution": _distribution(
+            phase2.get("recommended_bucket", pd.Series(dtype="object"))
+        ),
+        "regime_bucket_distribution": _distribution(
+            phase2.get("regime_bucket", pd.Series(dtype="object"))
+        ),
+        "topk_after_cost_expectancy_mean": _topk_after_cost_mean(phase2, k=10),
+        "topk_promoted_after_cost_expectancy_mean": _topk_after_cost_mean(promoted, k=10),
+        "regime_effectiveness_status": str(representative_summary.get("status", "")).strip(),
+        "regime_effectiveness_rows": int(scorecard_rows),
+        "promotion_decision_rows": int(len(promotion_decisions)),
+        "grouped_run_ids": run_id_list,
+    }
+    resolved_thresholds = dict(DEFAULT_AUDIT_THRESHOLDS)
+    if isinstance(thresholds, Mapping):
+        for key, value in thresholds.items():
+            try:
+                resolved_thresholds[str(key)] = float(value)
+            except (TypeError, ValueError):
+                continue
+    min_cov = float(resolved_thresholds["min_metadata_field_coverage"])
+    max_unknown = float(resolved_thresholds["max_unknown_regime_rate"])
+    max_routing = float(resolved_thresholds["max_routing_profile_candidate_share"])
+    issues: list[str] = []
+    if candidate_count > 0:
+        for field, rate in candidate_rates.items():
+            if (
+                field in {"canonical_regime", "recommended_bucket", "regime_bucket", "routing_profile_id"}
+                and rate < min_cov
+            ):
+                issues.append(f"candidate field coverage for {field}={rate:.3f} < {min_cov:.3f}")
+    if candidate_count > 0 and summary["unknown_regime_rate"] > max_unknown:
+        issues.append(
+            f"unknown regime rate={summary['unknown_regime_rate']:.3f} > {max_unknown:.3f}"
+        )
+    if (
+        candidate_count > 0
+        and summary["unique_canonical_regimes_represented"] > 1
+        and summary["candidate_routing_profile_max_share"] > max_routing
+    ):
+        issues.append(
+            "candidate routing profile max share="
+            f"{summary['candidate_routing_profile_max_share']:.3f} > {max_routing:.3f}"
+        )
+    summary["contract_health"] = {
+        "passed": not issues,
+        "issue_count": len(issues),
+        "issues": issues,
+        "thresholds": resolved_thresholds,
+    }
+    return summary
+
+
 def build_shakeout_audit(
     *,
     matrix: Mapping[str, Any],
@@ -600,8 +821,9 @@ def build_shakeout_audit(
     slices_by_run = {slice_def.run_id: slice_def for slice_def in slices}
     run_summaries: Dict[str, Any] = {}
     for run_id in sorted(slices_by_run):
+        edge_path = _edge_candidates_path(data_root, run_id)
         phase2_path = _phase2_path(data_root, run_id)
-        if not phase2_path.exists():
+        if not edge_path.exists() and not phase2_path.exists():
             continue
         run_summaries[run_id] = summarize_shakeout_run(
             data_root=data_root,
@@ -610,21 +832,29 @@ def build_shakeout_audit(
         )
 
     pair_reports: list[dict[str, Any]] = []
-    grouped: Dict[str, Dict[str, str]] = {}
+    grouped: Dict[str, Dict[str, Any]] = {}
     for slice_def in slices:
-        grouped.setdefault(slice_def.pair_id, {})[slice_def.slice_type] = slice_def.run_id
+        bucket = grouped.setdefault(slice_def.pair_id, {"regime_first": "", "raw_control": []})
+        if slice_def.slice_type == "regime_first":
+            bucket["regime_first"] = slice_def.run_id
+        elif slice_def.slice_type == "raw_control":
+            bucket.setdefault("raw_control", []).append(slice_def.run_id)
     for pair_id, run_map in sorted(grouped.items()):
-        regime_run_id = run_map.get("regime_first", "")
-        raw_run_id = run_map.get("raw_control", "")
-        if regime_run_id not in run_summaries or raw_run_id not in run_summaries:
+        regime_run_id = str(run_map.get("regime_first", "")).strip()
+        raw_run_ids = [str(run_id).strip() for run_id in run_map.get("raw_control", []) if str(run_id).strip()]
+        if regime_run_id not in run_summaries or not raw_run_ids:
             continue
         regime_summary = run_summaries[regime_run_id]
-        raw_summary = run_summaries[raw_run_id]
+        raw_summary = summarize_shakeout_run_group(
+            data_root=data_root,
+            run_ids=raw_run_ids,
+            thresholds=thresholds if isinstance(thresholds, Mapping) else None,
+        )
         pair_reports.append(
             {
                 "pair_id": pair_id,
                 "regime_run_id": regime_run_id,
-                "raw_control_run_id": raw_run_id,
+                "raw_control_run_ids": raw_run_ids,
                 "canonical_regime": slices_by_run[regime_run_id].canonical_regime,
                 "regime_summary": regime_summary,
                 "raw_control_summary": raw_summary,
@@ -647,11 +877,14 @@ def build_shakeout_audit(
                     "bucket_agreement_rate": regime_summary["bucket_agreement_rate"]
                     - raw_summary["bucket_agreement_rate"],
                 },
-                "research_run_comparison": compare_run_ids(
-                    data_root=data_root,
-                    baseline_run_id=raw_run_id,
-                    candidate_run_id=regime_run_id,
-                ),
+                "research_run_comparisons": [
+                    compare_run_ids(
+                        data_root=data_root,
+                        baseline_run_id=raw_run_id,
+                        candidate_run_id=regime_run_id,
+                    )
+                    for raw_run_id in raw_run_ids
+                ],
             }
         )
     return {
@@ -696,7 +929,7 @@ def render_shakeout_audit_markdown(audit: Mapping[str, Any]) -> str:
         delta = dict(pair.get("delta", {}))
         lines.append(
             f"| `{pair.get('pair_id', '')}` | `{pair.get('regime_run_id', '')}` | "
-            f"`{pair.get('raw_control_run_id', '')}` | `{delta.get('candidate_count', 0)}` | "
+            f"`{len(pair.get('raw_control_run_ids', []))} raw runs` | `{delta.get('candidate_count', 0)}` | "
             f"`{delta.get('promoted_count', 0)}` | `{delta.get('topk_after_cost_expectancy_mean', 0.0):.3f}` |"
         )
     lines.append("")
