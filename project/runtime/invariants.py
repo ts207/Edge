@@ -6,17 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import math
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from collections import defaultdict
 import pandas as pd
 
@@ -83,18 +73,30 @@ def _to_us(value: object) -> Optional[int]:
     return None
 
 
-def _first_timestamp_us(row: Mapping[str, Any], fields: Iterable[str]) -> Optional[int]:
+def _row_has_field(row: Any, field: str) -> bool:
+    if isinstance(row, Mapping):
+        return field in row
+    return hasattr(row, field)
+
+
+def _row_get(row: Any, field: str) -> Any:
+    if isinstance(row, Mapping):
+        return row.get(field)
+    return getattr(row, field, None)
+
+
+def _first_timestamp_us(row: Any, fields: Iterable[str]) -> Optional[int]:
     for field in fields:
-        if field not in row:
+        if not _row_has_field(row, field):
             continue
-        value = _to_us(row.get(field))
+        value = _to_us(_row_get(row, field))
         if value is not None:
             return int(value)
     return None
 
 
 def run_watermark_audit(
-    events: Iterable[Mapping[str, Any]],
+    events: Iterable[Any],
     *,
     max_lateness_us: int,
     max_violations: int = 100,
@@ -122,7 +124,7 @@ def run_watermark_audit(
             violation_counts["future_event_time"] += 1
             if len(examples) < max_violations:
                 examples.append(
-                    f"future_event: id={row.get('event_id')} {row.get('event_type')} "
+                    f"future_event: id={_row_get(row, 'event_id')} {_row_get(row, 'event_type')} "
                     f"time={event_time} detect={detect_time} (diff={event_time - detect_time}us)"
                 )
 
@@ -131,7 +133,7 @@ def run_watermark_audit(
             violation_counts["decision_before_watermark"] += 1
             if len(examples) < max_violations:
                 examples.append(
-                    f"causality: id={row.get('event_id')} {row.get('event_type')} "
+                    f"causality: id={_row_get(row, 'event_id')} {_row_get(row, 'event_type')} "
                     f"detect={detect_time} watermark={watermark_us} (lag={watermark_us - detect_time}us)"
                 )
 
@@ -205,7 +207,7 @@ def run_runtime_postflight_audit(
     # Watermark Audit (Causality)
     # Default alpha lane lateness is 5s (5,000,000us)
     watermark_results = run_watermark_audit(
-        events_df.to_dict("records"),
+        events_df.itertuples(index=False, name="WatermarkRow"),
         max_lateness_us=5_000_000,
     )
 

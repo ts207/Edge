@@ -46,7 +46,7 @@ regimes:
     profit_taking_profile: liquidity_snapback
   LIQUIDITY_STRESS:
     bucket: trade_generating
-    eligible_templates: [stop_run_repair, mean_reversion, reversal_or_squeeze]
+    eligible_templates: [stop_run_repair, mean_reversion]
     forbidden_templates: [range_reversion]
     risk_posture: reduced_size
     execution_style: spread_aware

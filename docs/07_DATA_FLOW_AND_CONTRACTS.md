@@ -1,284 +1,150 @@
-# Edge — Data Flow & Contracts
+# Data Flow and Contracts
 
-## Artifact Token System
+## Contract Source of Truth
 
-Every pipeline stage declares its inputs and outputs as **artifact tokens** — canonical string identifiers. This is the contract layer between stages.
+Stage-family and artifact-token contracts live in:
 
-### Token Naming Convention
+- `project/contracts/pipeline_registry.py`
 
-```
-{tier}.{market}.{type}_{timeframe}
-```
+Do not treat prose descriptions as authoritative when that file says otherwise.
 
-| Tier | Examples |
-|---|---|
-| `raw` | `raw.perp.ohlcv_5m`, `raw.perp.funding_5m`, `raw.perp.liquidations` |
-| `clean` | `clean.perp.*`, `clean.spot.*` |
-| `features` | `features.perp.v2`, `features.spot.v2` |
-| `metadata` | `metadata.universe_snapshots` |
+## Stage Family Contract Model
 
-Tokens are assembled by factory functions in `project.core.timeframes`:
+Two important registries exist in code:
 
-```python
-make_ohlcv_artifact_token(timeframe)       # → "raw.perp.ohlcv_{tf}"
-make_spot_ohlcv_artifact_token(timeframe)  # → "raw.spot.ohlcv_{tf}"
-make_clean_artifact_token(timeframe, market) # → "clean.{market}.*"
-make_feature_artifact_token(timeframe, market) # → "features.{market}.v2"
-make_funding_artifact_token(timeframe)     # → "raw.perp.funding_{tf}"
-```
+- stage family registry
+- stage artifact registry
 
----
+The stage family registry maps:
 
-## Full Artifact Flow
+- stage name patterns
+- script path patterns
+- family ownership
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           INGEST STAGE                                       │
-│                                                                              │
-│  Binance UM Perp                  Binance Spot                               │
-│  ├── ingest_binance_um_ohlcv_1m   → raw.perp.ohlcv_1m                      │
-│  ├── ingest_binance_um_ohlcv_5m   → raw.perp.ohlcv_5m                      │
-│  ├── ingest_binance_um_funding     → raw.perp.funding_5m                    │
-│  ├── ingest_binance_um_open_int... → raw.perp.open_interest                 │
-│  ├── ingest_binance_um_liquidat... → raw.perp.liquidations                  │
-│  ├── ingest_binance_um_mark_price  → raw.perp.mark_price_{tf}               │
-│  ├── ingest_binance_um_book_tick   → raw.perp.book_ticker                   │
-│  ├── ingest_binance_spot_ohlcv_1m  → raw.spot.ohlcv_1m                     │
-│  └── ingest_binance_spot_ohlcv_5m  → raw.spot.ohlcv_5m                     │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                            CLEAN STAGE                                       │
-│                                                                              │
-│  build_cleaned_{tf}    : raw.perp.ohlcv_{tf}     → clean.perp.*             │
-│  build_cleaned_{tf}_spot: raw.spot.ohlcv_{tf}    → clean.spot.*             │
-│  build_basis_state_5m  : clean.perp.* + clean.spot.* → basis_state          │
-│  build_tob_5m_agg      : raw.perp.book_ticker    → tob_5m                   │
-│  build_tob_snapshots_1s: raw.perp.book_ticker    → tob_1s                   │
-│  calibrate_execution_costs: tob data             → cost_calibration          │
-│  validate_data_coverage, validate_feature_integrity, validate_context_entropy│
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                          FEATURES STAGE                                      │
-│                                                                              │
-│  build_features_{tf}   : clean.perp.*                                       │
-│                         + optional: funding, liquidations, OI               │
-│                         → features.perp.v2                                   │
-│  build_features_{tf}_spot: clean.spot.*  → features.spot.v2                 │
-│  build_market_context  : features.perp.v2 → context features (regimes)      │
-│  build_microstructure_rollup: tob_1s → microstructure_rollup               │
-│  build_universe_snapshots: clean.perp.* → metadata.universe_snapshots       │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                        RUNTIME INVARIANTS STAGE                              │
-│                                                                              │
-│  build_normalized_replay_stream  → normalized event stream                  │
-│  run_causal_lane_ticks           → causal lane validation                   │
-│  run_determinism_replay_checks   → determinism assertions                   │
-│  run_oms_replay_validation       → OMS replay integrity                     │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                       PHASE 1 ANALYSIS STAGE                                 │
-│                                                                              │
-│  analyze_*             : features → event detection per family              │
-│                          (one analyze_* script per event family)            │
-│  phase1_correlation_clustering: event episodes → correlation clusters       │
-│  build_event_registry  : all event episodes → unified event registry        │
-│  canonicalize_event_episodes: episodes → canonical episode format           │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                      PHASE 2 DISCOVERY STAGE                                 │
-│                                                                              │
-│  phase2_conditional_hypotheses: event episodes + features                   │
-│                                → hypothesis evaluation frames               │
-│  phase2_search_engine : search space → hypothesis candidates                │
-│  bridge_evaluate_phase2: hypothesis frames → scored candidates              │
-│  summarize_discovery_quality: candidates → quality summary                  │
-│  finalize_experiment  : all phase2 outputs → experiment manifest            │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                      RESEARCH QUALITY STAGE                                  │
-│                                                                              │
-│  analyze_conditional_expectancy  → conditional expectancy report            │
-│  validate_expectancy_traps       → trap detection                           │
-│  generate_recommendations_checklist → actionable checklist                  │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                         PROMOTION STAGE                                      │
-│                                                                              │
-│  evaluate_naive_entry            → naive baseline for comparison            │
-│  generate_negative_control_summary → negative control report                │
-│  promote_candidates              → gated promotion decisions                │
-│  update_edge_registry            → persists promoted edges                  │
-│  update_campaign_memory          → writes to memory store                   │
-│  export_edge_candidates          → exported candidate artifacts             │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-┌──────────────────────────────────▼──────────────────────────────────────────┐
-│                      STRATEGY PACKAGING STAGE                                │
-│                                                                              │
-│  compile_strategy_blueprints → Blueprint YAML/JSON artifacts                │
-│  build_strategy_candidates   → candidate strategy set                       │
-│  select_profitable_strategies → filtered profitable set                     │
-│          ↓                                                                   │
-│  Live Engine (Native)                                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+The artifact registry maps:
 
----
+- required inputs
+- optional inputs
+- outputs
+- external inputs
 
-## Stage Contract Types
+This lets the planner validate execution structure before the run starts.
 
-Defined in `project/contracts/pipeline_registry.py`:
+## Current Stage Families
 
-### `StageFamilyContract`
+Current family names:
 
-Groups related stages under one owner:
+- `ingest`
+- `core`
+- `runtime_invariants`
+- `phase1_analysis`
+- `phase2_event_registry`
+- `phase2_discovery`
+- `promotion`
+- `research_quality`
+- `strategy_packaging`
 
-```python
-@dataclass(frozen=True)
-class StageFamilyContract:
-    family: str
-    stage_patterns: tuple[str, ...]    # fnmatch patterns
-    script_patterns: tuple[str, ...]   # relative script paths
-```
+This is the correct architectural vocabulary for current runs.
 
-### `StageArtifactContract`
+## Artifact Token Style
 
-Declares inputs and outputs for one stage:
+Artifact contracts use named tokens rather than only concrete paths.
 
-```python
-@dataclass(frozen=True)
-class StageArtifactContract:
-    stage_patterns: tuple[str, ...]
-    inputs: tuple[str, ...]            # Required artifact tokens
-    optional_inputs: tuple[str, ...]   # Optional artifact tokens
-    outputs: tuple[str, ...]           # Produced artifact tokens
-    external_inputs: tuple[str, ...]   # Tokens expected from external sources
-```
+Examples from the registry:
 
-### `ResolvedStageArtifactContract`
+- `raw.perp.ohlcv_{tf}`
+- `raw.spot.ohlcv_{tf}`
+- `raw.perp.funding_{tf}`
+- `raw.perp.liquidations`
+- `raw.perp.open_interest`
+- `clean.perp.*`
+- `clean.spot.*`
+- `features.perp.v2`
+- `features.spot.v2`
+- `metadata.universe_snapshots`
 
-Runtime-resolved version with all wildcard tokens expanded for a specific run.
+This token model allows structural reasoning before concrete artifact paths are resolved.
 
----
+## Run Manifest Layer
 
-## Manifest System
+`run_all` writes a run manifest that captures:
 
-Every run produces a hierarchical manifest that tracks all artifacts.
+- config resolution
+- effective behavior
+- planned stages
+- stage timings
+- objective and retail profile metadata
+- spec hashes and ontology hashes
+- runtime invariant settings
+- status / failed stage state
 
-### Manifest Read Order (for trust assessment)
+This manifest is a primary debugging artifact, not a side-product.
 
-```
-1. data/{run_id}/manifest.json          ← top-level run manifest
-2. data/{run_id}/{stage}/manifest.json  ← per-stage manifests
-3. data/{run_id}/{stage}/*.log          ← stage logs
-4. data/{run_id}/reports/               ← report artifacts
-5. docs/generated/                      ← machine-owned diagnostics
-```
+Typical companion artifacts:
 
-If any of these disagree with each other, the **disagreement is a first-class finding** and must be investigated before the run's conclusions can be trusted.
+- `effective_config.json`
+- per-stage manifests and outputs
+- comparison reports
+- smoke/regression summaries
 
-### Manifest Fields
+## Planning and Preflight
 
-Key fields in the run manifest:
+Planning performs more than argument parsing. It also:
 
-- `run_id` — unique run identifier
-- `config_digest` — hash of effective config at run time
-- `data_fingerprint` — hash of input data state
-- `git_commit` — source code commit at run time
-- `stage_results` — per-stage completion status and artifact hashes
-- `claim_map_hash` — hash of the artifact claim map
-- `runtime_lineage_fields` — provenance fields for auditing
+- resolves experiment overlays
+- computes stage instances
+- validates artifact contracts
+- resolves runtime invariant mode
+- determines effective behavior for discovery and promotion tails
 
----
+If contract resolution fails during planning, execution should not proceed.
 
-## Point-in-Time Correctness
+## Runtime Invariants and Replay
 
-All features declare a `pit_constraint`:
+The current data-flow model includes explicit runtime/replay surfaces:
 
-```yaml
-provenance:
-  pit_constraint: "asof <= t0"
-```
+- normalized replay stream
+- causal lane ticks
+- optional determinism replay checks
+- optional OMS replay checks
 
-This enforces that no future information can leak into feature computations at time `t0`. The `run_causal_lane_ticks` stage validates this at runtime.
+These are not optional documentation details. They are part of the pipeline architecture and quality model.
 
----
+## Promotion and Research-Quality Tails
 
-## Cost Model in the Data Flow
+After phase 2 discovery, the pipeline can continue into:
 
-Execution costs are propagated through every evaluation:
+- naive entry evaluation
+- negative control summaries
+- candidate promotion
+- edge registry update
+- campaign memory update
+- expectancy analysis
+- expectancy trap validation
+- recommendations checklist
 
-```
-cost_calibration (from TOB data)
-    ↓
-CandidateCostEstimate (per symbol, regime, time-of-day)
-    ↓
-phase2 scoring: after_cost_expectancy = raw_expectancy - round_trip_cost
-    ↓
-Gate V1: min_after_cost_expectancy_bps = 0.1
-    ↓
-Promotion: cost_stress_multiplier = 2.0× (deployable), 1.5× (shadow)
-    ↓
-Blueprint: cost_config_digest locked at compile time
-```
+This means "phase 2 finished" is not the same thing as "the research result is fully evaluated."
 
-Default costs (from `spec/cost_model.yaml`):
+## Generated Contract and Inventory Surfaces
 
-- Fee: 4.0 bps per side
-- Slippage: 2.0 bps per fill
-- Round-trip total: **12.0 bps**
+Use:
 
----
+- `docs/generated/system_map.json`
+- `docs/generated/detector_coverage.json`
+- `docs/generated/ontology_audit.json`
+- `docs/generated/event_ontology_audit.json`
+- `docs/generated/regime_routing_audit.json`
 
-## Train / Validation / Test Split
+to reconcile what the repo currently exposes.
 
-The holdout integrity module (`pipelines/research/holdout_integrity.py`) enforces strict temporal splits:
+## Practical Debugging Order
 
-- **Train** — used for hypothesis generation
-- **Validation** — used for parameter selection and FDR control
-- **Test** — held out; only evaluated for confirmed candidates
+When a run looks wrong:
 
-The splits are enforced at the data level and checked in `StageArtifactContract` reconciliation.
+1. inspect the top-level run manifest
+2. confirm planned stages and effective behavior
+3. inspect stage outputs expected by the contract registry
+4. inspect report artifacts
+5. inspect generated audits and comparison outputs
 
----
-
-## False Discovery Rate Control
-
-Phase 2 discovery applies FDR control via the **q-value** (Storey-Tibshirani procedure):
-
-```python
-apply_validation_multiple_testing(candidates)
-```
-
-- Max allowed q-value: **0.05** (5% FDR)
-- Applied per event type × template × context combination
-- `multiplicity_enable_cluster_adjusted: true` — applies cluster-adjusted FDR accounting for correlated hypotheses
-
----
-
-## Hypothesis Registry
-
-Hypotheses are stored in a structured registry:
-
-```python
-@dataclass
-class Hypothesis:
-    event_type: str
-    canonical_family: str
-    template: str
-    context: dict
-    side: str           # "long" | "short"
-    horizon_bars: int
-    entry_lag: int
-    symbol_scope: list[str]
-```
-
-The `HypothesisRegistry` maps hypothesis IDs to `Hypothesis` objects and persists them as part of campaign memory.
+If an artifact exists but violates its declared contract, treat that as a correctness failure even when the script returned `0`.

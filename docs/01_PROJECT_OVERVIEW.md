@@ -1,121 +1,153 @@
-# Edge — Project Overview
+# Edge Project Overview
 
-## What It Is
+## What This Repository Is
 
-EDGEE is a **research platform for event-driven alpha discovery in crypto markets**. It is not a generic backtesting sandbox. Its stated purpose is to convert market observations into explicit, testable hypotheses, run them through a structured multi-stage pipeline, and gate any result on mechanical, statistical, and deployment-readiness checks before a finding can be promoted.
+Edge is a proposal-driven research platform for event-based crypto market discovery.
 
-The design philosophy is: *reproducible, cost-aware, narrowly attributed research — not output volume.*
+It exists to test claims like:
 
----
+- "this event family appears under this context"
+- "this template behaves differently under this regime"
+- "this candidate survives costs, drift tolerances, and promotion gates"
 
-## Core Research Philosophy
+It does not exist to maximize the number of backtests run or to turn detector output directly into trading claims.
 
-The platform is built around **hypotheses**, not detectors and not strategies. A hypothesis specifies:
+## The Core Research Unit
 
-| Field | Description |
-| --- | --- |
-| `event` | The market event type being tested (e.g., `VOL_SHOCK`, `BASIS_DISLOC`) |
-| `canonical_family` | The high-level event family it belongs to |
-| `template` | The strategy template to apply (e.g., `mean_reversion`, `continuation`) |
-| `context` | Market regime context under which the hypothesis holds |
-| `side` | Long / short |
-| `horizon` | Time horizon in bars |
-| `entry_lag` | Bars after event to enter |
-| `symbol_scope` | Which instruments the hypothesis applies to |
+The system is organized around a bounded hypothesis, not around a detector and not around an aggregated PnL chart.
 
-This is what gets evaluated, stored in memory, and gated in promotion — not aggregate P&L curves.
+A working research unit usually contains:
 
----
+- event or trigger space
+- template set
+- context set
+- symbol scope
+- timeframe
+- horizon set
+- side / direction set
+- entry lag set
+- promotion profile
+- search-control limits
 
-## The 10 Canonical Event Families
+Those inputs flow through proposal validation, planning, execution, evaluation, and promotion.
 
-All events belong to one of 10 canonical families. Templates are only legal for their matching family.
+## End-to-End Operating Loop
 
-| Family | Description |
-| --- | --- |
-| `LIQUIDITY_DISLOCATION` | Sudden breakdown in market depth or spread abnormality |
-| `POSITIONING_EXTREMES` | Extreme open interest, funding, or leverage positioning |
-| `FORCED_FLOW_AND_EXHAUSTION` | Liquidation cascades and exhaustion reversals |
-| `STATISTICAL_DISLOCATION` | Z-score stretches, basis dislocations, band breaks |
-| `VOLATILITY_TRANSITION` | Regime shifts in realized/implied volatility |
-| `TREND_STRUCTURE` | Breakouts, pullbacks, momentum divergence, trend acceleration |
-| `REGIME_TRANSITION` | Macro or microstructure regime changes |
-| `TEMPORAL_STRUCTURE` | Session-based, scheduled, or time-of-day effects |
-| `INFORMATION_DESYNC` | Cross-venue lead-lag breaks, index divergence, desync |
-| `EXECUTION_FRICTION` | Spread/widden slippage, fee regime changes, execution quality degradation |
+The intended loop is:
 
----
+`observe -> retrieve memory -> propose -> translate -> plan -> execute -> evaluate -> reflect -> adapt`
 
-## Operating Principles
+The operator guidance in `CLAUDE.md` is conservative by design:
 
-The platform enforces a strict research discipline:
+- start narrow
+- trust artifacts over impressions
+- separate mechanical, statistical, and deployment conclusions
+- leave a next action after each meaningful run
 
-1. **Artifacts are the source of truth.** Exit codes alone are not sufficient. Run manifests must reconcile.
-2. **`plan_only` before material runs.** Scope must be verified before execution.
-3. **Synthetic runs are calibration, not proof.** Synthetic profitability is not evidence of live edge.
-4. **Promotion is a gate.** Attractive numbers are not promotion readiness.
-5. **Narrow first.** One family, one template, one context per run.
+## Primary Entities
 
----
+The most important repository entities are:
 
-## What a "Good Run" Looks Like
+- proposal
+  - compact YAML/JSON input for a bounded research question
+- experiment config
+  - repo-native config emitted from proposal translation
+- run manifest
+  - top-level execution and provenance record
+- event definition
+  - canonical event spec plus executable metadata
+- state definition
+  - context/state registry entry
+- candidate
+  - evaluated hypothesis row
+- promotion decision
+  - gated decision artifact with evidence
+- strategy candidate / blueprint
+  - post-promotion packaging surface
 
-A good run is **not** the run with the best headline metric. A good run leaves behind:
+## Actual Pipeline Shape
 
-- A bounded question
-- A clean artifact trail
-- A defensible interpretation
-- A recorded next action (`exploit` / `explore` / `repair` / `hold` / `stop`)
+The current implementation is broader than the old "8 box" diagram often repeated in stale docs.
 
----
+The orchestrator composes stage families defined in `project/contracts/pipeline_registry.py`:
 
----
+1. `ingest`
+2. `core`
+3. `runtime_invariants`
+4. `phase1_analysis`
+5. `phase2_event_registry`
+6. `phase2_discovery`
+7. `promotion`
+8. `research_quality`
+9. `strategy_packaging`
 
-## High-Level System Diagram
+That distinction matters because runtime replay checks, event-registry canonicalization, and research-quality tails are now explicit execution surfaces.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Edge Research Platform                   │
-│                                                             │
-│  Data Sources (Binance UM Perp + Spot)                      │
-│       │                                                      │
-│       ▼                                                      │
-│  [ingest] → raw OHLCV, funding, OI, liquidations, book      │
-│       │                                                      │
-│       ▼                                                      │
-│  [clean] → cleaned bars, basis state, TOB aggregates        │
-│       │                                                      │
-│       ▼                                                      │
-│  [build_features] → canonical feature outputs               │
-│       │                                                      │
-│       ▼                                                      │
-│  [build_market_context] → regime labels, microstructure     │
-│       │                                                      │
-│       ▼                                                      │
-│  [phase1_analysis] → active detectors → event episodes      │
-│       │                                                      │
-│       ▼                                                      │
-│  [phase2_discovery] → hypothesis scoring, FDR control       │
-│       │                                                      │
-│       ▼                                                      │
-│  [promotion] → gated promotion, edge registry, memory       │
-│       │                                                      │
-│       ▼                                                      │
-│  [strategy_packaging] → blueprints → live engine            │
-└─────────────────────────────────────────────────────────────┘
-```
+## Source-of-Truth Surfaces
 
----
+For repository intent:
 
-## Project Metrics
+- `docs/`
+- `CLAUDE.md`
 
-Current inventory counts and architecture metrics are generated artifacts, not hand-maintained documentation.
+For live inventory:
 
-| Metric Surface | Source |
-| --- | --- |
-| Detector and event inventory | `docs/generated/detector_coverage.md` |
-| Ontology consistency | `docs/generated/ontology_audit.json` |
-| System inventory | `docs/generated/system_map.json` |
-| Architecture metrics | `docs/generated/architecture_metrics.json` |
-| Active test suite | `project/tests/` |
-| Python requirement | `pyproject.toml` / install docs |
+- `docs/generated/`
+
+For actual behavior:
+
+- `project/pipelines/run_all.py`
+- `project/contracts/pipeline_registry.py`
+- `project/pipelines/pipeline_planning.py`
+- `project/pipelines/pipeline_execution.py`
+
+## Spec Layer vs Config Layer
+
+The repo has two different declarative layers:
+
+- `spec/`
+  - static domain specs
+  - events, ontology, grammar, objectives, runtime policy, search specs, templates, benchmarks
+- `project/configs/`
+  - runnable configuration
+  - registries, workflow configs, live configs, synthetic configs, retail profiles
+
+Confusing these two layers is a common source of stale documentation and incorrect changes.
+
+## Generated Ontology and Routing
+
+Current ontology work is not encoded only in prose. It is generated and audited.
+
+Important generated outputs:
+
+- `docs/generated/event_ontology_mapping.md`
+- `docs/generated/canonical_to_raw_event_map.md`
+- `docs/generated/context_tag_catalog.md`
+- `docs/generated/composite_event_catalog.md`
+- `docs/generated/strategy_construct_catalog.md`
+- `docs/generated/event_ontology_audit.md`
+- `docs/generated/regime_routing_audit.md`
+
+Use these when you need the current ontology surface, not narrative claims copied into markdown months ago.
+
+## What a Good Run Looks Like
+
+A good run leaves:
+
+- a bounded question
+- a validated plan
+- a clean manifest trail
+- interpretable candidate / promotion artifacts
+- a next action such as `explore`, `repair`, `hold`, or `stop`
+
+Headline metrics alone do not qualify a run as good.
+
+## What This Project Is Not
+
+It is not:
+
+- a generic backtesting playground
+- a detector zoo that treats event materialization as strategy proof
+- a synthetic-profitability showcase
+- a notebook-first research stack
+- a live execution system that ignores replay / artifact evidence

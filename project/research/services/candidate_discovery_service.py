@@ -251,39 +251,35 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
             tob_tolerance_minutes=int(config.cost_tob_tolerance_minutes),
         )
         event_frames: List[pd.DataFrame] = []
+        experiment_plan = None
+        required_experiment_events: set[str] = set()
+        if config.experiment_config:
+            import importlib
+
+            experiment_engine = importlib.import_module("project.research.experiment_engine")
+            experiment_plan = experiment_engine.build_experiment_plan(
+                Path(config.experiment_config),
+                config.registry_root or Path("project/configs/registries"),
+            )
+            for hypothesis in experiment_plan.hypotheses:
+                trigger = hypothesis.trigger
+                if trigger.trigger_type == "event" and trigger.event_id:
+                    required_experiment_events.add(trigger.event_id)
+                elif trigger.trigger_type == "sequence" and trigger.events:
+                    required_experiment_events.update(trigger.events)
+                elif trigger.trigger_type == "interaction":
+                    if trigger.left:
+                        required_experiment_events.add(trigger.left)
+                    if trigger.right:
+                        required_experiment_events.add(trigger.right)
+            if required_experiment_events:
+                required_experiment_events.add(config.event_type)
+
         for symbol in config.symbols:
             # If experiment is active, we might need multiple event types for sequences/interactions
             load_event_type: str | List[str] = config.event_type
-            if config.experiment_config:
-                import importlib
-
-                experiment_engine = importlib.import_module(
-                    "project.research.experiment_engine"
-                )
-                plan = experiment_engine.build_experiment_plan(
-                    Path(config.experiment_config),
-                    config.registry_root or Path("project/configs/registries"),
-                )
-
-                # Filter required event IDs for this symbol/run
-                # We load all events mentioned in any hypothesis trigger to support cross-event evaluation
-                required_events = set()
-                for h in plan.hypotheses:
-                    t = h.trigger
-                    if t.trigger_type == "event" and t.event_id:
-                        required_events.add(t.event_id)
-                    elif t.trigger_type == "sequence" and t.events:
-                        required_events.update(t.events)
-                    elif t.trigger_type == "interaction":
-                        if t.left:
-                            required_events.add(t.left)
-                        if t.right:
-                            required_events.add(t.right)
-
-                if required_events:
-                    # Keep current event_type in the list just in case, but usually it's already there
-                    required_events.add(config.event_type)
-                    load_event_type = sorted(list(required_events))
+            if required_experiment_events:
+                load_event_type = sorted(required_experiment_events)
 
             events_df = prepare_events_dataframe(
                 data_root=config.data_root,
@@ -355,6 +351,7 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                     experiment_config=config.experiment_config,
                     event_type=config.event_type,
                     registry_root=config.registry_root or Path("project/configs/registries"),
+                    experiment_plan=experiment_plan,
                 )
             elif config.concept_file:
                 candidates = discovery._synthesize_concept_candidates(

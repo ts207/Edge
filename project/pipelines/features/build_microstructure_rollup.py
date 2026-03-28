@@ -67,39 +67,40 @@ def _build_rollup(symbol: str, tob: pd.DataFrame) -> pd.DataFrame:
     if global_median_spread <= 0:
         global_median_spread = 1.0
 
-    rows = []
-    for bar_ts, group in tob.groupby("bar_ts", sort=True):
-        n = len(group)
-        spread_mean = float(group["spread_bps"].mean())
-        micro_spread_stress = spread_mean / global_median_spread
-
-        if has_depth:
-            depth_mean = float(group["depth"].mean())
-            depth_min = float(group["depth"].min())
-            micro_depth_depletion = 1.0 - (depth_min / depth_mean) if depth_mean > 0 else 0.0
-            micro_imbalance = float(group["imbalance"].abs().mean())
-            # Sweep pressure: fraction of bars where imbalance > 0.5
-            micro_sweep_pressure = float((group["imbalance"].abs() > 0.5).mean())
-        else:
-            micro_depth_depletion = 0.0
-            micro_imbalance = 0.0
-            micro_sweep_pressure = 0.0
-
-        micro_feature_coverage = float(n) / 300.0  # 300 = 5*60 1s bars
-
-        rows.append(
-            {
-                "timestamp": bar_ts,
-                "symbol": symbol,
-                "micro_spread_stress": micro_spread_stress,
-                "micro_depth_depletion": micro_depth_depletion,
-                "micro_sweep_pressure": micro_sweep_pressure,
-                "micro_imbalance": micro_imbalance,
-                "micro_feature_coverage": micro_feature_coverage,
-            }
+    if has_depth:
+        tob["abs_imbalance"] = tob["imbalance"].abs()
+        tob["sweep_flag"] = (tob["abs_imbalance"] > 0.5).astype(float)
+        grouped = (
+            tob.groupby("bar_ts", sort=True)
+            .agg(
+                spread_mean=("spread_bps", "mean"),
+                obs_count=("timestamp", "size"),
+                depth_mean=("depth", "mean"),
+                depth_min=("depth", "min"),
+                micro_imbalance=("abs_imbalance", "mean"),
+                micro_sweep_pressure=("sweep_flag", "mean"),
+            )
+            .reset_index()
         )
+        grouped["micro_depth_depletion"] = np.where(
+            grouped["depth_mean"] > 0.0,
+            1.0 - (grouped["depth_min"] / grouped["depth_mean"]),
+            0.0,
+        )
+    else:
+        grouped = (
+            tob.groupby("bar_ts", sort=True)
+            .agg(
+                spread_mean=("spread_bps", "mean"),
+                obs_count=("timestamp", "size"),
+            )
+            .reset_index()
+        )
+        grouped["micro_depth_depletion"] = 0.0
+        grouped["micro_imbalance"] = 0.0
+        grouped["micro_sweep_pressure"] = 0.0
 
-    if not rows:
+    if grouped.empty:
         return pd.DataFrame(
             columns=[
                 "timestamp",
@@ -112,7 +113,21 @@ def _build_rollup(symbol: str, tob: pd.DataFrame) -> pd.DataFrame:
             ]
         )
 
-    out = pd.DataFrame(rows)
+    out = grouped.rename(columns={"bar_ts": "timestamp"}).copy()
+    out["symbol"] = symbol
+    out["micro_spread_stress"] = out["spread_mean"].astype(float) / float(global_median_spread)
+    out["micro_feature_coverage"] = out["obs_count"].astype(float) / 300.0  # 300 = 5*60 1s bars
+    out = out[
+        [
+            "timestamp",
+            "symbol",
+            "micro_spread_stress",
+            "micro_depth_depletion",
+            "micro_sweep_pressure",
+            "micro_imbalance",
+            "micro_feature_coverage",
+        ]
+    ]
     out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True)
     return out.sort_values("timestamp").reset_index(drop=True)
 

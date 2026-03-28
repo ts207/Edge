@@ -1,369 +1,209 @@
-# Edge — Operator & Research Workflow Guide
+# Operator Workflow
 
-## Roles
+## Objective
 
-| Role | Starting Point |
-|---|---|
-| Researcher / Autonomous Agent | This guide + `CLAUDE.md` |
-| Developer / Engineer | `docs/developer/ONBOARDING.md` |
-| Deployment Operator | `deploy/` templates |
+Use this repository to run bounded, replayable research loops with a clean artifact trail.
 
----
+Default posture:
 
-## Research Loop
+- start narrow
+- inspect prior memory first
+- plan before material execution
+- separate mechanical, statistical, and deployment conclusions
+- record the next action
 
-The canonical workflow is a bounded, replayable loop:
+## Canonical Loop
 
-```
-observe → retrieve memory → define objective → propose → plan → execute → evaluate → reflect → adapt
-```
+1. inspect prior knowledge
+2. define the bounded objective
+3. write or select a proposal
+4. translate proposal into repo-native config
+5. inspect the validated plan
+6. execute only when the plan is acceptable
+7. evaluate artifacts in the correct order
+8. decide `explore`, `repair`, `hold`, `stop`, or `exploit`
 
-Optimize for: **reproducibility → post-cost robustness → contract cleanliness → narrow attribution → decision quality -alpha discovery**
-
----
-
-## Step 1: Inspect State Before Any Run
-
-Always check prior memory and available knobs before starting:
-
-```bash    ?example knobs, use cases
-# What knobs are tunable?
-python3 -m project.research.knowledge.query knobs
-
-# What has been found in prior runs for this program?
-python3 -m project.research.knowledge.query memory --program_id btc_campaign
-
-# What is known statically about a specific event?
-python3 -m project.research.knowledge.query static --event BASIS_DISLOC
-```
-
----
-
-## Step 2: Write a Proposal
-
-A proposal is a compact YAML document specifying a bounded hypothesis test.
-
-**Minimum required fields:**
-
-```yaml
-program_id: btc_campaign
-objective: "Test VOL_SHOCK mean_reversion in high vol regime for BTC"
-symbols: [BTCUSDT]
-timeframe: 5m
-start: "2024-01-01"
-end: "2024-06-30"
-trigger_space:
-  events: [VOL_SHOCK]
-templates: [mean_reversion]
-contexts:
-  vol_regime: [high]
-horizons_bars: [12, 36, 72]
-directions: [long, short]
-entry_lags: [0, 1, 2]
-```
-
-**Rules:**  
-
-- One event family or narrow trigger set per run
-- One template family per run
-- One primary context family per run
-- Only set knobs that are explicitly proposal-settable
-
----
-
-## Step 3: Translate Proposal to Run Config
+## Step 1: Inspect Knowledge and Knobs
 
 ```bash
-python3 -m project.research.agent_io.proposal_to_experiment \
-  --proposal /path/to/proposal.yaml \
+.venv/bin/python -m project.research.knowledge.query knobs
+.venv/bin/python -m project.research.knowledge.query memory --program_id btc_campaign
+.venv/bin/python -m project.research.knowledge.query static --event BASIS_DISLOC
+```
+
+Use this step to avoid rerunning near-duplicates and to narrow proposal scope.
+
+## Step 2: Write a Compact Proposal
+
+Proposal inputs should be hypothesis-shaped, not essay-shaped.
+
+Minimum proposal structure:
+
+- `program_id`
+- `objective`
+- `symbols`
+- `timeframe`
+- `start`
+- `end`
+- `trigger_space`
+- `templates`
+- `contexts` when relevant
+- `horizons_bars`
+- `directions`
+- `entry_lags`
+
+Keep the search space bounded. Avoid broad unrelated trigger sets in one run.
+
+## Step 3: Translate and Validate
+
+```bash
+.venv/bin/python -m project.research.agent_io.proposal_to_experiment \
+  --proposal /abs/path/to/proposal.yaml \
   --registry_root project/configs/registries \
   --config_path /tmp/experiment.yaml \
   --overrides_path /tmp/run_all_overrides.json
 ```
 
----
+Outputs:
 
-## Step 4: Plan Before Executing
+- experiment config
+- `run_all` overrides
+- validated plan summary with required detectors/features/states
 
-**Always plan first on material runs.** Planning validates scope without writing artifacts.
+Stop here if the validated plan is already too broad.
 
-```bash  ?why 3 different but same options, explain them and recommend
-# Via issue_proposal (with memory bookkeeping)
-python3 -m project.research.agent_io.issue_proposal \
-  --proposal /path/to/proposal.yaml \
+## Step 4: Plan Before Execution
+
+```bash
+.venv/bin/python -m project.research.agent_io.execute_proposal \
+  --proposal /abs/path/to/proposal.yaml \
+  --run_id btc_basis_slice_001 \
+  --registry_root project/configs/registries \
+  --out_dir data/artifacts/experiments/btc_campaign/proposals/btc_basis_slice_001 \
+  --plan_only 1
+```
+
+Or, if you want proposal bookkeeping under memory:
+
+```bash
+.venv/bin/python -m project.research.agent_io.issue_proposal \
+  --proposal /abs/path/to/proposal.yaml \
   --registry_root project/configs/registries \
   --plan_only 1
-
-# Via execute_proposal
-python3 -m project.research.agent_io.execute_proposal \
-  --proposal /path/to/proposal.yaml \
-  --run_id btc_vol_shock_001 \
-  --registry_root project/configs/registries \
-  --out_dir data/artifacts/experiments/btc_campaign/proposals/btc_vol_shock_001 \
-  --plan_only 1
-
-# Via CLI directly
-edge-run-all \
-  --run_id demo \
-  --symbols BTCUSDT \
-  --start 2024-01-01 \
-  --end 2024-03-31 \
-  --plan_only 1
 ```
 
----
+Review:
 
-## Step 5: Execute
+- estimated hypothesis count
+- required detectors
+- required features
+- required states
+- resulting `run_all` command
 
-Remove `--plan_only` or set it to `0` to execute:
+## Step 5: Execute Narrowly
+
+Examples:
 
 ```bash
-edge-run-all \
-  --run_id btc_vol_shock_001 \
-  --symbols BTCUSDT \
-  --start 2024-01-01 \
-  --end 2024-06-30
+make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK
+make discover-edges
+edge-run-all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-03-31 --plan_only 1
 ```
 
-### Targeted Discovery (single event)
+Use `run_all` directly when you need full control over flags such as:
+
+- `--events`
+- `--templates`
+- `--contexts`
+- `--entry_lags`
+- `--candidate_promotion_profile`
+- `--run_strategy_builder`
+- `--runtime_invariants_mode`
+- research comparison tolerances
+
+## Step 6: Read Artifacts in the Correct Order
+
+Read in this order:
+
+1. top-level run manifest
+2. stage manifests
+3. stage logs
+4. report artifacts
+5. generated diagnostics
+
+If these disagree, the disagreement is the finding.
+
+## Step 7: Evaluate on Three Layers
+
+Every meaningful run should be evaluated on:
+
+1. mechanical integrity
+2. statistical quality
+3. deployment relevance
+
+Minimum checks:
+
+- artifact completeness
+- warning surface
+- split counts / sample adequacy
+- q-values
+- after-cost expectancy
+- stressed cost survival
+- promotion eligibility
+
+## Synthetic Policy
+
+Use synthetic workflows for:
+
+- detector truth recovery
+- infrastructure validation
+- negative controls
+- regime stress
+- search/promotion calibration
+
+Do not present synthetic profitability as live evidence.
+
+Maintained commands:
 
 ```bash
-make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK    
-```
-
-### Full Discovery (all events)
-
-```bash
-make discover-edges     
-```
-
-```
-
-### Promotion Pass
-
-```bash
-edge-promote --run_id btc_vol_shock_001  
-
-```
-
-### Blueprint Compilation
-
-```bash
-compile-strategy-blueprints --run_id btc_vol_shock_001
-```
-
----
-
-## Step 6: Evaluate Output
-
-A run must be evaluated on **three layers**:
-
-### Layer 1 — Mechanical Integrity
-
-- Did the run complete without stage failures?
-- Do stage manifests reconcile with the top-level manifest?
-- Are artifact counts and hashes consistent?
-- Are there any contract violations?
-
-**Never trust a run based on exit code alone.** Read the manifests. ?more explicit instructions
-
-### Layer 2 — Statistical Quality
-
-Check at minimum:
-
-- `split_counts` (train / validation / test event counts)
-- `q_value` (must be ≤ 0.05 for Gate V1)
-- `after_cost_expectancy_bps` (must be > 0.1 bps)
-- `stressed_after_cost_expectancy_bps` (at 1.5× cost multiplier)
-- `sign_stability` (consistent directional signal across splits)
-- `regime_ess` (effective sample size per regime)
-
-```bash
-# View benchmark review
-PYTHONPATH=. python3 project/scripts/show_benchmark_review.py ?what benchmark, benchmark of what, use cases
-```
-
-### Layer 3 — Deployment Relevance
-
-- Does the event occur at sufficient frequency in live markets?
-- Is the strategy executable given market microstructure?
-- Does the blueprint pass the promotion confirmatory gates?
-- Is there regime stability across ≥2 distinct regimes?
-
----
-
-## Step 7: Record Next Action
-
-Every meaningful run must leave behind a recorded next action:
-
-| Action | Meaning |
-|---|---|
-| `exploit` | Gates passed; pursue live testing or promotion |
-| `explore` | Results are suggestive; refine and re-run |
-| `repair` | Mechanical or data issue found; fix before proceeding |
-| `hold` | Insufficient data or ambiguous; wait for more evidence |
-| `stop` | No evidence of edge; do not continue this line |
-
----
-
-## Make Targets (Common Shortcuts)
-
-```bash
-# Research
-make discover-blueprints    # Full pipeline: Ingest → Discovery → Blueprints
-make discover-edges         # Phase 2 discovery for all events
-make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK  # Targeted single event
-make baseline               # Full discovery + profitable strategy packaging
-make golden-workflow        # Canonical end-to-end smoke
-make golden-certification   # Golden workflow + runtime certification manifest
-
-# Testing
-make test           # Full test suite (407 files)
-make test-fast      # Excludes @pytest.mark.slow
-make minimum-green-gate  # Required baseline: compile + architecture + spec + drift checks + golden
-
-# Style
-make lint           # Ruff lint (changed files)
-make format         # Ruff format in-place
-make format-check   # Ruff format check (no writes)
-make style          # lint + format-check
-
-# Maintenance
-make benchmark-maintenance        # Full benchmark governance cycle
-make benchmark-maintenance-smoke  # Dry-run
-make governance     # Audit specs and sync schemas
-
-# Cleanup
-make clean-all-data  # Wipe data/lake and reports
-```
-
----
-
-## Synthetic Validation Workflow
-
-Synthetic data is used for **calibration and infrastructure validation only** — not as evidence of live profitability.
-
-**Appropriate uses:**
-
-- Detector truth recovery after code changes
-- Infrastructure validation (pipeline mechanics)
-- Negative-control testing
-- Regime stress testing
-- Search and promotion calibration
-
-**Maintained commands:**
-
-```bash
-# Generate synthetic dataset suite
 python3 -m project.scripts.generate_synthetic_crypto_regimes \
   --suite_config project/configs/synthetic_dataset_suite.yaml \
   --run_id synthetic_suite
-
-# Run golden synthetic discovery
 python3 -m project.scripts.run_golden_synthetic_discovery
-
-# Fast certification (CI/pre-merge)
 python3 -m project.scripts.run_fast_synthetic_certification
-
-# Validate detector truth
-python3 -m project.scripts.validate_synthetic_detector_truth \
-  --run_id golden_synthetic_discovery
+python3 -m project.scripts.validate_synthetic_detector_truth --run_id golden_synthetic_discovery
 ```
 
-**Synthetic rules:**
+## Benchmarks and Governance
 
-- Freeze the synthetic profile before evaluating outcomes
-- Keep the manifest and truth map with the run
-- Rerun truth validation after any detector or generator edits
-- Compare across ≥1 additional profile before strengthening belief
-
----
-
-## Benchmark Governance Cycle
-
-Benchmarks are the certified performance baselines. They must be maintained when detectors, features, or gates change.
+For benchmark governance:
 
 ```bash
-# Full production cycle
-make benchmark-maintenance
-
-# Dry-run only
 make benchmark-maintenance-smoke
-
-# Inspect promotion readiness
-PYTHONPATH=. python3 project/scripts/show_promotion_readiness.py \
-  --review data/reports/benchmarks/latest/benchmark_review.json \
-  --cert data/reports/benchmarks/latest/benchmark_certification.json
+make benchmark-maintenance
 ```
 
----
-
-## Maintenance Scripts (Operator)
-
-Run these after any structural change to synchronize the event registry and regenerate machine-owned artifacts.
-
-### 1. Synchronize Event Registry
-If you have added, deleted, or modified individual event YAML files in `spec/events/`, you **must** rebuild the unified registry first:
-
-```bash
-# Authoritative sync of spec/events/event_registry_unified.yaml
-PYTHONPATH=. python3 project/scripts/build_unified_event_registry.py
-```
-
-### 2. Regenerate All Artifacts
-Use the all-in-one script to regenerate the System Map, Detector Coverage, and Ontology Audit:
-
-```bash
-# Recommended for full artifact updates
-bash project/scripts/regenerate_artifacts.sh
-```
-
-### 3. Individual Maintenance Commands
-You can also run specific audits or metrics manually:
-
-```bash
-# Regenerate architecture metrics
-PYTHONPATH=. python3 project/scripts/build_architecture_metrics.py --check
-
-# Lint all YAML specs for governance compliance
-PYTHONPATH=. python3 project/scripts/spec_qa_linter.py
-```
-
-### 4. Minimum Green Gate
-To run the full suite of stabilization and governance checks (including tests and regressions):
+For structural maintenance:
 
 ```bash
 make minimum-green-gate
 ```
 
----
+## Stop Conditions
 
-## Live Engine Operations
+Stop and re-scope when:
 
-```bash
-# Inspect session metadata
-edge-live-engine \
-  --config project/configs/golden_certification.yaml \
-  --print_session_metadata
+- the validated plan is too broad
+- the run differs from a prior run only cosmetically
+- artifacts disagree
+- synthetic-only support is being mistaken for deployable evidence
+- drift or runtime invariants fail
 
-# Launch with state snapshot
-edge-live-engine \
-  --config project/configs/golden_certification.yaml \
-  --snapshot_path artifacts/live_state.json
-```
+## Expected Outputs of a Good Run
 
-**Health monitoring:** The `LiveDataManager` exposes `health_monitor_keys()` returning `(symbol, channel)` pairs for all active streams. Each stream must be monitored for staleness.
+A good run leaves:
 
-**Kill switch:** Configured in `spec/grammar/kill_switch_config.yaml`. Triggers hard shutdown of execution on configurable conditions.
-
----
-
-## What to Avoid
-
-- Broad search over unrelated triggers in one run
-- Re-runs that differ only in wording (not in hypothesis)
-- Treating detector materialization as strategy proof
-- Treating synthetic wins as live-market evidence
-- Trusting command exit status without artifact reconciliation
-- Presenting synthetic profitability as live-market evidence
-- Comparing runs across different cost configs without normalizing
+- a bounded question
+- manifested evidence
+- an interpretable result
+- a next action

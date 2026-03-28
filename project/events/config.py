@@ -163,6 +163,23 @@ def _family_by_event() -> Dict[str, str]:
 
 
 @lru_cache(maxsize=1)
+def _legacy_family_by_event() -> Dict[str, str]:
+    payload = _load_yaml(REPO_ROOT / "project" / "configs" / "registries" / "events.yaml")
+    events = payload.get("events", {}) if isinstance(payload, dict) else {}
+    if not isinstance(events, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for event_type, row in events.items():
+        if not isinstance(row, dict):
+            continue
+        family = str(row.get("family", "")).strip().upper()
+        normalized = str(event_type).strip().upper()
+        if normalized and family:
+            out[normalized] = family
+    return out
+
+
+@lru_cache(maxsize=1)
 def _operator_registry() -> Dict[str, Dict[str, Any]]:
     registry = get_domain_registry()
     return {name: dict(spec.raw) for name, spec in registry.template_operator_definitions.items()}
@@ -217,6 +234,10 @@ def compose_config(
         .upper()
     )
     legacy_family = str(row.get("legacy_family", "")).strip().upper()
+    if not legacy_family or legacy_family == normalized or legacy_family == family_name:
+        legacy_family = str(
+            row.get("family", _legacy_family_by_event().get(normalized, ""))
+        ).strip().upper()
     family_defaults_all = unified.get("families", {})
     family_defaults = (
         family_defaults_all.get(legacy_family, {}) if isinstance(family_defaults_all, dict) else {}
@@ -289,11 +310,20 @@ def compose_config(
         templates = ()
     # Validation
     operators = _operator_registry()
+    compatible_templates: list[str] = []
+    family_candidates = {
+        token
+        for token in (family_name, legacy_family)
+        if isinstance(token, str) and token.strip()
+    }
     for t_name in templates:
         if t_name in operators:
             compat = operators[t_name].get("compatible_families", [])
-            if compat and family_name not in [str(c).upper() for c in compat]:
-                raise ValueError(f"Template {t_name} is incompatible with family {family_name}")
+            compat_families = {str(c).upper() for c in compat}
+            if compat_families and not family_candidates.intersection(compat_families):
+                continue
+        compatible_templates.append(t_name)
+    templates = tuple(compatible_templates)
 
     # Hash for discovery uniqueness
     payload_for_hash = {

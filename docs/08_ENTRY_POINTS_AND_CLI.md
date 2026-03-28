@@ -1,307 +1,223 @@
-# Edge — Entry Points & CLI Reference
+# Entry Points and CLI
 
-## Installed CLI Commands
+## Installed Console Scripts
 
-Registered in `pyproject.toml` `[project.scripts]`:
+Defined in `pyproject.toml`:
 
-| Command | Entry Point | Role |
-|---|---|---|
-| `edge-run-all` | `project.pipelines.run_all:main` | **Primary**: Full pipeline orchestration |
-| `edge-phase2-discovery` | `project.pipelines.research.phase2_candidate_discovery:main` | Phase 2 discovery only |
-| `edge-promote` | `project.pipelines.research.promote_candidates:main` | Promotion pass only |
-| `edge-live-engine` | `project.scripts.run_live_engine:main` | Live trading engine |
-| `edge-backtest` / `backtest` | `project.cli:main` | Backtest runner |
-| `edge-smoke` | `project.reliability.cli_smoke:main` | Smoke test runner |
-| `compile-strategy-blueprints` | `project.pipelines.research.compile_strategy_blueprints:main` | Blueprint compilation |
-| `build-strategy-candidates` | `project.pipelines.research.build_strategy_candidates:main` | Strategy candidate assembly |
-| `ontology-consistency-audit` | `project.scripts.ontology_consistency_audit:main` | Ontology audit |
+- `backtest`
+- `edge-backtest`
+- `edge-run-all`
+- `edge-live-engine`
+- `edge-phase2-discovery`
+- `edge-promote`
+- `edge-smoke`
+- `compile-strategy-blueprints`
+- `build-strategy-candidates`
+- `ontology-consistency-audit`
 
----
+## Canonical Orchestrator
 
-## `edge-run-all` — Full Pipeline CLI
-
-The primary entry point. All flags:
-
-### Required
-
-```
---run_id         <str>    Unique identifier for this run
---symbols        <str>    Comma-separated symbols, e.g. BTCUSDT,ETHUSDT
---start          <date>   Start date (YYYY-MM-DD)
---end            <date>   End date (YYYY-MM-DD)
-```
-
-### Planning
-
-```
---plan_only      <0|1>    Plan and print the run without executing [default: 0]
-```
-
-### Timeframes
-
-```
---timeframes     <str>    Comma-separated timeframes [default: 5m]
-```
-
-### Phase 2 Controls
-
-```
---run_phase2_conditional  <0|1>  Run phase 2 hypothesis evaluation [default: 1]
---phase2_event_type       <str>  Filter to single event type (targeted runs)
---concept                 <str>  Concept filter for discovery
-```
-
-### Pipeline Stage Switches
-
-```
---run_edge_candidate_universe  <0|1>  Run edge candidate universe [default: 1]
---run_strategy_builder         <0|1>  Build strategy candidates [default: 1]
---run_recommendations_checklist <0|1> Generate checklist [default: 1]
---enable_cross_venue_spot_pipeline <0|1> Include spot pipeline [default: 0]
-```
-
-### Usage Examples
+The main orchestrator is:
 
 ```bash
-# Full pipeline on BTC+ETH
-edge-run-all \
-  --run_id btc_eth_2024q1 \
-  --symbols BTCUSDT,ETHUSDT \
-  --start 2024-01-01 \
-  --end 2024-03-31
-
-# Plan first (safe preview)
-edge-run-all \
-  --run_id btc_eth_2024q1 \
-  --symbols BTCUSDT,ETHUSDT \
-  --start 2024-01-01 \
-  --end 2024-03-31 \
-  --plan_only 1
-
-# Targeted single event
-edge-run-all \
-  --run_id vol_shock_run \
-  --symbols BTCUSDT \
-  --start 2024-01-01 \
-  --end 2024-06-30 \
-  --run_phase2_conditional 1 \
-  --phase2_event_type VOL_SHOCK \
-  --run_strategy_builder 0 \
-  --run_recommendations_checklist 0
-
-# Features-only (no discovery)
-edge-run-all \
-  --run_id features_prep \
-  --symbols BTCUSDT \
-  --start 2024-01-01 \
-  --end 2024-03-31 \
-  --run_phase2_conditional 0 \
-  --run_edge_candidate_universe 0 \
-  --run_strategy_builder 0
+edge-run-all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-03-31 --plan_only 1
 ```
 
----
-
-## `edge-phase2-discovery` — Phase 2 Only
-
-Runs discovery on previously prepared data (requires completed ingest+clean+features run).
+Equivalent Python module form:
 
 ```bash
-edge-phase2-discovery --run_id <existing_run_id>
+python -m project.pipelines.run_all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-03-31 --plan_only 1
 ```
 
----
+## `backtest` / `edge-backtest`
 
-## `edge-promote` — Promotion Pass
+`project/cli.py` exposes:
 
-Runs the promotion stage on a completed discovery run.
+- `pipeline run-all`
+- `ingest`
+
+Examples:
 
 ```bash
-edge-promote --run_id <run_id_with_discovery>
+backtest pipeline run-all --run_id demo --symbols BTCUSDT --start 2024-01-01 --end 2024-03-31
+backtest ingest --run_id ingest_demo --symbols BTCUSDT --start 2024-01-01 --end 2024-01-31 --timeframe 5m
 ```
 
----
+Use `edge-run-all` directly when you want the full modern run surface. The compatibility CLI is thinner.
 
-## `edge-live-engine` — Live Engine
+## Proposal and Planning CLIs
+
+Main proposal tooling:
 
 ```bash
-# Print session metadata (safe inspect)
-edge-live-engine \
-  --config project/configs/golden_certification.yaml \
-  --print_session_metadata
-
-# Launch with state snapshot
-edge-live-engine \
-  --config project/configs/golden_certification.yaml \
-  --snapshot_path artifacts/live_state.json
-
-# Launch (no snapshot)
-edge-live-engine \
-  --config project/configs/golden_certification.yaml
+python -m project.research.agent_io.proposal_to_experiment --proposal /abs/path/to/proposal.yaml --registry_root project/configs/registries
+python -m project.research.agent_io.execute_proposal --proposal /abs/path/to/proposal.yaml --run_id run_001 --registry_root project/configs/registries --out_dir /tmp/run_001 --plan_only 1
+python -m project.research.agent_io.issue_proposal --proposal /abs/path/to/proposal.yaml --registry_root project/configs/registries --plan_only 1
 ```
 
----
+Responsibilities:
 
-## `edge-smoke` — Smoke Test
+- `proposal_to_experiment`
+  - translate proposal and emit validated config / overrides
+- `execute_proposal`
+  - translate and invoke `run_all`
+- `issue_proposal`
+  - same as above plus memory bookkeeping and run-id issuance
+
+## Smoke and Reliability CLI
 
 ```bash
-edge-smoke
+edge-smoke --mode research
+edge-smoke --mode full --root /tmp/edge-smoke
+edge-smoke --mode validate-artifacts --root /path/to/artifacts/root
 ```
 
-Runs the reliability smoke test suite. Validates the system can initialize and run a minimal pipeline without errors.
+Supported modes:
 
----
+- `engine`
+- `research`
+- `promotion`
+- `full`
+- `validate-artifacts`
 
-## Knowledge Query CLI (`project.research.knowledge.query`)
+This CLI both generates smoke artifacts and validates artifact contracts.
+
+## Live Engine CLI
 
 ```bash
-# List all tunable knobs
-python3 -m project.research.knowledge.query knobs
-
-# Read campaign memory
-python3 -m project.research.knowledge.query memory \
-  --program_id btc_campaign
-
-# Read static knowledge about an event
-python3 -m project.research.knowledge.query static \
-  --event BASIS_DISLOC
-
-# Read static knowledge about a feature
-python3 -m project.research.knowledge.query static \
-  --feature vol_regime
+edge-live-engine --config project/configs/golden_certification.yaml --print_session_metadata
+edge-live-engine --config project/configs/live_paper.yaml --snapshot_path artifacts/live_state.json
 ```
 
----
+The live runtime validates:
 
-## Agent I/O CLI
+- environment variables
+- config / snapshot alignment
+- Binance venue connectivity
+- account snapshot normalization
 
-### `proposal_to_experiment`
+## `run_all` Flag Families
 
-Translates a compact proposal YAML to repo-native experiment config:
+`project.pipelines.pipeline_planning.build_parser()` currently exposes a wide run surface. Treat the flags in groups:
 
-```bash
-python3 -m project.research.agent_io.proposal_to_experiment \
-  --proposal /abs/path/to/proposal.yaml \
-  --registry_root project/configs/registries \
-  --config_path /tmp/experiment.yaml \
-  --overrides_path /tmp/run_all_overrides.json
-```
+### Identity and scope
 
-### `execute_proposal`
+- `--run_id`
+- `--symbols`
+- `--start`
+- `--end`
+- `--timeframes`
+- `--program_id`
+- `--concept`
 
-Plan or execute a proposal directly:
+### Config layering
 
-```bash
-# Plan only
-python3 -m project.research.agent_io.execute_proposal \
-  --proposal /abs/path/to/proposal.yaml \
-  --run_id btc_basis_001 \
-  --registry_root project/configs/registries \
-  --out_dir data/artifacts/experiments/btc_campaign/proposals/btc_basis_001 \
-  --plan_only 1
+- `--experiment_config`
+- `--registry_root`
+- `--config`
+- `--override`
 
-# Execute
-python3 -m project.research.agent_io.execute_proposal \
-  --proposal /abs/path/to/proposal.yaml \
-  --run_id btc_basis_001 \
-  --registry_root project/configs/registries \
-  --out_dir data/artifacts/experiments/btc_campaign/proposals/btc_basis_001
-```
+### Ingest and data-path controls
 
-### `issue_proposal`
+- `--skip_ingest_ohlcv`
+- `--skip_ingest_funding`
+- `--skip_ingest_spot_ohlcv`
+- `--run_ingest_liquidation_snapshot`
+- `--run_ingest_open_interest_hist`
+- `--funding_scale`
+- `--enable_cross_venue_spot_pipeline`
 
-Issues a proposal with memory bookkeeping (preferred over `execute_proposal` for campaigns):
+### Discovery scope
 
-```bash
-python3 -m project.research.agent_io.issue_proposal \
-  --proposal /abs/path/to/proposal.yaml \
-  --registry_root project/configs/registries \
-  --plan_only 1
-```
+- `--events`
+- `--templates`
+- `--contexts`
+- `--horizons`
+- `--directions`
+- `--entry_lags`
+- `--phase2_event_type`
+- `--discovery_profile`
+- `--search_spec`
 
----
+### Research quality and promotion
 
-## Maintenance Scripts (`python3 -m project.scripts.*`)
+- `--run_candidate_promotion`
+- `--candidate_promotion_profile`
+- `--run_recommendations_checklist`
+- `--run_expectancy_analysis`
+- `--run_expectancy_robustness`
+- `--run_edge_registry_update`
+- `--run_campaign_memory_update`
 
-| Command | Purpose |
-|---|---|
-| `python3 -m project.scripts.build_system_map --check` | Regenerate system map, fail if drift detected |
-| `python3 -m project.scripts.detector_coverage_audit --md-out ... --json-out ... --check` | Regenerate detector coverage, fail on drift |
-| `python3 -m project.scripts.ontology_consistency_audit --output ... --check` | Regenerate ontology audit, fail on drift |
-| `python3 -m project.scripts.build_architecture_metrics --check` | Regenerate architecture metrics |
-| `python3 -m project.scripts.run_golden_synthetic_discovery` | Golden synthetic discovery |
-| `python3 -m project.scripts.run_fast_synthetic_certification` | Fast synthetic certification |
-| `python3 -m project.scripts.validate_synthetic_detector_truth --run_id <id>` | Validate detector truth |
-| `python3 -m project.scripts.generate_synthetic_crypto_regimes --suite_config ... --run_id ...` | Generate synthetic suite |
-| `python3 -m project.scripts.run_golden_regression --run_id smoke_run` | Golden regression test |
-| `python3 -m project.scripts.run_golden_workflow` | End-to-end golden workflow |
-| `python3 -m project.scripts.run_benchmark_maintenance_cycle --execute 1` | Full benchmark cycle |
-| `python3 -m project.scripts.show_benchmark_review --path <path>` | Display benchmark review |
-| `python3 -m project.scripts.show_promotion_readiness --review <path> --cert <path>` | Display promotion readiness |
-| `python3 project/scripts/spec_qa_linter.py` | Lint all YAML specs |
+### Strategy packaging
 
----
+- `--run_strategy_builder`
+- `--run_strategy_blueprint_compiler`
+- `--run_profitable_selector`
 
-## Spec Validation CLI
+### Runtime and reproducibility
 
-```bash
-python3 -m project.spec_validation.cli
-```
+- `--runtime_invariants_mode`
+- `--determinism_replay_checks`
+- `--oms_replay_checks`
+- `--emit_run_hash`
+- `--resume_from_failed_stage`
+- `--dry_run`
+- `--plan_only`
 
-Validates all YAML specs in `spec/` for structural correctness and cross-reference integrity. Run in Tier 1 CI.
+### Research comparison drift thresholds
 
----
+Flags prefixed with `--research_compare_*` govern tolerated drift for:
 
-## `ontology-consistency-audit`
+- phase2 candidate counts
+- survivor counts
+- promoted counts
+- edge candidate counts
+- cost medians
+- expectancy medians
 
-```bash
-ontology-consistency-audit --output docs/generated/ontology_audit.json --check
-```
+These defaults are part of the repo's research-calibration behavior, not cosmetic CLI noise.
 
-Checks that:
+## Maintained `make` Targets
 
-- All events in `spec/events/` have a matching family in `spec/grammar/family_registry.yaml`
-- All templates used in events are legal for their family
-- State specs are consistent with state registry
-- Feature references in event specs match defined features
+Important targets:
 
----
+- `make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK`
+- `make discover-concept CONCEPT=<concept>`
+- `make discover-edges`
+- `make discover-blueprints`
+- `make run`
+- `make baseline`
+- `make golden-workflow`
+- `make golden-synthetic-discovery`
+- `make golden-certification`
+- `make benchmark-maintenance-smoke`
+- `make benchmark-maintenance`
+- `make minimum-green-gate`
+- `make test`
+- `make test-fast`
+- `make lint`
+- `make format-check`
 
-## Makefile Reference
+## High-Value Scripts
 
-Full target list (from `make help`):
+Frequently used scripts under `project/scripts/`:
 
-```
-discover-blueprints  Full research pipeline: Ingest → Discovery → Blueprints
-discover-edges       Phase 2 discovery for all events
-discover-target      Targeted: make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK
-discover-concept     Concept-based: make discover-concept CONCEPT=<concept>
-run                  Ingest + Clean + Features (preparation only)
-baseline             Full discovery + profitable strategy packaging
-golden-workflow      Canonical end-to-end smoke workflow
-golden-certification Golden workflow + runtime certification manifest
-test                 Full test suite
-test-fast            Run fast research test profile
-lint                 Ruff lint on changed Python files
-format-check         Ruff formatter check
-format               Ruff format in-place
-style                lint + format-check
-governance           Audit specs and sync schemas
-benchmark-m0         Emit (or execute) frozen M0 benchmark run matrix
-benchmark-maintenance-smoke  End-to-end dry-run of benchmark governance cycle
-benchmark-maintenance Full production execution of benchmark governance cycle
-clean-all-data       Wipe all data/lake and reports
-minimum-green-gate   Required baseline: compile + architecture + spec + drift + golden
-```
+- `run_golden_workflow.py`
+- `run_golden_regression.py`
+- `run_certification_workflow.py`
+- `run_golden_synthetic_discovery.py`
+- `run_fast_synthetic_certification.py`
+- `validate_synthetic_detector_truth.py`
+- `run_benchmark_maintenance_cycle.py`
+- `show_benchmark_review.py`
+- `show_promotion_readiness.py`
+- `build_system_map.py`
+- `build_architecture_metrics.py`
+- `detector_coverage_audit.py`
+- `ontology_consistency_audit.py`
+- `build_event_ontology_artifacts.py`
+- `event_ontology_audit.py`
+- `regime_routing_audit.py`
 
-### Key Makefile Variables
-
-```makefile
-RUN_ID    ?= discovery_2020_2025
-SYMBOLS   ?= BTCUSDT,ETHUSDT
-START     ?= 2020-06-01
-END       ?= 2025-07-10
-TIMEFRAMES ?= 5m
-EVENT     =              # required for discover-target
-CONCEPT   =              # required for discover-concept
-```
+Use these instead of inventing ad hoc maintenance commands.

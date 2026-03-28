@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.domain.compiled_registry import get_domain_registry
+from project.events.event_aliases import resolve_executable_event_alias
 from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
     RegistryBundle,
@@ -383,6 +384,7 @@ def _resolve_requested_event_ids(
     request: AgentExperimentRequest,
     registries: RegistryBundle,
 ) -> List[str]:
+    allowed_events = registries.events.get("events", {})
     requested_events = [str(event_id).strip() for event_id in request.trigger_space.events.get("include", []) if str(event_id).strip()]
     requested_regimes = [
         str(regime).strip().upper()
@@ -424,6 +426,10 @@ def _resolve_requested_event_ids(
     seen: set[str] = set()
     for event_id in requested_events:
         token = str(event_id).strip()
+        if token not in allowed_events:
+            executable_token = resolve_executable_event_alias(token)
+            if executable_token in allowed_events:
+                token = executable_token
         if token and token not in seen:
             ordered.append(token)
             seen.add(token)

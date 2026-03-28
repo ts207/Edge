@@ -347,17 +347,67 @@ def build_event_return_frame(
     if int(entry_lag_bars) < 1:
         raise ValueError("entry_lag_bars must be >= 1 to prevent same-bar entry leakage")
 
+    if "timestamp" not in features_df.columns:
+        return pd.DataFrame()
+
+    if "close" not in features_df.columns:
+        return pd.DataFrame()
+
+    features_sorted = features_df.sort_values("timestamp").reset_index(drop=True)
+    merged = join_events_to_features(sym_events, features_sorted)
+    feat_close = features_sorted["close"].astype(float).to_numpy()
+    return build_event_return_frame_from_joined(
+        merged,
+        feat_close,
+        rule=rule,
+        horizon=horizon,
+        side_policy=side_policy,
+        label_target=label_target,
+        canonical_family=canonical_family,
+        shift_labels_k=shift_labels_k,
+        entry_lag_bars=entry_lag_bars,
+        horizon_bars_override=horizon_bars_override,
+        stop_loss_bps=stop_loss_bps,
+        take_profit_bps=take_profit_bps,
+        stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+        take_profit_atr_multipliers=take_profit_atr_multipliers,
+        cost_bps=cost_bps,
+        direction_override=direction_override,
+    )
+
+
+def build_event_return_frame_from_joined(
+    merged: pd.DataFrame,
+    feat_close: np.ndarray,
+    *,
+    rule: str,
+    horizon: str,
+    side_policy: str = "both",
+    label_target: str = "fwd_return_h",
+    canonical_family: str = "",
+    shift_labels_k: int = 0,
+    entry_lag_bars: int = 1,
+    horizon_bars_override: Optional[int] = None,
+    stop_loss_bps: Optional[float] = None,
+    take_profit_bps: Optional[float] = None,
+    stop_loss_atr_multipliers: Optional[float] = None,
+    take_profit_atr_multipliers: Optional[float] = None,
+    cost_bps: float = 0.0,
+    direction_override: Optional[float] = None,
+) -> pd.DataFrame:
+    if merged.empty:
+        return pd.DataFrame()
+    if int(entry_lag_bars) < 1:
+        raise ValueError("entry_lag_bars must be >= 1 to prevent same-bar entry leakage")
+
     horizon_bars = (
         int(horizon_bars_override)
         if horizon_bars_override is not None
         else horizon_to_bars(horizon)
     )
     horizon_bars = max(1, int(horizon_bars))
-    merged = join_events_to_features(sym_events, features_df)
-    if merged.empty or "close" not in merged.columns:
+    if feat_close.size == 0 or "close" not in merged.columns:
         return pd.DataFrame()
-
-    feat_close = features_df["close"].astype(float).to_numpy()
     records: List[Dict[str, Any]] = []
     per_trade_cost = max(0.0, float(cost_bps)) / 10_000.0
     for row in merged.to_dict("records"):
