@@ -26,10 +26,10 @@ jobs:
           pip install -e . pytest pyright
 
       - name: 1. Compile Check
-        run: python -m compileall -q project tests
+        run: python -m compileall -q project project/tests
 
       - name: 2. Architecture Tests
-        run: pytest tests/architecture
+        run: pytest project/tests/architecture
 
       - name: 3. Spec Validation
         run: python -m project.spec_validation.cli
@@ -51,18 +51,18 @@ jobs:
       - name: 5. Selected Fast Regression Tests
         run: |
           pytest -q \
-            tests/contracts/test_strategy_trace_schema.py \
-            tests/contracts/test_portfolio_ledger_schema.py \
-            tests/contracts/test_candidate_artifact_schema.py \
-            tests/contracts/test_promotion_artifacts_schema.py \
-            tests/contracts/test_manifest_integrity.py \
-            tests/contracts/test_cross_artifact_reconciliation.py \
-            tests/regressions/test_runner_position_contract.py \
-            tests/regressions/test_next_open_entry_accounting.py \
-            tests/regressions/test_event_analyzer_full_market_requirement.py \
-            tests/regressions/test_timeframe_contracts.py \
-            tests/regressions/test_storage_fallback_respected.py \
-            tests/regressions/test_bundle_policy_consistency.py
+            project/tests/contracts/test_strategy_trace_schema.py \
+            project/tests/contracts/test_portfolio_ledger_schema.py \
+            project/tests/contracts/test_candidate_artifact_schema.py \
+            project/tests/contracts/test_promotion_artifacts_schema.py \
+            project/tests/contracts/test_manifest_integrity.py \
+            project/tests/contracts/test_cross_artifact_reconciliation.py \
+            project/tests/regressions/test_runner_position_contract.py \
+            project/tests/regressions/test_next_open_entry_accounting.py \
+            project/tests/regressions/test_event_analyzer_full_market_requirement.py \
+            project/tests/regressions/test_timeframe_contracts.py \
+            project/tests/regressions/test_storage_fallback_respected.py \
+            project/tests/regressions/test_bundle_policy_consistency.py
 
       - name: 6. Static Type Check (Pyright)
         run: pyright project

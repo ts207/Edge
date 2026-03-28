@@ -1,22 +1,27 @@
 # Detector Coverage Audit
 
 - Status: `passed`
-- Active event specs: `69`
-- Registered detectors: `69`
-- Raw registered detector entries: `72`
-- Issues: `2`
+- Active event specs: `70`
+- Registered detectors: `70`
+- Raw registered detector entries: `78`
+- Issues: `7`
 
 ## Maturity Counts
 
 - `production`: 6
 - `proxy`: 9
 - `specialized`: 3
-- `standard`: 51
+- `standard`: 52
 
 ## Issues
 
-- [warning] Registered detector has no active event spec: ABSORPTION_EVENT (project/events/detectors/liquidity.py)
-- [warning] Registered detector has no active event spec: CROSS_ASSET_DESYNC_EVENT (project/events/families/desync.py)
+- [warning] Registered detector has no active event spec: CROSS_ASSET_INTERACTION (project/events/families/interaction.py)
+- [warning] Registered detector has no active event spec: INT_DEPTH_VACUUM_CONFIRM (project/events/families/interaction.py)
+- [warning] Registered detector has no active event spec: INT_FND_LIQ_CONFIRM (project/events/families/interaction.py)
+- [warning] Registered detector has no active event spec: INT_LIQ_OI_CONFIRM (project/events/families/interaction.py)
+- [warning] Registered detector has no active event spec: INT_VOL_RANGE_CONFIRM (project/events/families/interaction.py)
+- [warning] Registered detector has no active event spec: INT_ZSCORE_OVERSHOOT_CONFIRM (project/events/families/interaction.py)
+- [warning] Detector implementation has hardcoded numerical thresholds: CROSS_ASSET_DESYNC_EVENT (project/events/families/desync.py)
 
 ## Detector Inventory
 
@@ -29,6 +34,7 @@
 - `CLIMAX_VOLUME_BAR`: `standard` via `ClimaxVolumeDetector`
 - `COPULA_PAIRS_TRADING`: `standard` via `CopulaPairsTradingDetector`
 - `CORRELATION_BREAKDOWN_EVENT`: `standard` via `CorrelationBreakdownDetector`
+- `CROSS_ASSET_DESYNC_EVENT`: `standard` via `CrossAssetDesyncDetector`
 - `CROSS_VENUE_DESYNC`: `standard` via `CrossVenueDesyncDetector`
 - `DELEVERAGING_WAVE`: `standard` via `DeleveragingWaveDetector`
 - `DEPTH_COLLAPSE`: `proxy` via `DepthCollapseDetector`

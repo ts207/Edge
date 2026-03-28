@@ -42,6 +42,35 @@ def test_run_all_plan_only():
     )
     assert result.returncode == 0, result.stderr
     assert "Plan for run smoke_test_plan" in result.stdout
+    assert "Effective behavior:" in result.stdout
+    assert "phase2_event_type=VOL_SHOCK" in result.stdout
+    assert "expectancy_tail=analysis:True robustness:True checklist:True" in result.stdout
+
+
+def test_run_all_plan_only_shows_template_only_event_widening():
+    cmd = [
+        sys.executable,
+        "-m",
+        "project.pipelines.run_all",
+        "--run_id",
+        "smoke_test_plan_templates",
+        "--symbols",
+        "BTCUSDT",
+        "--start",
+        "2024-01-01",
+        "--end",
+        "2024-01-02",
+        "--templates",
+        "continuation",
+        "--plan_only",
+        "1",
+    ]
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath()
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "phase2_event_type=all (template_only_auto_widen)" in result.stdout
 
 
 def test_run_all_dry_run():
@@ -73,3 +102,5 @@ def test_run_all_dry_run():
     assert payload["dry_run"] is True
     assert payload["normalized_symbols"] == ["BTCUSDT"]
     assert payload["normalized_timeframes"] == ["5m"]
+    assert payload["effective_behavior"]["phase2_event_type"] == "VOL_SHOCK"
+    assert payload["effective_behavior"]["run_expectancy_analysis"] is True

@@ -14,6 +14,17 @@ from project.spec_registry.search_space import DEFAULT_EVENT_PRIORITY_WEIGHT as 
 _LOG = logging.getLogger(__name__)
 
 
+def _as_str_list(values: Any) -> List[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        token = values.strip()
+        return [token] if token else []
+    if not isinstance(values, (list, tuple, set)):
+        return []
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
 def _read_memory_table(*args: Any, **kwargs: Any) -> pd.DataFrame:
     from project.research import campaign_controller as _controller
 
@@ -111,6 +122,14 @@ def build_proposal_from_memory_scope(
         "date_scope": date_scope,
         "trigger_type": trigger_type,
         "contexts": contexts,
+        "canonical_regimes": _as_str_list(scope.get("canonical_regimes", []))
+        if "canonical_regimes" in scope
+        else [],
+        "subtypes": _as_str_list(scope.get("subtypes", [])) if "subtypes" in scope else [],
+        "phases": _as_str_list(scope.get("phases", [])) if "phases" in scope else [],
+        "evidence_modes": _as_str_list(scope.get("evidence_modes", []))
+        if "evidence_modes" in scope
+        else [],
     }
     if trigger_type == "EVENT":
         if not event_type:
@@ -201,14 +220,20 @@ def step_scan_for_type(
 
 
 def step_scan_events(ctrl: Any, mem: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    events_registry = ctrl.registries.events.get("events", {})
     avoid_events: Set[str] = set(mem.get("avoid_event_types", set()))
+    event_to_regime = ctrl._event_to_regime_map()
+    regime_to_events = ctrl._executable_regime_event_fanout()
 
     tested_events: Set[str] = set()
+    tested_regimes: Set[str] = set()
     try:
         tested_df = _read_memory_table(ctrl.config.program_id, "tested_regions", data_root=ctrl.data_root)
         if not tested_df.empty and "event_type" in tested_df.columns:
             tested_events = set(tested_df["event_type"].astype(str).unique())
+            if "canonical_regime" in tested_df.columns:
+                tested_regimes = set(
+                    tested_df["canonical_regime"].astype(str).str.strip().str.upper()
+                ) - {""}
     except Exception:
         _LOG.warning("Failed to read superseded stages from memory", exc_info=True)
 
@@ -228,40 +253,50 @@ def step_scan_events(ctrl: Any, mem: Dict[str, Any]) -> Optional[Dict[str, Any]]
         except Exception:
             _LOG.warning("Failed to extract tested events from campaign ledger; skipping.", exc_info=True)
 
-    family_candidates: Dict[str, List[str]] = {}
-    for eid, meta in events_registry.items():
-        if not meta.get("enabled", True):
-            continue
-        if eid in tested_events or eid in avoid_events:
-            continue
-        family = str(meta.get("family", "UNKNOWN"))
-        family_candidates.setdefault(family, []).append(eid)
+    for event_id in tested_events:
+        regime = event_to_regime.get(event_id, "")
+        if regime:
+            tested_regimes.add(regime)
 
-    if not family_candidates:
+    regime_candidates: Dict[str, List[str]] = {}
+    for regime, event_ids in regime_to_events.items():
+        if regime in tested_regimes:
+            continue
+        candidates = [
+            event_id
+            for event_id in event_ids
+            if event_id not in tested_events and event_id not in avoid_events
+        ]
+        if candidates:
+            regime_candidates[regime] = candidates
+
+    if not regime_candidates:
         _LOG.info("STEP 4 SCAN [EVENT]: frontier exhausted.")
         return None
 
-    best_family = max(
-        family_candidates,
-        key=lambda family: max(
+    best_regime = max(
+        regime_candidates,
+        key=lambda regime: max(
             ctrl._quality_weights.get(event_id, _DEFAULT_QUALITY)
-            for event_id in family_candidates[family]
+            for event_id in regime_candidates[regime]
         ),
     )
     candidates = sorted(
-        family_candidates[best_family],
+        regime_candidates[best_regime],
         key=lambda event_id: ctrl._quality_weights.get(event_id, _DEFAULT_QUALITY),
         reverse=True,
     )
+    best_family = best_regime
     to_test = candidates[:3]
     _LOG.info(
-        "STEP 4 SCAN [EVENT family=%s]: events=%s quality=%s",
-        best_family,
+        "STEP 4 SCAN [EVENT regime=%s]: events=%s quality=%s",
+        best_regime,
         to_test,
         [ctrl._quality_weights.get(event_id, _DEFAULT_QUALITY) for event_id in to_test],
     )
     return ctrl._build_proposal(
         events=to_test,
+        canonical_regimes=[best_regime],
         templates=["mean_reversion", "continuation"],
         horizons=[12, 24],
         description=f"EVENT scan [{best_family}] — {', '.join(to_test)}",
@@ -546,10 +581,12 @@ def load_interaction_motifs(ctrl: Any) -> List[Dict[str, Any]]:
 
 
 def step_scan_frontier_cross_family(ctrl: Any, mem: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    events_registry = ctrl.registries.events.get("events", {})
     enabled_events = [
-        event_id for event_id, meta in events_registry.items() if meta.get("enabled", True)
+        event_id
+        for event_ids in ctrl._executable_regime_event_fanout().values()
+        for event_id in event_ids
     ]
+    event_to_regime = ctrl._event_to_regime_map()
 
     tested_events: Set[str] = set()
     try:
@@ -588,10 +625,11 @@ def step_scan_frontier_cross_family(ctrl: Any, mem: Dict[str, Any]) -> Optional[
 
     candidates.sort(key=lambda event_id: ctrl._quality_weights.get(event_id, _DEFAULT_QUALITY), reverse=True)
     to_test = candidates[:5]
-    families = {str(events_registry.get(event_id, {}).get("family", "?")) for event_id in to_test}
-    _LOG.info("STEP 4 EXPLORE (cross-family=%s): events=%s", sorted(families), to_test)
+    regimes = {event_to_regime.get(event_id, "?") for event_id in to_test}
+    _LOG.info("STEP 4 EXPLORE (cross-regime=%s): events=%s", sorted(regimes), to_test)
     return ctrl._build_proposal(
         events=to_test,
+        canonical_regimes=sorted(regime for regime in regimes if regime and regime != "?"),
         templates=["mean_reversion", "continuation"],
         horizons=[12, 24],
         description=f"Cross-family explore — {', '.join(to_test)}",
@@ -730,11 +768,19 @@ def build_proposal(
     sequences: Optional[Dict[str, Any]] = None,
     interactions: Optional[List[Dict[str, Any]]] = None,
     contexts: Optional[Dict[str, List[str]]] = None,
+    canonical_regimes: Optional[List[str]] = None,
+    subtypes: Optional[List[str]] = None,
+    phases: Optional[List[str]] = None,
+    evidence_modes: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     start, end = date_scope
     trigger_space: Dict[str, Any] = {"allowed_trigger_types": [trigger_type]}
     if trigger_type == "EVENT":
         trigger_space["events"] = {"include": events}
+        trigger_space["canonical_regimes"] = list(canonical_regimes or [])
+        trigger_space["subtypes"] = list(subtypes or [])
+        trigger_space["phases"] = list(phases or [])
+        trigger_space["evidence_modes"] = list(evidence_modes or [])
     elif trigger_type == "STATE":
         trigger_space["states"] = {"include": states or []}
     elif trigger_type == "TRANSITION":

@@ -156,10 +156,15 @@ def get_event_definition(event_type: str) -> dict | None:
 
 
 def list_events_by_family(family: str) -> list[dict]:
-    normalized = str(family).strip().lower()
+    normalized = str(family).strip().upper()
     rows = []
     for row in load_milestone_event_registry().values():
-        if str(row.get("family", "")).strip().lower() == normalized:
+        family_tokens = {
+            str(row.get("family", "")).strip().upper(),
+            str(row.get("canonical_regime", row.get("canonical_family", ""))).strip().upper(),
+            str(row.get("legacy_family", "")).strip().upper(),
+        }
+        if normalized in family_tokens:
             rows.append(dict(row))
     rows.sort(key=lambda item: str(item.get("event_type", "")))
     return rows

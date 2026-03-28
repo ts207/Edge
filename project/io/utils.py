@@ -6,6 +6,8 @@ from typing import Iterable, List, Sequence, Tuple
 
 import pandas as pd
 
+from project.io.parquet_compat import read_parquet_compat, write_parquet_compat
+
 try:
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -29,7 +31,7 @@ def run_scoped_lake_path(data_root: Path, run_id: str, *parts: str) -> Path:
     return Path(data_root) / "lake" / "runs" / str(run_id) / Path(*parts)
 
 
-def _force_csv_fallback_enabled() -> bool:
+def _force_parquet_fallback_enabled() -> bool:
     return str(os.getenv("BACKTEST_FORCE_CSV_FALLBACK", "0")).strip() in {
         "1",
         "true",
@@ -122,7 +124,11 @@ def read_parquet(
     files: Iterable[Path] | Path | str, columns: List[str] | None = None
 ) -> pd.DataFrame:
     """
-    Read multiple Parquet (or CSV fallback) files into a single DataFrame.
+    Read multiple logical parquet artifacts into a single DataFrame.
+
+    `.csv` reads remain supported for backward compatibility with legacy artifacts,
+    but logical parquet paths are canonical and may resolve to native parquet bytes
+    or the repository's pickle-backed fallback.
     """
     if isinstance(files, (str, Path)):
         files = [Path(files)]
@@ -138,14 +144,28 @@ def read_parquet(
                 # If some columns are missing in CSV, fallback or handled by pandas
                 frames.append(pd.read_csv(file_path))
         else:
-            if HAS_PYARROW:
-                # Use ParquetFile for single-file reads to avoid memory usage
-                # when only subset of columns is needed.
-                pf = pq.ParquetFile(file_path)
-                frames.append(pf.read(columns=columns).to_pandas())
-            else:
-                frame = pd.read_parquet(file_path, columns=columns)
-                frames.append(frame)
+            resolved_path = file_path
+            if not resolved_path.exists():
+                csv_fallback = resolved_path.with_suffix(".csv")
+                if csv_fallback.exists():
+                    use_cols = columns if columns else None
+                    try:
+                        frames.append(pd.read_csv(csv_fallback, usecols=use_cols))
+                    except ValueError:
+                        frames.append(pd.read_csv(csv_fallback))
+                    continue
+            force_fallback = _force_parquet_fallback_enabled()
+            if HAS_PYARROW and not force_fallback:
+                try:
+                    # Use ParquetFile for single-file reads to avoid memory usage
+                    # when only subset of columns is needed.
+                    pf = pq.ParquetFile(resolved_path)
+                    frames.append(pf.read(columns=columns).to_pandas())
+                    continue
+                except Exception:
+                    pass
+            frame = read_parquet_compat(resolved_path, columns=columns)
+            frames.append(frame)
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
@@ -169,9 +189,14 @@ def read_table_auto(path: Path | str, columns: List[str] | None = None) -> pd.Da
 
 def write_parquet(df: pd.DataFrame, path: Path, skip_lock: bool = False) -> Tuple[Path, str]:
     """
-    Write a DataFrame to a Parquet file if available; otherwise fall back to CSV.
+    Write a DataFrame to a logical parquet artifact.
+
+    The returned path always preserves the requested `.parquet` contract. When a
+    native parquet engine is unavailable, or when the compatibility toggle is set,
+    the file is written via the repository's pickle-backed parquet fallback.
+
     Uses file locking to prevent race conditions during parallel writes unless skip_lock=True.
-    Returns the actual path written and the storage format ("parquet" or "csv").
+    Returns the requested path and the logical storage format (`"parquet"`).
     """
     ensure_dir(path.parent)
 
@@ -194,18 +219,17 @@ def write_parquet(df: pd.DataFrame, path: Path, skip_lock: bool = False) -> Tupl
 
 
 def _write_parquet_impl(df: pd.DataFrame, path: Path) -> Tuple[Path, str]:
-    if HAS_PYARROW and not _force_csv_fallback_enabled():
+    if HAS_PYARROW and not _force_parquet_fallback_enabled():
         temp_path = path.with_suffix(path.suffix + ".tmp")
         table = pa.Table.from_pandas(df)
         pq.write_table(table, temp_path)
         temp_path.replace(path)
         return path, "parquet"
 
-    csv_path = path.with_suffix(".csv")
-    temp_path = csv_path.with_suffix(".csv.tmp")
-    df.to_csv(temp_path, index=False)
-    temp_path.replace(csv_path)
-    return csv_path, "csv"
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    write_parquet_compat(df, temp_path, index=False)
+    temp_path.replace(path)
+    return path, "parquet"
 
 
 def sorted_glob(paths):

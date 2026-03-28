@@ -4,10 +4,10 @@
     "project.research.compat_importers": 0,
     "project.strategy_dsl_importers": 0,
     "project.strategy_templates_importers": 0,
-    "run_all_coordinator_lines": 0,
-    "module_coupling_count": 2487,
-    "cross_boundary_import_count": 1708,
+    "run_all_coordinator_lines": 364,
+    "module_coupling_count": 2404,
+    "cross_boundary_import_count": 1606,
     "circular_dependency_count": 0,
-    "test_coverage_ratio": 0.38874538745387455
+    "test_coverage_ratio": 0.3384258363952814
   }
 }

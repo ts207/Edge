@@ -21,6 +21,9 @@ DEFAULT_DRIFT_THRESHOLDS: Dict[str, float] = {
     "max_edge_after_cost_positive_validation_count_delta_abs": 2.0,
     "max_edge_median_resolved_cost_bps_delta_abs": 0.25,
     "max_edge_median_expectancy_bps_delta_abs": 0.25,
+    "max_regime_incidence_drift_abs": 0.15,
+    "max_regime_actionability_drift_abs": 2.0,
+    "max_regime_direct_proxy_gap_drift_abs": 5.0,
 }
 
 
@@ -38,6 +41,11 @@ def research_diagnostics_paths(*, data_root: Path, run_id: str) -> Dict[str, Pat
         / "edge_candidates"
         / run_id
         / "edge_candidates_normalized.parquet",
+        "regime_effectiveness": data_root
+        / "reports"
+        / "regime_effectiveness"
+        / run_id
+        / "regime_effectiveness_summary.json",
     }
 
 
@@ -176,6 +184,27 @@ def summarize_edge_candidate_distribution(frame: pd.DataFrame) -> Dict[str, Any]
     }
 
 
+def summarize_regime_effectiveness_distribution(summary: Mapping[str, Any]) -> Dict[str, Any]:
+    top_regimes = summary.get("top_regimes_by_incidence", [])
+    bucket_counts = summary.get("recommended_bucket_counts", {})
+    if not isinstance(top_regimes, list):
+        top_regimes = []
+    if not isinstance(bucket_counts, Mapping):
+        bucket_counts = {}
+    top_regime = top_regimes[0] if top_regimes else {}
+    return {
+        "status": str(summary.get("status", "") or ""),
+        "regimes_total": _as_int(summary.get("regimes_total", 0)),
+        "episodes_total": _as_int(summary.get("episodes_total", 0)),
+        "scorecard_rows": _as_int(summary.get("scorecard_rows", 0)),
+        "top_regime": str(top_regime.get("canonical_regime", "") or ""),
+        "top_regime_episode_count": _as_int(top_regime.get("episode_count", 0)),
+        "trade_generating_count": _as_int(bucket_counts.get("trade_generating", 0)),
+        "trade_filtering_count": _as_int(bucket_counts.get("trade_filtering", 0)),
+        "context_only_count": _as_int(bucket_counts.get("context_only", 0)),
+    }
+
+
 def summarize_run_research_status(
     *,
     data_root: Path,
@@ -187,6 +216,9 @@ def summarize_run_research_status(
     phase2 = summarize_phase2_distribution(_read_json(diag_paths["phase2"]))
     promotion = summarize_promotion_distribution(_read_json(diag_paths["promotion"]))
     edge_candidates = summarize_edge_candidate_distribution(_read_parquet(diag_paths["edge_candidates"]))
+    regime_effectiveness = summarize_regime_effectiveness_distribution(
+        _read_json(diag_paths["regime_effectiveness"])
+    )
     manifest_status = str(manifest.get("status", "") or "").strip().lower()
     checklist_decision = str(
         checklist.get("decision", manifest.get("checklist_decision", "")) or ""
@@ -211,6 +243,7 @@ def summarize_run_research_status(
         "phase2": phase2,
         "promotion": promotion,
         "edge_candidates": edge_candidates,
+        "regime_effectiveness": regime_effectiveness,
         "artifact_paths": {key: str(value) for key, value in diag_paths.items()},
     }
 
@@ -302,6 +335,28 @@ def compare_edge_candidate_reports(
     }
 
 
+def compare_regime_effectiveness_reports(
+    baseline: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> Dict[str, Any]:
+    base = summarize_regime_effectiveness_distribution(baseline)
+    cand = summarize_regime_effectiveness_distribution(candidate)
+    return {
+        "baseline": base,
+        "candidate": cand,
+        "delta": {
+            "regimes_total": cand["regimes_total"] - base["regimes_total"],
+            "episodes_total": cand["episodes_total"] - base["episodes_total"],
+            "scorecard_rows": cand["scorecard_rows"] - base["scorecard_rows"],
+            "top_regime_episode_count": cand["top_regime_episode_count"] - base["top_regime_episode_count"],
+            "trade_generating_count": cand["trade_generating_count"] - base["trade_generating_count"],
+            "trade_filtering_count": cand["trade_filtering_count"] - base["trade_filtering_count"],
+            "context_only_count": cand["context_only_count"] - base["context_only_count"],
+        },
+        "top_regime_changed": bool(base["top_regime"] != cand["top_regime"]),
+    }
+
+
 def compare_run_reports(
     *,
     baseline_phase2_path: Path,
@@ -310,6 +365,8 @@ def compare_run_reports(
     candidate_promotion_path: Path,
     baseline_edge_candidates_path: Path,
     candidate_edge_candidates_path: Path,
+    baseline_regime_effectiveness_path: Path,
+    candidate_regime_effectiveness_path: Path,
 ) -> Dict[str, Any]:
     baseline_phase2_exists = baseline_phase2_path.exists()
     candidate_phase2_exists = candidate_phase2_path.exists()
@@ -317,6 +374,8 @@ def compare_run_reports(
     candidate_promotion_exists = candidate_promotion_path.exists()
     baseline_edge_exists = baseline_edge_candidates_path.exists()
     candidate_edge_exists = candidate_edge_candidates_path.exists()
+    baseline_regime_exists = baseline_regime_effectiveness_path.exists()
+    candidate_regime_exists = candidate_regime_effectiveness_path.exists()
     return {
         "phase2": compare_phase2_run_diagnostics(
             _read_json(baseline_phase2_path),
@@ -330,6 +389,10 @@ def compare_run_reports(
             _read_parquet(baseline_edge_candidates_path),
             _read_parquet(candidate_edge_candidates_path),
         ),
+        "regime_effectiveness": compare_regime_effectiveness_reports(
+            _read_json(baseline_regime_effectiveness_path),
+            _read_json(candidate_regime_effectiveness_path),
+        ),
         "artifacts": {
             "phase2": {
                 "baseline_exists": bool(baseline_phase2_exists),
@@ -342,6 +405,10 @@ def compare_run_reports(
             "edge_candidates": {
                 "baseline_exists": bool(baseline_edge_exists),
                 "candidate_exists": bool(candidate_edge_exists),
+            },
+            "regime_effectiveness": {
+                "baseline_exists": bool(baseline_regime_exists),
+                "candidate_exists": bool(candidate_regime_exists),
             },
         },
     }
@@ -362,6 +429,8 @@ def compare_run_ids(
         candidate_promotion_path=candidate_paths["promotion"],
         baseline_edge_candidates_path=baseline_paths["edge_candidates"],
         candidate_edge_candidates_path=candidate_paths["edge_candidates"],
+        baseline_regime_effectiveness_path=baseline_paths["regime_effectiveness"],
+        candidate_regime_effectiveness_path=candidate_paths["regime_effectiveness"],
     )
 
 
@@ -391,9 +460,11 @@ def assess_run_comparison(
     promotion_delta = dict(comparison.get("promotion", {}).get("delta", {}))
     reject_reason_shift = dict(comparison.get("promotion", {}).get("reject_reason_shift", {}))
     edge_delta = dict(comparison.get("edge_candidates", {}).get("delta", {}))
+    regime_delta = dict(comparison.get("regime_effectiveness", {}).get("delta", {}))
     artifacts = dict(comparison.get("artifacts", {}))
     promotion_artifacts = dict(artifacts.get("promotion", {}))
     edge_artifacts = dict(artifacts.get("edge_candidates", {}))
+    regime_artifacts = dict(artifacts.get("regime_effectiveness", {}))
     promotion_artifacts_present = bool(
         promotion_artifacts.get("baseline_exists", False)
         and promotion_artifacts.get("candidate_exists", False)
@@ -401,6 +472,10 @@ def assess_run_comparison(
     edge_artifacts_present = bool(
         edge_artifacts.get("baseline_exists", False)
         and edge_artifacts.get("candidate_exists", False)
+    )
+    regime_artifacts_present = bool(
+        regime_artifacts.get("baseline_exists", False)
+        and regime_artifacts.get("candidate_exists", False)
     )
     profile_mismatch = str(baseline_phase2.get("discovery_profile", "") or "") != str(
         candidate_phase2.get("discovery_profile", "") or ""
@@ -475,6 +550,18 @@ def assess_run_comparison(
                 > resolved_thresholds["max_edge_median_expectancy_bps_delta_abs"],
                 f"edge median_expectancy_bps delta={_as_float(edge_delta.get('median_expectancy_bps', 0.0)):.4f} exceeds {resolved_thresholds['max_edge_median_expectancy_bps_delta_abs']:.4f}",
             ),
+            (
+                regime_artifacts_present
+                and abs(_as_float(regime_delta.get("trade_generating_count", 0.0)))
+                > resolved_thresholds["max_regime_actionability_drift_abs"],
+                f"regime trade_generating_count delta={_as_float(regime_delta.get('trade_generating_count', 0.0)):.4f} exceeds {resolved_thresholds['max_regime_actionability_drift_abs']:.4f}",
+            ),
+            (
+                regime_artifacts_present
+                and abs(_as_float(regime_delta.get("trade_filtering_count", 0.0)))
+                > resolved_thresholds["max_regime_actionability_drift_abs"],
+                f"regime trade_filtering_count delta={_as_float(regime_delta.get('trade_filtering_count', 0.0)):.4f} exceeds {resolved_thresholds['max_regime_actionability_drift_abs']:.4f}",
+            ),
         ]
     )
     if promotion_artifacts_present:
@@ -499,6 +586,10 @@ def assess_run_comparison(
     if not edge_artifacts_present:
         notes.append(
             "edge candidate artifact missing for baseline or candidate run; edge drift thresholds were not enforced"
+        )
+    if not regime_artifacts_present:
+        notes.append(
+            "regime effectiveness artifact missing for baseline or candidate run; regime drift thresholds were not enforced"
         )
     if resolved_mode == "off":
         status = "off"
@@ -525,6 +616,7 @@ def render_run_comparison_summary(payload: Mapping[str, Any]) -> str:
     phase2 = dict(comparison.get("phase2", {}))
     promotion = dict(comparison.get("promotion", {}))
     edge_candidates = dict(comparison.get("edge_candidates", {}))
+    regime_effectiveness = dict(comparison.get("regime_effectiveness", {}))
     lines = [
         "# Research Run Comparison",
         "",
@@ -551,6 +643,13 @@ def render_run_comparison_summary(payload: Mapping[str, Any]) -> str:
         f"- after-cost-positive delta: {edge_candidates.get('delta', {}).get('after_cost_positive_validation_count', 0)}",
         f"- resolved cost bps delta: {edge_candidates.get('delta', {}).get('median_resolved_cost_bps', 0.0)}",
         f"- expectancy bps delta: {edge_candidates.get('delta', {}).get('median_expectancy_bps', 0.0)}",
+        "",
+        "## Regime Effectiveness",
+        f"- regimes total delta: {regime_effectiveness.get('delta', {}).get('regimes_total', 0)}",
+        f"- episodes total delta: {regime_effectiveness.get('delta', {}).get('episodes_total', 0)}",
+        f"- trade-generating delta: {regime_effectiveness.get('delta', {}).get('trade_generating_count', 0)}",
+        f"- trade-filtering delta: {regime_effectiveness.get('delta', {}).get('trade_filtering_count', 0)}",
+        f"- top regime changed: {regime_effectiveness.get('top_regime_changed', False)}",
         "",
         "## Alerts",
     ]
@@ -633,6 +732,7 @@ def render_run_matrix_summary(payload: Mapping[str, Any]) -> str:
         phase2 = dict(summary.get("phase2", {}))
         promotion = dict(summary.get("promotion", {}))
         edge = dict(summary.get("edge_candidates", {}))
+        regimes = dict(summary.get("regime_effectiveness", {}))
         failures = list(summary.get("checklist_failure_reasons", []))
         lines.append(
             f"- `{run_id}`: {summary.get('trust_classification', 'unknown')} | "
@@ -640,7 +740,8 @@ def render_run_matrix_summary(payload: Mapping[str, Any]) -> str:
             f"checklist={summary.get('checklist_decision', '') or 'none'} | "
             f"phase2_candidates={phase2.get('candidate_count', 0)} | "
             f"promoted={promotion.get('promoted_count', 0)} | "
-            f"tradable={edge.get('tradable_count', 0)}"
+            f"tradable={edge.get('tradable_count', 0)} | "
+            f"regimes={regimes.get('regimes_total', 0)}"
         )
         if failures:
             lines.append(f"  failures: {', '.join(failures)}")
@@ -668,6 +769,7 @@ def render_run_matrix_summary(payload: Mapping[str, Any]) -> str:
             f"- phase2_candidates={baseline_summary.get('phase2', {}).get('candidate_count', 0)}",
             f"- promoted={baseline_summary.get('promotion', {}).get('promoted_count', 0)}",
             f"- tradable={baseline_summary.get('edge_candidates', {}).get('tradable_count', 0)}",
+            f"- regimes={baseline_summary.get('regime_effectiveness', {}).get('regimes_total', 0)}",
         ]
     )
     return "\n".join(lines) + "\n"

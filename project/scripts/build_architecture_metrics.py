@@ -2,8 +2,22 @@
 import sys
 import json
 import ast
+import re
 from pathlib import Path
 from collections import defaultdict
+
+
+def _files_importing(root: Path, module_pattern: str) -> list[str]:
+    pattern = re.compile(rf"(?:from|import)\s+{re.escape(module_pattern)}(?:\.|\s|$)")
+    matches: list[str] = []
+    for base in (root / "project", root / "project" / "tests"):
+        if not base.exists():
+            continue
+        for file_path in base.rglob("*.py"):
+            text = file_path.read_text(encoding="utf-8")
+            if pattern.search(text):
+                matches.append(str(file_path.relative_to(root)).replace("\\", "/"))
+    return sorted(set(matches))
 
 def main():
     root = Path(__file__).resolve().parent.parent.parent
@@ -83,13 +97,20 @@ def main():
             dfs(node)
 
     test_coverage_ratio = test_funcs / max(1, src_funcs + test_funcs)
+    compat_importers = len(_files_importing(root, "project.research.compat"))
+    strategy_dsl_importers = len(_files_importing(root, "project.strategy_dsl"))
+    strategy_templates_importers = len(_files_importing(root, "project.strategy_templates"))
+    run_all_path = root / "project" / "pipelines" / "run_all.py"
+    run_all_coordinator_lines = (
+        len(run_all_path.read_text(encoding="utf-8").splitlines()) if run_all_path.exists() else 0
+    )
 
     metrics = {
         "metrics": {
-            "project.research.compat_importers": 0,
-            "project.strategy_dsl_importers": 0,
-            "project.strategy_templates_importers": 0,
-            "run_all_coordinator_lines": 0,
+            "project.research.compat_importers": compat_importers,
+            "project.strategy_dsl_importers": strategy_dsl_importers,
+            "project.strategy_templates_importers": strategy_templates_importers,
+            "run_all_coordinator_lines": run_all_coordinator_lines,
             "module_coupling_count": coupling_count,
             "cross_boundary_import_count": cross_boundary_imports,
             "circular_dependency_count": circular_dependency_count,

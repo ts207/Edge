@@ -47,14 +47,18 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
         row: Dict[str, Any] = {}
         if isinstance(defaults, dict):
             row.update(defaults)
-        family_name = str(unified_row.get("canonical_family", "")).strip().upper()
+        canonical_regime = str(
+            unified_row.get("canonical_regime", unified_row.get("canonical_family", ""))
+        ).strip().upper()
+        legacy_family = str(unified_row.get("legacy_family", "")).strip().upper()
+        family_name = canonical_regime
         
         if (
-            family_name
+            legacy_family
             and isinstance(families, dict)
-            and isinstance(families.get(family_name), dict)
+            and isinstance(families.get(legacy_family), dict)
         ):
-            row.update(families[family_name])
+            row.update(families[legacy_family])
         
         if isinstance(unified_row, dict):
             row.update(unified_row)
@@ -63,11 +67,11 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
         default_params = defaults.get("parameters", {}) if isinstance(defaults, dict) else {}
         family_params = {}
         if (
-            family_name
+            legacy_family
             and isinstance(families, dict)
-            and isinstance(families.get(family_name), dict)
+            and isinstance(families.get(legacy_family), dict)
         ):
-            family_params = families[family_name].get("parameters", {})
+            family_params = families[legacy_family].get("parameters", {})
             
         if isinstance(default_params, dict):
             parameters.update(default_params)
@@ -81,10 +85,26 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
         
         out[event_type] = EventDefinition(
             event_type=event_type,
-            canonical_family=family_name or str(row.get("canonical_family", "")).strip().upper(),
+            canonical_family=canonical_regime or str(row.get("canonical_family", "")).strip().upper(),
+            canonical_regime=canonical_regime or str(row.get("canonical_family", "")).strip().upper(),
+            legacy_family=legacy_family,
             reports_dir=str(row.get("reports_dir", event_type.lower())),
             events_file=str(row.get("events_file", f"{event_type.lower()}_events.parquet")),
             signal_column=str(row.get("signal_column", f"{event_type.lower()}_event")),
+            subtype=str(row.get("subtype", "")).strip(),
+            phase=str(row.get("phase", "")).strip(),
+            evidence_mode=str(row.get("evidence_mode", "")).strip(),
+            asset_scope=str(row.get("asset_scope", "")).strip(),
+            venue_scope=str(row.get("venue_scope", "")).strip(),
+            is_composite=bool(row.get("is_composite", False)),
+            is_context_tag=bool(row.get("is_context_tag", False)),
+            is_strategy_construct=bool(row.get("is_strategy_construct", False)),
+            research_only=bool(row.get("research_only", False)),
+            strategy_only=bool(row.get("strategy_only", False)),
+            deconflict_priority=int(row.get("deconflict_priority", 0) or 0),
+            disposition=str(row.get("disposition", "")).strip(),
+            layer=str(row.get("layer", "")).strip(),
+            notes=str(row.get("notes", "")).strip(),
             parameters=dict(parameters),
             raw=dict(row),
             spec_path=spec_path,

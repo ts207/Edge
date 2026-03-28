@@ -8,8 +8,10 @@ metadata:
     event_specs_dir: spec/events
     canonical_event_registry: spec/events/canonical_event_registry.yaml
     template_registry: spec/templates/event_template_registry.yaml
+    event_ontology_mapping: spec/events/event_ontology_mapping.yaml
   notes: Single event-centric schema for phase1+phase2 composition. Legacy specs retained
-    for compatibility and drift checks.
+    for compatibility and drift checks. canonical_family is a staged compatibility
+    alias of canonical_regime; legacy_family preserves current family-default wiring.
 defaults:
   parameters:
     merge_gap_bars: 1
@@ -39,7 +41,31 @@ defaults:
 families:
   ABSORPTION_PROXY:
     parameters: {}
+  BAND_BREAK:
+    parameters: {}
+  BASIS_DISLOC:
+    parameters: {}
+  BETA_SPIKE_EVENT:
+    parameters: {}
+  BREAKOUT_TRIGGER:
+    parameters: {}
+  CHOP_TO_TREND_SHIFT:
+    parameters: {}
+  CLIMAX_VOLUME_BAR:
+    parameters: {}
+  COPULA_PAIRS_TRADING:
+    parameters: {}
+  CORRELATION_BREAKDOWN_EVENT:
+    parameters: {}
+  CROSS_ASSET_DESYNC_EVENT:
+    parameters: {}
   CROSS_ASSET_INTERACTION:
+    parameters: {}
+  CROSS_VENUE_DESYNC:
+    parameters: {}
+  DELEVERAGING_WAVE:
+    parameters: {}
+  DEPTH_COLLAPSE:
     parameters: {}
   DEPTH_STRESS_PROXY:
     parameters: {}
@@ -48,7 +74,15 @@ families:
     templates:
     - slippage_aware_filter
     - tail_risk_avoid
+  FAILED_CONTINUATION:
+    parameters: {}
+  FALSE_BREAKOUT:
+    parameters: {}
+  FEE_REGIME_CHANGE_EVENT:
+    parameters: {}
   FLOW_EXHAUSTION_PROXY:
+    parameters: {}
+  FND_DISLOC:
     parameters: {}
   FORCED_FLOW_AND_EXHAUSTION:
     parameters: {}
@@ -59,6 +93,22 @@ families:
     - range_reversion
     - only_if_trend
     - drawdown_filter
+  FORCED_FLOW_EXHAUSTION:
+    parameters: {}
+  FUNDING_EXTREME_ONSET:
+    parameters: {}
+  FUNDING_FLIP:
+    parameters: {}
+  FUNDING_NORMALIZATION_TRIGGER:
+    parameters: {}
+  FUNDING_PERSISTENCE_TRIGGER:
+    parameters: {}
+  FUNDING_TIMESTAMP_EVENT:
+    parameters: {}
+  GAP_OVERSHOOT:
+    parameters: {}
+  INDEX_COMPONENT_DIVERGENCE:
+    parameters: {}
   INFORMATION_DESYNC:
     parameters: {}
     templates:
@@ -71,6 +121,10 @@ families:
     - cross_asset_mean_reversion
     - lead_lag_continuation
     - relative_value_basket
+  LEAD_LAG_BREAK:
+    parameters: {}
+  LIQUIDATION_CASCADE:
+    parameters: {}
   LIQUIDATION_EXHAUSTION_REVERSAL:
     parameters: {}
   LIQUIDITY_DISLOCATION:
@@ -83,11 +137,29 @@ families:
     - only_if_liquidity
     - slippage_aware_filter
     - liquidity_replenishment
+  LIQUIDITY_GAP_PRINT:
+    parameters: {}
+  LIQUIDITY_SHOCK:
+    parameters: {}
   LIQUIDITY_STRESS_DIRECT:
     parameters: {}
   LIQUIDITY_STRESS_PROXY:
     parameters: {}
+  LIQUIDITY_VACUUM:
+    parameters: {}
+  MOMENTUM_DIVERGENCE_TRIGGER:
+    parameters: {}
+  OI_FLUSH:
+    parameters: {}
+  OI_SPIKE_NEGATIVE:
+    parameters: {}
+  OI_SPIKE_POSITIVE:
+    parameters: {}
   ORDERFLOW:
+    parameters: {}
+  ORDERFLOW_IMBALANCE_SHOCK:
+    parameters: {}
+  OVERSHOOT_AFTER_SHOCK:
     parameters: {}
   POSITIONING_EXTREMES:
     parameters: {}
@@ -106,6 +178,12 @@ families:
     parameters: {}
   PRICE_VOL_IMBALANCE_PROXY:
     parameters: {}
+  PULLBACK_PIVOT:
+    parameters: {}
+  RANGE_BREAKOUT:
+    parameters: {}
+  RANGE_COMPRESSION_END:
+    parameters: {}
   REGIME_TRANSITION:
     parameters: {}
     templates:
@@ -115,6 +193,8 @@ families:
     - drawdown_filter
     - tail_risk_avoid
     - structural_regime_shift
+  SCHEDULED_NEWS_WINDOW_EVENT:
+    parameters: {}
   SEQ_FND_EXTREME_THEN_BREAKOUT:
     parameters: {}
   SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
@@ -123,12 +203,28 @@ families:
     parameters: {}
   SEQ_VOL_COMP_THEN_BREAKOUT:
     parameters: {}
+  SESSION_CLOSE_EVENT:
+    parameters: {}
+  SESSION_OPEN_EVENT:
+    parameters: {}
+  SLIPPAGE_SPIKE_EVENT:
+    parameters: {}
+  SPOT_PERP_BASIS_SHOCK:
+    parameters: {}
+  SPREAD_BLOWOUT:
+    parameters: {}
+  SPREAD_REGIME_WIDENING_EVENT:
+    parameters: {}
   STATISTICAL_DISLOCATION:
     parameters: {}
     templates:
     - mean_reversion
     - overshoot_repair
     - tail_risk_avoid
+  SUPPORT_RESISTANCE_BREAK:
+    parameters: {}
+  SWEEP_STOPRUN:
+    parameters: {}
   TEMPORAL_STRUCTURE:
     parameters: {}
     templates:
@@ -136,6 +232,12 @@ families:
     - continuation
     - tail_risk_avoid
     - only_if_no_news_window
+  TREND_ACCELERATION:
+    parameters: {}
+  TREND_DECELERATION:
+    parameters: {}
+  TREND_EXHAUSTION_TRIGGER:
+    parameters: {}
   TREND_STRUCTURE:
     parameters: {}
     templates:
@@ -145,6 +247,8 @@ families:
     - trend_continuation
     - continuation
     - only_if_trend
+  TREND_TO_CHOP_SHIFT:
+    parameters: {}
   VOLATILITY_TRANSITION:
     parameters: {}
     templates:
@@ -155,11 +259,213 @@ families:
     - pullback_entry
     - only_if_regime
     - structural_regime_shift
+  VOL_CLUSTER_SHIFT:
+    parameters: {}
+  VOL_REGIME_SHIFT_EVENT:
+    parameters: {}
+  VOL_RELAXATION_START:
+    parameters: {}
+  VOL_SHOCK:
+    parameters: {}
+  VOL_SPIKE:
+    parameters: {}
   WICK_REVERSAL_PROXY:
     parameters: {}
+  ZSCORE_STRETCH:
+    parameters: {}
+canonical_regimes:
+  BASIS_FUNDING_DISLOCATION:
+    event_types:
+    - BASIS_DISLOC
+    - CROSS_VENUE_DESYNC
+    - FND_DISLOC
+    - FUNDING_EXTREME_ONSET
+    - FUNDING_FLIP
+    - FUNDING_NORMALIZATION_TRIGGER
+    - FUNDING_PERSISTENCE_TRIGGER
+    - SEQ_FND_EXTREME_THEN_BREAKOUT
+    - SPOT_PERP_BASIS_SHOCK
+    default_executable_event_types:
+    - BASIS_DISLOC
+    - CROSS_VENUE_DESYNC
+    - FND_DISLOC
+    - FUNDING_EXTREME_ONSET
+    - FUNDING_FLIP
+    - FUNDING_NORMALIZATION_TRIGGER
+    - FUNDING_PERSISTENCE_TRIGGER
+    - SPOT_PERP_BASIS_SHOCK
+  CROSS_ASSET_DESYNCHRONIZATION:
+    event_types:
+    - CROSS_ASSET_DESYNC_EVENT
+    - INDEX_COMPONENT_DIVERGENCE
+    - LEAD_LAG_BREAK
+    default_executable_event_types:
+    - CROSS_ASSET_DESYNC_EVENT
+    - INDEX_COMPONENT_DIVERGENCE
+    - LEAD_LAG_BREAK
+  EXECUTION_FRICTION:
+    event_types:
+    - FEE_REGIME_CHANGE_EVENT
+    - SLIPPAGE_SPIKE_EVENT
+    - SPREAD_REGIME_WIDENING_EVENT
+    default_executable_event_types:
+    - FEE_REGIME_CHANGE_EVENT
+    - SLIPPAGE_SPIKE_EVENT
+    - SPREAD_REGIME_WIDENING_EVENT
+  LIQUIDATION_CASCADE:
+    event_types:
+    - LIQUIDATION_CASCADE
+    default_executable_event_types:
+    - LIQUIDATION_CASCADE
+  LIQUIDITY_STRESS:
+    event_types:
+    - ABSORPTION_PROXY
+    - DEPTH_COLLAPSE
+    - DEPTH_STRESS_PROXY
+    - LIQUIDITY_GAP_PRINT
+    - LIQUIDITY_SHOCK
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - LIQUIDITY_VACUUM
+    - ORDERFLOW_IMBALANCE_SHOCK
+    - PRICE_VOL_IMBALANCE_PROXY
+    - SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY
+    - SPREAD_BLOWOUT
+    - SWEEP_STOPRUN
+    - WICK_REVERSAL_PROXY
+    default_executable_event_types:
+    - ABSORPTION_PROXY
+    - DEPTH_COLLAPSE
+    - DEPTH_STRESS_PROXY
+    - LIQUIDITY_GAP_PRINT
+    - LIQUIDITY_SHOCK
+    - LIQUIDITY_STRESS_DIRECT
+    - LIQUIDITY_STRESS_PROXY
+    - LIQUIDITY_VACUUM
+    - ORDERFLOW_IMBALANCE_SHOCK
+    - PRICE_VOL_IMBALANCE_PROXY
+    - SPREAD_BLOWOUT
+    - SWEEP_STOPRUN
+    - WICK_REVERSAL_PROXY
+  POSITIONING_EXPANSION:
+    event_types:
+    - OI_SPIKE_NEGATIVE
+    - OI_SPIKE_POSITIVE
+    - SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE
+    default_executable_event_types:
+    - OI_SPIKE_NEGATIVE
+    - OI_SPIKE_POSITIVE
+  POSITIONING_UNWIND_DELEVERAGING:
+    event_types:
+    - DELEVERAGING_WAVE
+    - OI_FLUSH
+    - POST_DELEVERAGING_REBOUND
+    default_executable_event_types:
+    - DELEVERAGING_WAVE
+    - OI_FLUSH
+    - POST_DELEVERAGING_REBOUND
+  REGIME_TRANSITION:
+    event_types:
+    - BETA_SPIKE_EVENT
+    - CHOP_TO_TREND_SHIFT
+    - CORRELATION_BREAKDOWN_EVENT
+    - TREND_TO_CHOP_SHIFT
+    - VOL_REGIME_SHIFT_EVENT
+    default_executable_event_types:
+    - BETA_SPIKE_EVENT
+    - CHOP_TO_TREND_SHIFT
+    - CORRELATION_BREAKDOWN_EVENT
+    - TREND_TO_CHOP_SHIFT
+    - VOL_REGIME_SHIFT_EVENT
+  SCHEDULED_TEMPORAL_WINDOW:
+    event_types:
+    - FUNDING_TIMESTAMP_EVENT
+    - SCHEDULED_NEWS_WINDOW_EVENT
+    - SESSION_CLOSE_EVENT
+    - SESSION_OPEN_EVENT
+    default_executable_event_types: []
+  STATISTICAL_STRETCH_OVERSHOOT:
+    event_types:
+    - BAND_BREAK
+    - COPULA_PAIRS_TRADING
+    - GAP_OVERSHOOT
+    - OVERSHOOT_AFTER_SHOCK
+    - ZSCORE_STRETCH
+    default_executable_event_types:
+    - BAND_BREAK
+    - GAP_OVERSHOOT
+    - OVERSHOOT_AFTER_SHOCK
+    - ZSCORE_STRETCH
+  TREND_CONTINUATION:
+    event_types:
+    - PULLBACK_PIVOT
+    - RANGE_BREAKOUT
+    - SUPPORT_RESISTANCE_BREAK
+    - TREND_ACCELERATION
+    default_executable_event_types:
+    - PULLBACK_PIVOT
+    - RANGE_BREAKOUT
+    - SUPPORT_RESISTANCE_BREAK
+    - TREND_ACCELERATION
+  TREND_FAILURE_EXHAUSTION:
+    event_types:
+    - CLIMAX_VOLUME_BAR
+    - FAILED_CONTINUATION
+    - FALSE_BREAKOUT
+    - FLOW_EXHAUSTION_PROXY
+    - FORCED_FLOW_EXHAUSTION
+    - LIQUIDATION_EXHAUSTION_REVERSAL
+    - MOMENTUM_DIVERGENCE_TRIGGER
+    - TREND_DECELERATION
+    - TREND_EXHAUSTION_TRIGGER
+    default_executable_event_types:
+    - CLIMAX_VOLUME_BAR
+    - FAILED_CONTINUATION
+    - FALSE_BREAKOUT
+    - FLOW_EXHAUSTION_PROXY
+    - FORCED_FLOW_EXHAUSTION
+    - LIQUIDATION_EXHAUSTION_REVERSAL
+    - MOMENTUM_DIVERGENCE_TRIGGER
+    - TREND_DECELERATION
+    - TREND_EXHAUSTION_TRIGGER
+  VOLATILITY_EXPANSION:
+    event_types:
+    - VOL_CLUSTER_SHIFT
+    - VOL_SHOCK
+    - VOL_SPIKE
+    default_executable_event_types:
+    - VOL_CLUSTER_SHIFT
+    - VOL_SHOCK
+    - VOL_SPIKE
+  VOLATILITY_RELAXATION_COMPRESSION_RELEASE:
+    event_types:
+    - BREAKOUT_TRIGGER
+    - RANGE_COMPRESSION_END
+    - SEQ_VOL_COMP_THEN_BREAKOUT
+    - VOL_RELAXATION_START
+    default_executable_event_types:
+    - BREAKOUT_TRIGGER
+    - RANGE_COMPRESSION_END
+    - VOL_RELAXATION_START
 events:
   ABSORPTION_PROXY:
-    canonical_family: ABSORPTION_PROXY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: ABSORPTION_PROXY
+    subtype: absorption
+    phase: persistence
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Proxy absorption evidence for liquidity-stress episodes.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: absorption_proxy_event
@@ -185,7 +491,23 @@ events:
       cooldown_bars: 96
       merge_gap_bars: 0
   BAND_BREAK:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: STATISTICAL_STRETCH_OVERSHOOT
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    legacy_family: BAND_BREAK
+    subtype: band_break
+    phase: breakout
+    evidence_mode: statistical
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 60
+    notes: Statistical band escape; retained as subtype under stretch/overshoot.
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: band_break_event
@@ -215,7 +537,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   BASIS_DISLOC:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: BASIS_DISLOC
+    subtype: basis_dislocation
+    phase: shock
+    evidence_mode: statistical
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Canonical basis dislocation surface.
     reports_dir: basis_dislocation
     events_file: basis_dislocation_events.parquet
     signal_column: basis_dislocation_event
@@ -246,6 +584,22 @@ events:
     max_candidates_per_run: 350
   BETA_SPIKE_EVENT:
     canonical_family: REGIME_TRANSITION
+    canonical_regime: REGIME_TRANSITION
+    legacy_family: BETA_SPIKE_EVENT
+    subtype: beta_spike
+    phase: transition
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: keep
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Cross-asset transition evidence via beta instability.
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: beta_spike_event
@@ -276,7 +630,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   BREAKOUT_TRIGGER:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    legacy_family: BREAKOUT_TRIGGER
+    subtype: breakout_trigger
+    phase: breakout
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Compression-release bridge event; not a standalone canonical regime.
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: breakout_trigger_event
@@ -312,6 +682,22 @@ events:
     max_candidates_per_run: 500
   CHOP_TO_TREND_SHIFT:
     canonical_family: REGIME_TRANSITION
+    canonical_regime: REGIME_TRANSITION
+    legacy_family: CHOP_TO_TREND_SHIFT
+    subtype: chop_to_trend
+    phase: transition
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Transition from choppy to directional conditions.
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: chop_to_trend_shift_event
@@ -342,7 +728,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   CLIMAX_VOLUME_BAR:
-    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: CLIMAX_VOLUME_BAR
+    subtype: climax_volume
+    phase: exhaustion
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Exhaustion marker rather than standalone family.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: climax_volume_bar_event
@@ -377,7 +779,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   COPULA_PAIRS_TRADING:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: STATISTICAL_STRETCH_OVERSHOOT
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    legacy_family: COPULA_PAIRS_TRADING
+    subtype: copula_pairs_trading
+    phase: strategy
+    evidence_mode: statistical
+    layer: strategy_construct
+    disposition: demote
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: true
+    research_only: false
+    strategy_only: true
+    deconflict_priority: 10
+    notes: Relative-value strategy/search construct, not a canonical market event.
     reports_dir: copula_pairs
     events_file: copula_pairs_events.parquet
     signal_column: copula_pairs_trading_event
@@ -408,6 +826,22 @@ events:
     max_candidates_per_run: 350
   CORRELATION_BREAKDOWN_EVENT:
     canonical_family: REGIME_TRANSITION
+    canonical_regime: REGIME_TRANSITION
+    legacy_family: CORRELATION_BREAKDOWN_EVENT
+    subtype: correlation_breakdown
+    phase: transition
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: keep
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Cross-asset regime transition via correlation instability.
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: correlation_breakdown_event
@@ -438,7 +872,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   CROSS_ASSET_DESYNC_EVENT:
-    canonical_family: INFORMATION_DESYNC
+    canonical_family: CROSS_ASSET_DESYNCHRONIZATION
+    canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+    legacy_family: CROSS_ASSET_DESYNC_EVENT
+    subtype: cross_asset_desync
+    phase: divergence
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: keep
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: First-class cross-asset desynchronization regime.
     reports_dir: ''
     events_file: ''
     signal_column: ''
@@ -458,7 +908,23 @@ events:
     - 60m
     max_candidates_per_run: 600
   CROSS_VENUE_DESYNC:
-    canonical_family: INFORMATION_DESYNC
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: CROSS_VENUE_DESYNC
+    subtype: cross_venue_desync
+    phase: persistence
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Cross-venue basis persistence folded into basis/funding dislocation.
     reports_dir: cross_venue_desync
     events_file: cross_venue_desync_events.parquet
     signal_column: cross_venue_desync_event
@@ -559,7 +1025,23 @@ events:
     - 60m
     max_candidates_per_run: 600
   DELEVERAGING_WAVE:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: POSITIONING_UNWIND_DELEVERAGING
+    canonical_regime: POSITIONING_UNWIND_DELEVERAGING
+    legacy_family: DELEVERAGING_WAVE
+    subtype: deleveraging_wave
+    phase: unwind
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Positioning unwind regime with explicit deleveraging dynamics.
     reports_dir: positioning_extremes
     events_file: positioning_extremes_events.parquet
     signal_column: deleveraging_wave_event
@@ -594,7 +1076,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   DEPTH_COLLAPSE:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: DEPTH_COLLAPSE
+    subtype: depth_collapse
+    phase: collapse
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Direct depth failure evidence for liquidity stress.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: depth_collapse_event
@@ -628,7 +1126,23 @@ events:
     - 15m
     max_candidates_per_run: 600
   DEPTH_STRESS_PROXY:
-    canonical_family: DEPTH_STRESS_PROXY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: DEPTH_STRESS_PROXY
+    subtype: depth_collapse
+    phase: collapse
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Proxy depth-stress surface merged into liquidity stress.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: depth_stress_proxy_event
@@ -654,7 +1168,23 @@ events:
       cooldown_bars: 96
       merge_gap_bars: 0
   FAILED_CONTINUATION:
-    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: FAILED_CONTINUATION
+    subtype: failed_continuation
+    phase: failure
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Trend-follow signal failure belongs in exhaustion/failure regime.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: failed_continuation_event
@@ -687,7 +1217,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FALSE_BREAKOUT:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: FALSE_BREAKOUT
+    subtype: false_breakout
+    phase: failure
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Breakout failure surface under trend failure/exhaustion.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: false_breakout_event
@@ -721,6 +1267,22 @@ events:
     max_candidates_per_run: 450
   FEE_REGIME_CHANGE_EVENT:
     canonical_family: EXECUTION_FRICTION
+    canonical_regime: EXECUTION_FRICTION
+    legacy_family: FEE_REGIME_CHANGE_EVENT
+    subtype: fee_regime_change
+    phase: transition
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 65
+    notes: Execution-cost regime shift.
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: fee_regime_change_event
@@ -749,7 +1311,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   FLOW_EXHAUSTION_PROXY:
-    canonical_family: FLOW_EXHAUSTION_PROXY
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: FLOW_EXHAUSTION_PROXY
+    subtype: flow_exhaustion
+    phase: exhaustion
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Proxy-only forced-flow exhaustion evidence.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: flow_exhaustion_proxy_event
@@ -772,7 +1350,23 @@ events:
       cooldown_bars: 12
       merge_gap_bars: 0
   FND_DISLOC:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: FND_DISLOC
+    subtype: funding_dislocation
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Funding dislocation folded into basis/funding regime.
     reports_dir: funding_dislocation
     events_file: funding_dislocation_events.parquet
     signal_column: funding_dislocation_event
@@ -806,7 +1400,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   FORCED_FLOW_EXHAUSTION:
-    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: FORCED_FLOW_EXHAUSTION
+    subtype: forced_flow_exhaustion
+    phase: exhaustion
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Exhaustion regime with forced-flow mechanics.
     reports_dir: directional_exhaustion_after_forced_flow
     events_file: directional_exhaustion_after_forced_flow_events.parquet
     signal_column: forced_flow_exhaustion_event
@@ -838,7 +1448,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FUNDING_EXTREME_ONSET:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: FUNDING_EXTREME_ONSET
+    subtype: funding_extreme
+    phase: onset
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Funding extreme onset under basis/funding dislocation.
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_extreme_onset_event
@@ -966,7 +1592,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FUNDING_FLIP:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: FUNDING_FLIP
+    subtype: funding_flip
+    phase: flip
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Funding sign inversion as subtype metadata.
     reports_dir: positioning_extremes
     events_file: positioning_extremes_events.parquet
     signal_column: funding_flip_event
@@ -1004,7 +1646,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FUNDING_NORMALIZATION_TRIGGER:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: FUNDING_NORMALIZATION_TRIGGER
+    subtype: funding_normalization
+    phase: normalization
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Normalization phase of funding dislocation.
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_normalization_event
@@ -1064,7 +1722,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FUNDING_PERSISTENCE_TRIGGER:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: FUNDING_PERSISTENCE_TRIGGER
+    subtype: funding_persistence
+    phase: persistence
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Persistence phase of funding dislocation.
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_persistence_event
@@ -1125,7 +1799,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   FUNDING_TIMESTAMP_EVENT:
-    canonical_family: TEMPORAL_STRUCTURE
+    canonical_family: SCHEDULED_TEMPORAL_WINDOW
+    canonical_regime: SCHEDULED_TEMPORAL_WINDOW
+    legacy_family: FUNDING_TIMESTAMP_EVENT
+    subtype: funding_timestamp
+    phase: window
+    evidence_mode: contextual
+    layer: context_tag
+    disposition: demote
+    asset_scope: multi_asset
+    venue_scope: market_wide
+    is_composite: false
+    is_context_tag: true
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 20
+    notes: Mechanical funding window context; not a canonical regime.
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: funding_timestamp_event
@@ -1153,7 +1843,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   GAP_OVERSHOOT:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: STATISTICAL_STRETCH_OVERSHOOT
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    legacy_family: GAP_OVERSHOOT
+    subtype: gap_overshoot
+    phase: overshoot
+    evidence_mode: statistical
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 60
+    notes: Gap-extension overshoot state.
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: gap_overshoot_event
@@ -1183,7 +1889,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   INDEX_COMPONENT_DIVERGENCE:
-    canonical_family: INFORMATION_DESYNC
+    canonical_family: CROSS_ASSET_DESYNCHRONIZATION
+    canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+    legacy_family: INDEX_COMPONENT_DIVERGENCE
+    subtype: index_component_divergence
+    phase: divergence
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: keep
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Cross-asset divergence between index and components.
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: index_component_divergence_event
@@ -1216,7 +1938,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   LEAD_LAG_BREAK:
-    canonical_family: INFORMATION_DESYNC
+    canonical_family: CROSS_ASSET_DESYNCHRONIZATION
+    canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+    legacy_family: LEAD_LAG_BREAK
+    subtype: lead_lag_break
+    phase: divergence
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: keep
+    asset_scope: cross_asset
+    venue_scope: multi_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Lead/lag structure break.
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: lead_lag_break_event
@@ -1249,7 +1987,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   LIQUIDATION_CASCADE:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: LIQUIDATION_CASCADE
+    canonical_regime: LIQUIDATION_CASCADE
+    legacy_family: LIQUIDATION_CASCADE
+    subtype: liquidation_cascade
+    phase: cascade
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 100
+    notes: Structurally distinct canonical cascade regime.
     reports_dir: liquidation_cascade
     events_file: liquidation_cascade_events.parquet
     signal_column: liquidation_cascade_event
@@ -1285,7 +2039,23 @@ events:
     - 60m
     max_candidates_per_run: 300
   LIQUIDATION_EXHAUSTION_REVERSAL:
-    canonical_family: LIQUIDATION_EXHAUSTION_REVERSAL
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: LIQUIDATION_EXHAUSTION_REVERSAL
+    subtype: liquidation_exhaustion_reversal
+    phase: recovery
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Reversal after forced liquidation exhaustion.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: liquidation_exhaustion_reversal_event
@@ -1315,7 +2085,23 @@ events:
       cooldown_bars: 24
       merge_gap_bars: 0
   LIQUIDITY_GAP_PRINT:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: LIQUIDITY_GAP_PRINT
+    subtype: gap_print
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Gap print inside liquidity-stress regime.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: liquidity_gap_print_event
@@ -1348,7 +2134,23 @@ events:
     - 15m
     max_candidates_per_run: 600
   LIQUIDITY_SHOCK:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: LIQUIDITY_SHOCK
+    subtype: liquidity_shock
+    phase: shock
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: High-level liquidity stress onset.
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_shock_event
@@ -1379,7 +2181,23 @@ events:
     - 15m
     max_candidates_per_run: 600
   LIQUIDITY_STRESS_DIRECT:
-    canonical_family: LIQUIDITY_STRESS_DIRECT
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: LIQUIDITY_STRESS_DIRECT
+    subtype: liquidity_stress
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Direct evidence mode for liquidity stress.
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_stress_direct_event
@@ -1400,7 +2218,23 @@ events:
       spread_spike_th: 3.0
       median_window: 288
   LIQUIDITY_STRESS_PROXY:
-    canonical_family: LIQUIDITY_STRESS_PROXY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: LIQUIDITY_STRESS_PROXY
+    subtype: liquidity_stress
+    phase: shock
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Proxy evidence mode for liquidity stress.
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_stress_proxy_event
@@ -1421,7 +2255,23 @@ events:
       spread_spike_th: 3.0
       median_window: 288
   LIQUIDITY_VACUUM:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: LIQUIDITY_VACUUM
+    subtype: liquidity_vacuum
+    phase: collapse
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Thin-book vacuum regime.
     reports_dir: liquidity_vacuum
     events_file: liquidity_vacuum_events.parquet
     signal_column: liquidity_vacuum_event
@@ -1531,7 +2381,23 @@ events:
     conditioning_cols: []
     max_candidates_per_run: 1000
   MOMENTUM_DIVERGENCE_TRIGGER:
-    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: MOMENTUM_DIVERGENCE_TRIGGER
+    subtype: momentum_divergence
+    phase: exhaustion
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Divergence-based exhaustion signal.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: momentum_divergence_trigger_event
@@ -1565,7 +2431,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   OI_FLUSH:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: POSITIONING_UNWIND_DELEVERAGING
+    canonical_regime: POSITIONING_UNWIND_DELEVERAGING
+    legacy_family: OI_FLUSH
+    subtype: oi_flush
+    phase: unwind
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: OI flush folded into unwind/deleveraging regime.
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_flush_event
@@ -1599,7 +2481,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   OI_SPIKE_NEGATIVE:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: POSITIONING_EXPANSION
+    canonical_regime: POSITIONING_EXPANSION
+    legacy_family: OI_SPIKE_NEGATIVE
+    subtype: oi_spike_negative
+    phase: expansion
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Direction stays in subtype; canonical regime is positioning expansion.
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_spike_neg_event
@@ -1633,7 +2531,23 @@ events:
     - 60m
     max_candidates_per_run: 250
   OI_SPIKE_POSITIVE:
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: POSITIONING_EXPANSION
+    canonical_regime: POSITIONING_EXPANSION
+    legacy_family: OI_SPIKE_POSITIVE
+    subtype: oi_spike_positive
+    phase: expansion
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Direction stays in subtype; canonical regime is positioning expansion.
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_spike_pos_event
@@ -1666,7 +2580,23 @@ events:
     - 60m
     max_candidates_per_run: 250
   ORDERFLOW_IMBALANCE_SHOCK:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: ORDERFLOW_IMBALANCE_SHOCK
+    subtype: orderflow_imbalance
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Orderflow imbalance is treated as a liquidity-stress subtype.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: orderflow_imbalance_shock_event
@@ -1707,7 +2637,23 @@ events:
     - 15m
     max_candidates_per_run: 600
   OVERSHOOT_AFTER_SHOCK:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: STATISTICAL_STRETCH_OVERSHOOT
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    legacy_family: OVERSHOOT_AFTER_SHOCK
+    subtype: overshoot_after_shock
+    phase: overshoot
+    evidence_mode: statistical
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 60
+    notes: Statistical overshoot conditional on preceding shock.
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: overshoot_after_shock_event
@@ -1737,7 +2683,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   POST_DELEVERAGING_REBOUND:
-    canonical_family: POST_DELEVERAGING_REBOUND
+    canonical_family: POSITIONING_UNWIND_DELEVERAGING
+    canonical_regime: POSITIONING_UNWIND_DELEVERAGING
+    legacy_family: POST_DELEVERAGING_REBOUND
+    subtype: post_deleveraging_rebound
+    phase: recovery
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Recovery phase following deleveraging wave.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: post_deleveraging_rebound_event
@@ -1763,7 +2725,23 @@ events:
       cooldown_bars: 24
       merge_gap_bars: 0
   PRICE_VOL_IMBALANCE_PROXY:
-    canonical_family: PRICE_VOL_IMBALANCE_PROXY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: PRICE_VOL_IMBALANCE_PROXY
+    subtype: price_vol_imbalance
+    phase: shock
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Proxy liquidity-stress evidence via price/volume imbalance.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: price_vol_imbalance_proxy_event
@@ -1792,7 +2770,23 @@ events:
       cooldown_bars: 24
       merge_gap_bars: 0
   PULLBACK_PIVOT:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_CONTINUATION
+    canonical_regime: TREND_CONTINUATION
+    legacy_family: PULLBACK_PIVOT
+    subtype: pullback_pivot
+    phase: recovery
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Pullback continuation setup.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: pullback_pivot_event
@@ -1825,7 +2819,23 @@ events:
     - 60m
     max_candidates_per_run: 450
   RANGE_BREAKOUT:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_CONTINUATION
+    canonical_regime: TREND_CONTINUATION
+    legacy_family: RANGE_BREAKOUT
+    subtype: range_breakout
+    phase: breakout
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Directional breakout retained under trend continuation.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: range_breakout_event
@@ -1858,7 +2868,23 @@ events:
     - 60m
     max_candidates_per_run: 450
   RANGE_COMPRESSION_END:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    legacy_family: RANGE_COMPRESSION_END
+    subtype: range_compression_end
+    phase: breakout
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Compression-release subtype rather than standalone family.
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: range_compression_end_event
@@ -1891,7 +2917,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   SCHEDULED_NEWS_WINDOW_EVENT:
-    canonical_family: TEMPORAL_STRUCTURE
+    canonical_family: SCHEDULED_TEMPORAL_WINDOW
+    canonical_regime: SCHEDULED_TEMPORAL_WINDOW
+    legacy_family: SCHEDULED_NEWS_WINDOW_EVENT
+    subtype: scheduled_news_window
+    phase: window
+    evidence_mode: contextual
+    layer: context_tag
+    disposition: demote
+    asset_scope: multi_asset
+    venue_scope: market_wide
+    is_composite: false
+    is_context_tag: true
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 20
+    notes: Context gate for scheduled news windows.
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: scheduled_news_window_event
@@ -1918,7 +2960,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   SEQ_FND_EXTREME_THEN_BREAKOUT:
-    canonical_family: SEQ_FND_EXTREME_THEN_BREAKOUT
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: SEQ_FND_EXTREME_THEN_BREAKOUT
+    subtype: funding_extreme_then_breakout
+    phase: confirmation
+    evidence_mode: sequence_confirmed
+    layer: composite
+    disposition: demote
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: true
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: true
+    strategy_only: false
+    deconflict_priority: 30
+    notes: Composite research hypothesis, not a canonical event.
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_fnd_extreme_then_breakout_event
@@ -1938,7 +2996,23 @@ events:
       max_gap_bars: 96
       cooldown_bars: 24
   SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
-    canonical_family: SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY
+    subtype: liquidity_vacuum_then_depth_recovery
+    phase: confirmation
+    evidence_mode: sequence_confirmed
+    layer: composite
+    disposition: demote
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: true
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: true
+    strategy_only: false
+    deconflict_priority: 30
+    notes: Composite liquidity repair motif.
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_liq_vacuum_then_depth_recovery_event
@@ -1958,7 +3032,23 @@ events:
       max_gap_bars: 48
       cooldown_bars: 24
   SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
-    canonical_family: SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE
+    canonical_family: POSITIONING_EXPANSION
+    canonical_regime: POSITIONING_EXPANSION
+    legacy_family: SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE
+    subtype: oi_spike_positive_then_vol_spike
+    phase: confirmation
+    evidence_mode: sequence_confirmed
+    layer: composite
+    disposition: demote
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: true
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: true
+    strategy_only: false
+    deconflict_priority: 30
+    notes: Composite positioning/volatility hypothesis.
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_oi_spikepos_then_vol_spike_event
@@ -1978,7 +3068,23 @@ events:
       max_gap_bars: 48
       cooldown_bars: 24
   SEQ_VOL_COMP_THEN_BREAKOUT:
-    canonical_family: SEQ_VOL_COMP_THEN_BREAKOUT
+    canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    legacy_family: SEQ_VOL_COMP_THEN_BREAKOUT
+    subtype: vol_compression_then_breakout
+    phase: confirmation
+    evidence_mode: sequence_confirmed
+    layer: composite
+    disposition: demote
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: true
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: true
+    strategy_only: false
+    deconflict_priority: 30
+    notes: Composite compression-release hypothesis.
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_vol_comp_then_breakout_event
@@ -1998,7 +3104,23 @@ events:
       max_gap_bars: 48
       cooldown_bars: 24
   SESSION_CLOSE_EVENT:
-    canonical_family: TEMPORAL_STRUCTURE
+    canonical_family: SCHEDULED_TEMPORAL_WINDOW
+    canonical_regime: SCHEDULED_TEMPORAL_WINDOW
+    legacy_family: SESSION_CLOSE_EVENT
+    subtype: session_close
+    phase: window
+    evidence_mode: contextual
+    layer: context_tag
+    disposition: demote
+    asset_scope: multi_asset
+    venue_scope: market_wide
+    is_composite: false
+    is_context_tag: true
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 20
+    notes: Session close context tag.
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: session_close_event
@@ -2033,7 +3155,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   SESSION_OPEN_EVENT:
-    canonical_family: TEMPORAL_STRUCTURE
+    canonical_family: SCHEDULED_TEMPORAL_WINDOW
+    canonical_regime: SCHEDULED_TEMPORAL_WINDOW
+    legacy_family: SESSION_OPEN_EVENT
+    subtype: session_open
+    phase: window
+    evidence_mode: contextual
+    layer: context_tag
+    disposition: demote
+    asset_scope: multi_asset
+    venue_scope: market_wide
+    is_composite: false
+    is_context_tag: true
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 20
+    notes: Session open context tag.
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: session_open_event
@@ -2069,6 +3207,22 @@ events:
     max_candidates_per_run: 300
   SLIPPAGE_SPIKE_EVENT:
     canonical_family: EXECUTION_FRICTION
+    canonical_regime: EXECUTION_FRICTION
+    legacy_family: SLIPPAGE_SPIKE_EVENT
+    subtype: slippage_spike
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 65
+    notes: Execution friction shock.
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: slippage_spike_event
@@ -2097,7 +3251,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   SPOT_PERP_BASIS_SHOCK:
-    canonical_family: INFORMATION_DESYNC
+    canonical_family: BASIS_FUNDING_DISLOCATION
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    legacy_family: SPOT_PERP_BASIS_SHOCK
+    subtype: spot_perp_basis_shock
+    phase: shock
+    evidence_mode: inferred_cross_asset
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: cross_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 90
+    notes: Spot/perp basis shock is a basis/funding subtype.
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: spot_perp_basis_shock_event
@@ -2132,7 +3302,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   SPREAD_BLOWOUT:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: SPREAD_BLOWOUT
+    subtype: spread_widening
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Spread blowout retained as liquidity-stress subtype.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: spread_blowout_event
@@ -2166,6 +3352,22 @@ events:
     max_candidates_per_run: 600
   SPREAD_REGIME_WIDENING_EVENT:
     canonical_family: EXECUTION_FRICTION
+    canonical_regime: EXECUTION_FRICTION
+    legacy_family: SPREAD_REGIME_WIDENING_EVENT
+    subtype: spread_regime_widening
+    phase: persistence
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 65
+    notes: Persistent execution-friction regime widening.
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: spread_regime_widening_event
@@ -2197,7 +3399,23 @@ events:
     - 15m
     max_candidates_per_run: 300
   SUPPORT_RESISTANCE_BREAK:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_CONTINUATION
+    canonical_regime: TREND_CONTINUATION
+    legacy_family: SUPPORT_RESISTANCE_BREAK
+    subtype: support_resistance_break
+    phase: breakout
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Structural breakout subtype within trend continuation.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: support_resistance_break_event
@@ -2230,7 +3448,23 @@ events:
     - 60m
     max_candidates_per_run: 450
   SWEEP_STOPRUN:
-    canonical_family: LIQUIDITY_DISLOCATION
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: SWEEP_STOPRUN
+    subtype: sweep_stoprun
+    phase: shock
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Stop-run style liquidity stress.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: sweep_stoprun_event
@@ -2264,7 +3498,23 @@ events:
     - 15m
     max_candidates_per_run: 600
   TREND_ACCELERATION:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_CONTINUATION
+    canonical_regime: TREND_CONTINUATION
+    legacy_family: TREND_ACCELERATION
+    subtype: trend_acceleration
+    phase: persistence
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Continuation regime with accelerating trend.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: trend_acceleration_event
@@ -2297,7 +3547,23 @@ events:
     - 60m
     max_candidates_per_run: 450
   TREND_DECELERATION:
-    canonical_family: TREND_STRUCTURE
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: TREND_DECELERATION
+    subtype: trend_deceleration
+    phase: exhaustion
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 70
+    notes: Deceleration belongs with trend failure/exhaustion.
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: trend_deceleration_event
@@ -2330,7 +3596,23 @@ events:
     - 60m
     max_candidates_per_run: 450
   TREND_EXHAUSTION_TRIGGER:
-    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    canonical_family: TREND_FAILURE_EXHAUSTION
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    legacy_family: TREND_EXHAUSTION_TRIGGER
+    subtype: trend_exhaustion
+    phase: onset
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Canonical exhaustion onset.
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: trend_exhaustion_trigger_event
@@ -2365,6 +3647,22 @@ events:
     max_candidates_per_run: 500
   TREND_TO_CHOP_SHIFT:
     canonical_family: REGIME_TRANSITION
+    canonical_regime: REGIME_TRANSITION
+    legacy_family: TREND_TO_CHOP_SHIFT
+    subtype: trend_to_chop
+    phase: transition
+    evidence_mode: hybrid
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Transition from directional to choppy conditions.
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: trend_to_chop_shift_event
@@ -2395,7 +3693,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   VOL_CLUSTER_SHIFT:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_EXPANSION
+    canonical_regime: VOLATILITY_EXPANSION
+    legacy_family: VOL_CLUSTER_SHIFT
+    subtype: vol_cluster_shift
+    phase: persistence
+    evidence_mode: statistical
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Volatility cluster migration under expansion regime.
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_cluster_shift_event
@@ -2429,6 +3743,22 @@ events:
     max_candidates_per_run: 500
   VOL_REGIME_SHIFT_EVENT:
     canonical_family: REGIME_TRANSITION
+    canonical_regime: REGIME_TRANSITION
+    legacy_family: VOL_REGIME_SHIFT_EVENT
+    subtype: vol_regime_shift
+    phase: transition
+    evidence_mode: statistical
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 85
+    notes: Regime transition expressed through volatility-state change.
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: vol_regime_shift_event
@@ -2459,7 +3789,23 @@ events:
     - 60m
     max_candidates_per_run: 350
   VOL_RELAXATION_START:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    legacy_family: VOL_RELAXATION_START
+    subtype: vol_relaxation_start
+    phase: normalization
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 75
+    notes: Start of volatility normalization after expansion.
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_relaxation_start_event
@@ -2492,7 +3838,24 @@ events:
     - 60m
     max_candidates_per_run: 500
   VOL_SHOCK:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_EXPANSION
+    canonical_regime: VOLATILITY_EXPANSION
+    legacy_family: VOL_SHOCK
+    subtype: vol_shock
+    phase: shock
+    evidence_mode: statistical
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Canonical volatility shock; current detector implementation also models
+      relaxation boundary.
     reports_dir: vol_shock_relaxation
     events_file: vol_shock_relaxation_events.parquet
     signal_column: vol_shock_relaxation_event
@@ -2586,7 +3949,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   VOL_SPIKE:
-    canonical_family: VOLATILITY_TRANSITION
+    canonical_family: VOLATILITY_EXPANSION
+    canonical_regime: VOLATILITY_EXPANSION
+    legacy_family: VOL_SPIKE
+    subtype: vol_spike
+    phase: shock
+    evidence_mode: direct
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Canonical realized-volatility expansion onset.
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_spike_event
@@ -2618,7 +3997,23 @@ events:
     - 60m
     max_candidates_per_run: 500
   WICK_REVERSAL_PROXY:
-    canonical_family: WICK_REVERSAL_PROXY
+    canonical_family: LIQUIDITY_STRESS
+    canonical_regime: LIQUIDITY_STRESS
+    legacy_family: WICK_REVERSAL_PROXY
+    subtype: wick_reversal
+    phase: recovery
+    evidence_mode: proxy
+    layer: canonical
+    disposition: merge
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 80
+    notes: Proxy wick-based recovery within liquidity stress.
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: wick_reversal_proxy_event
@@ -2641,7 +4036,23 @@ events:
       merge_gap_bars: 0
       min_volume_quantile: 0.2
   ZSCORE_STRETCH:
-    canonical_family: STATISTICAL_DISLOCATION
+    canonical_family: STATISTICAL_STRETCH_OVERSHOOT
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    legacy_family: ZSCORE_STRETCH
+    subtype: zscore_stretch
+    phase: stretch
+    evidence_mode: statistical
+    layer: canonical
+    disposition: keep
+    asset_scope: single_asset
+    venue_scope: single_venue
+    is_composite: false
+    is_context_tag: false
+    is_strategy_construct: false
+    research_only: false
+    strategy_only: false
+    deconflict_priority: 60
+    notes: Canonical stretch/overshoot event.
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: zscore_stretch_event

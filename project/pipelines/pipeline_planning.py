@@ -90,7 +90,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Phase 2 Flags
     parser.add_argument("--run_phase2_conditional", type=int, default=1)
-    parser.add_argument("--phase2_event_type", default="VOL_SHOCK")
+    parser.add_argument(
+        "--phase2_event_type",
+        default="VOL_SHOCK",
+        help=(
+            "Primary phase2 event family. Template-only runs without an explicit event pin "
+            "auto-resolve to 'all' during preflight."
+        ),
+    )
     parser.add_argument("--events", nargs="+", help="Explicit subset of event IDs to run.")
     parser.add_argument(
         "--templates", nargs="+", help="Explicit subset of strategy templates to run."
@@ -186,9 +193,27 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Strategy / Promotion Flags
     parser.add_argument("--run_candidate_promotion", type=int, default=1)
-    parser.add_argument("--run_recommendations_checklist", type=int, default=1)
-    parser.add_argument("--run_expectancy_analysis", type=int, default=0)
-    parser.add_argument("--run_expectancy_robustness", type=int, default=0)
+    parser.add_argument(
+        "--run_recommendations_checklist",
+        type=int,
+        default=1,
+        help=(
+            "Run the recommendations checklist. When enabled, preflight auto-enables "
+            "expectancy analysis and robustness unless those flags are explicitly set."
+        ),
+    )
+    parser.add_argument(
+        "--run_expectancy_analysis",
+        type=int,
+        default=0,
+        help="Run expectancy analysis. May be auto-enabled by the checklist preflight.",
+    )
+    parser.add_argument(
+        "--run_expectancy_robustness",
+        type=int,
+        default=0,
+        help="Run expectancy robustness. May be auto-enabled by the checklist preflight.",
+    )
     parser.add_argument("--run_strategy_builder", type=int, default=1)
     parser.add_argument("--strategy_builder_top_k_per_event", type=int, default=2)
     parser.add_argument("--strategy_builder_max_candidates", type=int, default=20)
@@ -615,6 +640,40 @@ def prepare_run_preflight(
         )
     )
 
+    runs_search_engine = any(name == "phase2_search_engine" for name, *_ in stages)
+    runs_legacy_phase2_conditional = any(
+        str(name).startswith("phase2_conditional_hypotheses__") for name, *_ in stages
+    )
+    phase2_event_type_source = "explicit" if cli_flag_present("--phase2_event_type") else "implicit"
+    if (
+        not cli_flag_present("--phase2_event_type")
+        and int(getattr(args, "run_phase2_conditional", 0) or 0)
+        and getattr(args, "templates", None)
+        and not getattr(args, "events", None)
+        and str(getattr(args, "phase2_event_type", "")).strip().lower() == "all"
+    ):
+        phase2_event_type_source = "template_only_auto_widen"
+    elif not cli_flag_present("--phase2_event_type"):
+        phase2_event_type_source = "parser_default_or_config"
+
+    effective_behavior = {
+        "phase2_event_type": str(getattr(args, "phase2_event_type", "") or "").strip(),
+        "phase2_event_type_source": phase2_event_type_source,
+        "run_expectancy_analysis": bool(int(getattr(args, "run_expectancy_analysis", 0) or 0)),
+        "run_expectancy_robustness": bool(
+            int(getattr(args, "run_expectancy_robustness", 0) or 0)
+        ),
+        "run_recommendations_checklist": bool(
+            int(getattr(args, "run_recommendations_checklist", 0) or 0)
+        ),
+        "run_strategy_builder": bool(int(getattr(args, "run_strategy_builder", 0) or 0)),
+        "run_strategy_blueprint_compiler": bool(
+            int(getattr(args, "run_strategy_blueprint_compiler", 0) or 0)
+        ),
+        "runs_search_engine": runs_search_engine,
+        "runs_legacy_phase2_conditional": runs_legacy_phase2_conditional,
+    }
+
     return {
         "exit_code": None,
         "run_id": run_id,
@@ -635,6 +694,7 @@ def prepare_run_preflight(
         "runtime_invariants_status": "configured",
         "artifact_contracts": artifact_contracts,
         "artifact_contract_issues": artifact_contract_issues,
+        "effective_behavior": effective_behavior,
         "execution_requested": True,
         "search_spec": getattr(args, "search_spec", "spec/search_space.yaml"),
         "research_compare_baseline_run_id": str(

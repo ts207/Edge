@@ -5,6 +5,11 @@ from typing import Any, Dict
 from project import PROJECT_ROOT
 
 import yaml
+from project.events.ontology_mapping import (
+    canonical_regime_fanout,
+    normalized_ontology_rows,
+    validate_mapping_rows,
+)
 
 CORE_KEYS = {"event_type", "reports_dir", "events_file", "signal_column", "parameters"}
 META_KEYS = {
@@ -30,14 +35,21 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
     events_root = spec_root / "events"
 
     canonical = _load_yaml(events_root / "canonical_event_registry.yaml")
-    family_by_event: Dict[str, str] = {}
+    legacy_family_by_event: Dict[str, str] = {}
     for family, row in (canonical.get("families", {}) or {}).items():
         if not isinstance(row, dict):
             continue
         for event_type in row.get("events", []) or []:
             token = str(event_type).strip().upper()
             if token:
-                family_by_event[token] = str(family).strip().upper()
+                legacy_family_by_event[token] = str(family).strip().upper()
+
+    ontology_rows = normalized_ontology_rows()
+    ontology_issues = validate_mapping_rows(ontology_rows)
+    if ontology_issues:
+        raise ValueError(
+            "Invalid event ontology mapping:\n" + "\n".join(f"- {issue}" for issue in ontology_issues)
+        )
 
     event_defaults = _load_yaml(events_root / "_defaults.yaml")
     event_family_defaults = _load_yaml(events_root / "_families.yaml")
@@ -68,6 +80,9 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
         params = payload.get("parameters", {})
         if not isinstance(params, dict):
             params = {}
+        ontology = dict(ontology_rows.get(event_type, {}))
+        if not ontology:
+            raise ValueError(f"Active event_type {event_type} missing from ontology mapping")
 
         legacy_top_level = {
             str(k): v for k, v in payload.items() if k not in CORE_KEYS and k not in META_KEYS
@@ -76,7 +91,23 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
         merged_event_params.update(params)
 
         event_rows[event_type] = {
-            "canonical_family": family_by_event.get(event_type, event_type),
+            "canonical_family": ontology["canonical_regime"],
+            "canonical_regime": ontology["canonical_regime"],
+            "legacy_family": legacy_family_by_event.get(event_type, event_type),
+            "subtype": ontology["subtype"],
+            "phase": ontology["phase"],
+            "evidence_mode": ontology["evidence_mode"],
+            "layer": ontology["layer"],
+            "disposition": ontology["disposition"],
+            "asset_scope": ontology["asset_scope"],
+            "venue_scope": ontology["venue_scope"],
+            "is_composite": ontology["is_composite"],
+            "is_context_tag": ontology["is_context_tag"],
+            "is_strategy_construct": ontology["is_strategy_construct"],
+            "research_only": ontology["research_only"],
+            "strategy_only": ontology["strategy_only"],
+            "deconflict_priority": ontology["deconflict_priority"],
+            "notes": ontology["notes"],
             "reports_dir": str(payload["reports_dir"]),
             "events_file": str(payload["events_file"]),
             "signal_column": str(payload["signal_column"]),
@@ -104,20 +135,54 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
         base = event_rows.setdefault(
             token,
             {
-                "canonical_family": str(
-                    row.get("canonical_family", family_by_event.get(token, token))
-                )
-                .strip()
-                .upper()
-                or token,
+                "canonical_family": "",
+                "canonical_regime": "",
+                "legacy_family": legacy_family_by_event.get(token, token),
+                "subtype": "",
+                "phase": "",
+                "evidence_mode": "",
+                "layer": "",
+                "disposition": "",
+                "asset_scope": "",
+                "venue_scope": "",
+                "is_composite": False,
+                "is_context_tag": False,
+                "is_strategy_construct": False,
+                "research_only": False,
+                "strategy_only": False,
+                "deconflict_priority": 0,
+                "notes": "",
                 "reports_dir": "",
                 "events_file": "",
                 "signal_column": "",
                 "parameters": {},
             },
         )
-        if row.get("canonical_family"):
-            base["canonical_family"] = str(row.get("canonical_family")).strip().upper()
+        ontology = dict(ontology_rows.get(token, {}))
+        if not ontology:
+            if token in event_rows:
+                raise ValueError(f"Active event_type {token} missing from ontology mapping")
+            continue
+        base["canonical_family"] = ontology["canonical_regime"]
+        base["canonical_regime"] = ontology["canonical_regime"]
+        base["legacy_family"] = legacy_family_by_event.get(token, base.get("legacy_family", token))
+        for key in (
+            "subtype",
+            "phase",
+            "evidence_mode",
+            "layer",
+            "disposition",
+            "asset_scope",
+            "venue_scope",
+            "is_composite",
+            "is_context_tag",
+            "is_strategy_construct",
+            "research_only",
+            "strategy_only",
+            "deconflict_priority",
+            "notes",
+        ):
+            base[key] = ontology[key]
         for key in (
             "templates",
             "horizons",
@@ -140,9 +205,7 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
     all_families = set()
     all_families.update(str(k).strip().upper() for k in legacy_family_rows.keys())
     all_families.update(str(k).strip().upper() for k in template_families.keys())
-    all_families.update(
-        str(row.get("canonical_family", "")).strip().upper() for row in event_rows.values()
-    )
+    all_families.update(str(row.get("legacy_family", "")).strip().upper() for row in event_rows.values())
     all_families.discard("")
 
     for family in sorted(all_families):
@@ -189,14 +252,30 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
                 "event_specs_dir": "spec/events",
                 "canonical_event_registry": "spec/events/canonical_event_registry.yaml",
                 "template_registry": "spec/templates/event_template_registry.yaml",
+                "event_ontology_mapping": "spec/events/event_ontology_mapping.yaml",
             },
             "notes": (
                 "Single event-centric schema for phase1+phase2 composition. "
-                "Legacy specs retained for compatibility and drift checks."
+                "Legacy specs retained for compatibility and drift checks. "
+                "canonical_family is a staged compatibility alias of canonical_regime; "
+                "legacy_family preserves current family-default wiring."
             ),
         },
         "defaults": defaults,
         "families": family_rows,
+        "canonical_regimes": {
+            regime: {
+                "event_types": list(event_types),
+                "default_executable_event_types": [
+                    event_type
+                    for event_type in event_types
+                    if not event_rows.get(event_type, {}).get("is_composite", False)
+                    and not event_rows.get(event_type, {}).get("is_context_tag", False)
+                    and not event_rows.get(event_type, {}).get("is_strategy_construct", False)
+                ],
+            }
+            for regime, event_types in canonical_regime_fanout(event_rows).items()
+        },
         "events": {k: event_rows[k] for k in sorted(event_rows)},
     }
 

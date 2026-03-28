@@ -19,6 +19,7 @@ from project.research.promotion import (
     stabilize_promoted_output_schema,
 )
 from project.research.services.reporting_service import write_promotion_reports
+from project.research.regime_routing import annotate_regime_metadata
 from project.research.validation.evidence_bundle import (
     bundle_to_flat_record,
     serialize_evidence_bundles,
@@ -817,11 +818,13 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         audit_statistical_df["promotion_profile"] = resolved_policy.promotion_profile
         audit_statistical_df["confirmatory_rerun_run_id"] = confirmatory_rerun_run_id
         audit_df = _annotate_promotion_audit_decisions(audit_statistical_df.copy())
+        audit_df = annotate_regime_metadata(audit_df)
         diagnostics["decision_summary"] = _build_promotion_decision_diagnostics(audit_df)
         promoted_df = stabilize_promoted_output_schema(
             promoted_df=promoted_df,
             audit_df=audit_df,
         ).copy()
+        promoted_df = annotate_regime_metadata(promoted_df)
 
         evidence_bundles = []
         if not audit_df.empty and "evidence_bundle_json" in audit_df.columns:
@@ -837,6 +840,7 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         evidence_bundle_summary = pd.DataFrame(
             [bundle_to_flat_record(bundle) for bundle in evidence_bundles]
         )
+        evidence_bundle_summary = annotate_regime_metadata(evidence_bundle_summary)
         decision_cols = [
             column
             for column in [
@@ -849,6 +853,13 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
                 "policy_version",
                 "bundle_version",
                 "is_reduced_evidence",
+                "canonical_regime",
+                "subtype",
+                "phase",
+                "evidence_mode",
+                "recommended_bucket",
+                "regime_bucket",
+                "routing_profile_id",
             ]
             if column in evidence_bundle_summary.columns
         ]

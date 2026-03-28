@@ -83,40 +83,30 @@ def _load_family_events(
     tested_counts: Dict[str, int],
 ) -> List[FamilyEventConfig]:
     """Load all events in a family with their configurations."""
-    import yaml
+    from project.domain.compiled_registry import get_domain_registry
 
-    events_dir = registry_root / "events"
-    if not events_dir.exists():
-        events_dir = Path("spec") / "events"
-
+    normalized = str(family).strip().upper()
     configs = []
-
-    for yaml_file in sorted(events_dir.glob("*.yaml")):
-        if yaml_file.name == "event_registry_unified.yaml":
+    registry = get_domain_registry()
+    for event_type, spec in registry.event_definitions.items():
+        if normalized not in {
+            spec.canonical_regime,
+            spec.canonical_family,
+            spec.legacy_family,
+        }:
             continue
-        try:
-            data = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
-            if not data:
-                continue
-            if data.get("canonical_family", "") != family:
-                continue
-            if not data.get("enabled", True):
-                continue
-
-            event_type = yaml_file.stem
-            weight = event_weights.get(event_type, 1.5)
-            tested = tested_counts.get(event_type, 0)
-
-            configs.append(
-                FamilyEventConfig(
-                    event_type=event_type,
-                    weight=weight,
-                    priority_score=weight,
-                    tested_count=tested,
-                )
+        if spec.is_composite or spec.is_context_tag or spec.is_strategy_construct:
+            continue
+        weight = event_weights.get(event_type, 1.5)
+        tested = tested_counts.get(event_type, 0)
+        configs.append(
+            FamilyEventConfig(
+                event_type=event_type,
+                weight=weight,
+                priority_score=weight,
+                tested_count=tested,
             )
-        except Exception as e:
-            _LOG.warning("Failed to load %s: %s", yaml_file, e)
+        )
 
     configs.sort(key=lambda x: x.priority_score, reverse=True)
     return configs

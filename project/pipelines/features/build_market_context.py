@@ -74,6 +74,21 @@ def _normalize_percentile_scale(series: pd.Series) -> pd.Series:
     return out
 
 
+def _normalize_utc_timestamp_column(
+    frame: pd.DataFrame,
+    *,
+    column: str = "timestamp",
+    frame_name: str,
+) -> pd.DataFrame:
+    if column not in frame.columns:
+        raise ValueError(f"missing {column} column in {frame_name}")
+    out = frame.copy()
+    out[column] = pd.to_datetime(out[column], utc=True, errors="coerce")
+    if out[column].isna().all():
+        raise ValueError(f"{frame_name}.{column} normalized to all-null timestamps")
+    return out
+
+
 def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     ensure_market_context_feature_definitions_registered()
     if "funding_rate_scaled" not in features.columns:
@@ -102,7 +117,7 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
             )
         features["funding_rate_scaled"] = features["funding_rate_scaled"].fillna(0.0)
 
-    out = features.copy()
+    out = _normalize_utc_timestamp_column(features, frame_name=f"{symbol}_features")
 
     # funding_rate_bps
     out["funding_rate_bps"] = out["funding_rate_scaled"] * 10_000.0
@@ -113,6 +128,7 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
         out[["timestamp", "funding_rate_scaled"]],
         symbol=symbol,
     )
+    fp_state = _normalize_utc_timestamp_column(fp_state, frame_name=f"{symbol}_funding_persistence")
     fp_cols = [col for col in fp_state.columns if col != "timestamp"]
     out = out.merge(fp_state[["timestamp", *fp_cols]], on="timestamp", how="left")
 
@@ -253,8 +269,12 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
 
 def build_market_context(bars: pd.DataFrame, funding: pd.DataFrame, symbol: str) -> pd.DataFrame:
     """Build market context features."""
-    features = bars.copy()
+    features = _normalize_utc_timestamp_column(bars, frame_name=f"{symbol}_bars")
     if not funding.empty and "funding_rate_scaled" in funding.columns:
+        funding = _normalize_utc_timestamp_column(
+            funding[["timestamp", "funding_rate_scaled"]],
+            frame_name=f"{symbol}_funding",
+        )
         features = features.merge(
             funding[["timestamp", "funding_rate_scaled"]], on="timestamp", how="left"
         )

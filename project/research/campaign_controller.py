@@ -14,6 +14,7 @@ import pandas as pd
 import yaml
 
 from project.core.config import get_data_root
+from project.domain.compiled_registry import get_domain_registry
 from project.research import campaign_controller_scan_support as _scan_support
 from project.research.experiment_engine import build_experiment_plan, RegistryBundle
 from project.research.search_intelligence import update_search_intelligence
@@ -570,6 +571,21 @@ class CampaignController:
     def _templates_for_event(self, event_id: str) -> List[str]:
         return _scan_support.templates_for_event(self, event_id)
 
+    def _executable_regime_event_fanout(self) -> Dict[str, List[str]]:
+        registry = get_domain_registry()
+        return {
+            regime: list(registry.get_event_ids_for_regime(regime, executable_only=True))
+            for regime in registry.canonical_regime_rows()
+            if registry.get_event_ids_for_regime(regime, executable_only=True)
+        }
+
+    def _event_to_regime_map(self) -> Dict[str, str]:
+        out: Dict[str, str] = {}
+        for regime, event_ids in self._executable_regime_event_fanout().items():
+            for event_id in event_ids:
+                out[event_id] = regime
+        return out
+
     def _build_proposal(
         self,
         *,
@@ -589,6 +605,10 @@ class CampaignController:
         interactions: Optional[List[Dict[str, Any]]] = None,
         # Phase 3.2 — context conditioning
         contexts: Optional[Dict[str, List[str]]] = None,
+        canonical_regimes: Optional[List[str]] = None,
+        subtypes: Optional[List[str]] = None,
+        phases: Optional[List[str]] = None,
+        evidence_modes: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         return _scan_support.build_proposal(
             self,
@@ -605,6 +625,10 @@ class CampaignController:
             sequences=sequences,
             interactions=interactions,
             contexts=contexts,
+            canonical_regimes=canonical_regimes,
+            subtypes=subtypes,
+            phases=phases,
+            evidence_modes=evidence_modes,
         )
 
     def _context_for_proposal(self) -> Dict[str, List[str]]:

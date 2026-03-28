@@ -25,6 +25,10 @@ class InstrumentScope:
 class TriggerSpace:
     allowed_trigger_types: List[str]
     events: Dict[str, List[str]] = field(default_factory=dict)
+    canonical_regimes: List[str] = field(default_factory=list)
+    subtypes: List[str] = field(default_factory=list)
+    phases: List[str] = field(default_factory=list)
+    evidence_modes: List[str] = field(default_factory=list)
     sequences: Dict[str, Any] = field(default_factory=dict)
     states: Dict[str, List[str]] = field(default_factory=dict)
     transitions: Dict[str, List[Dict[str, str]]] = field(default_factory=dict)

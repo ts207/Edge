@@ -70,7 +70,7 @@ Legacy wrapper surfaces have been removed.
 
 - Owner service: `project.pipelines.run_all`
 - Stage patterns: `compile_strategy_blueprints`, `build_strategy_candidates`, `select_profitable_strategies`
-- Script patterns: `pipelines/research/compile_strategy_blueprints.py`, `pipelines/research/build_strategy_candidates.py`, `pipelines/research/select_profitable_strategies.py`
+- Script patterns: `pipelines/research/compile_strategy_blueprints.py`, `research/build_strategy_candidates.py`, `pipelines/research/select_profitable_strategies.py`
 
 ## Artifact Contracts
 
@@ -349,8 +349,8 @@ Legacy wrapper surfaces have been removed.
 
 ### `build_strategy_candidates`
 
-- Inputs: `strategy.blueprints`
-- Optional inputs: _none_
+- Inputs: _none_
+- Optional inputs: `research.recommendations_checklist`, `strategy.blueprints`
 - Outputs: `strategy.candidates`
 - External inputs: _none_
 

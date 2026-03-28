@@ -98,6 +98,26 @@ class TestMemoryContracts:
         required_cols = {"program_id", "reflection_id", "observation", "insight_type", "confidence", "action", "status"}
         assert required_cols.issubset(set(read_back.columns)), f"Missing columns: {required_cols - set(read_back.columns)}"
 
+    def test_write_and_read_reflection_by_program_id(self, temp_memory_dir):
+        reflection = pd.DataFrame([{
+            "reflection_id": "r2",
+            "timestamp": datetime.now().isoformat(),
+            "observation": "program-scoped reflection",
+            "insight_type": "positive",
+            "confidence": 0.9,
+            "action": "exploit",
+            "status": "complete",
+        }])
+
+        write_reflection("campaign_alpha", reflection, data_root=temp_memory_dir)
+        read_back = read_reflections("campaign_alpha", data_root=temp_memory_dir)
+
+        assert len(read_back) == 1
+        row = read_back.iloc[0]
+        assert row["program_id"] == "campaign_alpha"
+        assert row["reflection_id"] == "r2"
+        assert row["observation"] == "program-scoped reflection"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

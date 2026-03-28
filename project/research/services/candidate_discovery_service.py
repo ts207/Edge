@@ -35,6 +35,10 @@ from project.research.services.phase2_diagnostics import (
 )
 from project.research.services.phase2_support import bar_duration_minutes_from_timeframe
 from project.research.services.reporting_service import write_candidate_reports
+from project.research.services.regime_effectiveness_service import (
+    write_regime_effectiveness_reports,
+)
+from project.research.regime_routing import annotate_regime_metadata
 from project.research.validation import estimate_effect_from_frame
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -455,6 +459,7 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 min_test_n_obs=int(sample_quality_policy["min_test_n_obs"]),
                 min_total_n_obs=int(sample_quality_policy["min_total_n_obs"]),
             )
+            combined = annotate_regime_metadata(combined)
             symbol_candidates = {
                 str(symbol): sym_df.copy() for symbol, sym_df in combined.groupby("symbol")
             }
@@ -511,6 +516,13 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 "symbol_diagnostics": [symbol_diagnostics[s] for s in sorted(symbol_diagnostics)],
             },
         )
+        regime_artifacts = write_regime_effectiveness_reports(
+            run_id=config.run_id,
+            data_root=config.data_root,
+            episodes=combined,
+        )
+        manifest["regime_effectiveness_output_dir"] = str(regime_artifacts.output_dir)
+        manifest["regime_effectiveness_summary"] = dict(regime_artifacts.summary)
 
         reg_hash = hyp_registry.write_artifacts(out_dir)
         manifest["hypothesis_registry_hash"] = reg_hash

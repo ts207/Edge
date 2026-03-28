@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import pytest
 
 from project.research.promotion.core import build_promotion_statistical_audit
 from project.research.validation.evidence_bundle import (
@@ -113,6 +115,29 @@ def test_evidence_bundle_policy_and_serialization(tmp_path: Path):
     payload = json.loads(lines[0])
     assert payload["candidate_id"] == "cand_1"
     assert payload["promotion_decision"]["promotion_status"] == "promoted"
+
+
+def test_build_evidence_bundle_accepts_vectorized_returns_oos_combined():
+    row = {
+        "candidate_id": "cand_vector",
+        "event_type": "VOL_SHOCK",
+        "returns_oos_combined": np.array([0.1] * 12),
+    }
+
+    bundle = build_evidence_bundle(row)
+
+    assert bundle["metadata"]["has_realized_oos_path"] is True
+
+
+def test_build_evidence_bundle_rejects_object_returns_oos_combined():
+    row = {
+        "candidate_id": "cand_bad",
+        "event_type": "VOL_SHOCK",
+        "returns_oos_combined": {"unexpected": 1},
+    }
+
+    with pytest.raises(ValueError, match="array-like"):
+        build_evidence_bundle(row)
 
 
 def test_build_promotion_statistical_audit_retains_bundle_reporting_fields():

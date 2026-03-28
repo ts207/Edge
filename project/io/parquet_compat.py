@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any, Callable
 
@@ -14,6 +15,56 @@ except Exception:  # pragma: no cover - optional dependency
 
 def _coerce_path(path: Any) -> Path:
     return Path(path)
+
+
+def _filter_pickle_kwargs(writer: Callable[..., Any], kwargs: dict[str, Any]) -> dict[str, Any]:
+    allowed = set(inspect.signature(writer).parameters)
+    filtered = {key: value for key, value in kwargs.items() if key in allowed}
+    filtered.pop("index", None)
+    filtered.pop("engine", None)
+    filtered.pop("compression", None)
+    return filtered
+
+
+def write_parquet_compat(
+    df: pd.DataFrame,
+    path: Any,
+    *,
+    pickle_writer: Callable[..., Any] | None = None,
+    **kwargs: Any,
+) -> Path:
+    """Write a logical parquet artifact using the repository fallback contract.
+
+    The on-disk filename remains `.parquet`, but the bytes are pickle-backed when
+    a native parquet engine is unavailable or intentionally bypassed.
+    """
+
+    writer = pickle_writer or pd.DataFrame.to_pickle
+    target = _coerce_path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    writer_kwargs = _filter_pickle_kwargs(writer, dict(kwargs))
+    writer(df, target, **writer_kwargs)
+    return target
+
+
+def read_parquet_compat(
+    path: Any,
+    *,
+    columns: list[str] | None = None,
+    pickle_reader: Callable[..., Any] | None = None,
+    **kwargs: Any,
+) -> pd.DataFrame:
+    """Read a logical parquet artifact through the repository fallback contract."""
+
+    reader = pickle_reader or pd.read_pickle
+    target = _coerce_path(path)
+    allowed = set(inspect.signature(reader).parameters)
+    reader_kwargs = {key: value for key, value in kwargs.items() if key in allowed}
+    frame = reader(target, **reader_kwargs)
+    if columns is not None:
+        cols = [column for column in columns if column in frame.columns]
+        frame = frame.loc[:, cols]
+    return frame
 
 
 def patch_pandas_parquet_fallback() -> None:
@@ -34,18 +85,24 @@ def patch_pandas_parquet_fallback() -> None:
     original_read_pickle = pd.read_pickle
 
     def _to_parquet_fallback(self: pd.DataFrame, path, *args, **kwargs):
-        target = _coerce_path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        # Preserve the requested filename contract; write pickle bytes to the path.
-        return original_to_pickle(self, target, *args, **kwargs)
+        if args:
+            raise TypeError("parquet fallback requires keyword arguments after path")
+        return write_parquet_compat(
+            self,
+            path,
+            pickle_writer=original_to_pickle,
+            **kwargs,
+        )
 
     def _read_parquet_fallback(path, columns=None, *args, **kwargs):
-        target = _coerce_path(path)
-        frame = original_read_pickle(target, *args, **kwargs)
-        if columns is not None:
-            cols = [c for c in columns if c in frame.columns]
-            frame = frame.loc[:, cols]
-        return frame
+        if args:
+            raise TypeError("parquet fallback requires keyword arguments after path")
+        return read_parquet_compat(
+            path,
+            columns=columns,
+            pickle_reader=original_read_pickle,
+            **kwargs,
+        )
 
     _to_parquet_fallback._edge_fallback_patched = True  # type: ignore[attr-defined]
     _read_parquet_fallback._edge_fallback_patched = True  # type: ignore[attr-defined]
