@@ -1,199 +1,140 @@
-# Edge — Dependencies & Technical Stack
+# Dependencies and Technical Stack
 
-## Python Version Requirement
+## Runtime Requirement
 
-**Python 3.11+** (strict — typed union syntax, match statements, and other 3.11 features are used throughout).
+The package requires Python `>=3.11`.
 
----
+Build system:
 
-## Production Dependencies (`pyproject.toml`)
+- `setuptools>=69`
+- `wheel`
 
-| Package | Version | Role |
-|---|---|---|
-| `numpy` | 1.26.0 | Numerical arrays, vectorized operations |
-| `numba` | 0.59.1 | JIT compilation for performance-critical detector math |
-| `pandas` | 2.2.2 | Time-series data manipulation, the primary data structure throughout |
-| `pyarrow` | 17.0.0 | Parquet I/O (all artifact files are `.parquet`) |
-| `requests` | 2.32.4 | HTTP client (Binance REST API for historical data) |
-| `PyYAML` | 6.0.1 | Spec file loading from `spec/` YAML definitions |
-| `pandera` | 0.19.3 | DataFrame schema validation and contract enforcement |
-| `scikit-learn` | 1.5.0 | ML utilities (random forest features, clustering) |
-| `scipy` | 1.13.1 | Statistical tests (bootstrap, KS, t-test) |
-| `statsmodels` | 0.14.2 | Econometric models, regression diagnostics |
-| `websockets` | latest | Binance WebSocket streaming (live engine) |
-| `pydantic` | 2.8.0 | Data validation for all schemas and DSL models |
-| `aiohttp` | 3.9.5 | Async HTTP for live data fetching |
-| `networkx` | latest | Dependency graph construction (stage DAG) |
+Package metadata and console-script entry points live in `pyproject.toml`.
 
----
+## Core Python Dependencies
 
-## Optional Dependencies
+Numerics and data:
 
-| Group | Package | Role |
-|---|---|---|
-| `[dev]` | `pyright==1.1.350` | Static type checking |
+- `numpy`
+- `pandas`
+- `pyarrow`
+- `numba`
 
-### Installation
+Statistics and modeling:
 
-```bash
-# Standard research
-pip install -e .
-```
+- `scikit-learn`
+- `scipy`
+- `statsmodels`
 
----
+Validation and modeling:
 
-## Development Dependencies (`requirements-dev.txt`)
+- `pydantic`
+- `pandera`
+- `PyYAML`
 
-| Package | Version | Role |
-|---|---|---|
-| `ruff` | 0.15.4 | Linter and formatter |
-| `pytest` | 8.2.2 | Test runner |
+HTTP / async / connectivity:
 
----
+- `requests`
+- `aiohttp`
+- `websockets`
 
-## Tooling
+Graph / structure utilities:
 
-### Linting & Formatting
+- `networkx`
 
-- **Ruff** — linter + formatter, configured in `pyproject.toml`:
-  - `line-length: 100`
-  - `target-version: py311`
-  - Rules: `E`, `F`, `I`, `W`, `E9`, `F63`, `F7`, `F82`
-  - Excluded: `data/`, `.venv/`, `MEMORY/`, `.agents/`
+## Development Tooling
 
-### Type Checking
+Declared dev dependency:
 
-- **Pyright** v1.1.350 — run on `project/` package. Checked in Tier 1 CI gate.
+- `pyright`
 
-### Testing
+Repository tooling also expects:
 
-- **pytest** 8.2.2
-  - Config in `pytest.ini`
-  - 407 test files
-  - Markers: `@pytest.mark.slow` (excluded in fast profile)
-  - `make test` — full suite
-  - `make test-fast` — excludes slow tests
+- `pytest`
+- `ruff`
+- `make` for the maintained Linux/WSL operator workflow
 
-### Build System
+## Storage and Artifact Format
 
-- **setuptools** ≥ 69 + **wheel**
-- Package discovery: `where=["."]`, `include=["project*"]`
+Primary storage format:
 
----
+- Parquet
 
-## Data Layer
+Supporting code:
 
-### Storage Format
+- `project/io/`
+- `project/io/parquet_compat.py`
+- artifact validation in `project/reliability/`
 
-All pipeline artifacts are stored as **Parquet files** (via PyArrow). No SQL database.
+The repo uses manifest-tracked file outputs rather than a database-first design for core run artifacts.
 
-### Data Root
+## Execution and Orchestration Stack
 
-Configured at runtime via `project.core.config.get_data_root()`. Default: `data/` directory at project root.
+Main orchestration patterns:
 
-```
-data/
-└── lake/          Runtime outputs (not version controlled)
-    ├── raw/       Ingested data (ohlcv, funding, OI, liquidations)
-    ├── clean/     Cleaned bars
-    ├── features/  Computed feature frames
-    └── reports/   Pipeline output artifacts
-```
+- Python `argparse` CLIs
+- installed console scripts from `pyproject.toml`
+- `Makefile` targets for maintained workflows
+- GitHub Actions tiers for CI
 
-### Data Sources
+Important orchestration entry points:
 
-All market data ingested from **Binance** via:
+- `project/cli.py`
+- `project/pipelines/run_all.py`
+- `project/research/agent_io/*.py`
+- `project/scripts/*.py`
 
-- REST API (historical OHLCV, funding rates, OI, liquidations)
-- WebSocket (live klines at 1m and 5m, book ticker)
+## CI Stack
 
-Supported instruments:
+Current workflow tiers:
 
-- Binance USDⓈ-M Perpetuals (UM)
-- Binance Spot
+- `tier1.yml`
+  - structural fast gate
+- `tier2.yml`
+  - deterministic workflow gate
+- `tier3.yml`
+  - broad correctness gate
 
-Supported timeframes: `1m`, `5m` (primary research timeframes). Additional timeframes configurable.
+Those workflows run combinations of:
 
----
+- compile checks
+- architecture tests
+- spec validation
+- generated artifact drift checks
+- smoke workflows
+- replay/runtime determinism checks
+- full pytest
+- Pyright
 
-## CI/CD Infrastructure
+## Live Runtime Stack
 
-### GitHub Actions Workflows
+The live/runtime surface uses:
 
-| Workflow | File | Trigger | Role |
-|---|---|---|---|
-| Tier 1 — Structural Fast Gate | `tier1.yml` | push/PR to main | Compile, architecture tests, spec validation, drift checks, fast regressions, Pyright |
-| Tier 2 | `tier2.yml` | Scheduled/manual | Broader test suite |
-| Tier 3 | `tier3.yml` | Manual/release | Full suite + golden workflow |
-| Codex PR Review | `codex_pr_review.yml` | PR | Automated code review |
-| Gemini Dispatch | `gemini-dispatch.yml` | Various | AI-assisted dispatch |
-| Gemini Triage | `gemini-triage.yml` | Issues | Automated issue triage |
-| Gemini Scheduled Triage | `gemini-scheduled-triage.yml` | Cron | Periodic triage |
-| Gemini Invoke | `gemini-invoke.yml` | Manual | Manual AI invocation |
-| Gemini Review | `gemini-review.yml` | PR | AI code review |
+- `aiohttp` for venue preflight/account queries
+- environment-variable based runtime binding
+- YAML config loading via `project.spec_registry`
+- Binance-specific validation and account normalization in `project/scripts/run_live_engine.py`
 
-### Codex Configuration (`.codex/`)
+## Research and Reliability Stack
 
-| File | Purpose |
-|---|---|
-| `config.toml` | Codex agent configuration |
-| `setup.sh` | Environment setup for Codex |
-| `maintenance.sh` | Maintenance commands for Codex |
-| `rules/default.rules` | Default behavior rules for Codex |
+Research:
 
----
+- proposal schema / translation / planning under `project/research/agent_io`
+- knowledge and memory under `project/research/knowledge`
+- candidate and promotion services under `project/research/services`
 
-## Deployment
+Reliability:
 
-### Systemd Services
+- smoke CLI in `project/reliability/cli_smoke.py`
+- regression and artifact assertions in `project/reliability/`
+- generated audits in `project/scripts/*audit*.py`
 
-Three service templates in `deploy/systemd/`:
+## Operator Environment Notes
 
-| Service | Config | Purpose |
-|---|---|---|
-| `edge-live-engine.service` | `golden_certification.yaml` | Generic template |
-| `edge-live-engine-paper.service` | Paper trading env | Paper mode |
-| `edge-live-engine-production.service` | Production env | Production mode |
+The maintained command examples assume a Unix-like shell or WSL environment where:
 
-**Service configuration:**
+- `.venv/bin/python` exists
+- `make` is available
+- repo-relative paths behave like normal POSIX paths
 
-```ini
-[Service]
-WorkingDirectory=/opt/edge
-ExecStart=/opt/edge/.venv/bin/edge-live-engine \
-  --config /opt/edge/project/configs/golden_certification.yaml \
-  --snapshot_path /var/lib/edge/live_state.json
-Restart=on-failure
-RestartSec=5
-```
-
-### Environment Templates
-
-`deploy/env/` contains `.env.example` files specifying required environment variables for paper and production modes.
-
----
-
-## Constraints Lock
-
-`constraints.lock` — records pinned dependency constraints for reproducible environments. Checked in to ensure research runs are reproducible across machines.
-
----
-
-## Key Configuration Files
-
-| File | Purpose |
-|---|---|
-| `pyproject.toml` | Package metadata, dependencies, entry points, Ruff config |
-| `pytest.ini` | Pytest configuration |
-| `pyrightconfig.json` | Pyright static analysis config |
-| `constraints.lock` | Pinned dependency constraints |
-| `spec/global_defaults.yaml` | Default horizons, templates, conditioning dimensions |
-| `spec/gates.yaml` | Promotion gate thresholds |
-| `spec/cost_model.yaml` | Execution cost parameters |
-| `spec/blueprint_policies.yaml` | Stop/target/sizing policy defaults |
-| `spec/runtime/lanes.yaml` | Processing lane definitions |
-| `spec/runtime/firewall.yaml` | Alpha/execution firewall rules |
-| `project/configs/golden_certification.yaml` | Golden certification run config |
-| `project/configs/fees.yaml` | Authoritative fee config |
-| `project/configs/registries/` | Experiment and type registries |
-| `project/configs/venues/` | Venue-specific configs |
+The repo can still be invoked from other environments, but the documentation examples and Makefile targets are optimized for Linux/WSL.

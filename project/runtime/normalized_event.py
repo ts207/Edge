@@ -174,3 +174,37 @@ def event_to_record(event: NormalizedEvent) -> Dict[str, Any]:
 
 def events_to_records(events: Iterable[NormalizedEvent]) -> List[Dict[str, Any]]:
     return [event_to_record(event) for event in events]
+
+
+def normalized_events_from_frame(
+    frame: pd.DataFrame,
+    *,
+    max_events: Optional[int] = None,
+) -> List[NormalizedEvent]:
+    if frame.empty:
+        return []
+
+    rows = frame
+    max_n = int(max_events) if max_events is not None else 0
+    if max_n > 0:
+        rows = frame.iloc[:max_n]
+
+    events: List[NormalizedEvent] = []
+    for row in rows.itertuples(index=False):
+        events.append(
+            NormalizedEvent(
+                event_id=str(getattr(row, "event_id", "")),
+                event_type=str(getattr(row, "event_type", "") or "unknown_event_type"),
+                lane_id=str(getattr(row, "lane_id", "") or "alpha_5s"),
+                source_id=str(getattr(row, "source_id", "")),
+                source_seq=int(getattr(row, "source_seq", 0) or 0),
+                event_time_us=int(getattr(row, "event_time_us", 0) or 0),
+                recv_time_us=int(getattr(row, "recv_time_us", 0) or 0),
+                instrument_id=str(getattr(row, "instrument_id", "") or "UNKNOWN"),
+                venue_id=str(getattr(row, "venue_id", "") or "binance"),
+                role=str(getattr(row, "role", "") or "alpha"),
+                provenance=str(getattr(row, "provenance", "") or "market"),
+                order_id=str(getattr(row, "order_id", "") or ""),
+            )
+        )
+    return events

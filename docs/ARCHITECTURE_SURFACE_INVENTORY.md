@@ -1,41 +1,73 @@
 # Architecture Surface Inventory
 
-This document describes the canonical and transitional surfaces in the Edge system.
+Use this file for quick orientation.
 
-## Canonical Surfaces
+## Primary Runtime Surfaces
 
-Canonical surfaces are stable, production-ready modules that form the core of the system.
+- orchestrator
+  - `project/pipelines/run_all.py`
+- stage and artifact contracts
+  - `project/contracts/pipeline_registry.py`
+- planning
+  - `project/pipelines/pipeline_planning.py`
+- execution
+  - `project/pipelines/pipeline_execution.py`
+- provenance and manifest handling
+  - `project/pipelines/pipeline_provenance.py`
+- pipeline audit / summary
+  - `project/pipelines/pipeline_audit.py`
+  - `project/pipelines/pipeline_summary.py`
 
-### Core Surfaces
-- `project.core` - Core data structures and utilities
-- `project.events` - Event detection and processing
-- `project.features` - Feature engineering
-- `project.domain` - Domain models
-- `project.specs` - Specification definitions
-- `project.spec_registry` - Specification registry
-- `project.strategy` - Strategy definitions
-- `project.engine` - Execution engine
-- `project.portfolio` - Portfolio management
-- `project.research` - Research services
+## Research Surfaces
 
-### Transitional Surfaces
+- proposal schema and translation
+  - `project/research/agent_io/`
+- knowledge and memory
+  - `project/research/knowledge/`
+- services
+  - `project/research/services/`
+- validation
+  - `project/research/validation/`
 
-Transitional surfaces are modules in the process of being stabilized.
+## Event / Ontology Surfaces
 
-- `project.strategy.dsl` - Strategy DSL interpreter (transitional)
-- `project.strategy_templates` - Strategy templates (transitional)
+- detector implementations
+  - `project/events/detectors/`
+- grouped family surfaces
+  - `project/events/families/`
+- event specs and mapping
+  - `project/events/event_specs.py`
+  - `project/events/ontology_mapping.py`
+  - `project/events/ontology_deconfliction.py`
+- routing
+  - `project/research/regime_routing.py`
 
-## Removed Surfaces
+## Strategy / Engine / Live
 
-Previously existing surfaces that have been removed or consolidated:
+- strategy layer
+  - `project/strategy/`
+- engine layer
+  - `project/engine/`
+- live runtime
+  - `project/live/`
+  - `project/scripts/run_live_engine.py`
 
-- Legacy surface 1 (removed in v2.0)
-- Legacy surface 2 (merged into core)
+## Reliability and Generated Audit Surfaces
 
-## Surface Dependencies
+- smoke CLI
+  - `project/reliability/cli_smoke.py`
+- generated docs
+  - `docs/generated/`
+- maintenance scripts
+  - `project/scripts/`
 
-```
-project.core -> [project.spec_registry, project.artifacts, project.specs, project.io]
-project.events -> [project.core, project.features, project.specs, project.spec_registry, ...]
-project.research -> [project.core, project.specs, project.events, ...]
-```
+## Spec and Config Surfaces
+
+- domain specs
+  - `spec/`
+- runnable configs
+  - `project/configs/`
+- YAML loading / validation
+  - `project/spec_registry/`
+  - `project/spec_validation/`
+  - `project/specs/`

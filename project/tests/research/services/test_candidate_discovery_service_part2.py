@@ -93,6 +93,7 @@ def test_run_candidate_discovery_service_passes_registry_root_to_experiment_disc
 
     def _experiment(**kwargs):
         captured["registry_root"] = kwargs.get("registry_root")
+        captured["experiment_plan"] = kwargs.get("experiment_plan")
         return cands.copy()
 
     monkeypatch.setattr(svc, "get_data_root", lambda: tmp_path)
@@ -116,6 +117,7 @@ def test_run_candidate_discovery_service_passes_registry_root_to_experiment_disc
 
     assert result.exit_code == 0
     assert captured["registry_root"] == tmp_path / "registries"
+    assert captured["experiment_plan"] is not None
 
 
 def test_run_candidate_discovery_service_split_scheme_changes_split_plan(monkeypatch, tmp_path):

@@ -86,3 +86,24 @@ def test_filter_unsupported_flags_with_multiple_values(tmp_path):
     # Non-dangerous unknown flags are NOT filtered by current logic (they are passed through)
     # Wait, let's check execution_engine.py logic for unknown flags.
     assert "--other_flag" in filtered
+
+
+def test_phase2_search_engine_wrapper_preserves_experiment_config():
+    script_path = (
+        Path(__file__).resolve().parents[2] / "project" / "pipelines" / "research" / "phase2_search_engine.py"
+    )
+    base_args = [
+        "--run_id",
+        "shakeout_test",
+        "--experiment_config",
+        "/tmp/experiment.yaml",
+        "--program_id",
+        "regime_shakeout",
+        "--search_spec",
+        "spec/search_space.yaml",
+    ]
+
+    filtered = engine._filter_unsupported_flags(script_path, base_args)
+
+    assert "--experiment_config" in filtered
+    assert "/tmp/experiment.yaml" in filtered

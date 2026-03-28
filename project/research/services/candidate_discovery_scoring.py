@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 
 from project.research import discovery
-from project.research.gating import build_event_return_frame
+from project.research.gating import (
+    build_event_return_frame,
+    build_event_return_frame_from_joined,
+    join_events_to_features,
+)
 from project.research.validation.falsification import generate_placebo_events
 from project.research.validation.regime_tests import evaluate_by_regime
 from project.research.validation import (
@@ -103,6 +107,18 @@ def _random_entry_events(events_df: pd.DataFrame, features_df: Optional[pd.DataF
     if "enter_ts" in out.columns:
         out["enter_ts"] = sampled.values
     return out
+
+
+def _optional_float(value: object) -> float | None:
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(numeric):
+        return None
+    return float(numeric)
+
+
+def _cache_token(value: object) -> object:
+    numeric = _optional_float(value)
+    return numeric if numeric is not None else None
 
 
 def _placebo_pass(observed_frame: pd.DataFrame, placebo_frame: pd.DataFrame) -> bool:
@@ -296,6 +312,7 @@ def split_and_score_candidates(
         return candidates.copy()
 
     working = events_df.copy()
+    features_input = features_df if features_df is not None else pd.DataFrame()
     resolved_split_scheme_id, train_frac, validation_frac = resolve_split_scheme(split_scheme_id)
     time_col = (
         "enter_ts"
@@ -372,118 +389,213 @@ def split_and_score_candidates(
         out["cost_model_source"] = "static"
         out["cost_regime_multiplier"] = 1.0
 
+    time_col = (
+        "enter_ts"
+        if "enter_ts" in working.columns
+        else ("timestamp" if "timestamp" in working.columns else "timestamp")
+    )
+    shift_placebo_events = (
+        generate_placebo_events(working, time_col=time_col, shift_bars=1)
+        if not working.empty and time_col in working.columns
+        else pd.DataFrame()
+    )
+    random_placebo_events = _random_entry_events(working, features_input)
+
+    can_reuse_joined = (
+        build_event_return_frame_fn is build_event_return_frame
+        and not features_input.empty
+        and "timestamp" in features_input.columns
+        and "close" in features_input.columns
+    )
+    joined_frames: dict[str, pd.DataFrame] = {}
+    feat_close = np.array([], dtype=float)
+    if can_reuse_joined:
+        features_input = features_input.sort_values("timestamp").reset_index(drop=True)
+        feat_close = features_input["close"].astype(float).to_numpy()
+        joined_frames = {
+            "observed": join_events_to_features(working, features_input),
+            "shift_placebo": join_events_to_features(shift_placebo_events, features_input),
+            "random_placebo": join_events_to_features(random_placebo_events, features_input),
+        }
+
+    source_events = {
+        "observed": working,
+        "shift_placebo": shift_placebo_events,
+        "random_placebo": random_placebo_events,
+    }
+    frame_cache: dict[tuple[object, ...], pd.DataFrame] = {}
+
+    def _frame_key(
+        *,
+        source_kind: str,
+        rule: str,
+        row_horizon: str,
+        canonical_family: str,
+        row_horizon_bars: int,
+        frame_entry_lag_bars: int,
+        stop_loss_bps: object,
+        take_profit_bps: object,
+        stop_loss_atr_multipliers: object,
+        take_profit_atr_multipliers: object,
+        direction_value: object,
+    ) -> tuple[object, ...]:
+        return (
+            source_kind,
+            rule,
+            row_horizon,
+            canonical_family,
+            int(row_horizon_bars),
+            int(frame_entry_lag_bars),
+            int(shift_labels_k),
+            _cache_token(stop_loss_bps),
+            _cache_token(take_profit_bps),
+            _cache_token(stop_loss_atr_multipliers),
+            _cache_token(take_profit_atr_multipliers),
+            _cache_token(direction_value),
+            float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
+        )
+
+    def _build_frame(
+        *,
+        source_kind: str,
+        rule: str,
+        row_horizon: str,
+        canonical_family: str,
+        row_horizon_bars: int,
+        frame_entry_lag_bars: int,
+        stop_loss_bps: object,
+        take_profit_bps: object,
+        stop_loss_atr_multipliers: object,
+        take_profit_atr_multipliers: object,
+        direction_value: object,
+    ) -> pd.DataFrame:
+        cache_key = _frame_key(
+            source_kind=source_kind,
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=frame_entry_lag_bars,
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_value,
+        )
+        cached = frame_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        kwargs = {
+            "rule": rule,
+            "horizon": row_horizon,
+            "canonical_family": canonical_family,
+            "shift_labels_k": int(shift_labels_k),
+            "entry_lag_bars": int(frame_entry_lag_bars),
+            "horizon_bars_override": int(row_horizon_bars),
+            "stop_loss_bps": _optional_float(stop_loss_bps),
+            "take_profit_bps": _optional_float(take_profit_bps),
+            "stop_loss_atr_multipliers": _optional_float(stop_loss_atr_multipliers),
+            "take_profit_atr_multipliers": _optional_float(take_profit_atr_multipliers),
+            "cost_bps": float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
+            "direction_override": pd.to_numeric(direction_value, errors="coerce"),
+        }
+        if can_reuse_joined:
+            frame = build_event_return_frame_from_joined(
+                joined_frames[source_kind],
+                feat_close,
+                **kwargs,
+            )
+        else:
+            frame = build_event_return_frame_fn(
+                source_events[source_kind],
+                features_input,
+                **kwargs,
+            )
+        frame_cache[cache_key] = frame
+        return frame
+
     for idx, row in out.iterrows():
         row_horizon_bars = int(
             pd.to_numeric(row.get("horizon_bars", horizon_bars), errors="coerce") or horizon_bars
         )
         row_horizon = str(row.get("horizon", discovery.bars_to_timeframe(row_horizon_bars)))
-        return_frame = build_event_return_frame_fn(
-            working,
-            features_df if features_df is not None else pd.DataFrame(),
-            rule=str(row.get("rule_template", "continuation")),
-            horizon=row_horizon,
-            canonical_family=str(row.get("event_type", "")).split("_")[0],
-            shift_labels_k=int(shift_labels_k),
-            entry_lag_bars=int(entry_lag_bars),
-            horizon_bars_override=row_horizon_bars,
-            stop_loss_bps=pd.to_numeric(row.get("stop_loss_bps"), errors="coerce"),
-            take_profit_bps=pd.to_numeric(row.get("take_profit_bps"), errors="coerce"),
-            stop_loss_atr_multipliers=pd.to_numeric(
-                row.get("stop_loss_atr_multipliers"), errors="coerce"
-            ),
-            take_profit_atr_multipliers=pd.to_numeric(
-                row.get("take_profit_atr_multipliers"), errors="coerce"
-            ),
-            cost_bps=float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
-            direction_override=pd.to_numeric(row.get("direction"), errors="coerce"),
+        rule = str(row.get("rule_template", "continuation"))
+        canonical_family = str(row.get("event_type", "")).split("_")[0]
+        direction_value = row.get("direction")
+        stop_loss_bps = row.get("stop_loss_bps")
+        take_profit_bps = row.get("take_profit_bps")
+        stop_loss_atr_multipliers = row.get("stop_loss_atr_multipliers")
+        take_profit_atr_multipliers = row.get("take_profit_atr_multipliers")
+        direction_numeric = pd.to_numeric(direction_value, errors="coerce")
+        direction_placebo_value = (
+            -direction_numeric if pd.notna(direction_numeric) else direction_numeric
         )
-        delayed_frame = build_event_return_frame_fn(
-            working,
-            features_df if features_df is not None else pd.DataFrame(),
-            rule=str(row.get("rule_template", "continuation")),
-            horizon=row_horizon,
-            canonical_family=str(row.get("event_type", "")).split("_")[0],
-            shift_labels_k=int(shift_labels_k),
-            entry_lag_bars=int(entry_lag_bars) + 1,
-            horizon_bars_override=row_horizon_bars,
-            stop_loss_bps=pd.to_numeric(row.get("stop_loss_bps"), errors="coerce"),
-            take_profit_bps=pd.to_numeric(row.get("take_profit_bps"), errors="coerce"),
-            stop_loss_atr_multipliers=pd.to_numeric(
-                row.get("stop_loss_atr_multipliers"), errors="coerce"
-            ),
-            take_profit_atr_multipliers=pd.to_numeric(
-                row.get("take_profit_atr_multipliers"), errors="coerce"
-            ),
-            cost_bps=float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
-            direction_override=pd.to_numeric(row.get("direction"), errors="coerce"),
+
+        return_frame = _build_frame(
+            source_kind="observed",
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=int(entry_lag_bars),
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_value,
         )
-        time_col = (
-            "enter_ts" if "enter_ts" in working.columns else ("timestamp" if "timestamp" in working.columns else "timestamp")
+        delayed_frame = _build_frame(
+            source_kind="observed",
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=int(entry_lag_bars) + 1,
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_value,
         )
-        shift_placebo_events = (
-            generate_placebo_events(working, time_col=time_col, shift_bars=1)
-            if not working.empty and time_col in working.columns
-            else pd.DataFrame()
+        shift_placebo_frame = _build_frame(
+            source_kind="shift_placebo",
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=int(entry_lag_bars),
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_value,
         )
-        shift_placebo_frame = build_event_return_frame_fn(
-            shift_placebo_events,
-            features_df if features_df is not None else pd.DataFrame(),
-            rule=str(row.get("rule_template", "continuation")),
-            horizon=row_horizon,
-            canonical_family=str(row.get("event_type", "")).split("_")[0],
-            shift_labels_k=int(shift_labels_k),
-            entry_lag_bars=int(entry_lag_bars),
-            horizon_bars_override=row_horizon_bars,
-            stop_loss_bps=pd.to_numeric(row.get("stop_loss_bps"), errors="coerce"),
-            take_profit_bps=pd.to_numeric(row.get("take_profit_bps"), errors="coerce"),
-            stop_loss_atr_multipliers=pd.to_numeric(
-                row.get("stop_loss_atr_multipliers"), errors="coerce"
-            ),
-            take_profit_atr_multipliers=pd.to_numeric(
-                row.get("take_profit_atr_multipliers"), errors="coerce"
-            ),
-            cost_bps=float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
-            direction_override=pd.to_numeric(row.get("direction"), errors="coerce"),
+        random_placebo_frame = _build_frame(
+            source_kind="random_placebo",
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=int(entry_lag_bars),
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_value,
         )
-        random_placebo_frame = build_event_return_frame_fn(
-            _random_entry_events(working, features_df),
-            features_df if features_df is not None else pd.DataFrame(),
-            rule=str(row.get("rule_template", "continuation")),
-            horizon=row_horizon,
-            canonical_family=str(row.get("event_type", "")).split("_")[0],
-            shift_labels_k=int(shift_labels_k),
-            entry_lag_bars=int(entry_lag_bars),
-            horizon_bars_override=row_horizon_bars,
-            stop_loss_bps=pd.to_numeric(row.get("stop_loss_bps"), errors="coerce"),
-            take_profit_bps=pd.to_numeric(row.get("take_profit_bps"), errors="coerce"),
-            stop_loss_atr_multipliers=pd.to_numeric(
-                row.get("stop_loss_atr_multipliers"), errors="coerce"
-            ),
-            take_profit_atr_multipliers=pd.to_numeric(
-                row.get("take_profit_atr_multipliers"), errors="coerce"
-            ),
-            cost_bps=float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
-            direction_override=pd.to_numeric(row.get("direction"), errors="coerce"),
-        )
-        direction_placebo_frame = build_event_return_frame_fn(
-            working,
-            features_df if features_df is not None else pd.DataFrame(),
-            rule=str(row.get("rule_template", "continuation")),
-            horizon=row_horizon,
-            canonical_family=str(row.get("event_type", "")).split("_")[0],
-            shift_labels_k=int(shift_labels_k),
-            entry_lag_bars=int(entry_lag_bars),
-            horizon_bars_override=row_horizon_bars,
-            stop_loss_bps=pd.to_numeric(row.get("stop_loss_bps"), errors="coerce"),
-            take_profit_bps=pd.to_numeric(row.get("take_profit_bps"), errors="coerce"),
-            stop_loss_atr_multipliers=pd.to_numeric(
-                row.get("stop_loss_atr_multipliers"), errors="coerce"
-            ),
-            take_profit_atr_multipliers=pd.to_numeric(
-                row.get("take_profit_atr_multipliers"), errors="coerce"
-            ),
-            cost_bps=float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
-            direction_override=-pd.to_numeric(row.get("direction"), errors="coerce"),
+        direction_placebo_frame = _build_frame(
+            source_kind="observed",
+            rule=rule,
+            row_horizon=row_horizon,
+            canonical_family=canonical_family,
+            row_horizon_bars=row_horizon_bars,
+            frame_entry_lag_bars=int(entry_lag_bars),
+            stop_loss_bps=stop_loss_bps,
+            take_profit_bps=take_profit_bps,
+            stop_loss_atr_multipliers=stop_loss_atr_multipliers,
+            take_profit_atr_multipliers=take_profit_atr_multipliers,
+            direction_value=direction_placebo_value,
         )
         if return_frame.empty:
             eval_frame = pd.DataFrame(columns=["forward_return", "cluster_day"])

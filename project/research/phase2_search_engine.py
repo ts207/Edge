@@ -40,6 +40,7 @@ from project.research.search.search_feature_utils import (
 )
 from project.research.services.phase2_diagnostics import build_search_engine_diagnostics
 from project.research.services.reporting_service import write_json_report
+from project.research.regime_routing import annotate_regime_metadata
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +69,12 @@ def _normalize_audit_frame(rows: list[dict]) -> pd.DataFrame:
                 )
             )
     return frame
+
+
+def _annotate_candidate_regime_metadata(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "event_type" not in frame.columns:
+        return frame
+    return annotate_regime_metadata(frame)
 
 
 # Phase 4.2 — regime-conditional candidate discovery signal columns
@@ -524,6 +531,8 @@ def run(
         )
 
     log.info("Search engine produced %d total bridge candidates", len(final_df))
+
+    final_df = _annotate_candidate_regime_metadata(final_df)
 
     # 6. Write output
     write_parquet(final_df, output_path)

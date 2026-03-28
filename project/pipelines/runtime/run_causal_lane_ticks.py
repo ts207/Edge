@@ -11,30 +11,8 @@ from project import PROJECT_ROOT
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.specs.invariants import load_runtime_invariants_specs
 from project.runtime.lane_runner import run_causal_lane_ticks
-from project.runtime.normalized_event import NormalizedEvent
+from project.runtime.normalized_event import normalized_events_from_frame
 from project.io.utils import write_parquet
-
-
-def _to_normalized_events(rows: List[Dict[str, object]]) -> List[NormalizedEvent]:
-    out: List[NormalizedEvent] = []
-    for row in rows:
-        out.append(
-            NormalizedEvent(
-                event_id=str(row.get("event_id", "")),
-                event_type=str(row.get("event_type", "") or "unknown_event_type"),
-                lane_id=str(row.get("lane_id", "") or "alpha_5s"),
-                source_id=str(row.get("source_id", "")),
-                source_seq=int(row.get("source_seq", 0) or 0),
-                event_time_us=int(row.get("event_time_us", 0) or 0),
-                recv_time_us=int(row.get("recv_time_us", 0) or 0),
-                instrument_id=str(row.get("instrument_id", "") or "UNKNOWN"),
-                venue_id=str(row.get("venue_id", "") or "binance"),
-                role=str(row.get("role", "") or "alpha"),
-                provenance=str(row.get("provenance", "") or "market"),
-                order_id=str(row.get("order_id", "") or ""),
-            )
-        )
-    return out
 
 
 def main() -> int:
@@ -64,10 +42,9 @@ def main() -> int:
     try:
         if normalized_path.exists():
             normalized_df = pd.read_parquet(normalized_path)
-            normalized_rows = list(normalized_df.to_dict(orient="records"))
+            normalized_events = normalized_events_from_frame(normalized_df)
         else:
-            normalized_rows = []
-        normalized_events = _to_normalized_events(normalized_rows)
+            normalized_events = []
         specs = load_runtime_invariants_specs(PROJECT_ROOT.parent)
         out = run_causal_lane_ticks(
             normalized_events,

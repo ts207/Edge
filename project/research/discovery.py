@@ -315,13 +315,15 @@ def _synthesize_experiment_hypotheses(
     experiment_config: str,
     event_type: str,
     registry_root: str | Path = "project/configs/registries",
+    experiment_plan: Any | None = None,
 ) -> pd.DataFrame:
     """Synthesize candidates from an experiment plan for a specific event trigger context."""
-    import importlib
+    plan = experiment_plan
+    if plan is None:
+        import importlib
 
-    experiment_engine = importlib.import_module("project.research.experiment_engine")
-
-    plan = experiment_engine.build_experiment_plan(Path(experiment_config), Path(registry_root))
+        experiment_engine = importlib.import_module("project.research.experiment_engine")
+        plan = experiment_engine.build_experiment_plan(Path(experiment_config), Path(registry_root))
 
     # Filter hypotheses that can be evaluated in the context of this event_type
     relevant_hyps = []

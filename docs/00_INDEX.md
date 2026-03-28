@@ -1,126 +1,92 @@
-# Edge — Documentation Index
+# Edge Documentation Index
 
-This document set fully deconstructs the EDGEE research platform from its source repository. It is organized for three reader types: researchers, engineers, and operators.
+This documentation set describes the current repository as it exists today.
 
----
+The hand-authored docs explain intent, structure, and workflow. The generated docs in `docs/generated/` are the live inventory and audit surfaces. When hand-authored narrative and generated inventory disagree, trust the generated artifacts and then inspect code.
 
-## Document Set
+## Document Map
 
-| # | Document | Contents | Primary Audience |
-|---|---|---|---|
-| 1 | **Project Overview** | What EDGEE is, philosophy, operating principles, canonical event families, stable repo landmarks | Everyone |
-| 2 | **Architecture Reference** | Pipeline stage families, artifact flow, package topology, live engine, event detector architecture, strategy DSL, CI tiers | Engineers, Researchers |
-| 3 | **Component Reference** | Every module in every package — pipelines, events, research, strategy, core, contracts, live, scripts | Engineers |
-| 4 | **Spec & Ontology Reference** | Events, features, states, grammar, gates, global defaults, cost model, runtime lanes, hypotheses | Researchers |
-| 5 | **Dependencies & Technical Stack** | Python version, all dependencies with roles, tooling, data layer, CI/CD, deployment | Engineers, Operators |
-| 6 | **Operator & Research Workflow** | Full research loop, proposal writing, planning, execution, evaluation layers, make targets | Researchers, Operators |
-| 7 | **Data Flow & Contracts** | Artifact token system, full stage-by-stage flow, manifest system, PIT correctness, cost propagation, FDR | Engineers, Researchers |
-| 8 | **Entry Points & CLI** | All CLI commands with full flag reference and examples | Researchers, Operators |
-| 9 | **Research Concepts & Hypotheses** | Bootstrap concepts, pre-registered hypotheses, stress scenarios, search space, benchmark configs | Researchers |
-| 10 | **Testing & Quality Gates** | Test suite structure, CI tiers, E1/V1/P3 gates, Pandera schemas, drift detection, determinism | Engineers, Researchers |
+| File | Scope | Use It For |
+| --- | --- | --- |
+| `00_INDEX.md` | navigation | finding the right doc quickly |
+| `01_PROJECT_OVERVIEW.md` | system purpose and operating model | understanding what Edge is for |
+| `02_ARCHITECTURE.md` | runtime and package architecture | tracing control flow and ownership |
+| `03_COMPONENT_REFERENCE.md` | package-level responsibilities | orienting within `project/` |
+| `04_SPEC_AND_ONTOLOGY.md` | YAML spec layer and ontology/routing | understanding event and template legality |
+| `05_DEPENDENCIES_AND_STACK.md` | Python stack, storage, tooling, CI | setup and maintenance |
+| `06_OPERATOR_WORKFLOW.md` | proposal-driven research loop | running bounded experiments |
+| `07_DATA_FLOW_AND_CONTRACTS.md` | artifacts, manifests, stage contracts | debugging pipeline correctness |
+| `08_ENTRY_POINTS_AND_CLI.md` | console scripts, `make`, scripts | knowing what to run |
+| `09_RESEARCH_CONCEPTS_AND_HYPOTHESES.md` | research primitives and evaluation | designing good runs |
+| `10_TESTING_AND_QUALITY.md` | local and CI quality gates | knowing what "green" means |
+| `ARCHITECTURE_SURFACE_INVENTORY.md` | architecture surface summary | fast orientation |
+| `ARCHITECTURE_MAINTENANCE_CHECKLIST.md` | maintenance checklist | regeneration and drift workflows |
+| `RESEARCH_CALIBRATION_BASELINE.md` | regression baseline notes | comparing research drift tolerances |
 
----
+## Generated Docs
 
-## Quick Navigation by Task
+`docs/generated/` is the live source of truth for current inventory and audit outputs.
 
-### "I want to run a discovery experiment"
+Use:
 
-→ Start with **Doc 6** (Operator Workflow), specifically the 7-step research loop.
+- `system_map.{md,json}` for generated system inventory
+- `detector_coverage.{md,json}` for detector inventory and warnings
+- `ontology_audit.json` for ontology consistency drift
+- `event_ontology_mapping.{md,json}` for canonical mapping
+- `canonical_to_raw_event_map.{md,json}` for executable crosswalks
+- `event_ontology_audit.{md,json}` for event ontology health
+- `regime_routing_audit.{md,json}` for canonical regime routing validity
+- `architecture_metrics.json` for generated metrics
 
-### "I want to understand what events exist and how they're defined"
+Do not hand-edit those files.
 
-→ **Doc 4** (Spec & Ontology), Section 1 (Events).
+## Quick Navigation
 
-### "I want to add a new event detector"
+If you need to:
 
-→ **Doc 3** (Component Reference), Events Layer section. Then **Doc 4** to understand the YAML spec format.
+- run a bounded research experiment
+  - read `06_OPERATOR_WORKFLOW.md`
+- understand the current command surface
+  - read `08_ENTRY_POINTS_AND_CLI.md`
+- understand stage ordering and contracts
+  - read `07_DATA_FLOW_AND_CONTRACTS.md`
+- understand how specs, ontology, and routing fit together
+  - read `04_SPEC_AND_ONTOLOGY.md`
+- understand package responsibilities
+  - read `03_COMPONENT_REFERENCE.md`
+- understand what CI and local "green" mean
+  - read `10_TESTING_AND_QUALITY.md`
 
-### "I want to understand the full data flow"
+## Hard Invariants
 
-→ **Doc 7** (Data Flow & Contracts). The ASCII diagram shows every stage.
+These rules are stable across the repository:
 
-### "I want to understand what a 'good' research result looks like"
+1. Artifacts beat impressions.
+2. Exit codes are not enough.
+3. `plan_only` comes before material execution.
+4. Synthetic evidence is calibration evidence, not live profitability evidence.
+5. Promotion is a gate, not a reward.
+6. Narrow attribution is preferred over broad simultaneous search.
+7. Generated docs are inventory outputs, not narrative documentation.
+8. Stage and artifact contracts live in code, not prose.
+9. Replay and determinism checks are first-class quality surfaces.
+10. A good run leaves a clear next action.
 
-→ **Doc 6** (Workflow), Step 6 (Evaluate Output) — the three evaluation layers.
+## Repo Summary
 
-### "I want to deploy the live engine"
+Core repository layers:
 
-→ **Doc 5** (Stack), Deployment section. Plus `deploy/systemd/` and `deploy/env/` in the repo.
+- `project/`
+  - Python implementation
+- `spec/`
+  - domain specs and policy
+- `project/configs/`
+  - workflow and runtime configs
+- `docs/`
+  - hand-authored docs
+- `docs/generated/`
+  - generated inventories and audits
+- `data/` and `artifacts/`
+  - runtime outputs
 
-### "I want to know what gates a hypothesis must pass"
-
-→ **Doc 4**, Sections 5 (Gates). Plus **Doc 10** (Testing), Quality Gate Hierarchy section.
-
-### "CI is failing — what does it check?"
-
-→ **Doc 10** (Testing), CI Gate Tiers section.
-
-### "I want to understand the research philosophy and discipline"
-
-→ **Doc 1** (Overview), especially "Operating Principles" and "What a Good Run Looks Like".
-
----
-
-## Key Platform Invariants (Summary)
-
-These are the hard rules that all research on EDGEE must respect:
-
-1. **Exit codes are not sufficient.** Read manifests.
-2. **Plan before material runs.** Always use `--plan_only 1` first.
-3. **Synthetic ≠ live.** Synthetic profitability is not evidence of live edge.
-4. **Promotion is a gate, not a reward.** Attractive numbers ≠ promotion readiness.
-5. **Narrow first.** One family, one template, one context per run.
-6. **Artifacts are truth.** If manifests disagree, the disagreement is a finding.
-7. **PIT must hold.** No feature may observe data beyond t0.
-8. **Cost must be after-cost.** No gross-return claims count.
-9. **FDR must be controlled.** q-value ≤ 0.05.
-10. **Determinism must hold.** Same inputs + code + config = same outputs.
-
----
-
-## Platform Architecture Summary (One Page)
-
-```
-EDGEE Platform
-══════════════
-
-DATA SOURCES           Binance UM Perpetuals + Spot (via REST + WebSocket)
-
-PIPELINE (8 stages)
-  ingest              → raw.perp.{ohlcv,funding,oi,liquidations} + raw.spot.ohlcv
-  clean               → clean.perp.* + clean.spot.* + basis state + TOB aggs
-  build_features      → features.perp.v2 + features.spot.v2 (see system map)
-  build_market_context → regime labels, microstructure context
-  phase1_analysis     → active detectors → episode files (per family .parquet)
-  phase2_discovery    → hypothesis scoring, FDR control → scored candidates
-  promotion           → E1/V1/P3 gate → edge registry + campaign memory
-  strategy_packaging  → Blueprints → Executable strategy specs → live engine
-
-RESEARCH PRIMITIVES
-  Active event inventory  see docs/generated/detector_coverage.md
-  Feature and state inventory  see docs/generated/system_map.json
-  Legal templates     per family (7–8 templates each)
-  Named sequences     for multi-event composite triggers
-
-QUALITY GATES
-  Gate E1             Event prevalence + clustering (Phase 1)
-  Gate V1             q ≤ 0.05, after-cost ≥ 0.1 bps, sign stable (Phase 2)
-  Gate P3             OOS ESS ≥ 50, ≥ 2 regimes, cost stress 2× (Promotion)
-
-LIVE ENGINE
-  Binance WebSocket   kline_1m, kline_5m, bookTicker per symbol
-  Lane alpha_5s       Alpha signal computation (no exec state visibility)
-  Lane exec_1s        Order management (exec state visible)
-  Kill switch         Configurable hard shutdown
-
-TECH STACK
-  Python 3.11+        pandas, numpy, numba, pyarrow, pydantic, scikit-learn
-  Storage             Parquet (all artifacts)
-  CI                  3-tier GitHub Actions + Pyright + Ruff
-
-SCALE
-  Source inventory    see docs/generated/system_map.json
-  Test inventory      see project/tests/
-  Architecture metrics see docs/generated/architecture_metrics.json
-  Ontology health     see docs/generated/ontology_audit.json
-```
+The canonical pipeline entry point is `project/pipelines/run_all.py`.

@@ -1,0 +1,91 @@
+version: 1
+matrix_id: regime_shakeout_v1
+description: >
+  Empirical shakeout matrix for regime-first search against matched raw-event controls.
+  This is a bounded research harness: three canonical regimes, two symbols, two authored
+  windows, and paired regime/raw slices with fixed search and promotion settings.
+
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+
+defaults:
+  program_id: regime_shakeout
+  objective_name: retail_profitability
+  run_mode: research
+  promotion_profile: research
+  timeframe: 5m
+  horizons_bars:
+    - 12
+    - 24
+  directions:
+    - long
+    - short
+  entry_lags:
+    - 0
+  search_control:
+    max_hypotheses_total: 96
+    max_hypotheses_per_template: 48
+    max_hypotheses_per_event_family: 64
+    random_seed: 42
+  knobs:
+    run_phase2_conditional: 1
+    run_bridge_eval_phase2: 1
+    run_candidate_promotion: 1
+    run_strategy_blueprint_compiler: 0
+    run_strategy_builder: 0
+    run_recommendations_checklist: 1
+    skip_ingest_ohlcv: 1
+    skip_ingest_funding: 1
+    skip_ingest_spot_ohlcv: 1
+    max_analyzer_workers: 1
+    phase2_parallel_workers: 1
+  audit_thresholds:
+    min_metadata_field_coverage: 0.99
+    max_unknown_regime_rate: 0.01
+    max_routing_profile_candidate_share: 0.90
+
+windows:
+  - label: stress_rich
+    start: 2025-01-01
+    end: 2025-01-31
+  - label: mixed_normal
+    start: 2024-04-01
+    end: 2024-04-30
+
+regimes:
+  - canonical_regime: LIQUIDITY_STRESS
+    subtypes:
+      - absorption
+      - depth_collapse
+      - gap_print
+      - liquidity_shock
+      - liquidity_stress
+      - liquidity_vacuum
+      - orderflow_imbalance
+      - spread_widening
+      - sweep_stoprun
+    raw_control_events:
+      - ABSORPTION_EVENT
+      - DEPTH_COLLAPSE
+      - LIQUIDITY_GAP_PRINT
+      - LIQUIDITY_SHOCK
+      - LIQUIDITY_VACUUM
+      - ORDERFLOW_IMBALANCE_SHOCK
+      - SPREAD_BLOWOUT
+      - SWEEP_STOPRUN
+  - canonical_regime: BASIS_FUNDING_DISLOCATION
+    raw_control_events:
+      - BASIS_DISLOC
+      - CROSS_VENUE_DESYNC
+      - FND_DISLOC
+      - FUNDING_EXTREME_ONSET
+      - FUNDING_FLIP
+      - FUNDING_NORMALIZATION_TRIGGER
+      - FUNDING_PERSISTENCE_TRIGGER
+      - SPOT_PERP_BASIS_SHOCK
+  - canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+    raw_control_events:
+      - CROSS_ASSET_DESYNC_EVENT
+      - INDEX_COMPONENT_DIVERGENCE
+      - LEAD_LAG_BREAK
