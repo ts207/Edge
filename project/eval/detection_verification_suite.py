@@ -110,25 +110,29 @@ def run_detection_verification() -> pd.DataFrame:
     suite = DetectionVerificationSuite()
 
     # 1. Vol Spike test data
-    n = 1000
-    np.random.seed(42)
-    prices = np.exp(np.random.randn(n).cumsum() * 0.001) * 100.0
+    n = 4000
+    rng = np.random.default_rng(42)
+    prices = np.exp(rng.normal(0.0, 0.001, n).cumsum()) * 100.0
     df_vol = pd.DataFrame(
         {
             "timestamp": pd.date_range("2024-01-01", periods=n, freq="5min", tz="UTC"),
             "close": prices,
             "high": prices * 1.001,
             "low": prices * 0.999,
-            "rv_96": pd.Series(np.full(n, 0.001)).rolling(96).std(),
-            "range_96": pd.Series(np.full(n, 0.002)),
-            "range_med_2880": pd.Series(np.full(n, 0.002)),
+            "rv_96": pd.Series(np.clip(rng.normal(0.01, 0.002, n), 0.001, None)),
+            "range_96": pd.Series(np.full(n, 0.02)),
+            "range_med_2880": pd.Series(np.full(n, 1.0)),
+            "ms_vol_state": pd.Series(np.zeros(n)),
+            "ms_vol_confidence": pd.Series(np.full(n, 0.95)),
+            "ms_vol_entropy": pd.Series(np.full(n, 0.10)),
         }
     )
-    df_vol.loc[500, "close"] *= 1.10
-    logret = np.log(df_vol["close"] / df_vol["close"].shift(1))
-    df_vol["rv_96"] = logret.rolling(window=96, min_periods=8).std()
+    shock_idx = 3500
+    df_vol.loc[shock_idx - 1 :, "ms_vol_state"] = 2.0
+    df_vol.loc[shock_idx, "close"] *= 1.10
+    df_vol.loc[shock_idx, "rv_96"] = 0.50
 
-    suite.verify_vol_spike(df_vol, 500)
+    suite.verify_vol_spike(df_vol, shock_idx)
 
     # 2. Liquidity Shock test data
     df_liq = pd.DataFrame(
@@ -139,12 +143,17 @@ def run_detection_verification() -> pd.DataFrame:
             "low": 99.9,
             "spread_bps": 2.0,
             "depth_usd": 1000000.0,
+            "ms_spread_state": pd.Series(np.zeros(n)),
+            "ms_spread_confidence": pd.Series(np.full(n, 0.95)),
+            "ms_spread_entropy": pd.Series(np.full(n, 0.10)),
         }
     )
-    df_liq.loc[500, "spread_bps"] = 20.0
-    df_liq.loc[500, "depth_usd"] = 100000.0
+    liq_shock_idx = 500
+    df_liq.loc[liq_shock_idx - 1 :, "ms_spread_state"] = 1.0
+    df_liq.loc[liq_shock_idx, "spread_bps"] = 20.0
+    df_liq.loc[liq_shock_idx, "depth_usd"] = 100000.0
 
-    suite.verify_liquidity_shock(df_liq, 500)
+    suite.verify_liquidity_shock(df_liq, liq_shock_idx)
     suite.verify_edge_cases()
 
     return suite.get_report()

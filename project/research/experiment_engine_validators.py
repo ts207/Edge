@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
+from project.domain.compiled_registry import get_domain_registry
 from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
     RegistryBundle,
@@ -142,7 +143,7 @@ def _validate_proposal_quality(
     )
     exhausted = set(fail_counts[fail_counts >= 3].index)
 
-    requested_events = set(request.trigger_space.events.get("include", []))
+    requested_events = set(_resolve_requested_event_ids(request, registries))
     exhausted_overlap = requested_events.intersection(exhausted)
     if len(exhausted_overlap) > len(requested_events) * 0.5:
         raise ValueError(
@@ -185,7 +186,7 @@ def _validate_instrument_compatibility(
 
     # Check events
     allowed_events = registries.events.get("events", {})
-    for event_id in request.trigger_space.events.get("include", []):
+    for event_id in _resolve_requested_event_ids(request, registries):
         if event_id not in allowed_events:
             continue  # Let _validate_event_trigger handle it
         event_meta = allowed_events.get(event_id, {})
@@ -219,7 +220,7 @@ def _validate_contexts(request: AgentExperimentRequest, registries: RegistryBund
 def _validate_search_limits(request: AgentExperimentRequest, registries: RegistryBundle) -> None:
     limits = registries.limits.get("limits", {})
 
-    if len(request.trigger_space.events.get("include", [])) > limits.get("max_events_per_run", 100):
+    if len(_resolve_requested_event_ids(request, registries)) > limits.get("max_events_per_run", 100):
         raise ValueError("Exceeded max_events_per_run limit.")
     if len(request.templates.include) > limits.get("max_templates_per_run", 100):
         raise ValueError("Exceeded max_templates_per_run limit.")
@@ -231,7 +232,7 @@ def _validate_search_limits(request: AgentExperimentRequest, registries: Registr
 
 def _validate_event_trigger(request: AgentExperimentRequest, registries: RegistryBundle) -> None:
     allowed_events = registries.events.get("events", {})
-    requested = request.trigger_space.events.get("include", [])
+    requested = _resolve_requested_event_ids(request, registries)
     if not requested:
         raise ValueError("Trigger type EVENT enabled but no events included.")
     for event_id in requested:
@@ -356,7 +357,7 @@ def expand_hypotheses(
     for t_type in request.trigger_space.allowed_trigger_types:
         t_type_upper = t_type.upper()
         if t_type_upper == "EVENT":
-            hypotheses.extend(_expand_event_triggers(request, context_slices))
+            hypotheses.extend(_expand_event_triggers(request, registries, context_slices))
         elif t_type_upper == "STATE":
             hypotheses.extend(_expand_state_triggers(request, context_slices))
         elif t_type_upper == "TRANSITION":
@@ -378,11 +379,64 @@ def expand_hypotheses(
     return hypotheses
 
 
+def _resolve_requested_event_ids(
+    request: AgentExperimentRequest,
+    registries: RegistryBundle,
+) -> List[str]:
+    requested_events = [str(event_id).strip() for event_id in request.trigger_space.events.get("include", []) if str(event_id).strip()]
+    requested_regimes = [
+        str(regime).strip().upper()
+        for regime in getattr(request.trigger_space, "canonical_regimes", [])
+        if str(regime).strip()
+    ]
+    subtypes = {
+        str(value).strip().lower()
+        for value in getattr(request.trigger_space, "subtypes", [])
+        if str(value).strip()
+    }
+    phases = {
+        str(value).strip().lower()
+        for value in getattr(request.trigger_space, "phases", [])
+        if str(value).strip()
+    }
+    evidence_modes = {
+        str(value).strip().lower()
+        for value in getattr(request.trigger_space, "evidence_modes", [])
+        if str(value).strip()
+    }
+    if not requested_regimes:
+        return requested_events
+
+    registry = get_domain_registry()
+    for regime in requested_regimes:
+        for event_id in registry.get_event_ids_for_regime(regime, executable_only=True):
+            spec = registry.get_event(event_id)
+            if spec is None:
+                continue
+            if subtypes and str(spec.subtype).strip().lower() not in subtypes:
+                continue
+            if phases and str(spec.phase).strip().lower() not in phases:
+                continue
+            if evidence_modes and str(spec.evidence_mode).strip().lower() not in evidence_modes:
+                continue
+            requested_events.append(event_id)
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for event_id in requested_events:
+        token = str(event_id).strip()
+        if token and token not in seen:
+            ordered.append(token)
+            seen.add(token)
+    return ordered
+
+
 def _expand_event_triggers(
-    request: AgentExperimentRequest, context_slices: List[Optional[Dict[str, str]]]
+    request: AgentExperimentRequest,
+    registries: RegistryBundle,
+    context_slices: List[Optional[Dict[str, str]]],
 ) -> List[HypothesisSpec]:
     hyps = []
-    requested_events = request.trigger_space.events.get("include", [])
+    requested_events = _resolve_requested_event_ids(request, registries)
     for event_id in requested_events:
         for tpl in request.templates.include:
             for horizon in request.evaluation.horizons_bars:

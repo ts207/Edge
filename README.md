@@ -117,7 +117,7 @@ Systemd service templates: `deploy/systemd/`. Environment templates: `deploy/env
 ### Build and Test
 
 ```bash
-make test           # Full test suite (407 test files)
+make test           # Full test suite under project/tests
 make test-fast      # Excludes @pytest.mark.slow
 make lint           # Ruff lint
 make format-check   # Ruff format check (no writes)
@@ -134,6 +134,8 @@ python3 -m project.scripts.detector_coverage_audit \
   --json-out docs/generated/detector_coverage.json \
   --check
 ```
+
+Generated inventories and metrics live in `docs/generated/`. Treat those artifacts as the source of truth for current detector coverage, ontology status, and architecture metrics.
 
 ---
 

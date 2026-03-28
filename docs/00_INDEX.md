@@ -8,7 +8,7 @@ This document set fully deconstructs the EDGEE research platform from its source
 
 | # | Document | Contents | Primary Audience |
 |---|---|---|---|
-| 1 | **Project Overview** | What EDGEE is, philosophy, operating principles, canonical event families, project stats | Everyone |
+| 1 | **Project Overview** | What EDGEE is, philosophy, operating principles, canonical event families, stable repo landmarks | Everyone |
 | 2 | **Architecture Reference** | Pipeline stage families, artifact flow, package topology, live engine, event detector architecture, strategy DSL, CI tiers | Engineers, Researchers |
 | 3 | **Component Reference** | Every module in every package — pipelines, events, research, strategy, core, contracts, live, scripts | Engineers |
 | 4 | **Spec & Ontology Reference** | Events, features, states, grammar, gates, global defaults, cost model, runtime lanes, hypotheses | Researchers |
@@ -89,17 +89,16 @@ DATA SOURCES           Binance UM Perpetuals + Spot (via REST + WebSocket)
 PIPELINE (8 stages)
   ingest              → raw.perp.{ohlcv,funding,oi,liquidations} + raw.spot.ohlcv
   clean               → clean.perp.* + clean.spot.* + basis state + TOB aggs
-  build_features      → features.perp.v2 + features.spot.v2 (34 feature families)
+  build_features      → features.perp.v2 + features.spot.v2 (see system map)
   build_market_context → regime labels, microstructure context
-  phase1_analysis     → 69 event detectors → episode files (per family .parquet)
+  phase1_analysis     → active detectors → episode files (per family .parquet)
   phase2_discovery    → hypothesis scoring, FDR control → scored candidates
   promotion           → E1/V1/P3 gate → edge registry + campaign memory
   strategy_packaging  → Blueprints → Executable strategy specs → live engine
 
 RESEARCH PRIMITIVES
-  69 active event specs across 10 canonical families
-  34 feature families  from microstructure to ML signals
-  19 market states    tied to source events and families
+  Active event inventory  see docs/generated/detector_coverage.md
+  Feature and state inventory  see docs/generated/system_map.json
   Legal templates     per family (7–8 templates each)
   Named sequences     for multi-event composite triggers
 
@@ -120,7 +119,8 @@ TECH STACK
   CI                  3-tier GitHub Actions + Pyright + Ruff
 
 SCALE
-  1,153 Python files  407 test files
-  38% test coverage   0 circular dependencies
-  1,722 total files   2,417 module couplings
+  Source inventory    see docs/generated/system_map.json
+  Test inventory      see project/tests/
+  Architecture metrics see docs/generated/architecture_metrics.json
+  Ontology health     see docs/generated/ontology_audit.json
 ```

@@ -9,6 +9,7 @@ from typing import Any, Dict
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.domain.compiled_registry import get_domain_registry
 from project.research.experiment_engine import RegistryBundle
 from project.research.knowledge.memory import (
     ensure_memory_store,
@@ -110,6 +111,7 @@ def _build_summary(program_id: str, tested_regions: pd.DataFrame, *, top_k: int)
         "by_direction": _group_stats("direction"),
         "by_horizon": _group_stats("horizon"),
         "by_event_type": _group_stats("event_type"),
+        "by_canonical_regime": _group_stats("canonical_regime"),
     }
 
     def _gate_rank(val) -> int:
@@ -138,6 +140,7 @@ def _build_summary(program_id: str, tested_regions: pd.DataFrame, *, top_k: int)
                     "run_id",
                     "candidate_id",
                     "event_type",
+                    "canonical_regime",
                     "template_id",
                     "direction",
                     "horizon",
@@ -175,8 +178,9 @@ def _build_frontier(
     if quality_weights is None:
         quality_weights = {}
 
+    domain_registry = get_domain_registry()
     events = registries.events.get("events", {})
-    enabled_events = [eid for eid, meta in events.items() if meta.get("enabled", True)]
+    enabled_events = list(domain_registry.default_executable_event_ids())
     tested_events = set(
         tested_regions.get("event_type", pd.Series(dtype="object")).astype(str).unique()
     )
@@ -190,7 +194,11 @@ def _build_frontier(
     )
 
     exhausted_events: list[str] = []
-    if not tested_regions.empty and "event_type" in tested_regions.columns:
+    if (
+        not tested_regions.empty
+        and "event_type" in tested_regions.columns
+        and "eval_status" in tested_regions.columns
+    ):
         fail_counts = (
             tested_regions[tested_regions["eval_status"].astype(str) != "promoted"]
             .groupby("event_type")
@@ -200,17 +208,46 @@ def _build_frontier(
             list(fail_counts[fail_counts >= int(exhausted_failure_threshold)].index.astype(str))
         )
 
-    partial_families: Dict[str, str] = {}
-    families: Dict[str, Dict[str, int]] = {}
-    for eid, meta in events.items():
-        family = str(meta.get("family", "unknown"))
-        families.setdefault(family, {"total": 0, "tested": 0})
-        families[family]["total"] += 1
-        if eid in tested_events:
-            families[family]["tested"] += 1
-    for family, counts in families.items():
-        if 0 < counts["tested"] < counts["total"]:
-            partial_families[family] = f"{counts['tested']}/{counts['total']}"
+    tested_regimes = set(
+        tested_regions.get("canonical_regime", pd.Series(dtype="object"))
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    ) - {""}
+    if not tested_regimes:
+        tested_regimes = {
+            domain_registry.get_event(event_id).canonical_regime
+            for event_id in tested_events
+            if domain_registry.get_event(event_id) is not None
+        }
+
+    regime_fanout = {
+        regime: list(domain_registry.get_event_ids_for_regime(regime, executable_only=True))
+        for regime in domain_registry.canonical_regime_rows()
+    }
+    untested_regimes = [
+        regime
+        for regime, event_ids in regime_fanout.items()
+        if event_ids and regime not in tested_regimes
+    ]
+    untested_regimes.sort(
+        key=lambda regime: max(
+            (
+                quality_weights.get(event_id, DEFAULT_EVENT_PRIORITY_WEIGHT)
+                for event_id in regime_fanout.get(regime, [])
+            ),
+            default=DEFAULT_EVENT_PRIORITY_WEIGHT,
+        ),
+        reverse=True,
+    )
+
+    partial_regimes: Dict[str, str] = {}
+    for regime, event_ids in regime_fanout.items():
+        if not event_ids:
+            continue
+        tested_count = sum(1 for event_id in event_ids if event_id in tested_events)
+        if 0 < tested_count < len(event_ids):
+            partial_regimes[regime] = f"{tested_count}/{len(event_ids)}"
 
     repair_candidates = []
     if not failures.empty:
@@ -220,18 +257,23 @@ def _build_frontier(
             repair_candidates.append(f"repair repeated failure in stage: {stage} ({int(count)})")
 
     next_moves = []
-    if untested_events_raw:
+    if untested_regimes:
         next_moves.append(
-            f"explore untested events: {untested_events_raw[: int(untested_top_k)]}"
+            f"explore untested canonical regimes: {untested_regimes[: int(untested_top_k)]}"
         )
-    if partial_families:
-        next_moves.append(f"complete coverage for family: {next(iter(partial_families))}")
+    if partial_regimes:
+        next_moves.append(f"complete coverage for regime: {next(iter(partial_regimes))}")
     next_moves.extend(repair_candidates[: int(repair_top_k)])
 
     return {
+        "untested_canonical_regimes": untested_regimes[: int(untested_top_k)],
+        "canonical_regime_event_fanout": {
+            regime: regime_fanout[regime] for regime in untested_regimes[: int(untested_top_k)]
+        },
         "untested_registry_events": untested_events_raw[: int(untested_top_k)],
         "exhausted_events_to_avoid": exhausted_events,
-        "partially_explored_families": partial_families,
+        "partially_explored_regimes": partial_regimes,
+        "partially_explored_families": partial_regimes,
         "candidate_next_moves": next_moves,
     }
 

@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from project.domain.compiled_registry import get_domain_registry
 from project.spec_validation.ontology import (
     get_event_ids_for_family,
+    get_event_ids_for_regime,
     get_state_ids_for_family,
     get_searchable_event_families,
     get_searchable_state_families,
@@ -24,6 +25,11 @@ def expand_triggers(search_cfg: Dict[str, Any]) -> Dict[str, Any]:
         for eid in get_event_ids_for_family(fam):
             event_ids.add(eid)
             event_family_map[eid] = fam
+    raw_regimes = triggers.get("canonical_regimes", [])
+    for regime in raw_regimes:
+        for eid in get_event_ids_for_regime(regime, executable_only=True):
+            event_ids.add(eid)
+            event_family_map[eid] = regime
     # From explicit list
     for eid in triggers.get("events", []):
         event_ids.add(eid)

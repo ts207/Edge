@@ -16,6 +16,11 @@ PHASE2_EVENT_CHAIN: List[Tuple[str, str, List[str]]] = [
     ),
     ("FORCED_FLOW_EXHAUSTION", "analyze_events.py", ["--event_type", "FORCED_FLOW_EXHAUSTION"]),
     ("CROSS_VENUE_DESYNC", "analyze_events.py", ["--event_type", "CROSS_VENUE_DESYNC"]),
+    (
+        "CROSS_ASSET_DESYNC_EVENT",
+        "analyze_events.py",
+        ["--event_type", "CROSS_ASSET_DESYNC_EVENT"],
+    ),
     ("FUNDING_EXTREME_ONSET", "analyze_events.py", ["--event_type", "FUNDING_EXTREME_ONSET"]),
     (
         "FUNDING_PERSISTENCE_TRIGGER",

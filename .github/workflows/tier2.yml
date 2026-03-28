@@ -24,13 +24,13 @@ jobs:
           pip install -e . pytest
 
       - name: 1. Research Smoke
-        run: pytest tests/smoke/test_research_smoke.py
+        run: pytest project/tests/smoke/test_research_smoke.py
 
       - name: 2. Promotion Smoke
-        run: pytest tests/smoke/test_promotion_smoke.py
+        run: pytest project/tests/smoke/test_promotion_smoke.py
 
       - name: 3. Strategy Packaging (Engine) Smoke
-        run: pytest tests/smoke/test_engine_smoke.py
+        run: pytest project/tests/smoke/test_engine_smoke.py
 
       - name: 4. Full CLI Smoke Workflow
         run: python -m project.reliability.cli_smoke --mode full --root "$RUNNER_TEMP/edge-smoke"
@@ -38,19 +38,19 @@ jobs:
       - name: 5. Determinism and Replay Checks
         run: |
           pytest -q \
-            tests/runtime/test_runtime_hashing_replay.py \
-            tests/runtime/test_runtime_postflight.py \
-            tests/runtime/test_runtime_oms_replay.py \
-            tests/replays/test_determinism_replay_stage.py \
-            tests/replays/test_oms_replay_stage.py \
-            tests/pipelines/test_run_all_perf_controls.py -k "runtime or determinism or oms"
+            project/tests/runtime/test_runtime_hashing_replay.py \
+            project/tests/runtime/test_runtime_postflight.py \
+            project/tests/runtime/test_runtime_postflight_determinism.py \
+            project/tests/runtime/test_runtime_oms_replay.py \
+            project/tests/replays/test_determinism_replay_stage.py \
+            project/tests/replays/test_oms_replay_stage.py
 
       - name: 6. Manifest and Provenance Assertions
         run: |
           pytest -q \
-            tests/contracts/test_manifest_integrity.py \
-            tests/contracts/test_cross_artifact_reconciliation.py \
-            tests/contracts/test_candidate_artifact_schema.py
+            project/tests/contracts/test_manifest_integrity.py \
+            project/tests/contracts/test_cross_artifact_reconciliation.py \
+            project/tests/contracts/test_candidate_artifact_schema.py
 
       - name: Upload artifacts on failure
         if: failure()

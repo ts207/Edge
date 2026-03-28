@@ -159,9 +159,28 @@ def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     stages = preflight["stages"]
     planned_stage_instances = compute_stage_instance_ids(stages)
     runtime_invariants_mode = str(preflight["runtime_invariants_mode"])
+    effective_behavior = dict(preflight.get("effective_behavior", {}))
 
     if bool(args.plan_only):
         print(f"Plan for run {run_id}:")
+        if effective_behavior:
+            print("Effective behavior:")
+            print(
+                " - phase2_event_type="
+                f"{effective_behavior.get('phase2_event_type', '')} "
+                f"({effective_behavior.get('phase2_event_type_source', 'unknown')})"
+            )
+            print(
+                " - expectancy_tail="
+                f"analysis:{effective_behavior.get('run_expectancy_analysis', False)} "
+                f"robustness:{effective_behavior.get('run_expectancy_robustness', False)} "
+                f"checklist:{effective_behavior.get('run_recommendations_checklist', False)}"
+            )
+            print(
+                " - discovery_paths="
+                f"search_engine:{effective_behavior.get('runs_search_engine', False)} "
+                f"legacy_conditional:{effective_behavior.get('runs_legacy_phase2_conditional', False)}"
+            )
         for s in planned_stage_instances:
             print(f" - {s}")
         return 0
@@ -192,6 +211,8 @@ def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     resume_from_index = bootstrap.resume_from_index
     non_production_overrides = bootstrap.non_production_overrides
     run_manifest = bootstrap.run_manifest
+    if effective_behavior:
+        run_manifest["effective_behavior"] = effective_behavior
 
     seed_run_manifest(
         run_manifest=run_manifest,

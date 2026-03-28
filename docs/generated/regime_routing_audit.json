@@ -1,0 +1,40 @@
+{
+  "executable_regimes": [
+    "BASIS_FUNDING_DISLOCATION",
+    "CROSS_ASSET_DESYNCHRONIZATION",
+    "EXECUTION_FRICTION",
+    "LIQUIDATION_CASCADE",
+    "LIQUIDITY_STRESS",
+    "POSITIONING_EXPANSION",
+    "POSITIONING_UNWIND_DELEVERAGING",
+    "REGIME_TRANSITION",
+    "STATISTICAL_STRETCH_OVERSHOOT",
+    "TREND_CONTINUATION",
+    "TREND_FAILURE_EXHAUSTION",
+    "VOLATILITY_EXPANSION",
+    "VOLATILITY_RELAXATION_COMPRESSION_RELEASE"
+  ],
+  "invalid_templates": {},
+  "is_valid": true,
+  "missing_regimes": [],
+  "non_routable_entries": [],
+  "routed_regimes": [
+    "BASIS_FUNDING_DISLOCATION",
+    "CROSS_ASSET_DESYNCHRONIZATION",
+    "EXECUTION_FRICTION",
+    "LIQUIDATION_CASCADE",
+    "LIQUIDITY_STRESS",
+    "POSITIONING_EXPANSION",
+    "POSITIONING_UNWIND_DELEVERAGING",
+    "REGIME_TRANSITION",
+    "STATISTICAL_STRETCH_OVERSHOOT",
+    "TREND_CONTINUATION",
+    "TREND_FAILURE_EXHAUSTION",
+    "VOLATILITY_EXPANSION",
+    "VOLATILITY_RELAXATION_COMPRESSION_RELEASE"
+  ],
+  "routing_profile_id": "regime_routing_v1",
+  "scorecard_source_run": "authored_baseline",
+  "scorecard_version": "regime_effectiveness_v1",
+  "unexpected_regimes": []
+}

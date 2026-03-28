@@ -9,9 +9,25 @@ from typing import Any, Dict, Mapping
 class EventDefinition:
     event_type: str
     canonical_family: str
+    canonical_regime: str
+    legacy_family: str
     reports_dir: str
     events_file: str
     signal_column: str
+    subtype: str = ""
+    phase: str = ""
+    evidence_mode: str = ""
+    asset_scope: str = ""
+    venue_scope: str = ""
+    is_composite: bool = False
+    is_context_tag: bool = False
+    is_strategy_construct: bool = False
+    research_only: bool = False
+    strategy_only: bool = False
+    deconflict_priority: int = 0
+    disposition: str = ""
+    layer: str = ""
+    notes: str = ""
     parameters: Dict[str, Any] = field(default_factory=dict)
     raw: Dict[str, Any] = field(default_factory=dict)
     spec_path: str = ""
@@ -149,6 +165,53 @@ class DomainRegistry:
                 event_type
                 for event_type, spec in self.event_definitions.items()
                 if spec.canonical_family == family
+                or spec.canonical_regime == family
+                or spec.legacy_family == family
+            )
+        )
+
+    def get_event_ids_for_regime(
+        self,
+        regime_name: str,
+        *,
+        executable_only: bool = False,
+    ) -> tuple[str, ...]:
+        regime = str(regime_name).strip().upper()
+        return tuple(
+            sorted(
+                event_type
+                for event_type, spec in self.event_definitions.items()
+                if spec.canonical_regime == regime
+                and (
+                    not executable_only
+                    or (
+                        not spec.is_composite
+                        and not spec.is_context_tag
+                        and not spec.is_strategy_construct
+                    )
+                )
+            )
+        )
+
+    def canonical_regime_rows(self) -> Dict[str, tuple[str, ...]]:
+        regimes = {
+            spec.canonical_regime
+            for spec in self.event_definitions.values()
+            if spec.canonical_regime
+        }
+        return {
+            regime: self.get_event_ids_for_regime(regime)
+            for regime in sorted(regimes)
+        }
+
+    def default_executable_event_ids(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                event_type
+                for event_type, spec in self.event_definitions.items()
+                if not spec.is_composite
+                and not spec.is_context_tag
+                and not spec.is_strategy_construct
             )
         )
 

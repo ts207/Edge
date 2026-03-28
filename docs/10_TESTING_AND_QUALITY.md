@@ -2,10 +2,10 @@
 
 ## Test Suite Overview
 
-407 test files organized in `project/tests/`. The suite is structured into distinct test categories, each testing a different layer of the system.
+The active test suite is organized under `project/tests/`. The suite is structured into distinct test categories, each testing a different layer of the system.
 
 ```bash
-make test       # Full suite (407 files)
+make test       # Full suite under project/tests
 make test-fast  # Excludes @pytest.mark.slow
 pytest -q       # Direct pytest invocation
 ```
@@ -14,7 +14,7 @@ pytest -q       # Direct pytest invocation
 
 ## Test Categories
 
-### Architecture Tests (`tests/architecture/`)
+### Architecture Tests (`project/tests/architecture/`)
 
 The highest-priority tests — checked in **every CI run**. These enforce:
 
@@ -30,7 +30,7 @@ These tests catch structural regressions before any functional code is examined.
 pytest project/tests/architecture
 ```
 
-### Contract Tests (`tests/contracts/`)
+### Contract Tests (`project/tests/contracts/`)
 
 Validate that stage artifact schemas and manifest structures are correct:
 
@@ -43,7 +43,7 @@ Validate that stage artifact schemas and manifest structures are correct:
 | `test_manifest_integrity.py` | Run manifest completeness and consistency |
 | `test_cross_artifact_reconciliation.py` | Cross-artifact hash reconciliation |
 
-### Regression Tests (`tests/regressions/`)
+### Regression Tests (`project/tests/regressions/`)
 
 Named regressions for previously-found bugs:
 
@@ -56,7 +56,7 @@ Named regressions for previously-found bugs:
 | `test_storage_fallback_respected.py` | Storage fallback not honoured |
 | `test_bundle_policy_consistency.py` | Bundle policy inconsistency |
 
-### Event Tests (`tests/events/`)
+### Event Tests (`project/tests/events/`)
 
 Unit tests for each event detector family. Validates:
 
@@ -65,7 +65,7 @@ Unit tests for each event detector family. Validates:
 - Parameter boundaries are respected
 - Cooldown logic works correctly
 
-### Feature Tests (`tests/features/`)
+### Feature Tests (`project/tests/features/`)
 
 Validates feature computation:
 
@@ -73,64 +73,62 @@ Validates feature computation:
 - Correct formula application
 - Null handling and edge cases
 
-### Research Tests (`tests/research/`)
+### Research Tests (`project/tests/research/`)
 
 | Directory | Tests |
 |---|---|
-| `tests/research/agent_io/` | Proposal validation, translation, execution |
-| `tests/research/event_quality/` | Event quality metrics |
-| `tests/research/knowledge/` | Memory and knowledge retrieval |
-| `tests/research/promotion/` | Promotion gate logic |
-| `tests/research/robustness/` | Robustness testing utilities |
-| `tests/research/search/` | Search engine correctness |
-| `tests/research/services/` | Discovery and promotion service unit tests |
-| `tests/research/validation/` | Expectancy trap detection |
+| `project/tests/research/agent_io/` | Proposal validation, translation, execution |
+| `project/tests/research/event_quality/` | Event quality metrics |
+| `project/tests/research/knowledge/` | Memory and knowledge retrieval |
+| `project/tests/research/promotion/` | Promotion gate logic |
+| `project/tests/research/services/` | Discovery and promotion service unit tests |
+| `project/tests/research/validation/` | Expectancy trap detection |
 
-### Strategy Tests (`tests/strategy/`, `tests/strategy_dsl/`, `tests/strategy_templates/`)
+### Strategy Tests (`project/tests/strategy/`, `project/tests/strategy_dsl/`, `project/tests/strategy_templates/`)
 
 - Blueprint schema validation
 - DSL condition evaluation
 - Template instantiation
 - Policy enforcement
 
-### Pipeline Tests (`tests/pipelines/`)
+### Pipeline Tests (`project/tests/pipelines/`)
 
 Per-stage pipeline integration tests.
 
-### Live Engine Tests (`tests/live/`)
+### Live Engine Tests (`project/tests/live/`)
 
 WebSocket client behavior, reconnect logic, health monitoring.
 
-### Replay Tests (`tests/replays/`)
+### Replay Tests (`project/tests/replays/`)
 
 - OMS replay validation
 - Causal lane tick verification
 - Determinism checks
 
-### Point-in-Time Tests (`tests/pit/`)
+### Point-in-Time Tests (`project/tests/pit/`)
 
 Strict PIT correctness: no features should observe data beyond `t0`.
 
-### Spec Tests (`tests/specs/`, `tests/spec_registry/`, `tests/spec_validation/`)
+### Spec Tests (`project/tests/specs/`, `project/tests/spec_registry/`, `project/tests/spec_validation/`)
 
 - YAML spec loading
 - Registry consistency
 - Schema conformance
 
-### Audit Tests (`tests/audit/`)
+### Audit Tests (`project/tests/audit/`)
 
 - Ontology consistency
 - Detector coverage completeness
 
-### Smoke Tests (`tests/smoke/`)
+### Smoke Tests (`project/tests/smoke/`)
 
 End-to-end minimal run smoke tests.
 
-### Artifact Tests (`tests/artifacts/`)
+### Artifact Tests (`project/tests/artifacts/`)
 
 Baseline artifact integrity (golden snapshots).
 
-### Synthetic Truth Tests (`tests/synthetic_truth/`)
+### Synthetic Truth Tests (`project/tests/synthetic_truth/`)
 
 Validates the system against ground-truth synthetic datasets:
 
@@ -150,8 +148,8 @@ Validates the system against ground-truth synthetic datasets:
 
 Steps in order:
 
-1. **Compile Check** — `python -m compileall -q project tests`
-2. **Architecture Tests** — `pytest tests/architecture`
+1. **Compile Check** — `python -m compileall -q project project/tests`
+2. **Architecture Tests** — `pytest project/tests/architecture`
 3. **Spec Validation** — `python -m project.spec_validation.cli`
 4. **Artifact Drift Checks:**
    - Ontology consistency audit (with `--check` flag — fails on drift)
@@ -188,7 +186,7 @@ Runs:
 8. Golden regression
 9. Golden workflow
 
-**All 9 steps must pass** for minimum-green-gate to succeed.
+All listed steps must pass for `minimum-green-gate` to succeed.
 
 ---
 

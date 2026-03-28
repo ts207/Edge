@@ -86,6 +86,31 @@ def _optional_bool_gate(row: Dict[str, Any], *keys: str) -> bool | None:
     return bool(as_bool(value))
 
 
+def _normalize_returns_oos_combined(value: Any) -> list[float]:
+    if value is None:
+        return []
+    if isinstance(value, (float, np.floating)) and not np.isfinite(value):
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        try:
+            value = json.loads(text)
+        except Exception as exc:
+            raise ValueError("returns_oos_combined must be a JSON array when serialized as text") from exc
+
+    if isinstance(value, dict):
+        raise ValueError("returns_oos_combined must be array-like, not an object")
+    if isinstance(value, (list, tuple, np.ndarray, pd.Series, pd.Index)):
+        vector = pd.Series(list(value), dtype="object")
+        numeric = pd.to_numeric(vector, errors="coerce")
+        return [float(item) for item in numeric[np.isfinite(numeric)].tolist()]
+    if isinstance(value, (int, np.integer, bool)):
+        raise ValueError("returns_oos_combined must be array-like, not a scalar")
+    return []
+
+
 def build_evidence_bundle(
     row: Dict[str, Any],
     *,
@@ -129,15 +154,8 @@ def build_evidence_bundle(
     gate_structural_break = _optional_bool_gate(
         row, "gate_structural_break", "structural_break_pass"
     )
-    returns_oos_combined = row.get("returns_oos_combined")
-    has_realized_oos_path = False
-    if isinstance(returns_oos_combined, str):
-        try:
-            returns_oos_combined = json.loads(returns_oos_combined)
-        except Exception:
-            returns_oos_combined = []
-    if isinstance(returns_oos_combined, (list, tuple, np.ndarray, pd.Series)):
-        has_realized_oos_path = bool(len(returns_oos_combined) >= 10)
+    returns_oos_combined = _normalize_returns_oos_combined(row.get("returns_oos_combined"))
+    has_realized_oos_path = bool(len(returns_oos_combined) >= 10)
     bundle = EvidenceBundle(
         candidate_id=candidate_id,
         event_family=_event_family(event_type),

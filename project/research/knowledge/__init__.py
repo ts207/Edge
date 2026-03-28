@@ -15,7 +15,9 @@ if TYPE_CHECKING:
         compute_template_statistics,
         ensure_memory_store,
         memory_paths,
+        read_reflections,
         read_memory_table,
+        write_reflection,
         write_memory_table,
     )
     from project.research.knowledge.query import (
@@ -54,7 +56,9 @@ _EXPORTS = {
     "query_adjacent_regions": ("project.research.knowledge.query", "query_adjacent_regions"),
     "query_memory_rows": ("project.research.knowledge.query", "query_memory_rows"),
     "query_static_rows": ("project.research.knowledge.query", "query_static_rows"),
+    "read_reflections": ("project.research.knowledge.memory", "read_reflections"),
     "read_memory_table": ("project.research.knowledge.memory", "read_memory_table"),
+    "write_reflection": ("project.research.knowledge.memory", "write_reflection"),
     "write_memory_table": ("project.research.knowledge.memory", "write_memory_table"),
 }
 
@@ -74,7 +78,9 @@ __all__ = [
     "query_adjacent_regions",
     "query_memory_rows",
     "query_static_rows",
+    "read_reflections",
     "read_memory_table",
+    "write_reflection",
     "write_memory_table",
 ]
 

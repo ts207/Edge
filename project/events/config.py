@@ -37,6 +37,22 @@ _META_KEYS = {
 }
 _UNIFIED_NON_EVENT_PARAMETER_KEYS = {
     "canonical_family",
+    "canonical_regime",
+    "legacy_family",
+    "subtype",
+    "phase",
+    "evidence_mode",
+    "asset_scope",
+    "venue_scope",
+    "is_composite",
+    "is_context_tag",
+    "is_strategy_construct",
+    "research_only",
+    "strategy_only",
+    "deconflict_priority",
+    "disposition",
+    "layer",
+    "notes",
     "templates",
     "horizons",
     "conditioning_cols",
@@ -51,10 +67,26 @@ class ComposedConfig:
 
     event_type: str
     family: str
+    canonical_regime: str
+    legacy_family: str
     reports_dir: str
     events_file: str
     signal_column: str
     parameters: Dict[str, Any]
+    subtype: str = ""
+    phase: str = ""
+    evidence_mode: str = ""
+    asset_scope: str = ""
+    venue_scope: str = ""
+    is_composite: bool = False
+    is_context_tag: bool = False
+    is_strategy_construct: bool = False
+    research_only: bool = False
+    strategy_only: bool = False
+    deconflict_priority: int = 0
+    disposition: str = ""
+    layer: str = ""
+    notes: str = ""
 
     # Template related fields
     templates: tuple[str, ...] = ()
@@ -101,6 +133,11 @@ def _to_str_tuple(value: Any) -> tuple[str, ...]:
     return tuple(out)
 
 
+def _coalesce_text(value: Any, default: str) -> str:
+    text = str(value or "").strip()
+    return text or default
+
+
 @lru_cache(maxsize=1)
 def _unified_registry() -> Dict[str, Any]:
     payload = get_domain_registry().unified_payload
@@ -119,9 +156,9 @@ _registry = _unified_registry
 def _family_by_event() -> Dict[str, str]:
     registry = get_domain_registry()
     return {
-        event_type: spec.canonical_family
+        event_type: spec.canonical_regime or spec.canonical_family
         for event_type, spec in registry.event_definitions.items()
-        if spec.canonical_family
+        if spec.canonical_regime or spec.canonical_family
     }
 
 
@@ -170,13 +207,19 @@ def compose_config(
 
     defaults = unified.get("defaults", {})
     family_name = (
-        str(row.get("canonical_family", _family_by_event().get(normalized, "UNSPECIFIED")))
+        str(
+            row.get(
+                "canonical_regime",
+                row.get("canonical_family", _family_by_event().get(normalized, "UNSPECIFIED")),
+            )
+        )
         .strip()
         .upper()
     )
+    legacy_family = str(row.get("legacy_family", "")).strip().upper()
     family_defaults_all = unified.get("families", {})
     family_defaults = (
-        family_defaults_all.get(family_name, {}) if isinstance(family_defaults_all, dict) else {}
+        family_defaults_all.get(legacy_family, {}) if isinstance(family_defaults_all, dict) else {}
     )
 
     overrides = dict(runtime_overrides or {})
@@ -267,10 +310,32 @@ def compose_config(
     return ComposedConfig(
         event_type=normalized,
         family=family_name,
-        reports_dir=str(row.get("reports_dir", normalized.lower())),
-        events_file=str(row.get("events_file", f"{normalized.lower()}_events.parquet")),
-        signal_column=str(row.get("signal_column", f"{normalized.lower()}_event")),
+        canonical_regime=family_name,
+        legacy_family=legacy_family,
+        reports_dir=_coalesce_text(row.get("reports_dir"), normalized.lower()),
+        events_file=_coalesce_text(
+            row.get("events_file"),
+            f"{normalized.lower()}_events.parquet",
+        ),
+        signal_column=_coalesce_text(
+            row.get("signal_column"),
+            normalized.lower() if normalized.lower().endswith("_event") else f"{normalized.lower()}_event",
+        ),
         parameters=effective_parameters,
+        subtype=str(row.get("subtype", "")).strip(),
+        phase=str(row.get("phase", "")).strip(),
+        evidence_mode=str(row.get("evidence_mode", "")).strip(),
+        asset_scope=str(row.get("asset_scope", "")).strip(),
+        venue_scope=str(row.get("venue_scope", "")).strip(),
+        is_composite=bool(row.get("is_composite", False)),
+        is_context_tag=bool(row.get("is_context_tag", False)),
+        is_strategy_construct=bool(row.get("is_strategy_construct", False)),
+        research_only=bool(row.get("research_only", False)),
+        strategy_only=bool(row.get("strategy_only", False)),
+        deconflict_priority=int(row.get("deconflict_priority", 0) or 0),
+        disposition=str(row.get("disposition", "")).strip(),
+        layer=str(row.get("layer", "")).strip(),
+        notes=str(row.get("notes", "")).strip(),
         templates=templates,
         horizons=horizons,
         conditioning_cols=conditioning_cols,

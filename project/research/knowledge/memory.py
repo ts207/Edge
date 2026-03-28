@@ -253,6 +253,44 @@ def write_memory_table(
     return path
 
 
+def write_reflection(
+    memory_paths_or_program_id: MemoryPaths | str,
+    df: pd.DataFrame,
+    *,
+    data_root: Path | None = None,
+) -> Path:
+    normalized = _normalize_reflection_frame(df, program_id=_reflection_program_id(memory_paths_or_program_id))
+    if isinstance(memory_paths_or_program_id, MemoryPaths):
+        existing = _read_best_available(memory_paths_or_program_id.reflections)
+        combined = pd.concat([existing, normalized], ignore_index=True) if not existing.empty else normalized
+        _write_memory_frame(combined, memory_paths_or_program_id.reflections)
+        return memory_paths_or_program_id.reflections
+
+    program_id = str(memory_paths_or_program_id)
+    existing = read_memory_table(program_id, "reflections", data_root=data_root)
+    combined = pd.concat([existing, normalized], ignore_index=True) if not existing.empty else normalized
+    return write_memory_table(program_id, "reflections", combined, data_root=data_root)
+
+
+def read_reflections(
+    memory_paths_or_program_id: MemoryPaths | str,
+    program_id: str | None = None,
+    *,
+    data_root: Path | None = None,
+) -> pd.DataFrame:
+    if isinstance(memory_paths_or_program_id, MemoryPaths):
+        reflections = _read_best_available(memory_paths_or_program_id.reflections)
+        effective_program_id = program_id or _reflection_program_id(memory_paths_or_program_id)
+    else:
+        effective_program_id = str(memory_paths_or_program_id)
+        reflections = read_memory_table(effective_program_id, "reflections", data_root=data_root)
+
+    out = reflections.copy()
+    if effective_program_id and "program_id" in out.columns:
+        out = out[out["program_id"].astype(str) == str(effective_program_id)].reset_index(drop=True)
+    return _reflection_compat_view(out)
+
+
 @contextmanager
 def _canonical_parquet_write_mode() -> Iterable[None]:
     original = os.environ.get("BACKTEST_FORCE_CSV_FALLBACK")
@@ -280,6 +318,55 @@ def _read_best_available(path: Path) -> pd.DataFrame:
     if csv_path.exists():
         return pd.read_csv(csv_path)
     return pd.DataFrame()
+
+
+def _reflection_program_id(memory_paths_or_program_id: MemoryPaths | str) -> str | None:
+    if isinstance(memory_paths_or_program_id, MemoryPaths):
+        return None
+    return str(memory_paths_or_program_id)
+
+
+def _normalize_reflection_frame(
+    df: pd.DataFrame,
+    *,
+    program_id: str | None = None,
+) -> pd.DataFrame:
+    out = df.copy()
+    if "program_id" not in out.columns and program_id:
+        out["program_id"] = str(program_id)
+    if "run_id" not in out.columns:
+        out["run_id"] = out.get("reflection_id", "")
+    if "created_at" not in out.columns:
+        out["created_at"] = out.get("timestamp")
+    if "market_findings" not in out.columns:
+        out["market_findings"] = out.get("observation")
+    if "statistical_outcome" not in out.columns:
+        out["statistical_outcome"] = out.get("insight_type")
+    if "recommended_next_action" not in out.columns:
+        out["recommended_next_action"] = out.get("action")
+    if "run_status" not in out.columns:
+        out["run_status"] = out.get("status")
+    for column in REFLECTION_COLUMNS:
+        if column not in out.columns:
+            out[column] = None
+    return out.reindex(columns=REFLECTION_COLUMNS)
+
+
+def _reflection_compat_view(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    if "reflection_id" not in out.columns:
+        out["reflection_id"] = out.get("run_id")
+    if "timestamp" not in out.columns:
+        out["timestamp"] = out.get("created_at")
+    if "observation" not in out.columns:
+        out["observation"] = out.get("market_findings")
+    if "insight_type" not in out.columns:
+        out["insight_type"] = out.get("statistical_outcome")
+    if "action" not in out.columns:
+        out["action"] = out.get("recommended_next_action")
+    if "status" not in out.columns:
+        out["status"] = out.get("run_status")
+    return out
 
 
 def _parse_json_payload(raw: Any) -> Dict[str, Any]:

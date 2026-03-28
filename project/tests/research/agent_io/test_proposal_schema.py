@@ -40,3 +40,32 @@ def test_proposal_validation_warns_on_proxy_tier_events():
     warnings = validate_proposal_with_warnings(payload)
     proxy_warnings = [w for w in warnings if "proxy" in w.lower() and "ABSORPTION_EVENT" in w]
     assert proxy_warnings, f"Expected proxy-tier warning for ABSORPTION_EVENT; got: {warnings}"
+
+
+def test_proposal_schema_accepts_canonical_regimes_without_explicit_events():
+    from project.research.agent_io.proposal_schema import load_agent_proposal
+
+    payload = {
+        "program_id": "regime_campaign",
+        "objective": "test",
+        "symbols": ["BTCUSDT"],
+        "timeframe": "5m",
+        "start": "2024-01-01",
+        "end": "2024-06-01",
+        "trigger_space": {
+            "allowed_trigger_types": ["EVENT"],
+            "canonical_regimes": ["LIQUIDITY_STRESS"],
+            "subtypes": ["liquidity_stress"],
+            "phases": ["shock"],
+            "evidence_modes": ["direct"],
+        },
+        "templates": ["continuation"],
+        "horizons_bars": [12],
+        "directions": ["long"],
+        "entry_lags": [0],
+    }
+
+    proposal = load_agent_proposal(payload)
+
+    assert proposal.trigger_space["canonical_regimes"] == ["LIQUIDITY_STRESS"]
+    assert proposal.trigger_space["events"] == {}

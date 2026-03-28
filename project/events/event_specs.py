@@ -15,6 +15,22 @@ class EventRegistrySpec:
     reports_dir: str
     events_file: str
     signal_column: str
+    canonical_regime: str = ""
+    legacy_family: str = ""
+    subtype: str = ""
+    phase: str = ""
+    evidence_mode: str = ""
+    asset_scope: str = ""
+    venue_scope: str = ""
+    is_composite: bool = False
+    is_context_tag: bool = False
+    is_strategy_construct: bool = False
+    research_only: bool = False
+    strategy_only: bool = False
+    deconflict_priority: int = 0
+    disposition: str = ""
+    layer: str = ""
+    notes: str = ""
     merge_gap_bars: int = 1
     cooldown_bars: int = 0
     anchor_rule: str = "max_intensity"
@@ -25,6 +41,10 @@ class EventRegistrySpec:
     allowed_templates: Sequence[str] = ("all",)
     disallowed_states: Sequence[str] = ()
     synthetic_coverage: str = "uncovered"
+
+    @property
+    def canonical_family(self) -> str:
+        return self.canonical_regime
 
 
 def _load_event_specs() -> Dict[str, EventRegistrySpec]:
@@ -72,15 +92,45 @@ def _load_event_specs() -> Dict[str, EventRegistrySpec]:
                 return defaults.get(name, default)
             return default
 
-        reports_dir = str(row.get("reports_dir", event_type.lower()))
-        events_file = str(row.get("events_file", f"{event_type.lower()}_events.parquet"))
-        signal_column = str(row.get("signal_column", f"{event_type.lower()}_event"))
+        def _coalesce_text(value: object, default: str) -> str:
+            text = str(value or "").strip()
+            return text or default
+
+        reports_dir = _coalesce_text(row.get("reports_dir"), event_type.lower())
+        events_file = _coalesce_text(
+            row.get("events_file"),
+            f"{event_type.lower()}_events.parquet",
+        )
+        default_signal_column = (
+            event_type.lower()
+            if str(event_type).strip().lower().endswith("_event")
+            else f"{event_type.lower()}_event"
+        )
+        signal_column = _coalesce_text(row.get("signal_column"), default_signal_column)
 
         spec = EventRegistrySpec(
             event_type=event_type,
             reports_dir=reports_dir,
             events_file=events_file,
             signal_column=signal_column,
+            canonical_regime=str(
+                row.get("canonical_regime", row.get("canonical_family", ""))
+            ).strip().upper(),
+            legacy_family=str(row.get("legacy_family", "")).strip().upper(),
+            subtype=str(row.get("subtype", "")).strip(),
+            phase=str(row.get("phase", "")).strip(),
+            evidence_mode=str(row.get("evidence_mode", "")).strip(),
+            asset_scope=str(row.get("asset_scope", "")).strip(),
+            venue_scope=str(row.get("venue_scope", "")).strip(),
+            is_composite=as_bool(row.get("is_composite", False)),
+            is_context_tag=as_bool(row.get("is_context_tag", False)),
+            is_strategy_construct=as_bool(row.get("is_strategy_construct", False)),
+            research_only=as_bool(row.get("research_only", False)),
+            strategy_only=as_bool(row.get("strategy_only", False)),
+            deconflict_priority=int(row.get("deconflict_priority", 0) or 0),
+            disposition=str(row.get("disposition", "")).strip(),
+            layer=str(row.get("layer", "")).strip(),
+            notes=str(row.get("notes", "")).strip(),
             merge_gap_bars=int(_canon_param("merge_gap_bars", 1)),
             cooldown_bars=int(_canon_param("cooldown_bars", 0)),
             anchor_rule=str(_canon_param("anchor_rule", "max_intensity")),

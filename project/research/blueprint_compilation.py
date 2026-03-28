@@ -393,6 +393,15 @@ def compile_blueprint(
         str(merged_row.get("canonical_event_type", event_type)).strip() or event_type
     )
     canonical_family = str(merged_row.get("canonical_family", "")).strip()
+    canonical_regime = str(
+        merged_row.get("canonical_regime", canonical_family or canonical_event_type)
+    ).strip()
+    subtype = str(merged_row.get("subtype", "")).strip()
+    phase = str(merged_row.get("phase", "")).strip()
+    evidence_mode = str(merged_row.get("evidence_mode", "")).strip()
+    regime_bucket = str(merged_row.get("regime_bucket", "")).strip()
+    recommended_bucket = str(merged_row.get("recommended_bucket", "")).strip()
+    routing_profile_id = str(merged_row.get("routing_profile_id", "")).strip()
 
     operator_version = "unknown"
     if operator_registry is not None:
@@ -449,6 +458,13 @@ def compile_blueprint(
             ontology_spec_hash=ontology_spec_hash_value,
             canonical_event_type=canonical_event_type,
             canonical_family=canonical_family,
+            canonical_regime=canonical_regime,
+            subtype=subtype,
+            phase=phase,
+            evidence_mode=evidence_mode,
+            regime_bucket=regime_bucket,
+            recommended_bucket=recommended_bucket,
+            routing_profile_id=routing_profile_id,
             state_id=state_id,
             template_verb=template_verb,
             operator_version=operator_version,

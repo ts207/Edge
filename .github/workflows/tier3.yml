@@ -30,12 +30,12 @@ jobs:
         run: pytest -q
 
       - name: 2. Replay and Regression Suites
-        run: pytest -q tests/replays tests/regressions
+        run: pytest -q project/tests/replays project/tests/regressions
 
       - name: 3. Large Integration Flows
         run: |
           # Example of a larger integration flow if distinct from smoke
-          pytest -q tests/pipelines
+          pytest -q project/tests/pipelines
 
       - name: Upload artifacts on failure
         if: failure()

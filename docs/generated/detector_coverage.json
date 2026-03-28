@@ -131,6 +131,19 @@
       ]
     },
     {
+      "class_name": "CrossAssetDesyncDetector",
+      "event_type": "CROSS_ASSET_DESYNC_EVENT",
+      "family": "desync",
+      "maturity_tier": "standard",
+      "module": "project.events.families.desync",
+      "path": "project/events/families/desync.py",
+      "registered": true,
+      "required_columns": [
+        "timestamp",
+        "close"
+      ]
+    },
+    {
       "class_name": "CrossVenueDesyncDetector",
       "event_type": "CROSS_VENUE_DESYNC",
       "family": "basis",
@@ -983,31 +996,61 @@
   "issues": [
     {
       "check_id": "detector_untracked",
-      "message": "Registered detector has no active event spec: ABSORPTION_EVENT",
-      "path": "project/events/detectors/liquidity.py",
+      "message": "Registered detector has no active event spec: CROSS_ASSET_INTERACTION",
+      "path": "project/events/families/interaction.py",
       "severity": "warning"
     },
     {
       "check_id": "detector_untracked",
-      "message": "Registered detector has no active event spec: CROSS_ASSET_DESYNC_EVENT",
+      "message": "Registered detector has no active event spec: INT_DEPTH_VACUUM_CONFIRM",
+      "path": "project/events/families/interaction.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: INT_FND_LIQ_CONFIRM",
+      "path": "project/events/families/interaction.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: INT_LIQ_OI_CONFIRM",
+      "path": "project/events/families/interaction.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: INT_VOL_RANGE_CONFIRM",
+      "path": "project/events/families/interaction.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_untracked",
+      "message": "Registered detector has no active event spec: INT_ZSCORE_OVERSHOOT_CONFIRM",
+      "path": "project/events/families/interaction.py",
+      "severity": "warning"
+    },
+    {
+      "check_id": "detector_hardcoded_params",
+      "message": "Detector implementation has hardcoded numerical thresholds: CROSS_ASSET_DESYNC_EVENT",
       "path": "project/events/families/desync.py",
       "severity": "warning"
     }
   ],
   "summary": {
-    "active_event_count": 69,
+    "active_event_count": 70,
     "error_count": 0,
-    "issue_count": 2,
+    "issue_count": 7,
     "maturity_counts": {
       "production": 6,
       "proxy": 9,
       "specialized": 3,
-      "standard": 51
+      "standard": 52
     },
-    "registered_detector_entry_count": 72,
-    "registered_event_count": 69,
+    "registered_detector_entry_count": 78,
+    "registered_event_count": 70,
     "schema_version": "detector_coverage_audit_v2",
     "status": "passed",
-    "warning_count": 2
+    "warning_count": 7
   }
 }

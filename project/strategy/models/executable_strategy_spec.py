@@ -32,6 +32,13 @@ class ResearchOriginSpec(BaseModel):
     promotion_track: str = "standard"
     canonical_event_type: str = ""
     canonical_family: str = ""
+    canonical_regime: str = ""
+    subtype: str = ""
+    phase: str = ""
+    evidence_mode: str = ""
+    regime_bucket: str = ""
+    recommended_bucket: str = ""
+    routing_profile_id: str = ""
     template_verb: str = ""
     wf_status: str = "pending"
     wf_evidence_hash: str = ""
@@ -183,6 +190,13 @@ class ExecutableStrategySpec(BaseModel):
                 "ontology_spec_hash": self.research_origin.ontology_spec_hash,
                 "canonical_event_type": self.research_origin.canonical_event_type,
                 "canonical_family": self.research_origin.canonical_family,
+                "canonical_regime": self.research_origin.canonical_regime,
+                "subtype": self.research_origin.subtype,
+                "phase": self.research_origin.phase,
+                "evidence_mode": self.research_origin.evidence_mode,
+                "regime_bucket": self.research_origin.regime_bucket,
+                "recommended_bucket": self.research_origin.recommended_bucket,
+                "routing_profile_id": self.research_origin.routing_profile_id,
                 "template_verb": self.research_origin.template_verb,
                 "constraints": dict(self.research_origin.constraints),
             },
@@ -221,6 +235,13 @@ class ExecutableStrategySpec(BaseModel):
                 promotion_track=blueprint.lineage.promotion_track,
                 canonical_event_type=blueprint.lineage.canonical_event_type,
                 canonical_family=blueprint.lineage.canonical_family,
+                canonical_regime=blueprint.lineage.canonical_regime,
+                subtype=blueprint.lineage.subtype,
+                phase=blueprint.lineage.phase,
+                evidence_mode=blueprint.lineage.evidence_mode,
+                regime_bucket=blueprint.lineage.regime_bucket,
+                recommended_bucket=blueprint.lineage.recommended_bucket,
+                routing_profile_id=blueprint.lineage.routing_profile_id,
                 template_verb=blueprint.lineage.template_verb,
                 wf_status=blueprint.lineage.wf_status,
                 wf_evidence_hash=blueprint.lineage.wf_evidence_hash,

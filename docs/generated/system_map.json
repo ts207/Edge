@@ -617,10 +617,11 @@
     },
     {
       "external_inputs": [],
-      "inputs": [
+      "inputs": [],
+      "optional_inputs": [
+        "research.recommendations_checklist",
         "strategy.blueprints"
       ],
-      "optional_inputs": [],
       "outputs": [
         "strategy.candidates"
       ],
@@ -846,7 +847,7 @@
       "schema_version": "phase5_stage_contract_v1",
       "script_patterns": [
         "pipelines/research/compile_strategy_blueprints.py",
-        "pipelines/research/build_strategy_candidates.py",
+        "research/build_strategy_candidates.py",
         "pipelines/research/select_profitable_strategies.py"
       ],
       "stage_patterns": [

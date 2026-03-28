@@ -86,13 +86,13 @@ A good run is **not** the run with the best headline metric. A good run leaves b
 │  [clean] → cleaned bars, basis state, TOB aggregates        │
 │       │                                                      │
 │       ▼                                                      │
-│  [build_features] → 34 feature families                     │
+│  [build_features] → canonical feature outputs               │
 │       │                                                      │
 │       ▼                                                      │
 │  [build_market_context] → regime labels, microstructure     │
 │       │                                                      │
 │       ▼                                                      │
-│  [phase1_analysis] → 69 event detectors → event episodes    │
+│  [phase1_analysis] → active detectors → event episodes      │
 │       │                                                      │
 │       ▼                                                      │
 │  [phase2_discovery] → hypothesis scoring, FDR control       │
@@ -107,16 +107,15 @@ A good run is **not** the run with the best headline metric. A good run leaves b
 
 ---
 
-## Project Stats | Metric | Value |
+## Project Metrics
+
+Current inventory counts and architecture metrics are generated artifacts, not hand-maintained documentation.
+
+| Metric Surface | Source |
 | --- | --- |
-| Python source files | 1,153 |
-| Total files in repo | 1,722 |
-| Test files | 407 |
-| Event types (spec) | 69 |
-| Feature definitions | 34 |
-| Market states | 19 |
-| Module coupling count | 2,417 |
-| Cross-boundary imports | 1,665 |
-| Circular dependencies | 0 |
-| Test coverage ratio | ~38% |
-| Requires Python | 3.11+ |
+| Detector and event inventory | `docs/generated/detector_coverage.md` |
+| Ontology consistency | `docs/generated/ontology_audit.json` |
+| System inventory | `docs/generated/system_map.json` |
+| Architecture metrics | `docs/generated/architecture_metrics.json` |
+| Active test suite | `project/tests/` |
+| Python requirement | `pyproject.toml` / install docs |

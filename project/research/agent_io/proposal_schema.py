@@ -61,13 +61,23 @@ def _normalize_trigger_space(values: Any) -> Dict[str, Any]:
     payload["allowed_trigger_types"] = [value.upper() for value in allowed]
     for key in (
         "events",
+        "canonical_regimes",
+        "subtypes",
+        "phases",
+        "evidence_modes",
         "states",
         "sequences",
         "transitions",
         "feature_predicates",
         "interactions",
     ):
-        payload.setdefault(key, {})
+        payload.setdefault(
+            key,
+            {}
+            if key
+            in {"events", "states", "sequences", "transitions", "feature_predicates", "interactions"}
+            else [],
+        )
     return payload
 
 
@@ -206,8 +216,13 @@ def _validate_proposal(proposal: AgentProposal) -> None:
     if not proposal.entry_lags:
         raise ValueError("entry_lags must contain at least one lag")
     allowed = set(proposal.trigger_space.get("allowed_trigger_types", []))
-    if "EVENT" in allowed and not proposal.trigger_space.get("events", {}).get("include"):
-        raise ValueError("EVENT trigger proposals must include trigger_space.events.include")
+    if "EVENT" in allowed:
+        has_events = bool(proposal.trigger_space.get("events", {}).get("include"))
+        has_regimes = bool(proposal.trigger_space.get("canonical_regimes", []))
+        if not has_events and not has_regimes:
+            raise ValueError(
+                "EVENT trigger proposals must include trigger_space.events.include or trigger_space.canonical_regimes"
+            )
     if "STATE" in allowed and not proposal.trigger_space.get("states", {}).get("include"):
         raise ValueError("STATE trigger proposals must include trigger_space.states.include")
 

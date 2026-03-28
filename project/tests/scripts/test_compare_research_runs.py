@@ -24,11 +24,24 @@ def _seed_research_diagnostics(
     *,
     phase2: dict,
     promotion: dict,
+    regime_effectiveness: dict | None = None,
     edge_candidates: list[dict] | None = None,
 ) -> None:
     paths = research_diagnostics_paths(data_root=data_root, run_id=run_id)
     _write_json(paths["phase2"], phase2)
     _write_json(paths["promotion"], promotion)
+    _write_json(
+        paths["regime_effectiveness"],
+        regime_effectiveness
+        or {
+            "status": "ok",
+            "regimes_total": 2,
+            "episodes_total": 5,
+            "scorecard_rows": 3,
+            "recommended_bucket_counts": {"trade_generating": 1, "trade_filtering": 1},
+            "top_regimes_by_incidence": [{"canonical_regime": "LIQUIDITY_STRESS", "episode_count": 3}],
+        },
+    )
     import pandas as pd
 
     paths["edge_candidates"].parent.mkdir(parents=True, exist_ok=True)
@@ -123,6 +136,7 @@ def test_compare_run_ids_uses_canonical_research_report_paths(tmp_path):
     assert out["promotion"]["delta"]["promoted_count"] == 1
     assert out["promotion"]["reject_reason_shift"]["negative_control_fail"] == 1
     assert out["edge_candidates"]["delta"]["tradable_count"] == 1
+    assert out["regime_effectiveness"]["delta"]["episodes_total"] == 0
 
 
 def test_compare_research_runs_script_writes_report(tmp_path, monkeypatch):
@@ -225,6 +239,7 @@ def test_compare_research_runs_script_writes_report(tmp_path, monkeypatch):
     assert report["candidate_run_id"] == "cand1"
     assert report["comparison"]["phase2"]["delta"]["candidate_count"] == 3
     assert report["comparison"]["promotion"]["delta"]["promoted_count"] == 1
+    assert report["comparison"]["regime_effectiveness"]["delta"]["regimes_total"] == 0
     assert report["assessment"]["status"] == "warn"
     summary_path = out_dir / "research_run_comparison_summary.md"
     assert summary_path.exists()

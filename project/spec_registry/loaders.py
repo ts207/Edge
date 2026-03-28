@@ -103,6 +103,11 @@ def load_unified_event_registry() -> Dict[str, Any]:
 
 
 @functools.lru_cache(maxsize=1)
+def load_event_ontology_mapping() -> Dict[str, Any]:
+    return load_yaml_relative("spec/events/event_ontology_mapping.yaml")
+
+
+@functools.lru_cache(maxsize=1)
 def load_template_registry() -> Dict[str, Any]:
     unified = load_unified_event_registry()
     if unified:
@@ -335,6 +340,7 @@ def clear_caches() -> None:
     load_gates_spec.cache_clear()
     load_family_specs.cache_clear()
     load_unified_event_registry.cache_clear()
+    load_event_ontology_mapping.cache_clear()
     load_template_registry.cache_clear()
     load_state_registry.cache_clear()
     load_runtime_spec.cache_clear()

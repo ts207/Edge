@@ -155,6 +155,41 @@ def test_build_market_context_materializes_canonical_state_columns():
         assert (valid.sum(axis=1) - 1.0).abs().max() < 1e-6
 
 
+def test_build_market_context_normalizes_timestamp_dtypes_before_merge():
+    bars = _feature_frame()
+    funding = pd.DataFrame(
+        {
+            "timestamp": [
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:05:00Z",
+                "2026-01-01T00:10:00Z",
+                "2026-01-01T00:15:00Z",
+            ],
+            "funding_rate_scaled": [0.0002, -0.0002, 0.0003, -0.0003],
+        }
+    )
+
+    out = build_market_context.build_market_context(bars, funding, symbol="BTCUSDT")
+
+    assert str(out["timestamp"].dtype) == "datetime64[ns, UTC]"
+    assert out["funding_rate_scaled"].tolist() == pytest.approx([0.0002, -0.0002, 0.0003, -0.0003])
+
+
+def test_build_market_context_rejects_missing_or_all_null_timestamps():
+    features = _feature_frame().drop(columns=["timestamp"])
+    features["funding_rate_scaled"] = [0.0002, -0.0002, 0.0003, -0.0003]
+
+    with pytest.raises(ValueError, match="missing timestamp column"):
+        build_market_context._build_market_context(symbol="BTCUSDT", features=features)
+
+    bad = _feature_frame()
+    bad["timestamp"] = [None, None, None, None]
+    bad["funding_rate_scaled"] = [0.0002, -0.0002, 0.0003, -0.0003]
+
+    with pytest.raises(ValueError, match="normalized to all-null timestamps"):
+        build_market_context._build_market_context(symbol="BTCUSDT", features=bad)
+
+
 def test_main_writes_context_quality_report(monkeypatch, tmp_path):
     features = _feature_frame()
     features["funding_rate_scaled"] = [0.0002, -0.0002, 0.0003, -0.0003]
