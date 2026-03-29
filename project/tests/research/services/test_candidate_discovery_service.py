@@ -806,15 +806,16 @@ def test_split_and_score_candidates_emits_confirmatory_evidence(monkeypatch):
             },
         ]
     )
+    timestamps = pd.date_range("2024-01-01", periods=16, freq="5min", tz="UTC")
     events = pd.DataFrame(
         {
-            "enter_ts": pd.date_range("2024-01-01", periods=6, freq="5min", tz="UTC"),
-            "timestamp": pd.date_range("2024-01-01", periods=6, freq="5min", tz="UTC"),
-            "symbol": ["BTCUSDT"] * 6,
-            "event_type": ["VOL_SHOCK"] * 6,
-            "split_label": ["train", "train", "validation", "validation", "test", "test"],
-            "split_plan_id": ["TVT_60_20_20"] * 6,
-            "vol_regime": ["low", "low", "high", "high", "low", "high"],
+            "enter_ts": timestamps,
+            "timestamp": timestamps,
+            "symbol": ["BTCUSDT"] * len(timestamps),
+            "event_type": ["VOL_SHOCK"] * len(timestamps),
+            "split_label": ["train"] * 8 + ["validation"] * 4 + ["test"] * 4,
+            "split_plan_id": ["TVT_60_20_20"] * len(timestamps),
+            "vol_regime": ["low" if idx % 2 == 0 else "high" for idx in range(len(timestamps))],
         }
     )
     features = pd.DataFrame(
@@ -882,11 +883,17 @@ def test_split_and_score_candidates_emits_confirmatory_evidence(monkeypatch):
     )
 
     row = out.iloc[0]
-    assert len(json.loads(row["returns_oos_combined"])) == 4
-    assert len(json.loads(row["pnl_series"])) == 4
-    assert len(json.loads(row["timestamps"])) == 4
-    assert len(json.loads(row["fold_scores"])) == 3
-    assert json.loads(row["regime_counts"]) == {"high": 3, "low": 1}
+    returns_oos = json.loads(row["returns_oos_combined"])
+    pnl_series = json.loads(row["pnl_series"])
+    timestamps = json.loads(row["timestamps"])
+    fold_scores = json.loads(row["fold_scores"])
+    regime_counts = json.loads(row["regime_counts"])
+
+    assert len(returns_oos) == 4
+    assert len(pnl_series) == 4
+    assert len(timestamps) == 4
+    assert len(fold_scores) == 3
+    assert regime_counts == {"high": 2, "low": 2}
     assert 0.0 <= float(row["control_pass_rate"]) <= 1.0
     assert isinstance(bool(row["gate_delay_robustness"]), bool)
     assert isinstance(bool(row["gate_regime_stability"]), bool)
@@ -961,3 +968,233 @@ def test_apply_validation_multiple_testing_computes_real_cluster_adjustment():
     assert eth_cluster != out.loc[out["symbol"] == "ETHUSDT", "q_value_by"].iloc[0]
     assert btc_cluster == pytest.approx(0.04)
     assert eth_cluster == pytest.approx(0.06)
+
+
+def test_split_and_score_candidates_drops_boundary_straddling_events(monkeypatch):
+    candidates = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_boundary",
+                "event_type": "VOL_SHOCK",
+                "symbol": "BTCUSDT",
+                "direction": 1.0,
+                "rule_template": "continuation",
+                "family_id": "fam_boundary",
+                "horizon": "15m",
+                "horizon_bars": 3,
+            },
+        ]
+    )
+    timestamps = pd.date_range("2024-01-01", periods=10, freq="5min", tz="UTC")
+    events = pd.DataFrame(
+        {
+            "enter_ts": timestamps[[1, 5, 8]],
+            "timestamp": timestamps[[1, 5, 8]],
+            "symbol": ["BTCUSDT"] * 3,
+            "event_type": ["VOL_SHOCK"] * 3,
+        }
+    )
+    features = pd.DataFrame({"timestamp": timestamps, "close": np.linspace(100.0, 109.0, len(timestamps))})
+
+    def _fake_return_frame(sym_events, _features, **kwargs):
+        ts = pd.to_datetime(sym_events["timestamp"], utc=True, errors="coerce")
+        return pd.DataFrame(
+            {
+                "forward_return": np.arange(1, len(sym_events) + 1, dtype=float) / 100.0,
+                "cluster_day": ts.dt.strftime("%Y-%m-%d"),
+                "split_label": sym_events["split_label"].tolist(),
+                "event_ts": ts,
+            }
+        )
+
+    monkeypatch.setattr(svc, "build_event_return_frame", _fake_return_frame)
+    monkeypatch.setattr(
+        svc,
+        "estimate_effect_from_frame",
+        lambda frame, **kwargs: SimpleNamespace(
+            estimate=float(frame["forward_return"].mean()) if not frame.empty else 0.0,
+            stderr=0.0,
+            ci_low=0.0,
+            ci_high=0.0,
+            p_value_raw=1.0,
+            n_obs=len(frame),
+            n_clusters=len(frame),
+            method="mock",
+            cluster_col="cluster_day",
+        ),
+    )
+
+    out = svc._split_and_score_candidates(
+        candidates,
+        events,
+        horizon_bars=3,
+        split_scheme_id="WF_60_20_20",
+        purge_bars=0,
+        embargo_bars=0,
+        bar_duration_minutes=5,
+        features_df=features,
+        entry_lag_bars=1,
+        shift_labels_k=0,
+        cost_estimate=None,
+    )
+
+    row = out.iloc[0]
+    assert int(row["train_n_obs"]) == 1
+    assert int(row["validation_n_obs"]) == 0
+    assert int(row["test_n_obs"]) == 0
+    assert int(row["sample_size"]) == 0
+    assert int(row["n_obs"]) == 0
+    assert row["effect_split_basis"] == "none"
+
+
+def test_build_evidence_bundle_blocks_missing_confirmatory_gates():
+    from project.domain.promotion.promotion_policy import PromotionPolicy
+    from project.research.validation.evidence_bundle import (
+        build_evidence_bundle,
+        evaluate_promotion_bundle,
+    )
+
+    row = {
+        "candidate_id": "cand_missing_gates",
+        "event_type": "VOL_SHOCK",
+        "n_events": 64,
+        "validation_samples": 32,
+        "test_samples": 32,
+        "estimate": 0.01,
+        "estimate_bps": 100.0,
+        "stderr": 0.001,
+        "ci_low": 0.001,
+        "ci_high": 0.02,
+        "q_value": 0.01,
+        "q_value_by": 0.02,
+        "q_value_cluster": 0.03,
+        "n_obs": 64,
+        "n_clusters": 16,
+        "cost_survival_ratio": 1.2,
+        "net_expectancy_bps": 20.0,
+        "tob_coverage": 1.0,
+        "stability_score": 2.0,
+        "sign_consistency": 1.0,
+        "delay_robustness_pass": True,
+        "timeframe_consensus_pass": True,
+        "returns_oos_combined": [0.01] * 12,
+        "pass_shift_placebo": True,
+        "pass_random_entry_placebo": True,
+        "pass_direction_reversal_placebo": True,
+        "gate_stability": True,
+        "gate_after_cost_stressed_positive": True,
+        "gate_delayed_entry_stress": True,
+        "gate_promo_placebo_controls": True,
+        "gate_promo_falsification": True,
+        "microstructure_pass": True,
+        "gate_promo_baseline_beats_complexity": True,
+        "event_is_trade_trigger": True,
+    }
+
+    bundle = build_evidence_bundle(row)
+    decision = evaluate_promotion_bundle(
+        bundle,
+        PromotionPolicy(
+            max_q_value=0.10,
+            min_events=10,
+            min_stability_score=0.5,
+            min_sign_consistency=0.5,
+            min_cost_survival_ratio=0.5,
+            min_tob_coverage=0.0,
+            require_hypothesis_audit=True,
+            enforce_baseline_beats_complexity=True,
+            enforce_placebo_controls=True,
+            enforce_timeframe_consensus=True,
+            enforce_regime_stability=True,
+        ),
+    )
+
+    assert decision["eligible"] is False
+    assert "oos_validation" in decision["rejection_reasons"]
+    assert "hypothesis_audit" in decision["rejection_reasons"]
+    assert "multiplicity_confirmatory" in decision["rejection_reasons"]
+
+
+def test_apply_validation_multiple_testing_collapses_reruns_into_shared_family():
+    frame = pd.DataFrame(
+        [
+            {
+                "candidate_id": "btc_r1",
+                "run_id": "run_a",
+                "event_type": "OI_FLUSH",
+                "symbol": "BTCUSDT",
+                "horizon": "24b",
+                "p_value_raw": 0.01,
+            },
+            {
+                "candidate_id": "btc_r2",
+                "run_id": "run_b",
+                "event_type": "OI_FLUSH",
+                "symbol": "BTCUSDT",
+                "horizon": "24b",
+                "p_value_raw": 0.02,
+            },
+        ]
+    )
+
+    out = svc._apply_validation_multiple_testing(frame)
+
+    assert out["correction_family_id"].nunique() == 1
+    assert out["correction_frontier_id"].nunique() == 1
+    assert out["q_value"].tolist() == pytest.approx([0.02, 0.02])
+
+
+
+def test_apply_historical_frontier_multiple_testing_penalizes_prior_reruns(tmp_path: Path):
+    data_root = tmp_path / "data"
+    prior_path = data_root / "reports" / "phase2" / "prior_run" / "search_engine"
+    prior_path.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "hist_1",
+                "event_type": "OI_FLUSH",
+                "horizon": "24b",
+                "p_value_raw": 0.03,
+            },
+            {
+                "candidate_id": "hist_2",
+                "event_type": "OI_FLUSH",
+                "horizon": "24b",
+                "p_value_raw": 0.04,
+            },
+        ]
+    ).to_parquet(prior_path / "phase2_candidates.parquet", index=False)
+
+    current = svc._apply_validation_multiple_testing(
+        pd.DataFrame(
+            [
+                {
+                    "candidate_id": "curr_1",
+                    "run_id": "current_run",
+                    "event_type": "OI_FLUSH",
+                    "symbol": "BTCUSDT",
+                    "horizon": "24b",
+                    "p_value_raw": 0.01,
+                },
+                {
+                    "candidate_id": "curr_2",
+                    "run_id": "current_run",
+                    "event_type": "OI_FLUSH",
+                    "symbol": "ETHUSDT",
+                    "horizon": "24b",
+                    "p_value_raw": 0.02,
+                },
+            ]
+        )
+    )
+    widened = svc._apply_historical_frontier_multiple_testing(
+        current,
+        data_root=data_root,
+        current_run_id="current_run",
+    )
+
+    assert widened["historical_frontier_test_count"].iloc[0] == 4
+    assert widened["q_value_run_local"].tolist() == pytest.approx([0.02, 0.02])
+    assert widened["q_value"].tolist() == pytest.approx([0.04, 0.04])
+    assert widened["correction_scope_policy"].iloc[0] == "historical_frontier_bh"

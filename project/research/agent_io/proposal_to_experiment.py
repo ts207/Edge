@@ -17,6 +17,21 @@ def _build_experiment_plan(*args: Any, **kwargs: Any) -> Any:
     return module.build_experiment_plan(*args, **kwargs)
 
 
+def _normalize_entry_lags(values: Any, *, field_name: str) -> list[int]:
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for raw in list(values or []):
+        lag = int(raw)
+        if lag < 1:
+            raise ValueError(f"{field_name} must be >= 1 to prevent same-bar entry leakage")
+        if lag not in seen:
+            normalized.append(lag)
+            seen.add(lag)
+    if not normalized:
+        raise ValueError(f"{field_name} must contain at least one lag >= 1")
+    return normalized
+
+
 def _load_search_limit_defaults(registry_root: Path) -> Dict[str, Any]:
     payload = load_yaml_path(registry_root / "search_limits.yaml")
     if not isinstance(payload, dict):
@@ -26,7 +41,9 @@ def _load_search_limit_defaults(registry_root: Path) -> Dict[str, Any]:
     return {
         "horizons_bars": list(defaults.get("horizons_bars", [1, 3, 12, 24, 72])),
         "directions": list(defaults.get("directions", ["long", "short"])),
-        "entry_lags": list(defaults.get("entry_lags", [0, 1, 2])),
+        "entry_lags": _normalize_entry_lags(
+            defaults.get("entry_lags", [1, 2]), field_name="search_limit_defaults.entry_lags"
+        ),
         "max_hypotheses_total": int(limits.get("max_hypotheses_total", 1000)),
         "max_hypotheses_per_template": int(limits.get("max_hypotheses_per_template", 250)),
         "max_hypotheses_per_event_family": int(limits.get("max_hypotheses_per_event_family", 300)),
@@ -59,7 +76,9 @@ def proposal_to_experiment_config(
     }
     horizons = proposal.horizons_bars or list(defaults["horizons_bars"])
     directions = proposal.directions or list(defaults["directions"])
-    entry_lags = proposal.entry_lags or list(defaults["entry_lags"])
+    entry_lags = _normalize_entry_lags(
+        proposal.entry_lags or list(defaults["entry_lags"]), field_name="proposal.entry_lags"
+    )
     promotion_enabled = proposal.promotion_profile != "disabled"
 
     return {

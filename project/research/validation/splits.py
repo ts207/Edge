@@ -138,6 +138,8 @@ def assign_split_labels(
     purge_bars: int = 0,
     bar_duration_minutes: int = DEFAULT_BAR_DURATION_MINUTES,
     split_col: str = "split_label",
+    event_window_start_col: str | None = None,
+    event_window_end_col: str | None = None,
 ) -> pd.DataFrame:
     if df.empty or time_col not in df.columns:
         return df.copy()
@@ -145,7 +147,21 @@ def assign_split_labels(
     out = df.copy()
     ts = pd.to_datetime(out[time_col], utc=True, errors="coerce")
     out[time_col] = ts
-    valid = ts.notna()
+    window_start = None
+    window_end = None
+    if event_window_start_col and event_window_start_col in out.columns:
+        window_start = pd.to_datetime(out[event_window_start_col], utc=True, errors="coerce")
+        out[event_window_start_col] = window_start
+    if event_window_end_col and event_window_end_col in out.columns:
+        window_end = pd.to_datetime(out[event_window_end_col], utc=True, errors="coerce")
+        out[event_window_end_col] = window_end
+
+    use_event_windows = window_start is not None and window_end is not None
+    if use_event_windows:
+        valid = ts.notna() & window_start.notna() & window_end.notna()
+    else:
+        valid = ts.notna()
+
     if valid.sum() < 2:
         out[split_col] = "train"
         out["non_promotable"] = True
@@ -162,7 +178,10 @@ def assign_split_labels(
     )
     labels = pd.Series([pd.NA] * len(out), index=out.index, dtype="object")
     for window in windows:
-        if window.label == "test":
+        if use_event_windows:
+            assert window_start is not None and window_end is not None
+            mask = valid & (window_start >= window.start) & (window_end <= window.end)
+        elif window.label == "test":
             mask = valid & (ts >= window.start) & (ts <= window.end)
         else:
             mask = valid & (ts >= window.start) & (ts < window.end)

@@ -81,7 +81,7 @@ def test_env(tmp_path):
         },
         "trigger_space": {"allowed_trigger_types": ["EVENT"], "events": {"include": ["VOL_SPIKE"]}},
         "templates": {"include": ["continuation"]},
-        "evaluation": {"horizons_bars": [10], "directions": ["long"], "entry_lags": [0]},
+        "evaluation": {"horizons_bars": [10], "directions": ["long"], "entry_lags": [1]},
         "contexts": {"include": {"session": ["open"]}},
         "search_control": {
             "max_hypotheses_total": 1000,

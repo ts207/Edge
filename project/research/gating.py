@@ -410,6 +410,26 @@ def _build_event_return_frame_from_joined(
         return pd.DataFrame()
     records: List[Dict[str, Any]] = []
     per_trade_cost = max(0.0, float(cost_bps)) / 10_000.0
+
+    def _funding_carry_return(row: Dict[str, Any], direction_sign: float) -> tuple[float, bool]:
+        for key in ("funding_rate_realized", "funding_rate_scaled", "funding_rate"):
+            value = row.get(key)
+            if value is None:
+                continue
+            numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+            if pd.isna(numeric):
+                continue
+            return float(-direction_sign * float(numeric)), True
+        for key in ("funding_rate_bps",):
+            value = row.get(key)
+            if value is None:
+                continue
+            numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+            if pd.isna(numeric):
+                continue
+            return float(-direction_sign * float(numeric) / 10_000.0), True
+        return 0.0, False
+
     for row in merged.to_dict("records"):
         feature_pos = row.get("_feature_pos")
         if pd.isna(feature_pos):
@@ -451,6 +471,7 @@ def _build_event_return_frame_from_joined(
             take_profit_atr_multipliers=take_profit_atr_multipliers,
             atr_value=row.get("atr_14", row.get("atr")),
         )
+        funding_carry_return, funding_carry_present = _funding_carry_return(row, direction_sign)
         event_ts = pd.to_datetime(row.get("event_ts"), utc=True, errors="coerce")
         if pd.isna(event_ts):
             continue
@@ -479,8 +500,10 @@ def _build_event_return_frame_from_joined(
                 "event_direction": int(event_direction),
                 "direction_sign": float(direction_sign),
                 "forward_return_raw": float(raw_return),
-                "cost_return": float(per_trade_cost),
-                "forward_return": float(raw_return - per_trade_cost),
+                "funding_carry_return": float(funding_carry_return),
+                "funding_carry_present": bool(funding_carry_present),
+                "cost_return": float(per_trade_cost - funding_carry_return),
+                "forward_return": float(raw_return - per_trade_cost + funding_carry_return),
             }
         )
     if not records:

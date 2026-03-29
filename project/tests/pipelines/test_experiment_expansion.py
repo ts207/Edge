@@ -100,7 +100,7 @@ def _make_config(tmp_path, **overrides):
         },
         "trigger_space": {"allowed_trigger_types": ["EVENT"], "events": {"include": ["E1"]}},
         "templates": {"include": ["tpl"]},
-        "evaluation": {"horizons_bars": [10], "directions": ["long"], "entry_lags": [0]},
+        "evaluation": {"horizons_bars": [10], "directions": ["long"], "entry_lags": [1]},
         "contexts": {"include": {}},
         "search_control": {
             "max_hypotheses_total": 1000,

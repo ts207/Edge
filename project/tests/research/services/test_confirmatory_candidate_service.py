@@ -369,3 +369,60 @@ def test_build_confirmatory_workflow_payload_recommends_promotion_review_for_str
 
     assert payload["workflow_status"] == "confirmatory_strict_pass"
     assert payload["next_action"] == "promotion_review"
+
+
+
+def test_compare_confirmatory_candidates_requires_entry_lag_match(tmp_path):
+    data_root = tmp_path / "data"
+    origin_dir = data_root / "reports" / "edge_candidates" / "origin_run"
+    target_dir = data_root / "reports" / "phase2" / "target_run" / "search_engine"
+    origin_dir.mkdir(parents=True, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "origin_1",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "entry_lag_bars": 1,
+                "gate_bridge_tradable": "pass",
+                "q_value": 0.01,
+            }
+        ]
+    ).to_parquet(origin_dir / "edge_candidates_normalized.parquet", index=False)
+
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "target_a",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "entry_lag_bars": 2,
+                "gate_oos_validation": True,
+                "gate_after_cost_positive": True,
+                "gate_after_cost_stressed_positive": True,
+                "gate_bridge_tradable": True,
+                "gate_multiplicity": True,
+                "gate_c_regime_stable": True,
+                "gate_multiplicity_strict": True,
+                "bridge_eval_status": "tradable",
+                "q_value": 0.03,
+            }
+        ]
+    ).to_parquet(target_dir / "phase2_candidates.parquet", index=False)
+
+    payload = svc.compare_confirmatory_candidates(
+        data_root=data_root,
+        origin_run_id="origin_run",
+        target_run_id="target_run",
+    )
+
+    assert "entry_lag_bars" in payload["structural_key_columns"]
+    assert payload["matched_summary"]["matched_structural_rows"] == 0

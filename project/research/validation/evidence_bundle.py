@@ -92,6 +92,12 @@ def _optional_bool_gate(row: Dict[str, Any], *keys: str) -> bool | None:
     return bool(as_bool(value))
 
 
+def _set_optional_bool(target: Dict[str, Any], row: Dict[str, Any], key: str, *aliases: str) -> None:
+    value = _optional_bool_gate(row, key, *aliases)
+    if value is not None:
+        target[key] = value
+
+
 def _normalize_returns_oos_combined(value: Any) -> list[float]:
     if value is None:
         return []
@@ -262,52 +268,11 @@ def build_evidence_bundle(
             ),
             "robustness_panel_complete": bool(as_bool(row.get("robustness_panel_complete", False))),
             "num_regimes_supported": int(safe_int(row.get("num_regimes", 0), 0)),
-            "gate_stability": _bool_gate_value(row, "gate_stability", True),
-            "gate_after_cost_stressed_positive": _bool_gate_value(
-                row, "gate_after_cost_stressed_positive", True
-            ),
-            "gate_delayed_entry_stress": _bool_gate_value(row, "gate_delayed_entry_stress", True),
-            "gate_promo_hypothesis_audit": _bool_gate_value(
-                row, "gate_promo_hypothesis_audit", True
-            ),
-            "gate_promo_oos_validation": _bool_gate_value(row, "gate_promo_oos_validation", True),
-            "gate_promo_retail_viability": _bool_gate_value(
-                row, "gate_promo_retail_viability", True
-            ),
-            "gate_promo_low_capital_viability": _bool_gate_value(
-                row, "gate_promo_low_capital_viability", True
-            ),
-            "gate_promo_negative_control": _bool_gate_value(
-                row, "gate_promo_negative_control", bool(falsification.negative_control_pass)
-            ),
-            "gate_promo_falsification": _bool_gate_value(
-                row, "gate_promo_falsification", bool(falsification.passes_control)
-            ),
-            "gate_promo_baseline_beats_complexity": _bool_gate_value(
-                row, "gate_promo_baseline_beats_complexity", True
-            ),
-            "gate_promo_placebo_controls": _bool_gate_value(
-                row,
-                "gate_promo_placebo_controls",
-                bool(
-                    falsification.shift_placebo_pass
-                    and falsification.random_placebo_pass
-                    and falsification.direction_reversal_pass
-                ),
-            ),
-            "gate_promo_tob_coverage": _bool_gate_value(
-                row, "gate_promo_tob_coverage", tob_gate_default
-            ),
-            "gate_promo_dsr": _bool_gate_value(row, "gate_promo_dsr", True),
-            "gate_promo_robustness": _bool_gate_value(row, "gate_promo_robustness", True),
-            "gate_promo_regime": _bool_gate_value(row, "gate_promo_regime", True),
-            "gate_promo_multiplicity_confirmatory": _bool_gate_value(
-                row, "gate_promo_multiplicity_confirmatory", True
-            ),
             "promotion_track_hint": "standard"
             if _bool_gate_value(row, "gate_promo_tob_coverage", tob_gate_default)
             else "fallback_only",
         },
+
         policy_version=policy_version,
         bundle_version=bundle_version,
     )
@@ -315,6 +280,22 @@ def build_evidence_bundle(
         bundle.cost_robustness["microstructure_pass"] = microstructure_pass
     else:
         bundle.cost_robustness.pop("microstructure_pass", None)
+    _set_optional_bool(bundle.metadata, row, "gate_stability")
+    _set_optional_bool(bundle.metadata, row, "gate_after_cost_stressed_positive")
+    _set_optional_bool(bundle.metadata, row, "gate_delayed_entry_stress")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_hypothesis_audit")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_oos_validation")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_retail_viability")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_low_capital_viability")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_negative_control")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_falsification")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_baseline_beats_complexity")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_placebo_controls")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_tob_coverage")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_dsr")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_robustness")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_regime")
+    _set_optional_bool(bundle.metadata, row, "gate_promo_multiplicity_confirmatory")
     if gate_delay_robustness is not None:
         bundle.metadata["gate_delay_robustness"] = gate_delay_robustness
     else:
@@ -431,7 +412,7 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
             else "missing_evidence"
         ),
         "multiplicity_confirmatory": _gate_state(
-            meta.get("gate_promo_multiplicity_confirmatory"), "pass"
+            meta.get("gate_promo_multiplicity_confirmatory"), "missing_evidence"
         ),
         "stability": (
             "pass"
@@ -440,12 +421,16 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
                 >= float(policy.min_stability_score)
                 and safe_float(stability.get("sign_consistency", np.nan), np.nan)
                 >= float(policy.min_sign_consistency)
-                and as_bool(meta.get("gate_stability", True))
-                and as_bool(stability.get("delay_robustness_pass", True))
+                and meta.get("gate_stability") is True
+                and as_bool(stability.get("delay_robustness_pass", False))
             )
             else (
                 "missing_evidence"
-                if not np.isfinite(safe_float(stability.get("stability_score", np.nan), np.nan))
+                if (
+                    not np.isfinite(safe_float(stability.get("stability_score", np.nan), np.nan))
+                    or "gate_stability" not in meta
+                    or "delay_robustness_pass" not in stability
+                )
                 else "fail"
             )
         ),

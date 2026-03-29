@@ -92,7 +92,7 @@ def test_golden_synthetic_discovery_applies_narrowing_overrides(
                 "end_date: 2026-01-14",
                 "events: [FND_DISLOC]",
                 "templates: [continuation]",
-                "entry_lags: [0, 1]",
+                "entry_lags: [1, 2]",
                 "search_budget: 32",
                 "required_outputs:",
                 "  - synthetic/{run_id}/synthetic_generation_manifest.json",

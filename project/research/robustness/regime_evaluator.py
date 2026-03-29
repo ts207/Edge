@@ -55,12 +55,11 @@ def evaluate_by_regime(
     if features.empty or "close" not in features.columns:
         return pd.DataFrame()
 
-    # Trigger mask (no entry lag)
+    # Trigger mask with explicit entry-lag guardrail
+    if spec.entry_lag < 1:
+        raise ValueError("entry_lag must be >= 1 to prevent same-bar entry leakage")
     mask_raw = trigger_mask(spec, features)
-    if spec.entry_lag > 0:
-        mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
-    else:
-        mask = mask_raw
+    mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
 
     # Feature condition
     if spec.feature_condition is not None:
@@ -140,7 +139,7 @@ def evaluate_by_regime(
             {
                 "regime": regime,
                 "n": n_valid,
-                "mean_return_bps": round(mean_r * _BPS, 4),
+                "mean_return_bps": round(mean_r, 4),
                 "t_stat": round(t, 4),
                 "hit_rate": round(hit_rate, 4),
                 "valid": True,

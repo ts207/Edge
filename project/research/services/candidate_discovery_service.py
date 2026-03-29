@@ -199,6 +199,7 @@ def _split_and_score_candidates(*args: Any, **kwargs: Any) -> pd.DataFrame:
 
 
 _apply_validation_multiple_testing = apply_validation_multiple_testing
+_apply_historical_frontier_multiple_testing = candidate_scoring.apply_historical_frontier_multiple_testing
 
 
 def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDiscoveryResult:
@@ -415,6 +416,14 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 entry_lag_bars=config.entry_lag_bars,
                 shift_labels_k=config.shift_labels_k,
                 cost_estimate=cost_estimate,
+                cost_coordinate={
+                    "config_digest": str(getattr(resolved_costs, "config_digest", "") or ""),
+                    "execution_model": dict(getattr(resolved_costs, "execution_model", {}) or {}),
+                    "after_cost_includes_funding_carry": True,
+                    "fee_bps_per_side": float(getattr(resolved_costs, "fee_bps_per_side", 0.0) or 0.0),
+                    "slippage_bps_per_fill": float(getattr(resolved_costs, "slippage_bps_per_fill", 0.0) or 0.0),
+                    "cost_bps": float(getattr(resolved_costs, "cost_bps", 0.0) or 0.0),
+                },
             )
             symbol_diag["post_split_candidate_rows"] = int(len(candidates))
             if "validation_n_obs" in candidates.columns or "test_n_obs" in candidates.columns:
@@ -457,6 +466,11 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
         if event_frames:
             combined = pd.concat(event_frames, ignore_index=True)
             combined = apply_validation_multiple_testing(combined)
+            combined = _apply_historical_frontier_multiple_testing(
+                combined,
+                data_root=config.data_root,
+                current_run_id=config.run_id,
+            )
             combined = apply_sample_quality_gates(
                 combined,
                 min_validation_n_obs=int(sample_quality_policy["min_validation_n_obs"]),
@@ -506,6 +520,8 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                     "cost_bps": float(resolved_costs.cost_bps),
                     "fee_bps_per_side": float(resolved_costs.fee_bps_per_side),
                     "slippage_bps_per_fill": float(resolved_costs.slippage_bps_per_fill),
+                    "execution_model": dict(getattr(resolved_costs, "execution_model", {}) or {}),
+                    "after_cost_includes_funding_carry": True,
                 },
                 "symbols_requested": list(config.symbols),
                 "symbols_with_candidates": sorted(symbol_candidates),

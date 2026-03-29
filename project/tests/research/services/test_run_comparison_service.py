@@ -698,3 +698,81 @@ def test_assess_run_comparison_skips_edge_and_promotion_enforcement_when_artifac
     assert assessed["violation_count"] == 0
     assert any("promotion artifact missing" in note for note in assessed["notes"])
     assert any("edge candidate artifact missing" in note for note in assessed["notes"])
+
+
+
+def test_compare_run_ids_reports_symbol_and_cost_digest_incompatibility(tmp_path: Path):
+    data_root = tmp_path / "data"
+    import pandas as pd
+
+    for run_id, symbols, digest in [
+        ("baseline_run", ["BTCUSDT"], "digest_a"),
+        ("candidate_run", ["ETHUSDT"], "digest_b"),
+    ]:
+        _write_json(
+            data_root / "runs" / run_id / "run_manifest.json",
+            {
+                "run_id": run_id,
+                "status": "success",
+                "normalized_symbols": symbols,
+                "split_scheme_id": "standard",
+                "entry_lag_bars": 1,
+                "horizon_bars": 12,
+                "purge_bars": 12,
+                "embargo_bars": 2,
+            },
+        )
+        _write_json(
+            data_root / "reports" / "phase2" / run_id / "phase2_diagnostics.json",
+            {
+                "discovery_profile": "standard",
+                "search_spec": "spec/search_space.yaml",
+                "cost_coordinate": {
+                    "config_digest": digest,
+                    "after_cost_includes_funding_carry": True,
+                },
+            },
+        )
+        _write_json(
+            data_root / "reports" / "promotions" / run_id / "promotion_diagnostics.json",
+            {"decision_summary": {"candidates_total": 1, "promoted_count": 0, "rejected_count": 1}},
+        )
+        edge_path = data_root / "reports" / "edge_candidates" / run_id / "edge_candidates_normalized.parquet"
+        edge_path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(
+            [
+                {
+                    "gate_bridge_tradable": "pass",
+                    "resolved_cost_bps": 1.0,
+                    "expectancy_bps": 2.0,
+                    "gate_bridge_after_cost_positive_validation": True,
+                    "bridge_validation_after_cost_bps": 1.0,
+                    "cost_config_digest": digest,
+                    "cost_model_source": "tob_regime",
+                    "after_cost_includes_funding_carry": True,
+                }
+            ]
+        ).to_parquet(edge_path)
+
+    _write_json(
+        data_root / "reports" / "regime_effectiveness" / "baseline_run" / "regime_effectiveness_summary.json",
+        {"status": "ok"},
+    )
+    _write_json(
+        data_root / "reports" / "regime_effectiveness" / "candidate_run" / "regime_effectiveness_summary.json",
+        {"status": "ok"},
+    )
+
+    comparison = svc.compare_run_ids(
+        data_root=data_root,
+        baseline_run_id="baseline_run",
+        candidate_run_id="candidate_run",
+    )
+    compatibility = comparison["compatibility"]
+    assessed = svc.assess_run_comparison(comparison, mode="warn")
+
+    assert compatibility["comparable"] is False
+    assert any("symbol universe mismatch" in message for message in compatibility["reasons"])
+    assert any("cost digest mismatch" in message for message in compatibility["reasons"])
+    assert assessed["status"] == "warn"
+    assert any("run compatibility:" in message for message in assessed["violations"])

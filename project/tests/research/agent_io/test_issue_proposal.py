@@ -54,7 +54,7 @@ def _write_registry(reg_dir: Path) -> None:
                 "defaults": {
                     "horizons_bars": [12, 24],
                     "directions": ["long", "short"],
-                    "entry_lags": [0, 1],
+                    "entry_lags": [1, 2],
                 },
             }
         )
@@ -86,7 +86,7 @@ def _write_proposal(path: Path) -> None:
                 "contexts": {"session": ["open"]},
                 "horizons_bars": [12],
                 "directions": ["long", "short"],
-                "entry_lags": [0],
+                "entry_lags": [1],
             }
         ),
         encoding="utf-8",

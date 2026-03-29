@@ -110,6 +110,189 @@ def _as_string_list(value: Any) -> list[str]:
     return [str(item) for item in value if str(item).strip()]
 
 
+def _normalize_string_token(value: Any) -> str:
+    text = str(value or "").strip()
+    return "" if text.lower() in {"", "nan", "none", "null"} else text
+
+
+def _manifest_symbol_universe(manifest: Mapping[str, Any]) -> list[str]:
+    symbols = manifest.get("normalized_symbols")
+    if isinstance(symbols, list):
+        normalized = sorted({str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()})
+        if normalized:
+            return normalized
+    raw = str(manifest.get("symbols", "") or "").strip()
+    if not raw:
+        return []
+    return sorted({token.strip().upper() for token in raw.split(",") if token.strip()})
+
+
+def _phase2_contract_summary(diagnostics: Mapping[str, Any], manifest: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        "discovery_profile": _normalize_string_token(diagnostics.get("discovery_profile", manifest.get("discovery_profile", ""))),
+        "search_spec": _normalize_string_token(diagnostics.get("search_spec", manifest.get("search_spec", ""))),
+        "split_scheme_id": _normalize_string_token(manifest.get("split_scheme_id", "")),
+        "entry_lag_bars": _as_int(manifest.get("entry_lag_bars", 0)),
+        "horizon_bars": _as_int(manifest.get("horizon_bars", 0)),
+        "purge_bars": _as_int(manifest.get("purge_bars", 0)),
+        "embargo_bars": _as_int(manifest.get("embargo_bars", 0)),
+    }
+
+
+def _edge_candidate_metadata(frame: pd.DataFrame) -> Dict[str, Any]:
+    if frame.empty:
+        return {
+            "required_columns_present": {},
+            "cost_config_digests": [],
+            "cost_model_sources": [],
+            "after_cost_includes_funding_carry": [],
+            "columns": [],
+        }
+    required_columns = [
+        "gate_bridge_tradable",
+        "resolved_cost_bps",
+        "expectancy_bps",
+        "gate_bridge_after_cost_positive_validation",
+        "bridge_validation_after_cost_bps",
+    ]
+    def _unique_values(column: str) -> list[str]:
+        if column not in frame.columns:
+            return []
+        series = frame[column]
+        normalized = [
+            _normalize_string_token(value)
+            for value in series.tolist()
+        ]
+        return sorted({value for value in normalized if value})
+    return {
+        "required_columns_present": {column: bool(column in frame.columns) for column in required_columns},
+        "cost_config_digests": _unique_values("cost_config_digest"),
+        "cost_model_sources": _unique_values("cost_model_source"),
+        "after_cost_includes_funding_carry": _unique_values("after_cost_includes_funding_carry"),
+        "columns": sorted(str(column) for column in frame.columns),
+    }
+
+
+def _compare_value_sets(
+    *,
+    baseline_values: Sequence[str],
+    candidate_values: Sequence[str],
+    label: str,
+    reasons: list[str],
+    notes: list[str],
+) -> None:
+    base = [value for value in baseline_values if _normalize_string_token(value)]
+    cand = [value for value in candidate_values if _normalize_string_token(value)]
+    if base and cand and base != cand:
+        reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
+    elif (base and not cand) or (cand and not base):
+        notes.append(f"{label} unavailable for one run; strict compatibility could not be verified")
+
+
+def _build_run_comparison_compatibility(
+    *,
+    baseline_manifest: Mapping[str, Any],
+    candidate_manifest: Mapping[str, Any],
+    baseline_phase2_diag: Mapping[str, Any],
+    candidate_phase2_diag: Mapping[str, Any],
+    baseline_edge_frame: pd.DataFrame,
+    candidate_edge_frame: pd.DataFrame,
+) -> Dict[str, Any]:
+    reasons: list[str] = []
+    notes: list[str] = []
+
+    baseline_symbols = _manifest_symbol_universe(baseline_manifest)
+    candidate_symbols = _manifest_symbol_universe(candidate_manifest)
+    if baseline_symbols and candidate_symbols and baseline_symbols != candidate_symbols:
+        reasons.append(
+            f"symbol universe mismatch: baseline={baseline_symbols} candidate={candidate_symbols}"
+        )
+    elif (baseline_symbols and not candidate_symbols) or (candidate_symbols and not baseline_symbols):
+        notes.append("symbol universe unavailable for one run; strict compatibility could not be verified")
+
+    baseline_contract = _phase2_contract_summary(baseline_phase2_diag, baseline_manifest)
+    candidate_contract = _phase2_contract_summary(candidate_phase2_diag, candidate_manifest)
+    for label in ("discovery_profile", "search_spec", "split_scheme_id"):
+        base = _normalize_string_token(baseline_contract.get(label, ""))
+        cand = _normalize_string_token(candidate_contract.get(label, ""))
+        if base and cand and base != cand:
+            reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
+        elif (base and not cand) or (cand and not base):
+            notes.append(f"{label} unavailable for one run; strict compatibility could not be verified")
+    for label in ("entry_lag_bars", "horizon_bars", "purge_bars", "embargo_bars"):
+        base = _as_int(baseline_contract.get(label, 0))
+        cand = _as_int(candidate_contract.get(label, 0))
+        if base > 0 and cand > 0 and base != cand:
+            reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
+        elif (base > 0 and cand <= 0) or (cand > 0 and base <= 0):
+            notes.append(f"{label} unavailable for one run; strict compatibility could not be verified")
+
+    baseline_coordinate = dict(baseline_phase2_diag.get("cost_coordinate", {}))
+    candidate_coordinate = dict(candidate_phase2_diag.get("cost_coordinate", {}))
+    base_digest = _normalize_string_token(baseline_coordinate.get("config_digest", ""))
+    cand_digest = _normalize_string_token(candidate_coordinate.get("config_digest", ""))
+    if base_digest and cand_digest and base_digest != cand_digest:
+        reasons.append(f"cost digest mismatch: baseline={base_digest} candidate={cand_digest}")
+    elif (base_digest and not cand_digest) or (cand_digest and not base_digest):
+        notes.append("cost digest unavailable for one run; strict compatibility could not be verified")
+
+    base_funding_flag = _normalize_string_token(baseline_coordinate.get("after_cost_includes_funding_carry", ""))
+    cand_funding_flag = _normalize_string_token(candidate_coordinate.get("after_cost_includes_funding_carry", ""))
+    if base_funding_flag and cand_funding_flag and base_funding_flag != cand_funding_flag:
+        reasons.append(
+            "after-cost funding-carry policy mismatch: "
+            f"baseline={base_funding_flag} candidate={cand_funding_flag}"
+        )
+
+    baseline_edge_meta = _edge_candidate_metadata(baseline_edge_frame)
+    candidate_edge_meta = _edge_candidate_metadata(candidate_edge_frame)
+    for column, present in baseline_edge_meta["required_columns_present"].items():
+        cand_present = bool(candidate_edge_meta["required_columns_present"].get(column, False))
+        if present != cand_present:
+            reasons.append(
+                f"edge metric schema mismatch for column '{column}': baseline={present} candidate={cand_present}"
+            )
+    _compare_value_sets(
+        baseline_values=baseline_edge_meta["cost_config_digests"],
+        candidate_values=candidate_edge_meta["cost_config_digests"],
+        label="edge cost digest",
+        reasons=reasons,
+        notes=notes,
+    )
+    _compare_value_sets(
+        baseline_values=baseline_edge_meta["cost_model_sources"],
+        candidate_values=candidate_edge_meta["cost_model_sources"],
+        label="edge cost model sources",
+        reasons=reasons,
+        notes=notes,
+    )
+    _compare_value_sets(
+        baseline_values=baseline_edge_meta["after_cost_includes_funding_carry"],
+        candidate_values=candidate_edge_meta["after_cost_includes_funding_carry"],
+        label="edge after-cost funding-carry flags",
+        reasons=reasons,
+        notes=notes,
+    )
+
+    return {
+        "comparable": not reasons,
+        "reasons": reasons,
+        "notes": notes,
+        "baseline": {
+            "symbols": baseline_symbols,
+            "phase2_contract": baseline_contract,
+            "cost_coordinate": baseline_coordinate,
+            "edge_candidate_metadata": baseline_edge_meta,
+        },
+        "candidate": {
+            "symbols": candidate_symbols,
+            "phase2_contract": candidate_contract,
+            "cost_coordinate": candidate_coordinate,
+            "edge_candidate_metadata": candidate_edge_meta,
+        },
+    }
+
+
 def summarize_phase2_distribution(diagnostics: Mapping[str, Any]) -> Dict[str, Any]:
     false_diag = diagnostics.get("false_discovery_diagnostics", {})
     global_diag = false_diag.get("global", {})
@@ -419,7 +602,7 @@ def compare_run_ids(
 ) -> Dict[str, Any]:
     baseline_paths = research_diagnostics_paths(data_root=data_root, run_id=baseline_run_id)
     candidate_paths = research_diagnostics_paths(data_root=data_root, run_id=candidate_run_id)
-    return compare_run_reports(
+    comparison = compare_run_reports(
         baseline_phase2_path=baseline_paths["phase2"],
         candidate_phase2_path=candidate_paths["phase2"],
         baseline_promotion_path=baseline_paths["promotion"],
@@ -429,6 +612,15 @@ def compare_run_ids(
         baseline_regime_effectiveness_path=baseline_paths["regime_effectiveness"],
         candidate_regime_effectiveness_path=candidate_paths["regime_effectiveness"],
     )
+    comparison["compatibility"] = _build_run_comparison_compatibility(
+        baseline_manifest=_read_json(_run_manifest_path(data_root=data_root, run_id=baseline_run_id)),
+        candidate_manifest=_read_json(_run_manifest_path(data_root=data_root, run_id=candidate_run_id)),
+        baseline_phase2_diag=_read_json(baseline_paths["phase2"]),
+        candidate_phase2_diag=_read_json(candidate_paths["phase2"]),
+        baseline_edge_frame=_read_parquet(baseline_paths["edge_candidates"]),
+        candidate_edge_frame=_read_parquet(candidate_paths["edge_candidates"]),
+    )
+    return comparison
 
 
 def resolve_drift_thresholds(
@@ -458,6 +650,9 @@ def assess_run_comparison(
     reject_reason_shift = dict(comparison.get("promotion", {}).get("reject_reason_shift", {}))
     edge_delta = dict(comparison.get("edge_candidates", {}).get("delta", {}))
     regime_delta = dict(comparison.get("regime_effectiveness", {}).get("delta", {}))
+    compatibility = dict(comparison.get("compatibility", {}))
+    compatibility_reasons = [str(message) for message in compatibility.get("reasons", [])]
+    compatibility_notes = [str(message) for message in compatibility.get("notes", [])]
     artifacts = dict(comparison.get("artifacts", {}))
     promotion_artifacts = dict(artifacts.get("promotion", {}))
     edge_artifacts = dict(artifacts.get("edge_candidates", {}))
@@ -571,7 +766,11 @@ def assess_run_comparison(
             )
 
     violations = [message for failed, message in checks if failed]
-    notes: list[str] = []
+    if compatibility and not bool(compatibility.get("comparable", True)):
+        violations.extend([f"run compatibility: {message}" for message in compatibility_reasons])
+    notes: list[str] = list(compatibility_notes)
+    if compatibility and not bool(compatibility.get("comparable", True)):
+        notes.append("run compatibility checks failed; drift deltas may compare unlike with unlike")
     if profile_mismatch:
         notes.append(
             "phase2 profile/search-spec mismatch detected; candidate-count drift threshold was not enforced"
@@ -604,6 +803,7 @@ def assess_run_comparison(
         "notes": notes,
         "profile_mismatch": bool(profile_mismatch),
         "thresholds": resolved_thresholds,
+        "compatibility": compatibility,
     }
 
 
@@ -614,12 +814,14 @@ def render_run_comparison_summary(payload: Mapping[str, Any]) -> str:
     promotion = dict(comparison.get("promotion", {}))
     edge_candidates = dict(comparison.get("edge_candidates", {}))
     regime_effectiveness = dict(comparison.get("regime_effectiveness", {}))
+    compatibility = dict(comparison.get("compatibility", {}))
     lines = [
         "# Research Run Comparison",
         "",
         f"Baseline run: {payload.get('baseline_run_id', '')}",
         f"Candidate run: {payload.get('candidate_run_id', '')}",
         f"Assessment: {assessment.get('status', 'unknown')} ({assessment.get('mode', 'warn')})",
+        f"Comparable: {compatibility.get('comparable', True)}",
         "",
         "## Phase 2",
         f"- candidate delta: {phase2.get('delta', {}).get('candidate_count', 0)}",
@@ -650,6 +852,10 @@ def render_run_comparison_summary(payload: Mapping[str, Any]) -> str:
         "",
         "## Alerts",
     ]
+    compatibility_reasons = list(compatibility.get("reasons", []))
+    if compatibility_reasons:
+        lines.extend(["", "## Compatibility"])
+        lines.extend([f"- {message}" for message in compatibility_reasons])
     violations = list(assessment.get("violations", []))
     if violations:
         lines.extend([f"- {message}" for message in violations])

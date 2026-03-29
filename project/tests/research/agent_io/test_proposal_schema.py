@@ -35,7 +35,7 @@ def test_proposal_validation_warns_on_proxy_tier_events():
         "templates": ["continuation"],
         "horizons_bars": [12],
         "directions": ["long"],
-        "entry_lags": [0],
+        "entry_lags": [1],
     }
     warnings = validate_proposal_with_warnings(payload)
     proxy_warnings = [w for w in warnings if "proxy" in w.lower() and "ABSORPTION_EVENT" in w]
@@ -62,7 +62,7 @@ def test_proposal_schema_accepts_canonical_regimes_without_explicit_events():
         "templates": ["continuation"],
         "horizons_bars": [12],
         "directions": ["long"],
-        "entry_lags": [0],
+        "entry_lags": [1],
     }
 
     proposal = load_agent_proposal(payload)

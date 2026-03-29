@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Callable, Optional
 
 import numpy as np
@@ -20,6 +21,7 @@ from project.research.validation import (
     estimate_effect_from_frame,
     resolve_split_scheme,
 )
+from project.research.validation.purging import compute_event_windows
 from project.research.multiplicity import simes_p_value
 from project.research.gating import bh_adjust
 
@@ -53,7 +55,7 @@ def _evaluation_mask(split_labels: pd.Series) -> pd.Series:
     if not bool(evaluation_mask.any()):
         evaluation_mask = split_labels != "train"
     if not bool(evaluation_mask.any()):
-        evaluation_mask = pd.Series(True, index=split_labels.index)
+        evaluation_mask = pd.Series(False, index=split_labels.index)
     return evaluation_mask.astype(bool)
 
 
@@ -184,6 +186,8 @@ def _build_confirmatory_evidence(
             "pass_random_entry_placebo": False,
             "pass_direction_reversal_placebo": False,
             "control_pass_rate": 1.0,
+            "funding_carry_eval_coverage": 0.0,
+            "mean_funding_carry_bps": 0.0,
         }
 
     labels = _split_labels(return_frame)
@@ -201,6 +205,15 @@ def _build_confirmatory_evidence(
         else _numeric_series(eval_frame, "forward_return")
     ).dropna()
     costs_bps = (_numeric_series(eval_frame, "cost_return", default=0.0).fillna(0.0) * 1e4).tolist()
+    funding_present = (
+        eval_frame.get("funding_carry_present", pd.Series(False, index=eval_frame.index))
+        if not eval_frame.empty
+        else pd.Series(dtype=bool)
+    )
+    funding_present = funding_present.fillna(False).astype(bool)
+    funding_carry = _numeric_series(eval_frame, "funding_carry_return", default=0.0).fillna(0.0)
+    funding_carry_eval_coverage = float(funding_present.mean()) if len(funding_present) else 0.0
+    mean_funding_carry_bps = float(funding_carry[funding_present].mean() * 1e4) if bool(funding_present.any()) else 0.0
     if "event_ts" in eval_frame.columns:
         event_ts = pd.to_datetime(eval_frame["event_ts"], utc=True, errors="coerce").dropna()
         timestamps = [ts.isoformat() for ts in event_ts.tolist()]
@@ -313,6 +326,7 @@ def split_and_score_candidates(
     entry_lag_bars: int = 1,
     shift_labels_k: int = 0,
     cost_estimate: Optional[object] = None,
+    cost_coordinate: Optional[dict[str, object]] = None,
     alpha: float = 0.05,
     build_event_return_frame_fn: Callable[..., pd.DataFrame] = build_event_return_frame,
     estimate_effect_from_frame_fn: Callable[..., object] = estimate_effect_from_frame,
@@ -328,6 +342,16 @@ def split_and_score_candidates(
         if "enter_ts" in working.columns
         else ("timestamp" if "timestamp" in working.columns else None)
     )
+    cost_coordinate_payload = dict(cost_coordinate or {})
+    resolved_cost_digest = str(cost_coordinate_payload.get("config_digest", "") or "")
+    resolved_execution_model_json = "{}"
+    execution_model_payload = cost_coordinate_payload.get("execution_model")
+    if isinstance(execution_model_payload, dict):
+        resolved_execution_model_json = json.dumps(execution_model_payload, sort_keys=True)
+    after_cost_includes_funding_carry = bool(
+        cost_coordinate_payload.get("after_cost_includes_funding_carry", True)
+    )
+
     if time_col is None:
         out = candidates.copy()
         out["p_value"] = np.nan
@@ -340,6 +364,11 @@ def split_and_score_candidates(
         out["n_obs"] = 0
         out["n_clusters"] = 0
         out["split_scheme_id"] = resolved_split_scheme_id
+        out["cost_config_digest"] = resolved_cost_digest
+        out["execution_model_json"] = resolved_execution_model_json
+        out["after_cost_includes_funding_carry"] = bool(after_cost_includes_funding_carry)
+        out["funding_carry_eval_coverage"] = 0.0
+        out["mean_funding_carry_bps"] = 0.0
         return out
 
     split_plan_id = (
@@ -379,6 +408,9 @@ def split_and_score_candidates(
     out["bar_duration_minutes"] = int(bar_duration_minutes)
     out["resolved_train_frac"] = float(train_frac)
     out["resolved_validation_frac"] = float(validation_frac)
+    out["cost_config_digest"] = resolved_cost_digest
+    out["execution_model_json"] = resolved_execution_model_json
+    out["after_cost_includes_funding_carry"] = bool(after_cost_includes_funding_carry)
     if cost_estimate is not None:
         out["resolved_cost_bps"] = float(cost_estimate.cost_bps)
         out["fee_bps_per_side"] = float(cost_estimate.fee_bps_per_side)
@@ -415,7 +447,44 @@ def split_and_score_candidates(
         "shift_placebo": shift_placebo_events,
         "random_placebo": random_placebo_events,
     }
+    prepared_source_events_cache: dict[tuple[object, ...], pd.DataFrame] = {}
     frame_cache: dict[tuple[object, ...], pd.DataFrame] = {}
+
+    def _prepare_source_events_for_frame(
+        source_frame: pd.DataFrame,
+        *,
+        source_kind: str,
+        row_horizon_bars: int,
+        frame_entry_lag_bars: int,
+    ) -> pd.DataFrame:
+        cache_key = (source_kind, int(row_horizon_bars), int(frame_entry_lag_bars))
+        cached = prepared_source_events_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        if source_frame.empty or time_col not in source_frame.columns:
+            prepared = pd.DataFrame(columns=list(source_frame.columns))
+        else:
+            prepared = compute_event_windows(
+                source_frame,
+                time_col=time_col,
+                horizon_bars=int(row_horizon_bars),
+                entry_lag_bars=int(frame_entry_lag_bars),
+                bar_duration_minutes=int(bar_duration_minutes),
+            )
+            prepared = assign_split_labels(
+                prepared,
+                time_col=time_col,
+                train_frac=train_frac,
+                validation_frac=validation_frac,
+                embargo_bars=int(embargo_bars),
+                purge_bars=int(purge_bars),
+                bar_duration_minutes=int(bar_duration_minutes),
+                split_col="split_label",
+                event_window_start_col="event_window_start",
+                event_window_end_col="event_window_end",
+            )
+        prepared_source_events_cache[cache_key] = prepared
+        return prepared
 
     def _frame_key(
         *,
@@ -492,8 +561,14 @@ def split_and_score_candidates(
             "cost_bps": float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
             "direction_override": pd.to_numeric(direction_value, errors="coerce"),
         }
-        frame = build_event_return_frame_fn(
+        prepared_events = _prepare_source_events_for_frame(
             source_events[source_kind],
+            source_kind=source_kind,
+            row_horizon_bars=int(row_horizon_bars),
+            frame_entry_lag_bars=int(frame_entry_lag_bars),
+        )
+        frame = build_event_return_frame_fn(
+            prepared_events,
             features_input,
             **kwargs,
         )
@@ -623,8 +698,8 @@ def split_and_score_candidates(
         out.at[idx, "cluster_col"] = str(estimate.cluster_col or "cluster_day")
         out.at[idx, "effect_split_basis"] = (
             "validation_test"
-            if not eval_frame.empty and bool(split_labels.isin(["validation", "test"]).any())
-            else "all"
+            if bool(split_labels.isin(["validation", "test"]).any())
+            else "none"
         )
         out.at[idx, "validation_n_obs"] = int((split_labels == "validation").sum())
         out.at[idx, "test_n_obs"] = int((split_labels == "test").sum())
@@ -659,9 +734,14 @@ def apply_validation_multiple_testing(candidates_df: pd.DataFrame) -> pd.DataFra
     out = candidates_df.copy()
     source_events = out.get("canonical_event_type", out.get("event_type", pd.Series("", index=out.index)))
     out["event_family"] = source_events.map(_canonical_grouping_for_event)
+    out["correction_frontier_id"] = (
+        out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip()
+        + "::"
+        + out.get("horizon", pd.Series("", index=out.index)).astype(str).str.strip()
+    )
     out = assign_test_families(
         out,
-        family_cols=["run_id", "event_family", "horizon"],
+        family_cols=["event_family", "horizon"],
         out_col="correction_family_id",
     )
     out = apply_multiple_testing(
@@ -721,4 +801,117 @@ def apply_validation_multiple_testing(candidates_df: pd.DataFrame) -> pd.DataFra
     out["is_discovery_by"] = out["q_value_by"].fillna(1.0) <= 0.10
     out["is_discovery_cluster"] = out["q_value_cluster"].fillna(1.0) <= 0.10
     out["gate_multiplicity"] = out["is_discovery"].astype(bool)
+    return out
+
+
+
+def _candidate_run_id_from_phase2_path(path: Path) -> str:
+    parts = list(path.parts)
+    if "phase2" in parts:
+        idx = parts.index("phase2")
+        if idx + 1 < len(parts):
+            return str(parts[idx + 1])
+    return ""
+
+
+
+def _historical_phase2_candidate_paths(data_root: Path, *, current_run_id: str) -> list[Path]:
+    reports_root = Path(data_root) / "reports" / "phase2"
+    if not reports_root.exists():
+        return []
+    discovered: list[Path] = []
+    patterns = ["*/search_engine/phase2_candidates.parquet", "*/phase2_candidates.parquet"]
+    for pattern in patterns:
+        for path in reports_root.glob(pattern):
+            run_id = _candidate_run_id_from_phase2_path(path)
+            if not run_id or run_id == str(current_run_id):
+                continue
+            if path not in discovered:
+                discovered.append(path)
+    return sorted(discovered)
+
+
+
+def apply_historical_frontier_multiple_testing(
+    candidates_df: pd.DataFrame,
+    *,
+    data_root: Path,
+    current_run_id: str,
+) -> pd.DataFrame:
+    if candidates_df.empty:
+        return candidates_df.copy()
+    out = candidates_df.copy()
+    if "event_family" not in out.columns:
+        source_events = out.get(
+            "canonical_event_type", out.get("event_type", pd.Series("", index=out.index))
+        )
+        out["event_family"] = source_events.map(_canonical_grouping_for_event)
+    if "correction_frontier_id" not in out.columns:
+        out["correction_frontier_id"] = (
+            out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip()
+            + "::"
+            + out.get("horizon", pd.Series("", index=out.index)).astype(str).str.strip()
+        )
+    out["historical_frontier_test_count"] = 0
+    out["q_value_historical_frontier"] = pd.to_numeric(out.get("q_value", np.nan), errors="coerce")
+    out["gate_multiplicity_frontier"] = out.get("gate_multiplicity", False)
+
+    historical_parts: list[pd.DataFrame] = []
+    for path in _historical_phase2_candidate_paths(Path(data_root), current_run_id=str(current_run_id)):
+        try:
+            hist = pd.read_parquet(path)
+        except Exception:
+            continue
+        if hist.empty or "p_value_raw" not in hist.columns:
+            continue
+        if "event_family" not in hist.columns:
+            source_events = hist.get(
+                "canonical_event_type", hist.get("event_type", pd.Series("", index=hist.index))
+            )
+            hist["event_family"] = source_events.map(_canonical_grouping_for_event)
+        hist["correction_frontier_id"] = (
+            hist.get("event_family", pd.Series("", index=hist.index)).astype(str).str.strip()
+            + "::"
+            + hist.get("horizon", pd.Series("", index=hist.index)).astype(str).str.strip()
+        )
+        hist = hist[["correction_frontier_id", "p_value_raw"]].copy()
+        hist["p_value_raw"] = pd.to_numeric(hist["p_value_raw"], errors="coerce")
+        hist = hist.dropna(subset=["p_value_raw"])
+        if not hist.empty:
+            historical_parts.append(hist)
+
+    if not historical_parts:
+        return out
+
+    historical = pd.concat(historical_parts, ignore_index=True)
+    current_p = pd.to_numeric(out.get("p_value_raw", np.nan), errors="coerce")
+    if current_p.notna().sum() == 0:
+        return out
+
+    for frontier_id, group in out.groupby("correction_frontier_id"):
+        current_idx = list(group.index)
+        current_vals = pd.to_numeric(group.get("p_value_raw"), errors="coerce")
+        current_vals = current_vals.dropna()
+        hist_vals = pd.to_numeric(
+            historical.loc[historical["correction_frontier_id"] == frontier_id, "p_value_raw"],
+            errors="coerce",
+        ).dropna()
+        if current_vals.empty:
+            continue
+        pool = pd.concat([hist_vals.reset_index(drop=True), current_vals.reset_index(drop=True)], ignore_index=True)
+        q_pool = bh_adjust(pool.fillna(1.0).to_numpy())
+        q_current = q_pool[len(hist_vals):]
+        out.loc[current_idx, "historical_frontier_test_count"] = int(len(pool))
+        out.loc[current_vals.index, "q_value_historical_frontier"] = q_current
+        out.loc[current_vals.index, "gate_multiplicity_frontier"] = q_current <= 0.10
+
+    local_q = pd.to_numeric(out.get("q_value", np.nan), errors="coerce")
+    frontier_q = pd.to_numeric(out.get("q_value_historical_frontier", np.nan), errors="coerce")
+    combined_q = np.where(local_q.notna() & frontier_q.notna(), np.maximum(local_q, frontier_q), np.where(frontier_q.notna(), frontier_q, local_q))
+    out["q_value_run_local"] = local_q
+    out["q_value"] = combined_q
+    out["gate_multiplicity_run_local"] = out.get("gate_multiplicity", False)
+    out["gate_multiplicity"] = pd.Series(combined_q, index=out.index).fillna(1.0) <= 0.10
+    out["is_discovery"] = out["gate_multiplicity"].astype(bool)
+    out["correction_scope_policy"] = "historical_frontier_bh"
     return out

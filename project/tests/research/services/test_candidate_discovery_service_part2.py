@@ -423,15 +423,16 @@ def test_split_and_score_candidates_emits_confirmatory_evidence(monkeypatch):
             },
         ]
     )
+    timestamps = pd.date_range("2024-01-01", periods=16, freq="5min", tz="UTC")
     events = pd.DataFrame(
         {
-            "enter_ts": pd.date_range("2024-01-01", periods=6, freq="5min", tz="UTC"),
-            "timestamp": pd.date_range("2024-01-01", periods=6, freq="5min", tz="UTC"),
-            "symbol": ["BTCUSDT"] * 6,
-            "event_type": ["VOL_SHOCK"] * 6,
-            "split_label": ["train", "train", "validation", "validation", "test", "test"],
-            "split_plan_id": ["TVT_60_20_20"] * 6,
-            "vol_regime": ["low", "low", "high", "high", "low", "high"],
+            "enter_ts": timestamps,
+            "timestamp": timestamps,
+            "symbol": ["BTCUSDT"] * len(timestamps),
+            "event_type": ["VOL_SHOCK"] * len(timestamps),
+            "split_label": ["train"] * 8 + ["validation"] * 4 + ["test"] * 4,
+            "split_plan_id": ["TVT_60_20_20"] * len(timestamps),
+            "vol_regime": ["low" if idx % 2 == 0 else "high" for idx in range(len(timestamps))],
         }
     )
     features = pd.DataFrame(
@@ -499,11 +500,17 @@ def test_split_and_score_candidates_emits_confirmatory_evidence(monkeypatch):
     )
 
     row = out.iloc[0]
-    assert len(json.loads(row["returns_oos_combined"])) == 4
-    assert len(json.loads(row["pnl_series"])) == 4
-    assert len(json.loads(row["timestamps"])) == 4
-    assert len(json.loads(row["fold_scores"])) == 3
-    assert json.loads(row["regime_counts"]) == {"high": 3, "low": 1}
+    returns_oos = json.loads(row["returns_oos_combined"])
+    pnl_series = json.loads(row["pnl_series"])
+    timestamps = json.loads(row["timestamps"])
+    fold_scores = json.loads(row["fold_scores"])
+    regime_counts = json.loads(row["regime_counts"])
+
+    assert len(returns_oos) == 4
+    assert len(pnl_series) == 4
+    assert len(timestamps) == 4
+    assert len(fold_scores) == 3
+    assert regime_counts == {"high": 2, "low": 2}
     assert 0.0 <= float(row["control_pass_rate"]) <= 1.0
     assert isinstance(bool(row["gate_delay_robustness"]), bool)
     assert isinstance(bool(row["gate_regime_stability"]), bool)

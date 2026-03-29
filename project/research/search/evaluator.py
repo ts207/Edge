@@ -238,10 +238,10 @@ def evaluate_hypothesis_batch(
         mask_raw = _trigger_mask(spec, features)
 
         # Apply entry lag
-        if spec.entry_lag > 0:
-            mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
-        else:
-            mask = mask_raw
+        if spec.entry_lag < 1:
+            rows.append(_null_row(spec, 0, "entry_lag_guardrail"))
+            continue
+        mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
 
         # Apply context filter (regime conditioning)
         # If context is specified but cannot be resolved to feature columns, skip this hypothesis.

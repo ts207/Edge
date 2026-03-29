@@ -33,8 +33,8 @@ def validate_hypothesis_spec(spec: HypothesisSpec) -> List[str]:
     if not spec.template_id or not spec.template_id.strip():
         errors.append("template_id must not be empty")
 
-    if spec.entry_lag < 0:
-        errors.append(f"entry_lag must be >= 0, got {spec.entry_lag}")
+    if spec.entry_lag < 1:
+        errors.append(f"entry_lag must be >= 1 to prevent same-bar entry leakage, got {spec.entry_lag}")
 
     try:
         spec.trigger.validate()

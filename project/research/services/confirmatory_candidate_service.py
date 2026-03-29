@@ -8,7 +8,23 @@ from typing import Any, Dict, List
 import pandas as pd
 
 
-STRUCTURAL_KEY_COLUMNS = ["symbol", "event_type", "direction", "rule_template", "horizon"]
+BASE_STRUCTURAL_KEY_COLUMNS = ["symbol", "event_type", "direction", "rule_template", "horizon"]
+STRICT_OPTIONAL_STRUCTURAL_KEY_COLUMNS = [
+    "entry_lag_bars",
+    "stop_loss_bps",
+    "take_profit_bps",
+    "stop_loss_atr_multipliers",
+    "take_profit_atr_multipliers",
+    "state_id",
+    "canonical_regime",
+    "regime_bucket",
+    "context_label",
+    "contexts_json",
+    "cost_config_digest",
+    "after_cost_includes_funding_carry",
+    "cost_model_source",
+]
+STRUCTURAL_KEY_COLUMNS = list(BASE_STRUCTURAL_KEY_COLUMNS)
 
 
 def _read_parquet(path: Path) -> pd.DataFrame:
@@ -35,6 +51,40 @@ def _pass_like(value: Any) -> bool:
     return text in {"1", "true", "t", "yes", "y", "on", "pass", "passed", "tradable"}
 
 
+def _column_has_signal(frame: pd.DataFrame, column: str) -> bool:
+    if frame.empty or column not in frame.columns:
+        return False
+    series = frame[column]
+    if series.empty:
+        return False
+    if pd.api.types.is_numeric_dtype(series):
+        return bool(pd.to_numeric(series, errors="coerce").notna().any())
+    normalized = series.astype(str).str.strip().str.lower()
+    return bool((~series.isna() & ~normalized.isin({"", "nan", "none", "null", "[]", "{}"})).any())
+
+
+def _normalize_key_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple, set)):
+        return json.dumps(sorted(str(item) for item in value), separators=(",", ":"))
+    if isinstance(value, dict):
+        return json.dumps(value, sort_keys=True, default=str, separators=(",", ":"))
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if not pd.isna(numeric):
+        return f"{float(numeric):.10g}"
+    text = str(value).strip()
+    return "" if text.lower() in {"nan", "none", "null"} else text
+
+
+def _resolve_structural_key_columns(origin: pd.DataFrame, target: pd.DataFrame) -> List[str]:
+    columns = list(BASE_STRUCTURAL_KEY_COLUMNS)
+    for column in STRICT_OPTIONAL_STRUCTURAL_KEY_COLUMNS:
+        if _column_has_signal(origin, column) or _column_has_signal(target, column):
+            columns.append(column)
+    return columns
+
+
 def _search_engine_gate_pass(frame: pd.DataFrame) -> pd.Series:
     if frame.empty:
         return pd.Series(dtype=bool)
@@ -54,27 +104,27 @@ def _search_engine_gate_pass(frame: pd.DataFrame) -> pd.Series:
     return mask
 
 
-def _normalize_origin_candidates(frame: pd.DataFrame) -> pd.DataFrame:
+def _normalize_origin_candidates(frame: pd.DataFrame, *, key_columns: List[str]) -> pd.DataFrame:
     if frame.empty:
         return frame
     out = frame.copy()
     if "gate_bridge_tradable" in out.columns:
         out = out[out["gate_bridge_tradable"].apply(_pass_like)].copy()
-    for col in STRUCTURAL_KEY_COLUMNS:
+    for col in key_columns:
         if col not in out.columns:
             out[col] = ""
-        out[col] = out[col].astype(str)
+        out[col] = out[col].map(_normalize_key_value)
     return out
 
 
-def _normalize_target_candidates(frame: pd.DataFrame) -> pd.DataFrame:
+def _normalize_target_candidates(frame: pd.DataFrame, *, key_columns: List[str]) -> pd.DataFrame:
     if frame.empty:
         return frame
     out = frame.copy()
-    for col in STRUCTURAL_KEY_COLUMNS:
+    for col in key_columns:
         if col not in out.columns:
             out[col] = ""
-        out[col] = out[col].astype(str)
+        out[col] = out[col].map(_normalize_key_value)
     out["confirmatory_gate_pass"] = _search_engine_gate_pass(out).astype(bool)
     out["confirmatory_bridge_pass"] = (
         out["gate_bridge_tradable"].fillna(False).astype(bool)
@@ -97,7 +147,7 @@ def _normalize_target_candidates(frame: pd.DataFrame) -> pd.DataFrame:
         ],
         ascending=[False, False, False, True],
     )
-    out = out.drop_duplicates(subset=STRUCTURAL_KEY_COLUMNS, keep="first").copy()
+    out = out.drop_duplicates(subset=key_columns, keep="first").copy()
     return out.drop(columns=["_q_sort"], errors="ignore")
 
 
@@ -313,12 +363,15 @@ def compare_confirmatory_candidates(
         / "phase2_candidates.parquet"
     )
 
-    origin = _normalize_origin_candidates(_read_parquet(origin_path))
-    target = _normalize_target_candidates(_read_parquet(target_path))
+    origin_raw = _read_parquet(origin_path)
+    target_raw = _read_parquet(target_path)
+    key_columns = _resolve_structural_key_columns(origin_raw, target_raw)
+    origin = _normalize_origin_candidates(origin_raw, key_columns=key_columns)
+    target = _normalize_target_candidates(target_raw, key_columns=key_columns)
 
     origin_summary = {
         "candidate_count": int(len(origin)),
-        "structural_key_count": int(len(origin[STRUCTURAL_KEY_COLUMNS].drop_duplicates()))
+        "structural_key_count": int(len(origin[key_columns].drop_duplicates()))
         if not origin.empty
         else 0,
     }
@@ -343,6 +396,7 @@ def compare_confirmatory_candidates(
         return {
             "origin_run_id": origin_run_id,
             "target_run_id": target_run_id,
+            "structural_key_columns": key_columns,
             "origin_summary": origin_summary,
             "target_summary": target_summary,
             "matched_summary": {
@@ -357,18 +411,18 @@ def compare_confirmatory_candidates(
             "target_path": str(target_path),
         }
 
-    origin_keyed = origin.drop_duplicates(subset=STRUCTURAL_KEY_COLUMNS).copy()
+    origin_keyed = origin.drop_duplicates(subset=key_columns).copy()
     target_keyed = target.copy()
     merged = origin_keyed.merge(
         target_keyed,
-        on=STRUCTURAL_KEY_COLUMNS,
+        on=key_columns,
         how="inner",
         suffixes=("_origin", "_target"),
     )
 
     matched_summary = {
         "matched_structural_rows": int(len(merged)),
-        "matched_structural_keys": int(len(merged[STRUCTURAL_KEY_COLUMNS].drop_duplicates()))
+        "matched_structural_keys": int(len(merged[key_columns].drop_duplicates()))
         if not merged.empty
         else 0,
         "matched_bridge_pass_count": int(
@@ -412,6 +466,7 @@ def compare_confirmatory_candidates(
     return {
         "origin_run_id": origin_run_id,
         "target_run_id": target_run_id,
+        "structural_key_columns": key_columns,
         "origin_summary": origin_summary,
         "target_summary": target_summary,
         "matched_summary": matched_summary,
@@ -442,27 +497,30 @@ def build_adjacent_survivorship_payload(
         / "search_engine"
         / "phase2_candidates.parquet"
     )
+    origin_raw = _read_parquet(origin_path)
+    target_raw = _read_parquet(target_path)
+    key_columns = _resolve_structural_key_columns(origin_raw, target_raw)
     origin = (
-        _normalize_origin_candidates(_read_parquet(origin_path))
-        .drop_duplicates(subset=STRUCTURAL_KEY_COLUMNS)
+        _normalize_origin_candidates(origin_raw, key_columns=key_columns)
+        .drop_duplicates(subset=key_columns)
         .copy()
     )
-    target = _normalize_target_candidates(_read_parquet(target_path)).copy()
+    target = _normalize_target_candidates(target_raw, key_columns=key_columns).copy()
 
     target_index: Dict[tuple[str, ...], Dict[str, Any]] = {}
     if not target.empty:
         for row in target.to_dict(orient="records"):
-            key = tuple(str(row.get(col, "")) for col in STRUCTURAL_KEY_COLUMNS)
+            key = tuple(str(row.get(col, "")) for col in key_columns)
             target_index[key] = row
 
     rows: List[Dict[str, Any]] = []
     for row in origin.to_dict(orient="records"):
-        key = tuple(str(row.get(col, "")) for col in STRUCTURAL_KEY_COLUMNS)
+        key = tuple(str(row.get(col, "")) for col in key_columns)
         target_row = target_index.get(key, {})
         reasons = _fail_reasons_from_row(target_row)
         rows.append(
             {
-                **{col: row.get(col) for col in STRUCTURAL_KEY_COLUMNS},
+                **{col: row.get(col) for col in key_columns},
                 "origin_candidate_id": row.get("candidate_id"),
                 "origin_q_value": row.get("q_value"),
                 "origin_after_cost_expectancy_per_trade": row.get(
@@ -507,6 +565,7 @@ def build_adjacent_survivorship_payload(
     return {
         "origin_run_id": origin_run_id,
         "target_run_id": target_run_id,
+        "structural_key_columns": key_columns,
         "origin_survivor_count": int(len(origin)),
         "adjacent_survivor_count": int(sum(1 for row in rows if row["survived_adjacent_window"])),
         "failure_reason_counts": failure_reason_counts,
