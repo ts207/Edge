@@ -1,0 +1,21 @@
+event_type: COPULA_PAIRS_TRADING
+synthetic_coverage: covered
+reports_dir: copula_pairs
+events_file: copula_pairs_events.parquet
+signal_column: copula_pairs_trading_event
+parameters:
+  alpha1: 0.05
+  alpha2: 0.95
+  lookback_window: 288
+  cooldown_bars: 12
+canonical_family: STATISTICAL_DISLOCATION
+trigger: Detector triggers on copula pairs trading pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 6-36
+  invalidation_conditions:
+  - Basis normalizes within horizon
+  - Z-score returns to mean
+  disabled_regimes:
+  - 'Low basis volatility: z-score undefined'
+cluster_id: basis_dislocation

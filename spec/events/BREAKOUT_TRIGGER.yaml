@@ -1,0 +1,26 @@
+event_type: BREAKOUT_TRIGGER
+synthetic_coverage: covered
+reports_dir: volatility_transition
+events_file: volatility_transition_events.parquet
+signal_column: breakout_trigger_event
+description: Breakout trigger requires recent range compression followed by a distance-confirmed
+  break beyond the rolling high or low.
+parameters:
+  vol_lookback_window: 96
+  compression_ratio_max: 0.8
+  compression_window: 6
+  min_breakout_distance: 0.0015
+  expansion_quantile: 0.85
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: VOLATILITY_TRANSITION
+trigger: Detector triggers on breakout trigger pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 8-48
+  invalidation_conditions:
+  - Vol re-expands above threshold within horizon
+  - Second shock occurs before resolution
+  disabled_regimes:
+  - 'Low volume: vol computation noise-dominated'
+cluster_id: trend_momentum

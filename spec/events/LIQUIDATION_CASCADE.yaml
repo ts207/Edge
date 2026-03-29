@@ -1,0 +1,21 @@
+event_type: LIQUIDATION_CASCADE
+synthetic_coverage: covered
+reports_dir: liquidation_cascade
+events_file: liquidation_cascade_events.parquet
+signal_column: liquidation_cascade_event
+parameters:
+  liq_multiplier: 3.0
+  median_window: 288
+  liq_vol_th: 100000.0
+  oi_drop_th: -500000.0
+canonical_family: POSITIONING_EXTREMES
+trigger: Detector triggers on liquidation cascade pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 4-24
+  invalidation_conditions:
+  - Position unwinds within expected horizon
+  - Funding reverses sign
+  disabled_regimes:
+  - 'Low liquidity regime: OI/vol signals unreliable'
+cluster_id: forced_liquidation

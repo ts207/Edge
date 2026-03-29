@@ -1,0 +1,21 @@
+event_type: GAP_OVERSHOOT
+synthetic_coverage: covered
+reports_dir: statistical_dislocation
+events_file: statistical_dislocation_events.parquet
+signal_column: gap_overshoot_event
+parameters:
+  lookback_window: 288
+  band_z_threshold: 3.0
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: STATISTICAL_DISLOCATION
+trigger: Detector triggers on gap overshoot pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 6-36
+  invalidation_conditions:
+  - Basis normalizes within horizon
+  - Z-score returns to mean
+  disabled_regimes:
+  - 'Low basis volatility: z-score undefined'
+cluster_id: statistical_stretch

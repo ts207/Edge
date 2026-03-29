@@ -1,0 +1,9 @@
+version: 1
+defaults:
+  numeric_abs_tolerance: 0.0
+metric_tolerances:
+  kpi_scorecard.net_expectancy_bps: 0.25
+  kpi_scorecard.oos_sign_consistency: 0.02
+  kpi_scorecard.max_drawdown_pct: 0.02
+  kpi_scorecard.trade_count: 5.0
+  kpi_scorecard.turnover_proxy_mean: 0.10

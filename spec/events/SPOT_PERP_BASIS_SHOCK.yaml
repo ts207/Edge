@@ -1,0 +1,23 @@
+event_type: SPOT_PERP_BASIS_SHOCK
+synthetic_coverage: covered
+reports_dir: information_desync
+events_file: information_desync_events.parquet
+signal_column: spot_perp_basis_shock_event
+parameters:
+  z_threshold: 5.0
+  shock_change_quantile: 0.95
+  lead_lag_window: 60
+  cooldown_bars: 12
+  merge_gap_bars: 0
+  min_basis_bps: 15.0
+canonical_family: INFORMATION_DESYNC
+trigger: Detector triggers on spot perp basis shock pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 4-24
+  invalidation_conditions:
+  - Desync resolves (assets converge)
+  - Lead-lag relationship resumes
+  disabled_regimes:
+  - 'Low correlation assets: desync undefined'
+cluster_id: desync

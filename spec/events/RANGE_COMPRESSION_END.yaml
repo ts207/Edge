@@ -1,0 +1,22 @@
+event_type: RANGE_COMPRESSION_END
+synthetic_coverage: covered
+reports_dir: volatility_transition
+events_file: volatility_transition_events.parquet
+signal_column: range_compression_end_event
+parameters:
+  vol_lookback_window: 288
+  compression_quantile: 0.1
+  expansion_z_threshold: 2.5
+  cooldown_bars: 12
+  merge_gap_bars: 0
+canonical_family: VOLATILITY_TRANSITION
+trigger: Detector triggers on range compression end pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 8-48
+  invalidation_conditions:
+  - Vol re-expands above threshold within horizon
+  - Second shock occurs before resolution
+  disabled_regimes:
+  - 'Low volume: vol computation noise-dominated'
+cluster_id: vol_regime

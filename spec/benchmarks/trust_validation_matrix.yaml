@@ -1,0 +1,34 @@
+version: 1
+matrix_id: trust_validation_matrix
+description: >
+  Small real-data benchmark matrix used to validate benchmark runner reporting
+  and research matrix summary emission against already ingested BTC/ETH January
+  2021 slices.
+
+defaults:
+  mode: production
+  flags:
+    skip_ingest_ohlcv: 1
+    skip_ingest_funding: 1
+    skip_ingest_spot_ohlcv: 1
+    run_strategy_blueprint_compiler: 0
+    run_strategy_builder: 0
+    run_profitable_selector: 0
+    max_analyzer_workers: 1
+    phase2_parallel_workers: 1
+    search_budget: 500
+    funding_scale: decimal
+    retail_profile: capital_constrained
+    phase2_gate_profile: promotion
+    candidate_promotion_profile: deploy
+
+runs:
+  - run_id: bench_trust_btc_2021_01_r1
+    symbols: BTCUSDT
+    start: 2021-01-01
+    end: 2021-01-31
+
+  - run_id: bench_trust_eth_2021_01_r1
+    symbols: ETHUSDT
+    start: 2021-01-01
+    end: 2021-01-31

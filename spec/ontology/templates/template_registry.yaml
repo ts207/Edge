@@ -1,0 +1,199 @@
+version: 1
+kind: template_registry
+defaults:
+  templates:
+  - mean_reversion
+  - continuation
+  - trend_continuation
+  - pullback_entry
+  horizons:
+  - 5m
+  - 15m
+  - 60m
+  conditioning_cols:
+  - vol_regime
+  - carry_state
+  - funding_bps
+  - ms_trend_state
+  - ms_spread_state
+  - severity_bucket
+  param_grids:
+    common:
+      entry_lag_bars: [1, 2, 3]
+      horizon_bars: [6, 12, 24, 48]
+      cooldown_bars: [6, 12, 24]
+    risk:
+      stop_loss_bps: [20, 40, 80]
+      take_profit_bps: [20, 40, 80, 160]
+      stop_loss_atr_multipliers: [1.0, 2.0, 3.0]
+      take_profit_atr_multipliers: [1.5, 3.0, 5.0]
+
+families:
+  LIQUIDITY_DISLOCATION:
+    allowed_templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    - liquidity_replenishment
+    default_horizon: 15m
+  VOLATILITY_TRANSITION:
+    allowed_templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    - structural_regime_shift
+    default_horizon: 60m
+  POSITIONING_EXTREMES:
+    allowed_templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    default_horizon: 60m
+  FORCED_FLOW_AND_EXHAUSTION:
+    allowed_templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    default_horizon: 60m
+  TREND_STRUCTURE:
+    allowed_templates:
+    - breakout_followthrough
+    - false_breakout_reversal
+    - pullback_entry
+    - trend_continuation
+    - continuation
+    - only_if_trend
+    default_horizon: 60m
+  STATISTICAL_DISLOCATION:
+    allowed_templates:
+    - mean_reversion
+    - overshoot_repair
+    - tail_risk_avoid
+    default_horizon: 60m
+  REGIME_TRANSITION:
+    allowed_templates:
+    - only_if_regime
+    - continuation
+    - mean_reversion
+    - drawdown_filter
+    - tail_risk_avoid
+    - structural_regime_shift
+    default_horizon: 60m
+  INFORMATION_DESYNC:
+    allowed_templates:
+    - desync_repair
+    - convergence
+    - basis_repair
+    - lead_lag_follow
+    - divergence_continuation
+    - basis_convergence
+    default_horizon: 60m
+  TEMPORAL_STRUCTURE:
+    allowed_templates:
+    - mean_reversion
+    - continuation
+    default_horizon: 15m
+  EXECUTION_FRICTION:
+    allowed_templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+    default_horizon: 15m
+
+# Filter templates: search-time feature conditions that subset trigger rows.
+# Each defines operator/threshold applied to a feature column before evaluation.
+# These produce genuinely different t-stats from the unconditional base hypothesis.
+filter_templates:
+  only_if_funding:
+    feature: funding_rate
+    operator: ">"
+    threshold: 0.0
+  only_if_oi:
+    feature: oi_delta_1h
+    operator: ">"
+    threshold: 0.0
+  only_if_liquidity:
+    feature: liquidation_count
+    operator: ">"
+    threshold: 0.0
+  slippage_aware_filter:
+    feature: spread_zscore
+    operator: ">"
+    threshold: 1.0
+  tail_risk_avoid:
+    feature: rv_pct_17280
+    operator: "<"
+    threshold: 0.9
+  drawdown_filter:
+    feature: logret_1
+    operator: "<"
+    threshold: -0.002
+  stop_run_repair:
+    feature: liquidation_count
+    operator: ">"
+    threshold: 0.0
+  overshoot_repair:
+    feature: basis_zscore
+    operator: ">"
+    threshold: 1.5
+  desync_repair:
+    feature: cross_exchange_spread_z
+    operator: ">"
+    threshold: 1.5
+  basis_repair:
+    feature: basis_zscore
+    operator: ">"
+    threshold: 1.0
+  basis_convergence:
+    feature: basis_bps
+    operator: ">"
+    threshold: 5.0
+  only_if_regime:
+    feature: rv_pct_17280
+    operator: ">"
+    threshold: 0.7
+  only_if_trend:
+    feature: logret_1
+    operator: ">"
+    threshold: 0.001
+  divergence_continuation:
+    feature: cross_exchange_spread_z
+    operator: ">"
+    threshold: 1.0
+  momentum_fade:
+    feature: logret_1
+    operator: "<"
+    threshold: -0.001
+  range_reversion:
+    feature: basis_zscore
+    operator: ">"
+    threshold: 0.5
+  volatility_expansion_follow:
+    feature: rv_96
+    operator: ">"
+    threshold: 0.0
+  exhaustion_reversal:
+    feature: rv_pct_17280
+    operator: ">"
+    threshold: 0.8
+  reversal_or_squeeze:
+    feature: funding_rate_scaled
+    operator: ">"
+    threshold: 1.0
+  convexity_capture:
+    feature: oi_delta_1h
+    operator: "<"
+    threshold: 0.0

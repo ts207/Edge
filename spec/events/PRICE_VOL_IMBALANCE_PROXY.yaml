@@ -1,0 +1,31 @@
+event_type: PRICE_VOL_IMBALANCE_PROXY
+maturity: standard
+synthetic_coverage: covered
+active: true
+status: validated
+description: Explicit proxy replacement for legacy orderflow-imbalance labeling.
+reports_dir: liquidity_dislocation
+events_file: liquidity_dislocation_events.parquet
+signal_column: price_vol_imbalance_proxy_event
+parameters:
+  ret_quantile: 0.995
+  rv_quantile: 0.9
+  volume_quantile: 0.9
+  ret_window: 288
+  rv_window: 288
+  vol_window: 288
+  min_history_bars: 288
+  min_spacing: 24
+  cooldown_bars: 24
+  merge_gap_bars: 0
+canonical_family: LIQUIDITY_DISLOCATION
+trigger: Detector triggers on price vol imbalance proxy pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 1-12
+  invalidation_conditions:
+  - Volume returns above median within 1-2 bars
+  - Spread compresses back to baseline
+  disabled_regimes:
+  - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
+cluster_id: orderflow_imbalance

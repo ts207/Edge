@@ -1,0 +1,16 @@
+version: 1
+program_id: authoritative_benchmark
+objective: retail_profitability
+description: >
+  The primary authoritative baseline for retail profitability research.
+  All certification runs must pass against this benchmark slice.
+symbols: [BTCUSDT, ETHUSDT]
+start: 2024-01-01
+end: 2024-12-31
+timeframe: 5m
+templates: [continuation]
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include: [LIQUIDITY_VACUUM]
+knobs: {}

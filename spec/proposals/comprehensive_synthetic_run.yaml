@@ -1,0 +1,40 @@
+program_id: btc_comprehensive_synthetic_research
+objective: retail_profitability
+description: >
+  Comprehensive research run on 6 months of synthetic BTC data.
+  Tests a broad set of features and states across multiple volatility profiles.
+symbols: [BTCUSDT]
+start: 2021-01-01
+end: 2021-06-30
+timeframe: 5m
+templates: [continuation]
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include: 
+      - DEPTH_COLLAPSE
+      - SPREAD_REGIME_WIDENING_EVENT
+      - ORDERFLOW_IMBALANCE_SHOCK
+      - ABSORPTION_EVENT
+      - TREND_ACCELERATION
+      - DELEVERAGING_WAVE
+      - LIQUIDATION_CASCADE
+      - FALSE_BREAKOUT
+      - FAILED_CONTINUATION
+      - TREND_EXHAUSTION_TRIGGER
+      - LIQUIDITY_VACUUM
+features:
+  include:
+    - spread_z_30
+    - depth_imbalance_10
+    - vol_spike_ratio
+    - basis_zscore
+    - rv_96
+states:
+  include:
+    - HIGH_VOL_REGIME
+    - BULL_TREND_REGIME
+    - CHOP_REGIME
+    - OVERBOUGHT_STATE
+    - CROWDING_STATE
+knobs: {}

@@ -1,0 +1,22 @@
+version: 1
+kind: event
+event_type: SEQ_VOL_COMP_THEN_BREAKOUT
+active: true
+synthetic_coverage: covered
+canonical_family: VOLATILITY_TRANSITION
+reports_dir: event_sequences
+events_file: event_sequences.parquet
+signal_column: seq_vol_comp_then_breakout_event
+parameters:
+  max_gap_bars: 48
+  cooldown_bars: 24
+trigger: Detector triggers on seq vol comp then breakout pattern
+confirmation: Post-detection price action confirms signal validity
+expected_behavior:
+  holding_horizon_bars: 8-48
+  invalidation_conditions:
+  - Vol re-expands above threshold within horizon
+  - Second shock occurs before resolution
+  disabled_regimes:
+  - 'Low volume: vol computation noise-dominated'
+cluster_id: vol_regime
