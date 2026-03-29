@@ -25,7 +25,7 @@ Before you run anything, understand:
 3. how proposal-driven research differs from direct CLI execution
 4. how phase-2 filtering differs from bridge/promotion filtering
 
-Read those in this order:
+Read in this order:
 
 1. [01_PROJECT_MODEL.md](/home/irene/Edge/docs/01_PROJECT_MODEL.md)
 2. [02_REPOSITORY_MAP.md](/home/irene/Edge/docs/02_REPOSITORY_MAP.md)
@@ -46,23 +46,6 @@ Use this precedence when sources disagree:
 4. hand-authored prose
 
 That rule matters because a successful process exit does not prove a good run, and older prose can lag implementation.
-
-## The Default Operating Policy
-
-Prefer:
-
-- one event family or one narrow trigger set per run
-- one template family per run
-- one primary context family when context matters
-- plan-only before execution
-- confirmatory follow-up after discovery
-
-Avoid:
-
-- broad search across unrelated triggers in one run
-- reruns that only change wording
-- treating event materialization as strategy proof
-- treating synthetic wins as live-market evidence
 
 ## First Day Tasks
 

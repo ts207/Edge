@@ -17,9 +17,13 @@ Most day-to-day work lands in these directories:
 - [project/pipelines/](/home/irene/Edge/project/pipelines): orchestration, planning, stage execution, manifests
 - [project/research/](/home/irene/Edge/project/research): discovery, search, robustness, promotion, reporting, memory
 - [project/contracts/](/home/irene/Edge/project/contracts): stage-family and artifact contracts
+- [project/engine/](/home/irene/Edge/project/engine): execution engine and ledger infrastructure
+- [project/strategy/](/home/irene/Edge/project/strategy): strategy DSL, templates, and models
+- [project/core/](/home/irene/Edge/project/core): foundational classes and shared components
 - [project/features/](/home/irene/Edge/project/features): feature engineering and event detector implementations
 - [project/events/](/home/irene/Edge/project/events): detector loading, event helpers, runtime event semantics
 - [project/runtime/](/home/irene/Edge/project/runtime): replay and runtime invariants
+- [project/scripts/](/home/irene/Edge/project/scripts): auxiliary scripts and utilities
 - [project/reliability/](/home/irene/Edge/project/reliability): smoke and reliability workflows
 - [project/domain/](/home/irene/Edge/project/domain): compiled registry model and loader surfaces
 - [project/specs/](/home/irene/Edge/project/specs): code-side accessors for YAML specs like gates

@@ -7,6 +7,7 @@ This file lists the main maintained ways to interact with the repository.
 Defined in [pyproject.toml](/home/irene/Edge/pyproject.toml):
 
 - `edge-run-all`: full orchestrator
+- `edge-backtest` (alias `backtest`): backtest execution engine
 - `edge-live-engine`: live runtime entry point
 - `edge-phase2-discovery`: phase-2 discovery entry point via [project/research/cli/candidate_discovery_cli.py](/home/irene/Edge/project/research/cli/candidate_discovery_cli.py)
 - `edge-promote`: promotion entry point via [project/research/cli/promotion_cli.py](/home/irene/Edge/project/research/cli/promotion_cli.py)
@@ -14,8 +15,6 @@ Defined in [pyproject.toml](/home/irene/Edge/pyproject.toml):
 - `compile-strategy-blueprints`: strategy blueprint compiler via [project/research/compile_strategy_blueprints.py](/home/irene/Edge/project/research/compile_strategy_blueprints.py)
 - `build-strategy-candidates`: candidate packager via [project/research/build_strategy_candidates.py](/home/irene/Edge/project/research/build_strategy_candidates.py)
 - `ontology-consistency-audit`
-
-Compatibility-only pipeline wrappers remain under [project/pipelines/research/phase2_candidate_discovery.py](/home/irene/Edge/project/pipelines/research/phase2_candidate_discovery.py) and [project/pipelines/research/promote_candidates.py](/home/irene/Edge/project/pipelines/research/promote_candidates.py) for historical compatibility and replay. They are not the maintained operator-facing console-script targets, and the active planner now schedules the canonical `project/research/*` and `project/research/cli/*` files directly.
 
 ## Main Python Entry Points
 
@@ -35,7 +34,10 @@ Maintained targets from `make help`:
 
 - `discover-blueprints`: full research pipeline
 - `discover-edges`: phase-2 discovery for all events
+- `discover-edges-from-raw`: discovery starting from raw data ingest
 - `discover-target`: targeted discovery for specific symbols and events
+- `discover-concept`: targeted conceptual discovery run
+- `discover-hybrid`: specialized hybrid discovery profile
 - `run`: ingest, clean, and feature preparation
 - `baseline`: full discovery plus profitable strategy packaging
 - `golden-workflow`: canonical end-to-end smoke workflow
@@ -45,6 +47,11 @@ Maintained targets from `make help`:
 - `format-check`
 - `format`
 - `style`
+- `compile`: rust extension compilation
+- `clean`: cleans ephemeral files
+- `clean-all-data`: wipe all data/lake and reports
+- `clean-hygiene`: remove dangling temp files/cache
+- `check-hygiene`: fail if temp files violate hygiene
 - `governance`
 - `benchmark-m0`
 - `benchmark-maintenance-smoke`

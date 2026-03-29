@@ -68,7 +68,7 @@ python -m ruff format .
 If you rename stages, artifact tokens, schemas, or entrypoints, update:
 
 - `README.md`
-- `docs/ARCHITECTURE.md`
-- `docs/PIPELINE.md`
-- `docs/RESEARCH_WORKFLOW.md`
+- `docs/02_REPOSITORY_MAP.md`
+- `docs/03_OPERATOR_WORKFLOW.md`
+- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
 - any local README in the affected subsystem

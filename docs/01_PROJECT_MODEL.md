@@ -125,3 +125,84 @@ When you read a result, ask in this order:
 3. what template generated the trade idea
 4. what states and regimes qualified or disqualified the idea
 5. whether the candidate died in search, bridge, or promotion
+
+---
+
+## Glossary
+
+These terms look similar but mean different things.
+
+### Proposal
+
+A compact operator input that defines a bounded research run.
+
+Typical fields: `program_id`, objective, symbols, timeframe, start/end, trigger space, templates, horizons, directions, entry lags.
+
+Main surface: [project/research/agent_io/proposal_schema.py](/home/irene/Edge/project/research/agent_io/proposal_schema.py)
+
+### Experiment
+
+A repo-native execution config produced from a proposal. It is the translated, fully structured configuration that the pipeline actually uses.
+
+Main surfaces: [proposal_to_experiment.py](/home/irene/Edge/project/research/agent_io/proposal_to_experiment.py), [experiment_engine.py](/home/irene/Edge/project/research/experiment_engine.py)
+
+### Run
+
+A concrete execution instance with a specific `run_id`. A run writes artifacts under directories keyed by `run_id`.
+
+### Hypothesis
+
+A single explicit claim evaluated by the research/search layer.
+
+Examples: after `BASIS_DISLOC`, `BTCUSDT`, `short`, `12b`, `mean_reversion`.
+
+Main surface: [project/domain/hypotheses.py](/home/irene/Edge/project/domain/hypotheses.py)
+
+### Candidate
+
+A hypothesis that has been evaluated and materialized into a row with metrics and gates. A candidate has: metrics, fail reasons or pass flags, and promotion-related fields.
+
+### Blueprint
+
+An executable strategy specification describing: entry logic, exit logic, sizing, overlays, and lineage. It is the object the DSL/runtime layer interprets.
+
+Main surfaces: [project/strategy/dsl](/home/irene/Edge/project/strategy/dsl), [blueprint.py](/home/irene/Edge/project/strategy/models/blueprint.py)
+
+### Strategy
+
+A runtime-executable trading logic object. The engine runs strategies, not raw hypotheses.
+
+### Trigger
+
+The condition that causes a hypothesis or strategy entry logic to activate.
+
+Supported types: `EVENT`, `STATE`, `TRANSITION`, `FEATURE_PREDICATE`, `SEQUENCE`, `INTERACTION`.
+
+Reference: [13_TRIGGER_TYPES.md](/home/irene/Edge/docs/13_TRIGGER_TYPES.md)
+
+### Artifact
+
+A file written by the system that records what happened. Examples: run manifest, stage manifest, hypothesis table, candidate parquet, funnel summary, metrics JSON, engine trace.
+
+Artifacts are the source of truth.
+
+### Promotion
+
+The gating process that decides whether a candidate is eligible to move forward. Promotion is not the same as detection success, positive expectancy in one slice, or a completed run.
+
+### Backtest
+
+Using the engine/runtime path to simulate strategy execution and produce a ledger/PnL trace.
+
+Main surface: [runner.py](/home/irene/Edge/project/engine/runner.py)
+
+This is different from the canonical search evaluator, which is a statistical trigger-conditioned evaluation path.
+
+### Evaluation
+
+This word has two senses in the repo:
+
+- **Research evaluation**: score a hypothesis statistically in the search pipeline.
+- **Execution evaluation**: run a strategy and evaluate realized ledger/PnL behavior in the engine.
+
+Do not treat those as the same thing.
