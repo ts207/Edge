@@ -16,6 +16,7 @@ Recommended reading order:
 10. [09_WORKED_EXAMPLE_VOL_SHOCK.md](/home/irene/Edge/docs/09_WORKED_EXAMPLE_VOL_SHOCK.md)
 11. [10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md](/home/irene/Edge/docs/10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md)
 12. [11_AUDIT_MATRIX.md](/home/irene/Edge/docs/11_AUDIT_MATRIX.md)
+13. [12_AUDIT_RUN_SCHEDULE.md](/home/irene/Edge/docs/12_AUDIT_RUN_SCHEDULE.md)
 
 Reference surfaces:
 
