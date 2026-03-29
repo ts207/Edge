@@ -8,8 +8,24 @@ from project.spec_validation.cli import run_all_validations
 from project.spec_validation.search import validate_search_spec_doc
 
 
-def test_validate_search_spec_rejects_unsupported_fields() -> None:
-    with pytest.raises(ValueError, match="unsupported fields: cost_profiles"):
+def test_validate_search_spec_accepts_supported_optional_fields() -> None:
+    validate_search_spec_doc(
+        {
+            "kind": "search_spec",
+            "triggers": {"events": ["VOL_SHOCK"]},
+            "templates": ["continuation"],
+            "horizons": ["15m"],
+            "directions": ["long"],
+            "entry_lag": 1,
+            "cost_profiles": ["standard"],
+            "conditioning_intersections": ["CROWDING_STATE + HIGH_VOL_REGIME"],
+        },
+        source="inline_search_spec",
+    )
+
+
+def test_validate_search_spec_rejects_unsupported_cost_profiles() -> None:
+    with pytest.raises(ValueError, match="Unsupported cost_profiles entries: premium"):
         validate_search_spec_doc(
             {
                 "kind": "search_spec",
@@ -18,7 +34,7 @@ def test_validate_search_spec_rejects_unsupported_fields() -> None:
                 "horizons": ["15m"],
                 "directions": ["long"],
                 "entry_lag": 1,
-                "cost_profiles": ["standard"],
+                "cost_profiles": ["premium"],
             },
             source="inline_search_spec",
         )
@@ -53,6 +69,7 @@ def test_spec_validation_cli_checks_real_search_specs(tmp_path: Path, monkeypatc
                 "horizons: [15m]",
                 "directions: [long]",
                 "entry_lag: 1",
+                "cost_profiles: [standard]",
                 "",
             ]
         ),

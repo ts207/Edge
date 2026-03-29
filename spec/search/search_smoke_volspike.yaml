@@ -14,5 +14,5 @@ contexts: {}
 templates: "*"
 horizons: [15m]
 directions: [long, short]
-entry_lag: 0
+entry_lag: 1
 cost_profiles: [standard]

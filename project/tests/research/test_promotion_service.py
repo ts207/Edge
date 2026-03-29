@@ -125,7 +125,26 @@ def test_execute_promotion_success_path(monkeypatch, tmp_path: Path) -> None:
             "bundle_version": ["1"],
             "is_reduced_evidence": [False],
             "promotion_metrics_trace": [json.dumps({"economics": {"passed": True, "observed": {"x": 1}, "thresholds": {"y": 2}}})],
-            "evidence_bundle_json": [json.dumps({"candidate_id": "cand-1", "event_type": "BASIS_DISLOC", "promotion_decision": "promoted"})],
+            "evidence_bundle_json": [
+                json.dumps(
+                    {
+                        "candidate_id": "cand-1",
+                        "event_family": "BASIS_DISLOC",
+                        "event_type": "BASIS_DISLOC",
+                        "run_id": "run-1",
+                        "sample_definition": {"n_events": 120, "validation_samples": 60, "test_samples": 60, "symbol": "BTCUSDT"},
+                        "split_definition": {"split_scheme_id": "confirmatory", "purge_bars": 1, "embargo_bars": 1, "bar_duration_minutes": 5},
+                        "effect_estimates": {"estimate": 0.12, "estimate_bps": 12.0, "stderr": 0.03, "stderr_bps": 3.0},
+                        "uncertainty_estimates": {"ci_low": 0.02, "ci_high": 0.22, "ci_low_bps": 2.0, "ci_high_bps": 22.0, "p_value_raw": 0.01, "q_value": 0.01, "q_value_by": 0.01, "q_value_cluster": 0.01, "n_obs": 120, "n_clusters": 8},
+                        "stability_tests": {"sign_consistency": 1.0, "stability_score": 0.9, "regime_stability_pass": True, "timeframe_consensus_pass": True, "delay_robustness_pass": True},
+                        "falsification_results": {"shift_placebo_pass": True, "random_placebo_pass": True, "direction_reversal_pass": True, "negative_control_pass": True, "passes_control": True},
+                        "cost_robustness": {"cost_survival_ratio": 1.0, "net_expectancy_bps": 9.0, "effective_cost_bps": 3.0, "turnover_proxy_mean": 1.0, "tob_coverage": 0.9, "tob_coverage_pass": True, "stressed_cost_pass": True, "retail_net_expectancy_pass": True, "retail_cost_budget_pass": True, "retail_turnover_pass": True},
+                        "multiplicity_adjustment": {"correction_family_id": "default_program", "correction_method": "bh", "p_value_adj": 0.01, "p_value_adj_by": 0.01, "p_value_adj_holm": 0.01, "q_value_program": 0.01},
+                        "metadata": {"plan_row_id": "plan-1", "hypothesis_id": "hyp-1"},
+                        "promotion_decision": {"promotion_status": "promoted", "promotion_track": "deploy", "eligible": True, "rank_score": 1.0},
+                    }
+                )
+            ],
         }
     )
     promoted_df = pd.DataFrame({"candidate_id": ["cand-1"], "event_type": ["BASIS_DISLOC"]})

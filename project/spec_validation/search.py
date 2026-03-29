@@ -10,20 +10,16 @@ from project.spec_validation.ontology import (
     get_event_family,
 )
 
-_UNSUPPORTED_SEARCH_FIELDS = frozenset({"cost_profiles", "conditioning_intersections"})
+_SUPPORTED_COST_PROFILES = frozenset({"standard"})
 
 
 def validate_search_spec_doc(search_cfg: Dict[str, Any], *, source: str = "<memory>") -> None:
     if not isinstance(search_cfg, dict):
         raise ValueError(f"Search spec must resolve to a mapping: {source}")
 
-    unsupported = sorted(
-        field_name for field_name in _UNSUPPORTED_SEARCH_FIELDS if field_name in search_cfg
-    )
-    if unsupported:
-        raise ValueError(
-            f"Search spec '{source}' contains unsupported fields: {', '.join(unsupported)}"
-        )
+    # Validate optional search-surface controls eagerly so spec docs and runtime contract stay aligned.
+    resolve_cost_profiles(search_cfg)
+    resolve_conditioning_intersections(search_cfg)
 
     # Resolve and validate entry lags eagerly so stale same-bar configs fail before generation.
     resolve_entry_lags(search_cfg)
@@ -107,6 +103,55 @@ def resolve_filter_templates(family: str) -> List[Dict[str, Any]]:
     Returns list of dicts: {name, feature, operator, threshold}.
     """
     return list(get_domain_registry().family_filter_templates(family))
+
+
+def resolve_cost_profiles(search_cfg: Dict[str, Any]) -> List[str]:
+    profiles = search_cfg.get("cost_profiles", ["standard"])
+    if profiles == "*":
+        resolved = ["standard"]
+    elif profiles is None or profiles == "" or profiles == [] or profiles == ():
+        resolved = ["standard"]
+    else:
+        resolved = [profiles] if isinstance(profiles, str) else list(profiles)
+
+    normalized: List[str] = []
+    seen: set[str] = set()
+    invalid: List[str] = []
+    for raw in resolved:
+        profile = str(raw).strip().lower()
+        if not profile:
+            raise ValueError("cost_profiles entries must be non-empty strings")
+        if profile not in _SUPPORTED_COST_PROFILES:
+            invalid.append(profile)
+            continue
+        if profile not in seen:
+            normalized.append(profile)
+            seen.add(profile)
+    if invalid:
+        raise ValueError(
+            "Unsupported cost_profiles entries: " + ", ".join(sorted(set(invalid)))
+        )
+    return normalized
+
+
+def resolve_conditioning_intersections(search_cfg: Dict[str, Any]) -> List[str]:
+    intersections = search_cfg.get("conditioning_intersections", [])
+    if intersections == "*":
+        return ["*"]
+    if intersections is None or intersections == "" or intersections == [] or intersections == ():
+        return []
+
+    resolved = [intersections] if isinstance(intersections, str) else list(intersections)
+    normalized: List[str] = []
+    seen: set[str] = set()
+    for raw in resolved:
+        value = str(raw).strip()
+        if not value:
+            raise ValueError("conditioning_intersections entries must be non-empty strings")
+        if value not in seen:
+            normalized.append(value)
+            seen.add(value)
+    return normalized
 
 
 def resolve_entry_lags(search_cfg: Dict[str, Any]) -> List[int]:
