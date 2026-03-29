@@ -9,13 +9,43 @@ from project.core.coercion import as_bool, safe_float
 from project.research.validation.schemas import FalsificationResult
 
 
+def _infer_time_offset(ts: pd.Series) -> pd.Timedelta:
+    cleaned = pd.to_datetime(ts, utc=True, errors="coerce").dropna()
+    if cleaned.empty:
+        return pd.Timedelta(0)
+    unique = cleaned.drop_duplicates().sort_values()
+    if len(unique) >= 3:
+        try:
+            freq = pd.infer_freq(unique)
+        except Exception:
+            freq = None
+        if freq:
+            try:
+                offset = pd.tseries.frequencies.to_offset(freq)
+                nanos = getattr(offset, "nanos", None)
+                if nanos is not None:
+                    return pd.Timedelta(nanoseconds=int(nanos))
+            except Exception:
+                pass
+    diffs = unique.diff().dropna()
+    diffs = diffs[diffs > pd.Timedelta(0)]
+    if not diffs.empty:
+        return pd.Timedelta(diffs.median())
+    return pd.Timedelta(0)
+
+
 def generate_placebo_events(
     events: pd.DataFrame, *, time_col: str = "timestamp", shift_bars: int = 1
 ) -> pd.DataFrame:
     out = events.copy()
     if time_col in out.columns:
         ts = pd.to_datetime(out[time_col], utc=True, errors="coerce")
-        out[time_col] = ts.shift(shift_bars)
+        offset = _infer_time_offset(ts) * int(shift_bars)
+        shifted = ts + offset
+        out[time_col] = shifted
+        for alias in ("timestamp", "enter_ts"):
+            if alias in out.columns and alias != time_col:
+                out[alias] = shifted
     return out
 
 

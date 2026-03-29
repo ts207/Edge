@@ -8,16 +8,22 @@ Defined in [pyproject.toml](/home/irene/Edge/pyproject.toml):
 
 - `edge-run-all`: full orchestrator
 - `edge-live-engine`: live runtime entry point
-- `edge-phase2-discovery`: phase-2 discovery entry point
-- `edge-promote`: promotion entry point
+- `edge-phase2-discovery`: phase-2 discovery entry point via [project/research/cli/candidate_discovery_cli.py](/home/irene/Edge/project/research/cli/candidate_discovery_cli.py)
+- `edge-promote`: promotion entry point via [project/research/cli/promotion_cli.py](/home/irene/Edge/project/research/cli/promotion_cli.py)
 - `edge-smoke`: smoke workflow
-- `compile-strategy-blueprints`
-- `build-strategy-candidates`
+- `compile-strategy-blueprints`: strategy blueprint compiler via [project/research/compile_strategy_blueprints.py](/home/irene/Edge/project/research/compile_strategy_blueprints.py)
+- `build-strategy-candidates`: candidate packager via [project/research/build_strategy_candidates.py](/home/irene/Edge/project/research/build_strategy_candidates.py)
 - `ontology-consistency-audit`
+
+Compatibility-only pipeline wrappers remain under [project/pipelines/research/phase2_candidate_discovery.py](/home/irene/Edge/project/pipelines/research/phase2_candidate_discovery.py) and [project/pipelines/research/promote_candidates.py](/home/irene/Edge/project/pipelines/research/promote_candidates.py) for historical compatibility and replay. They are not the maintained operator-facing console-script targets, and the active planner now schedules the canonical `project/research/*` and `project/research/cli/*` files directly.
 
 ## Main Python Entry Points
 
 - [project/pipelines/run_all.py](/home/irene/Edge/project/pipelines/run_all.py)
+- [project/research/cli/candidate_discovery_cli.py](/home/irene/Edge/project/research/cli/candidate_discovery_cli.py)
+- [project/research/cli/promotion_cli.py](/home/irene/Edge/project/research/cli/promotion_cli.py)
+- [project/research/compile_strategy_blueprints.py](/home/irene/Edge/project/research/compile_strategy_blueprints.py)
+- [project/research/build_strategy_candidates.py](/home/irene/Edge/project/research/build_strategy_candidates.py)
 - [project/research/agent_io/execute_proposal.py](/home/irene/Edge/project/research/agent_io/execute_proposal.py)
 - [project/research/agent_io/issue_proposal.py](/home/irene/Edge/project/research/agent_io/issue_proposal.py)
 - [project/research/agent_io/proposal_to_experiment.py](/home/irene/Edge/project/research/agent_io/proposal_to_experiment.py)

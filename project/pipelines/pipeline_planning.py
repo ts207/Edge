@@ -644,7 +644,7 @@ def prepare_run_preflight(
         args.phase2_event_type = "all"
 
     expectancy_script = (
-        project_root / "pipelines" / "research" / "analyze_conditional_expectancy.py"
+        project_root / "research" / "analyze_conditional_expectancy.py"
     )
     expectancy_tail_requested = any(
         int(getattr(args, attr, 0) or 0)

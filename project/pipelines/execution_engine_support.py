@@ -249,9 +249,21 @@ def _manifest_declared_outputs_exist(
     manifest_path: Path,
     payload: Mapping[str, object],
 ) -> bool:
+    def _path_has_payload(path: Path) -> bool:
+        if not path.exists():
+            return False
+        if path.is_dir():
+            for child in path.rglob("*"):
+                if child.is_file():
+                    return True
+            return False
+        return path.is_file()
+
     outputs = payload.get("outputs")
-    if not isinstance(outputs, list) or not outputs:
+    if not isinstance(outputs, list):
         return False
+    if not outputs:
+        return True
     for row in outputs:
         if not isinstance(row, dict):
             return False
@@ -260,14 +272,14 @@ def _manifest_declared_outputs_exist(
             return False
         candidate = Path(raw_path)
         if candidate.is_absolute():
-            if not candidate.exists():
+            if not _path_has_payload(candidate):
                 return False
             continue
-        if (
-            not (manifest_path.parent / candidate).exists()
-            and not (PROJECT_ROOT.parent / candidate).exists()
-        ):
-            return False
+        if _path_has_payload(manifest_path.parent / candidate):
+            continue
+        if _path_has_payload(PROJECT_ROOT.parent / candidate):
+            continue
+        return False
     return True
 
 

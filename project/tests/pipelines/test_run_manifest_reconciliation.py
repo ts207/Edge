@@ -40,6 +40,7 @@ def test_reconcile_run_manifest_from_stage_manifests_marks_completed_manual_repl
             "status": "success",
             "started_at": "2026-03-11T03:00:00+00:00",
             "finished_at": "2026-03-11T03:00:10+00:00",
+            "outputs": [],
         },
     )
     _write_json(
@@ -49,6 +50,7 @@ def test_reconcile_run_manifest_from_stage_manifests_marks_completed_manual_repl
             "status": "success",
             "started_at": "2026-03-11T03:00:10+00:00",
             "finished_at": "2026-03-11T03:00:20+00:00",
+            "outputs": [],
         },
     )
     _write_json(
@@ -58,6 +60,7 @@ def test_reconcile_run_manifest_from_stage_manifests_marks_completed_manual_repl
             "status": "success",
             "started_at": "2026-03-11T03:00:20+00:00",
             "finished_at": "2026-03-11T03:00:30+00:00",
+            "outputs": [],
         },
     )
 
@@ -149,6 +152,7 @@ def test_reconcile_run_manifest_from_stage_manifests_treats_warning_as_terminal(
             "status": "success",
             "started_at": "2026-03-11T03:00:05+00:00",
             "finished_at": "2026-03-11T03:00:10+00:00",
+            "outputs": [],
         },
     )
 
@@ -222,6 +226,7 @@ def test_reconcile_run_manifest_respects_explicit_data_root(tmp_path, monkeypatc
             "status": "success",
             "started_at": "2026-03-11T03:00:10+00:00",
             "finished_at": "2026-03-11T03:00:20+00:00",
+            "outputs": [],
         },
     )
 

@@ -88,9 +88,9 @@ def test_filter_unsupported_flags_with_multiple_values(tmp_path):
     assert "--other_flag" in filtered
 
 
-def test_phase2_search_engine_wrapper_preserves_experiment_config():
+def test_phase2_search_engine_script_preserves_experiment_config():
     script_path = (
-        Path(__file__).resolve().parents[2] / "project" / "pipelines" / "research" / "phase2_search_engine.py"
+        Path(__file__).resolve().parents[2] / "project" / "research" / "phase2_search_engine.py"
     )
     base_args = [
         "--run_id",
@@ -109,13 +109,13 @@ def test_phase2_search_engine_wrapper_preserves_experiment_config():
     assert "/tmp/experiment.yaml" in filtered
 
 
-def test_phase2_candidate_discovery_wrapper_preserves_experiment_config():
+def test_phase2_candidate_discovery_script_preserves_experiment_config():
     script_path = (
         Path(__file__).resolve().parents[2]
         / "project"
-        / "pipelines"
         / "research"
-        / "phase2_candidate_discovery.py"
+        / "cli"
+        / "candidate_discovery_cli.py"
     )
     base_args = [
         "--run_id",

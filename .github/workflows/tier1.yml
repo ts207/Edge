@@ -58,8 +58,11 @@ jobs:
             project/tests/contracts/test_manifest_integrity.py \
             project/tests/contracts/test_cross_artifact_reconciliation.py \
             project/tests/regressions/test_runner_position_contract.py \
+            project/tests/regressions/test_monitor_only_venue_immutability.py \
             project/tests/regressions/test_next_open_entry_accounting.py \
             project/tests/regressions/test_event_analyzer_full_market_requirement.py \
+            project/tests/regressions/test_run_success_requires_outputs.py \
+            project/tests/regressions/test_stage_registry_path_validity.py \
             project/tests/regressions/test_timeframe_contracts.py \
             project/tests/regressions/test_storage_fallback_respected.py \
             project/tests/regressions/test_bundle_policy_consistency.py

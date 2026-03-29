@@ -8,6 +8,39 @@ import numpy as np
 import pandas as pd
 
 
+def _as_numeric_series(df: pd.DataFrame, column: str, default: float = np.nan) -> pd.Series:
+    value = df.get(column, None)
+    if isinstance(value, pd.Series):
+        return pd.to_numeric(value, errors="coerce").reindex(df.index)
+    if value is None:
+        return pd.Series(default, index=df.index, dtype=float)
+    return pd.to_numeric(pd.Series(value, index=df.index), errors="coerce")
+
+
+def _resolve_round_trip_cost_bps(df: pd.DataFrame) -> pd.Series:
+    explicit_columns = (
+        "round_trip_cost_bps_resolved",
+        "resolved_round_trip_cost_bps",
+        "round_trip_cost_bps",
+    )
+    for column in explicit_columns:
+        candidate = _as_numeric_series(df, column, default=np.nan)
+        if candidate.notna().any():
+            fallback = _as_numeric_series(df, "cost_bps_resolved", default=np.nan)
+            if not fallback.notna().any():
+                fallback = _as_numeric_series(df, "resolved_cost_bps", default=np.nan)
+            if not fallback.notna().any():
+                fallback = _as_numeric_series(df, "cost_bps", default=0.0)
+            return candidate.fillna(fallback.fillna(0.0) * 2.0)
+
+    per_side = _as_numeric_series(df, "cost_bps_resolved", default=np.nan)
+    if not per_side.notna().any():
+        per_side = _as_numeric_series(df, "resolved_cost_bps", default=np.nan)
+    if not per_side.notna().any():
+        per_side = _as_numeric_series(df, "cost_bps", default=0.0)
+    return per_side.fillna(0.0) * 2.0
+
+
 def _refresh_phase2_metrics_after_shrinkage(
     df: pd.DataFrame,
     *,
@@ -49,32 +82,30 @@ def _refresh_phase2_metrics_after_shrinkage(
         if "effect_raw" in out.columns:
             out["effect_raw"] = out["effect_raw"] * direction_multiplier
 
-    out["expectancy"] = pd.to_numeric(out["effect_shrunk_state"], errors="coerce").fillna(
-        pd.to_numeric(out.get("expectancy", 0.0), errors="coerce").fillna(0.0)
+    out["expectancy"] = _as_numeric_series(out, "effect_shrunk_state").fillna(
+        _as_numeric_series(out, "expectancy", default=0.0)
     )
 
-    resolved_cost = (
-        pd.to_numeric(out.get("cost_bps_resolved", 0.0), errors="coerce").fillna(0.0) / 10000.0
-    )
-    out["after_cost_expectancy"] = out["expectancy"] - resolved_cost
-    out["after_cost_expectancy_per_trade"] = out["after_cost_expectancy"]
-    out["stressed_after_cost_expectancy_per_trade"] = out["expectancy"] - (
-        resolved_cost * float(conservative_cost_multiplier)
+    round_trip_cost_bps = _resolve_round_trip_cost_bps(out)
+    conservative_multiplier = float(conservative_cost_multiplier)
+    after_cost_bps = out["expectancy"] - round_trip_cost_bps
+    stressed_after_cost_bps = out["expectancy"] - (round_trip_cost_bps * conservative_multiplier)
+    out["after_cost_expectancy"] = after_cost_bps
+    out["after_cost_expectancy_per_trade"] = after_cost_bps / 10000.0
+    out["stressed_after_cost_expectancy"] = stressed_after_cost_bps
+    out["stressed_after_cost_expectancy_per_trade"] = (
+        stressed_after_cost_bps / 10000.0
     )
 
-    out["p_value"] = (
-        pd.to_numeric(out.get("p_value_shrunk", out.get("p_value", 1.0)), errors="coerce")
-        .fillna(1.0)
-        .clip(0.0, 1.0)
-    )
-    out["p_value_for_fdr"] = (
-        pd.to_numeric(out.get("p_value_for_fdr", out["p_value"]), errors="coerce")
-        .fillna(out["p_value"])
-        .clip(0.0, 1.0)
-    )
+    out["p_value"] = _as_numeric_series(out, "p_value_shrunk", default=np.nan).fillna(
+        _as_numeric_series(out, "p_value", default=1.0)
+    ).clip(0.0, 1.0)
+    out["p_value_for_fdr"] = _as_numeric_series(out, "p_value_for_fdr", default=np.nan).fillna(
+        out["p_value"]
+    ).clip(0.0, 1.0)
 
     out["gate_economic"] = out["after_cost_expectancy"] >= float(min_after_cost)
-    out["gate_economic_conservative"] = out["stressed_after_cost_expectancy_per_trade"] >= float(
+    out["gate_economic_conservative"] = out["stressed_after_cost_expectancy"] >= float(
         min_after_cost
     )
     out["gate_after_cost_positive"] = out["gate_economic"]
@@ -84,22 +115,20 @@ def _refresh_phase2_metrics_after_shrinkage(
     else:
         gate_stability_col = pd.Series(False, index=out.index)
     out["gate_stability"] = gate_stability_col.astype(bool)
-    out["sample_size"] = (
-        pd.to_numeric(out.get("sample_size", out.get("n_events", 0)), errors="coerce")
-        .fillna(0)
-        .astype(int)
-    )
-    out["n_events"] = pd.to_numeric(out.get("n_events", 0), errors="coerce").fillna(0).astype(int)
-    out["validation_samples"] = (
-        pd.to_numeric(out.get("validation_samples", 0), errors="coerce").fillna(0).astype(int)
-    )
-    out["test_samples"] = (
-        pd.to_numeric(out.get("test_samples", 0), errors="coerce").fillna(0).astype(int)
+    out["sample_size"] = _as_numeric_series(out, "sample_size", default=np.nan).fillna(
+        _as_numeric_series(out, "n_events", default=0.0)
+    ).astype(int)
+    out["n_events"] = _as_numeric_series(out, "n_events", default=0.0).fillna(0).astype(int)
+    out["validation_samples"] = _as_numeric_series(
+        out, "validation_samples", default=0.0
+    ).fillna(0).astype(int)
+    out["test_samples"] = _as_numeric_series(out, "test_samples", default=0.0).fillna(0).astype(
+        int
     )
 
-    validation_return = pd.to_numeric(out.get("mean_validation_return", np.nan), errors="coerce")
-    test_return = pd.to_numeric(out.get("mean_test_return", np.nan), errors="coerce")
-    expectancy_sign = np.sign(pd.to_numeric(out["expectancy"], errors="coerce").fillna(0.0))
+    validation_return = _as_numeric_series(out, "mean_validation_return", default=np.nan)
+    test_return = _as_numeric_series(out, "mean_test_return", default=np.nan)
+    expectancy_sign = np.sign(_as_numeric_series(out, "expectancy", default=0.0))
     validation_sign = np.sign(validation_return.fillna(0.0))
     test_sign = np.sign(test_return.fillna(0.0))
 

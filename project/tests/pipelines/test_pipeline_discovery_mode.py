@@ -114,6 +114,51 @@ def test_search_stage_receives_phase2_event_type_pin(tmp_path):
     assert "phase1_correlation_clustering" in names
 
 
+def test_planner_uses_canonical_research_stage_paths(tmp_path):
+    from project.pipelines.stages.research import build_research_stages
+
+    project_root = Path(__file__).parents[3] / "project"
+    stages = build_research_stages(
+        args=_make_args(
+            run_candidate_promotion=1,
+            run_edge_registry_update=1,
+            run_expectancy_analysis=1,
+            run_expectancy_robustness=1,
+            run_recommendations_checklist=1,
+        ),
+        run_id="r0",
+        symbols="BTCUSDT",
+        start="2024-01-01",
+        end="2024-03-01",
+        research_gate_profile="discovery",
+        project_root=project_root,
+        data_root=tmp_path,
+        phase2_event_chain=[("VOL_SHOCK", "analyze_events.py", [])],
+    )
+
+    stage_paths = {name: path for name, path, _args in stages}
+    assert stage_paths["analyze_events__VOL_SHOCK_15m"] == project_root / "research" / "analyze_events.py"
+    assert stage_paths["build_event_registry__VOL_SHOCK_15m"] == (
+        project_root / "research" / "build_event_registry.py"
+    )
+    assert stage_paths["phase1_correlation_clustering"] == (
+        project_root / "research" / "phase1_correlation_clustering.py"
+    )
+    assert stage_paths["phase2_search_engine"] == project_root / "research" / "phase2_search_engine.py"
+    assert stage_paths["export_edge_candidates"] == project_root / "research" / "export_edge_candidates.py"
+    assert stage_paths["promote_candidates"] == project_root / "research" / "cli" / "promotion_cli.py"
+    assert stage_paths["update_edge_registry"] == project_root / "research" / "update_edge_registry.py"
+    assert stage_paths["analyze_conditional_expectancy"] == (
+        project_root / "research" / "analyze_conditional_expectancy.py"
+    )
+    assert stage_paths["validate_expectancy_traps"] == (
+        project_root / "research" / "validate_expectancy_traps.py"
+    )
+    assert stage_paths["generate_recommendations_checklist"] == (
+        project_root / "research" / "generate_recommendations_checklist.py"
+    )
+
+
 def test_discovery_mode_argument_is_ignored_in_favor_of_canonical_search(tmp_path):
     from project.pipelines.stages.research import build_research_stages
 

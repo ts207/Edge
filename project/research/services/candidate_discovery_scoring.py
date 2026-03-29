@@ -66,6 +66,16 @@ def _split_frame(frame: pd.DataFrame, label: str) -> pd.DataFrame:
     return frame.loc[labels == str(label).strip().lower()].copy()
 
 
+def _evaluation_only_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return pd.DataFrame(columns=list(frame.columns))
+    labels = _split_labels(frame)
+    mask = _evaluation_mask(labels)
+    if not bool(mask.any()):
+        return pd.DataFrame(columns=list(frame.columns))
+    return frame.loc[mask].copy()
+
+
 def _float_mean(frame: pd.DataFrame, column: str) -> float:
     if frame.empty or column not in frame.columns:
         return 0.0
@@ -169,6 +179,8 @@ def _build_confirmatory_evidence(
             "fold_scores": "[]",
             "validation_fold_scores": "[]",
             "regime_counts": "{}",
+            "funding_carry_eval_coverage": 0.0,
+            "mean_funding_carry_bps": 0.0,
             "mean_train_return": 0.0,
             "mean_validation_return": 0.0,
             "mean_test_return": 0.0,
@@ -279,9 +291,9 @@ def _build_confirmatory_evidence(
         )
     )
 
-    shift_pass = _placebo_pass(eval_frame, shift_placebo_frame)
-    random_pass = _placebo_pass(eval_frame, random_placebo_frame)
-    direction_pass = _placebo_pass(eval_frame, direction_placebo_frame)
+    shift_pass = _placebo_pass(eval_frame, _evaluation_only_frame(shift_placebo_frame))
+    random_pass = _placebo_pass(eval_frame, _evaluation_only_frame(random_placebo_frame))
+    direction_pass = _placebo_pass(eval_frame, _evaluation_only_frame(direction_placebo_frame))
     control_pass_rate = float(np.mean([not shift_pass, not random_pass, not direction_pass]))
 
     return {
@@ -293,6 +305,8 @@ def _build_confirmatory_evidence(
         "fold_scores": _json_array([float(value) for value in fold_scores]),
         "validation_fold_scores": _json_array([float(value) for value in validation_fold_scores]),
         "regime_counts": json.dumps(regime_counts, sort_keys=True),
+        "funding_carry_eval_coverage": funding_carry_eval_coverage,
+        "mean_funding_carry_bps": mean_funding_carry_bps,
         "mean_train_return": split_means["train"],
         "mean_validation_return": split_means["validation"],
         "mean_test_return": split_means["test"],
@@ -349,7 +363,14 @@ def split_and_score_candidates(
     if isinstance(execution_model_payload, dict):
         resolved_execution_model_json = json.dumps(execution_model_payload, sort_keys=True)
     after_cost_includes_funding_carry = bool(
-        cost_coordinate_payload.get("after_cost_includes_funding_carry", True)
+        cost_coordinate_payload.get("after_cost_includes_funding_carry", False)
+    )
+    round_trip_cost_bps = float(
+        cost_coordinate_payload.get(
+            "round_trip_cost_bps",
+            2.0 * float(cost_coordinate_payload.get("cost_bps", 0.0) or 0.0),
+        )
+        or 0.0
     )
 
     if time_col is None:
@@ -367,6 +388,7 @@ def split_and_score_candidates(
         out["cost_config_digest"] = resolved_cost_digest
         out["execution_model_json"] = resolved_execution_model_json
         out["after_cost_includes_funding_carry"] = bool(after_cost_includes_funding_carry)
+        out["round_trip_cost_bps"] = float(round_trip_cost_bps)
         out["funding_carry_eval_coverage"] = 0.0
         out["mean_funding_carry_bps"] = 0.0
         return out
@@ -411,6 +433,7 @@ def split_and_score_candidates(
     out["cost_config_digest"] = resolved_cost_digest
     out["execution_model_json"] = resolved_execution_model_json
     out["after_cost_includes_funding_carry"] = bool(after_cost_includes_funding_carry)
+    out["round_trip_cost_bps"] = float(round_trip_cost_bps)
     if cost_estimate is not None:
         out["resolved_cost_bps"] = float(cost_estimate.cost_bps)
         out["fee_bps_per_side"] = float(cost_estimate.fee_bps_per_side)
@@ -513,7 +536,7 @@ def split_and_score_candidates(
             _cache_token(stop_loss_atr_multipliers),
             _cache_token(take_profit_atr_multipliers),
             _cache_token(direction_value),
-            float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
+            float(round_trip_cost_bps if cost_estimate is not None else 0.0),
         )
 
     def _build_frame(
@@ -558,7 +581,7 @@ def split_and_score_candidates(
             "take_profit_bps": _optional_float(take_profit_bps),
             "stop_loss_atr_multipliers": _optional_float(stop_loss_atr_multipliers),
             "take_profit_atr_multipliers": _optional_float(take_profit_atr_multipliers),
-            "cost_bps": float(cost_estimate.cost_bps) if cost_estimate is not None else 0.0,
+            "cost_bps": float(round_trip_cost_bps if cost_estimate is not None else 0.0),
             "direction_override": pd.to_numeric(direction_value, errors="coerce"),
         }
         prepared_events = _prepare_source_events_for_frame(

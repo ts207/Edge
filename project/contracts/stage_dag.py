@@ -58,6 +58,14 @@ def validate_stage_registry_definitions(project_root: Path) -> List[str]:
         for pattern in spec.script_patterns:
             if not pattern.strip():
                 issues.append(f"family '{spec.family}' has blank script pattern")
+                continue
+            if any(token in pattern for token in ("*", "?", "[")):
+                continue
+            candidate = project_root / pattern
+            if not candidate.exists():
+                issues.append(
+                    f"family '{spec.family}' script pattern '{pattern}' does not resolve under {project_root}"
+                )
     return issues
 
 

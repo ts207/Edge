@@ -116,3 +116,13 @@ def parse_candidate_discovery_argv(argv: Optional[List[str]] = None) -> Candidat
 
 def run_candidate_discovery_cli(argv: Optional[List[str]] = None) -> CandidateDiscoveryResult:
     return execute_candidate_discovery(parse_candidate_discovery_argv(argv))
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    return int(run_candidate_discovery_cli(argv).exit_code)
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main(sys.argv[1:]))

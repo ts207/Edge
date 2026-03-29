@@ -18,6 +18,7 @@ from project.reliability.regression_checks import (
     assert_bundle_policy_consistency,
     assert_storage_fallback_respected,
 )
+from project.pipelines import stage_registry
 from project.reliability.smoke_data import (
     build_smoke_dataset,
     build_smoke_summary,
@@ -97,6 +98,13 @@ def run_smoke_cli(
         if not root.exists():
             raise FileNotFoundError(root)
         result: Dict[str, Any] = {"root": str(root)}
+        registry_issues = stage_registry.validate_stage_registry_definitions(Path.cwd() / "project")
+        if registry_issues:
+            raise AssertionError(
+                "stage registry definition issues detected during validate-artifacts smoke: "
+                + "; ".join(registry_issues)
+            )
+        result["structural"] = {"stage_registry_issues": 0}
         promo_dirs = (
             list((root / "reports" / "promotions").glob("*"))
             if (root / "reports" / "promotions").exists()

@@ -20,6 +20,19 @@ STRICT_OPTIONAL_STRUCTURAL_KEY_COLUMNS = [
     "regime_bucket",
     "context_label",
     "contexts_json",
+    "fee_bps_per_side",
+    "slippage_bps_per_fill",
+    "cost_bps",
+    "round_trip_cost_bps",
+    "cost_config_digest",
+    "after_cost_includes_funding_carry",
+    "cost_model_source",
+]
+STRICT_COST_IDENTITY_COLUMNS = [
+    "fee_bps_per_side",
+    "slippage_bps_per_fill",
+    "cost_bps",
+    "round_trip_cost_bps",
     "cost_config_digest",
     "after_cost_includes_funding_carry",
     "cost_model_source",
@@ -125,15 +138,27 @@ def _normalize_target_candidates(frame: pd.DataFrame, *, key_columns: List[str])
         if col not in out.columns:
             out[col] = ""
         out[col] = out[col].map(_normalize_key_value)
+    cost_identity_complete = pd.Series(True, index=out.index)
+    for col in STRICT_COST_IDENTITY_COLUMNS:
+        if col not in out.columns:
+            out[col] = ""
+        normalized = out[col].map(_normalize_key_value)
+        out[col] = normalized
+        cost_identity_complete &= normalized.astype(str).str.strip().ne("")
+    out["confirmatory_cost_identity_complete"] = cost_identity_complete.astype(bool)
     out["confirmatory_gate_pass"] = _search_engine_gate_pass(out).astype(bool)
     out["confirmatory_bridge_pass"] = (
         out["gate_bridge_tradable"].fillna(False).astype(bool)
         if "gate_bridge_tradable" in out.columns
         else False
     )
-    out["confirmatory_strict_pass"] = out["confirmatory_gate_pass"] & out.get(
-        "gate_multiplicity_strict", pd.Series(False, index=out.index)
-    ).fillna(False).astype(bool)
+    out["confirmatory_strict_pass"] = (
+        out["confirmatory_gate_pass"]
+        & out.get("gate_multiplicity_strict", pd.Series(False, index=out.index))
+        .fillna(False)
+        .astype(bool)
+        & out["confirmatory_cost_identity_complete"].astype(bool)
+    )
     if "q_value" in out.columns:
         out["_q_sort"] = pd.to_numeric(out["q_value"], errors="coerce").fillna(1.0)
     else:
@@ -368,6 +393,23 @@ def compare_confirmatory_candidates(
     key_columns = _resolve_structural_key_columns(origin_raw, target_raw)
     origin = _normalize_origin_candidates(origin_raw, key_columns=key_columns)
     target = _normalize_target_candidates(target_raw, key_columns=key_columns)
+    shared_cost_identity_complete = all(
+        _column_has_signal(origin_raw, column) and _column_has_signal(target_raw, column)
+        for column in STRICT_COST_IDENTITY_COLUMNS
+    )
+    strict_matching_blocked = not shared_cost_identity_complete
+    strict_matching_blocking_reasons = (
+        [
+            "confirmatory cost identity incomplete: "
+            + ", ".join(
+                column
+                for column in STRICT_COST_IDENTITY_COLUMNS
+                if not (_column_has_signal(origin_raw, column) and _column_has_signal(target_raw, column))
+            )
+        ]
+        if strict_matching_blocked
+        else []
+    )
 
     origin_summary = {
         "candidate_count": int(len(origin)),
@@ -377,6 +419,11 @@ def compare_confirmatory_candidates(
     }
     target_summary = {
         "candidate_count": int(len(target)),
+        "cost_identity_complete_count": int(
+            target.get("confirmatory_cost_identity_complete", pd.Series(dtype=bool)).sum()
+        )
+        if not target.empty
+        else 0,
         "bridge_pass_count": int(
             target.get("confirmatory_bridge_pass", pd.Series(dtype=bool)).sum()
         )
@@ -397,11 +444,14 @@ def compare_confirmatory_candidates(
             "origin_run_id": origin_run_id,
             "target_run_id": target_run_id,
             "structural_key_columns": key_columns,
+            "strict_matching_blocked": strict_matching_blocked,
+            "strict_matching_blocking_reasons": strict_matching_blocking_reasons,
             "origin_summary": origin_summary,
             "target_summary": target_summary,
             "matched_summary": {
                 "matched_structural_rows": 0,
                 "matched_structural_keys": 0,
+                "matched_cost_identity_complete_count": 0,
                 "matched_bridge_pass_count": 0,
                 "matched_gate_pass_count": 0,
                 "matched_strict_pass_count": 0,
@@ -423,6 +473,11 @@ def compare_confirmatory_candidates(
     matched_summary = {
         "matched_structural_rows": int(len(merged)),
         "matched_structural_keys": int(len(merged[key_columns].drop_duplicates()))
+        if not merged.empty
+        else 0,
+        "matched_cost_identity_complete_count": int(
+            merged.get("confirmatory_cost_identity_complete", pd.Series(dtype=bool)).sum()
+        )
         if not merged.empty
         else 0,
         "matched_bridge_pass_count": int(
@@ -467,6 +522,8 @@ def compare_confirmatory_candidates(
         "origin_run_id": origin_run_id,
         "target_run_id": target_run_id,
         "structural_key_columns": key_columns,
+        "strict_matching_blocked": strict_matching_blocked,
+        "strict_matching_blocking_reasons": strict_matching_blocking_reasons,
         "origin_summary": origin_summary,
         "target_summary": target_summary,
         "matched_summary": matched_summary,
@@ -687,6 +744,17 @@ def build_confirmatory_workflow_payload(
         origin_run_id=origin_run_id,
         target_run_id=target,
     )
+    if comparison.get("strict_matching_blocked"):
+        blocking_reason = "; ".join(comparison.get("strict_matching_blocking_reasons", []))
+        return {
+            "origin_run_id": origin_run_id,
+            "target_run_id": target,
+            "workflow_status": "blocked",
+            "next_action": "repair_confirmatory_cost_identity",
+            "blocking_reason": blocking_reason,
+            "window_plan": window_plan,
+            "comparison": comparison,
+        }
     matched = dict(comparison.get("matched_summary", {}))
     matched_rows = int(matched.get("matched_structural_rows", 0))
     matched_gate_pass = int(matched.get("matched_gate_pass_count", 0))

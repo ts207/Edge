@@ -120,6 +120,74 @@ def test_run_candidate_discovery_service_passes_registry_root_to_experiment_disc
     assert captured["experiment_plan"] is not None
 
 
+def test_split_and_score_candidates_forwards_round_trip_cost(monkeypatch):
+    features = _make_features(n_bars=40)
+    events = _make_events_from_features(features, n_events=10, start_bar=3)
+    candidates = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_cost",
+                "event_type": "VOL_SHOCK",
+                "symbol": "BTCUSDT",
+                "direction": 1.0,
+                "rule_template": "continuation",
+                "family_id": "fam_cost",
+                "horizon": "15m",
+                "horizon_bars": 3,
+            }
+        ]
+    )
+    captured_cost_bps: list[float] = []
+
+    def _build_event_return_frame(*args, **kwargs):
+        captured_cost_bps.append(float(kwargs.get("cost_bps", 0.0)))
+        cost_penalty = float(kwargs.get("cost_bps", 0.0)) / 1000.0
+        return pd.DataFrame(
+            {
+                "forward_return": [0.03 - cost_penalty, 0.02 - cost_penalty, 0.01 - cost_penalty],
+                "cluster_day": ["a", "b", "c"],
+                "split_label": ["train", "validation", "test"],
+            }
+        )
+
+    monkeypatch.setattr(svc, "build_event_return_frame", _build_event_return_frame)
+    out = svc._split_and_score_candidates(
+        candidates,
+        events,
+        horizon_bars=3,
+        split_scheme_id="WF_60_20_20",
+        purge_bars=0,
+        embargo_bars=0,
+        bar_duration_minutes=5,
+        features_df=features,
+        entry_lag_bars=1,
+        shift_labels_k=0,
+        cost_estimate=SimpleNamespace(
+            cost_bps=6.0,
+            fee_bps_per_side=4.0,
+            slippage_bps_per_fill=2.0,
+            round_trip_cost_bps=12.0,
+            avg_dynamic_cost_bps=6.0,
+            cost_input_coverage=1.0,
+            cost_model_valid=True,
+            cost_model_source="stub",
+            regime_multiplier=1.0,
+        ),
+        cost_coordinate={
+            "config_digest": "digest",
+            "execution_model": {},
+            "after_cost_includes_funding_carry": False,
+            "fee_bps_per_side": 4.0,
+            "slippage_bps_per_fill": 2.0,
+            "cost_bps": 6.0,
+            "round_trip_cost_bps": 12.0,
+        },
+    )
+
+    assert captured_cost_bps == [12.0, 12.0, 12.0, 12.0, 12.0]
+    assert float(out.iloc[0]["round_trip_cost_bps"]) == 12.0
+
+
 def test_run_candidate_discovery_service_split_scheme_changes_split_plan(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "project.core.execution_costs.load_configs",
@@ -256,6 +324,21 @@ def test_run_candidate_discovery_service_cost_bps_changes_estimate(monkeypatch, 
     monkeypatch.setattr(svc.discovery, "action_name_from_direction", lambda direction: "LONG")
     monkeypatch.setattr(svc, "HypothesisRegistry", _HypothesisRegistry)
     monkeypatch.setattr(svc, "Hypothesis", _Hypothesis)
+    monkeypatch.setattr(
+        svc,
+        "build_event_return_frame",
+        lambda *args, **kwargs: pd.DataFrame(
+            {
+                "forward_return": [
+                    0.03 - float(kwargs.get("cost_bps", 0.0)) / 1000.0,
+                    0.02 - float(kwargs.get("cost_bps", 0.0)) / 1000.0,
+                    0.01 - float(kwargs.get("cost_bps", 0.0)) / 1000.0,
+                ],
+                "cluster_day": ["a", "b", "c"],
+                "split_label": ["train", "validation", "test"],
+            }
+        ),
+    )
 
     result_free = _run_candidate_discovery(
         tmp_path,
@@ -514,6 +597,46 @@ def test_split_and_score_candidates_emits_confirmatory_evidence(monkeypatch):
     assert 0.0 <= float(row["control_pass_rate"]) <= 1.0
     assert isinstance(bool(row["gate_delay_robustness"]), bool)
     assert isinstance(bool(row["gate_regime_stability"]), bool)
+
+
+def test_split_and_score_candidates_limits_placebo_checks_to_evaluation_rows(monkeypatch):
+    timestamps = pd.date_range("2024-01-01", periods=16, freq="5min", tz="UTC")
+    return_frame = pd.DataFrame(
+        {
+            "forward_return": [0.20] * 8 + [0.05] * 8,
+            "forward_return_raw": [0.20] * 8 + [0.05] * 8,
+            "cost_return": [0.0005] * 16,
+            "cluster_day": timestamps.strftime("%Y-%m-%d"),
+            "split_label": ["train"] * 8 + ["validation"] * 4 + ["test"] * 4,
+            "event_ts": timestamps,
+            "vol_regime": ["low" if idx % 2 == 0 else "high" for idx in range(len(timestamps))],
+        }
+    )
+    delayed_frame = return_frame.copy()
+    shift_placebo_frame = pd.DataFrame(
+        {
+            "forward_return": [0.20] * 8 + [0.001] * 8,
+            "forward_return_raw": [0.20] * 8 + [0.001] * 8,
+            "cost_return": [0.0005] * 16,
+            "cluster_day": timestamps.strftime("%Y-%m-%d"),
+            "split_label": ["train"] * 8 + ["validation"] * 4 + ["test"] * 4,
+            "event_ts": timestamps,
+            "vol_regime": ["low" if idx % 2 == 0 else "high" for idx in range(len(timestamps))],
+        }
+    )
+
+    evidence = svc.candidate_scoring._build_confirmatory_evidence(
+        return_frame=return_frame,
+        delayed_frame=delayed_frame,
+        shift_placebo_frame=shift_placebo_frame,
+        random_placebo_frame=shift_placebo_frame,
+        direction_placebo_frame=shift_placebo_frame,
+    )
+
+    assert bool(evidence["pass_shift_placebo"]) is True
+    assert bool(evidence["pass_random_entry_placebo"]) is True
+    assert bool(evidence["pass_direction_reversal_placebo"]) is True
+    assert float(evidence["control_pass_rate"]) == 0.0
 
 
 def test_standard_sample_quality_floors_are_defensible():

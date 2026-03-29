@@ -173,6 +173,36 @@ def test_validate_instrument_mismatch(registry_root, tmp_path):
         build_experiment_plan(conf, registry_root)
 
 
+def test_validate_entry_lag_zero_is_rejected(registry_root, tmp_path):
+    conf = _make_config(
+        tmp_path,
+        evaluation={"horizons_bars": [10], "directions": ["long"], "entry_lags": [0]},
+    )
+    with pytest.raises(ValueError, match="entry_lags must be >= 1"):
+        build_experiment_plan(conf, registry_root)
+
+
+def test_build_experiment_plan_canonicalizes_carry_state_aliases(registry_root, tmp_path):
+    (registry_root / "contexts.yaml").write_text(
+        yaml.dump(
+            {
+                "context_dimensions": {
+                    "carry_state": {"allowed_values": ["funding_pos", "funding_neg"]},
+                }
+            }
+        )
+    )
+    conf = _make_config(
+        tmp_path,
+        contexts={"include": {"carry_state": ["positive"]}},
+    )
+
+    plan = build_experiment_plan(conf, registry_root)
+
+    assert plan.hypotheses
+    assert {hyp.context["carry_state"] for hyp in plan.hypotheses if hyp.context} == {"funding_pos"}
+
+
 def test_build_experiment_plan_uses_explicit_data_root(registry_root, tmp_path, monkeypatch):
     from project.core import config as config_mod
 

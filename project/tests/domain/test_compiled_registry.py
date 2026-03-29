@@ -49,7 +49,9 @@ def test_domain_registry_exposes_context_and_searchable_family_views():
     registry = get_domain_registry()
 
     assert registry.resolve_context_state("vol_regime", "high") == "HIGH_VOL_REGIME"
+    assert registry.resolve_context_state("carry_state", "funding_pos") == "FUNDING_POSITIVE"
     assert "low" in registry.context_labels_for_family("vol_regime")
+    assert registry.context_labels_for_family("carry_state") == ("funding_neg", "funding_pos")
     assert "VOLATILITY_TRANSITION" in registry.searchable_event_families
     assert "TREND_STRUCTURE" in registry.searchable_state_families
     assert "AFTERSHOCK_STATE" in registry.valid_state_ids

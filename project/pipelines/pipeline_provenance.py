@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from project import PROJECT_ROOT
 from project.pipelines.pipeline_defaults import DATA_ROOT, utc_now_iso
+from project.pipelines.execution_engine_support import _manifest_declared_outputs_exist
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -256,6 +257,11 @@ def reconcile_run_manifest_from_stage_manifests(
 
         status = str(stage_manifest.get("status", "")).strip().lower()
         if status not in {"success", "skipped", "warning"}:
+            all_completed = False
+            continue
+        if status == "success" and not _manifest_declared_outputs_exist(
+            stage_manifest_path, stage_manifest
+        ):
             all_completed = False
             continue
 

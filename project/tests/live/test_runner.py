@@ -10,8 +10,9 @@ from project.engine.exchange_constraints import SymbolConstraints
 from project.engine.strategy_executor import StrategyResult, calculate_strategy_returns
 from project.live.execution_attribution import build_execution_attribution_record
 from project.live.kill_switch import KillSwitchReason
-from project.live.oms import OrderManager, OrderType
+from project.live.oms import OrderManager, OrderType, OrderSubmissionBlocked
 from project.live.runner import LiveEngineRunner
+from project.portfolio.incubation import IncubationLedger
 
 
 class _DummyDataManager:
@@ -189,6 +190,8 @@ def test_live_runner_actuates_kill_switch_shutdown_and_unwind() -> None:
         ["btcusdt"],
         order_manager=order_manager,
         data_manager=data_manager,
+        runtime_mode="trading",
+        strategy_runtime={"implemented": True},
     )
     runner._running = True
 
@@ -203,6 +206,30 @@ def test_live_runner_actuates_kill_switch_shutdown_and_unwind() -> None:
     assert data_manager.stop_calls == 1
     assert order_manager.cancel_calls == 1
     assert order_manager.flatten_calls == 1
+
+
+def test_live_runner_monitor_only_kill_switch_does_not_mutate_venue() -> None:
+    data_manager = _DummyDataManager()
+    order_manager = _DummyOrderManager()
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        order_manager=order_manager,
+        data_manager=data_manager,
+        runtime_mode="monitor_only",
+    )
+    runner._running = True
+
+    async def _exercise() -> None:
+        runner.kill_switch.trigger(KillSwitchReason.MANUAL, "monitor-only test")
+        assert runner._kill_switch_task is not None
+        await runner._kill_switch_task
+
+    asyncio.run(_exercise())
+
+    assert runner._running is False
+    assert data_manager.stop_calls == 1
+    assert order_manager.cancel_calls == 0
+    assert order_manager.flatten_calls == 0
 
 
 class _DummyStrategy:
@@ -241,6 +268,13 @@ def _features() -> pd.DataFrame:
     )
 
 
+def _graduate_dummy_strategy(runner: LiveEngineRunner, tmp_path) -> None:
+    ledger = IncubationLedger(tmp_path / "incubation_ledger.json")
+    ledger.start_incubation("dummy_strategy", "test-blueprint")
+    ledger.graduate("dummy_strategy")
+    runner.incubation_ledger = ledger
+
+
 def test_live_runner_submit_strategy_result_routes_order_through_oms(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("project.engine.strategy_executor.get_strategy", lambda _: _DummyStrategy())
     monkeypatch.setattr(
@@ -277,6 +311,7 @@ def test_live_runner_submit_strategy_result_routes_order_through_oms(monkeypatch
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
     accepted = runner.submit_strategy_result(
         result,
         client_order_id="runner-order-1",
@@ -291,6 +326,92 @@ def test_live_runner_submit_strategy_result_routes_order_through_oms(monkeypatch
     assert order.metadata["expected_return_bps"] == 25.0
     assert order.metadata["realized_fee_bps"] == 1.5
     assert order.metadata["execution_degradation_action"] == "allow"
+
+
+def test_live_runner_blocks_ungraduated_strategy_submission(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr("project.engine.strategy_executor.get_strategy", lambda _: _DummyStrategy())
+    monkeypatch.setattr(
+        "project.engine.strategy_executor.load_symbol_constraints",
+        lambda symbol, meta_dir: SymbolConstraints(
+            tick_size=None, step_size=None, min_notional=None
+        ),
+    )
+
+    result = calculate_strategy_returns(
+        "BTCUSDT",
+        _bars(),
+        _features(),
+        "dummy_strategy",
+        {
+            "position_scale": 1000.0,
+            "execution_lag_bars": 0,
+            "expected_return_bps": 25.0,
+            "expected_adverse_bps": 5.0,
+            "execution_model": {
+                "cost_model": "static",
+                "base_fee_bps": 2.0,
+                "base_slippage_bps": 1.0,
+            },
+        },
+        0.0,
+        tmp_path,
+    )
+
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        order_manager=OrderManager(),
+        data_manager=_DummyDataManager(),
+        runtime_mode="trading",
+        strategy_runtime={"implemented": True},
+    )
+    runner.incubation_ledger = IncubationLedger(tmp_path / "incubation_ledger.json")
+
+    blocked = runner.submit_strategy_result(
+        result,
+        client_order_id="runner-order-incubating",
+        order_type=OrderType.MARKET,
+        realized_fee_bps=1.5,
+        market_state={"spread_bps": 2.0, "depth_usd": 100000.0, "tob_coverage": 0.95},
+    )
+
+    assert blocked is not None
+    assert blocked["accepted"] is False
+    assert blocked["blocked_by"] == "incubation_gate"
+    assert "runner-order-incubating" not in runner.order_manager.active_orders
+    assert runner.order_manager.order_history[-1].status.name == "REJECTED"
+
+
+def test_live_runner_rejects_forged_strategy_result_in_trading_mode() -> None:
+    result = StrategyResult(
+        name="dummy",
+        data=pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2024-01-01", periods=1, freq="5min", tz="UTC"),
+                "symbol": ["BTCUSDT"],
+                "target_position": [1000.0],
+                "prior_executed_position": [0.0],
+                "fill_price": [100.0],
+                "close": [100.0],
+                "expected_return_bps": [20.0],
+                "expected_adverse_bps": [5.0],
+                "expected_cost_bps": [3.0],
+                "expected_net_edge_bps": [12.0],
+            }
+        ),
+        diagnostics={},
+        strategy_metadata={},
+        trace=pd.DataFrame(),
+    )
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        order_manager=OrderManager(),
+        data_manager=_DummyDataManager(),
+        runtime_mode="trading",
+        strategy_runtime={"implemented": True},
+    )
+
+    with pytest.raises(OrderSubmissionBlocked, match="validated runtime provenance"):
+        runner.submit_strategy_result(result, client_order_id="forged-order")
 
 
 def test_live_runner_sync_submit_fails_closed_for_exchange_backed_oms(
@@ -333,6 +454,7 @@ def test_live_runner_sync_submit_fails_closed_for_exchange_backed_oms(
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
 
     with pytest.raises(Exception, match="submit_strategy_result_async"):
         runner.submit_strategy_result(
@@ -387,6 +509,7 @@ def test_live_runner_submit_strategy_result_async_hits_venue(monkeypatch, tmp_pa
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
 
     accepted = asyncio.run(
         runner.submit_strategy_result_async(
@@ -506,6 +629,7 @@ def test_live_runner_submit_strategy_result_throttles_negative_bucket(
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
     runner.order_manager.execution_attribution.extend(
         [
             build_execution_attribution_record(
@@ -597,6 +721,7 @@ def test_live_runner_submit_strategy_result_blocks_degraded_bucket(monkeypatch, 
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
     runner.order_manager.execution_attribution.extend(
         [
             build_execution_attribution_record(
@@ -686,6 +811,7 @@ def test_live_runner_persists_execution_quality_report_after_fill(monkeypatch, t
         runtime_mode="trading",
         strategy_runtime={"implemented": True},
     )
+    _graduate_dummy_strategy(runner, tmp_path)
     runner.submit_strategy_result(
         result,
         client_order_id="runner-order-2",

@@ -67,6 +67,23 @@ def _make_blueprint(*, bp_id: str, candidate_id: str) -> Blueprint:
     )
 
 
+def test_blueprint_family_cluster_key_is_stable_and_family_scoped():
+    bp_a = _make_blueprint(bp_id="bp_1", candidate_id="c_1")
+    bp_b = _make_blueprint(bp_id="bp_2", candidate_id="c_2")
+    bp_c = _make_blueprint(bp_id="bp_3", candidate_id="c_3")
+
+    bp_a = bp_a.model_copy(update={"lineage": bp_a.lineage.model_copy(update={"template_verb": "mean_reversion"})})
+    bp_b = bp_b.model_copy(update={"lineage": bp_b.lineage.model_copy(update={"template_verb": "mean_reversion"})})
+    bp_c = bp_c.model_copy(update={"lineage": bp_c.lineage.model_copy(update={"template_verb": "breakout"})})
+
+    key_a = compiler._stable_blueprint_family_cluster_key(bp_a)
+    key_b = compiler._stable_blueprint_family_cluster_key(bp_b)
+    key_c = compiler._stable_blueprint_family_cluster_key(bp_c)
+
+    assert key_a == key_b
+    assert key_a != key_c
+
+
 def test_choose_event_rows_delegates_to_selection_module(monkeypatch):
     captured: dict[str, object] = {}
     sentinel_rows = [{"candidate_id": "c1"}]

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from project.research.services import run_comparison_service as svc
 
 
@@ -254,6 +256,47 @@ def test_compare_run_reports_reads_json_files(tmp_path):
     }
     assert out["regime_effectiveness"]["delta"]["regimes_total"] == 1
     assert out["regime_effectiveness"]["top_regime_changed"] is True
+
+
+def test_build_run_comparison_compatibility_fails_closed_when_cost_identity_missing():
+    baseline_manifest = {
+        "normalized_symbols": ["BTCUSDT"],
+        "split_scheme_id": "WF_60_20_20",
+        "entry_lag_bars": 1,
+        "horizon_bars": 24,
+        "purge_bars": 0,
+        "embargo_bars": 0,
+    }
+    candidate_manifest = dict(baseline_manifest)
+    baseline_phase2 = {
+        "discovery_profile": "standard",
+        "search_spec": "search/v1",
+        "cost_coordinate": {
+            "config_digest": "digest-a",
+            "fee_bps_per_side": 4.0,
+            "slippage_bps_per_fill": 2.0,
+            "cost_bps": 6.0,
+            "round_trip_cost_bps": 12.0,
+            "after_cost_includes_funding_carry": False,
+        },
+    }
+    candidate_phase2 = {
+        "discovery_profile": "standard",
+        "search_spec": "search/v1",
+        "cost_coordinate": {},
+    }
+
+    out = svc._build_run_comparison_compatibility(
+        baseline_manifest=baseline_manifest,
+        candidate_manifest=candidate_manifest,
+        baseline_phase2_diag=baseline_phase2,
+        candidate_phase2_diag=candidate_phase2,
+        baseline_edge_frame=pd.DataFrame(),
+        candidate_edge_frame=pd.DataFrame(),
+    )
+
+    assert out["comparable"] is False
+    assert any("confirmatory cost identity requires both sides" in reason for reason in out["reasons"])
 
 
 def test_assess_run_comparison_reports_warn_or_fail_status():
@@ -776,3 +819,34 @@ def test_compare_run_ids_reports_symbol_and_cost_digest_incompatibility(tmp_path
     assert any("cost digest mismatch" in message for message in compatibility["reasons"])
     assert assessed["status"] == "warn"
     assert any("run compatibility:" in message for message in assessed["violations"])
+
+
+def test_build_run_comparison_compatibility_treats_zero_and_nonzero_contract_knobs_as_mismatch():
+    compatibility = svc._build_run_comparison_compatibility(
+        baseline_manifest={
+            "split_scheme_id": "WF_60_20_20",
+            "entry_lag_bars": 0,
+            "horizon_bars": 12,
+            "purge_bars": 0,
+            "embargo_bars": 0,
+        },
+        candidate_manifest={
+            "split_scheme_id": "WF_60_20_20",
+            "entry_lag_bars": 1,
+            "horizon_bars": 12,
+            "purge_bars": 2,
+            "embargo_bars": 1,
+        },
+        baseline_phase2_diag={"cost_coordinate": {}},
+        candidate_phase2_diag={"cost_coordinate": {}},
+        baseline_edge_frame=pd.DataFrame(),
+        candidate_edge_frame=pd.DataFrame(),
+    )
+
+    assert compatibility["comparable"] is False
+    assert any("entry_lag_bars mismatch" in reason for reason in compatibility["reasons"])
+    assert any("purge_bars mismatch" in reason for reason in compatibility["reasons"])
+    assert any("embargo_bars mismatch" in reason for reason in compatibility["reasons"])
+    assert not any(
+        "entry_lag_bars unavailable" in note for note in compatibility["notes"]
+    )

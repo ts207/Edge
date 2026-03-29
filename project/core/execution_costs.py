@@ -18,6 +18,7 @@ class ResolvedExecutionCosts:
     config: Dict[str, Any]
     fee_bps_per_side: float
     slippage_bps_per_fill: float
+    round_trip_cost_bps: float
     slippage_model: str
     impact_coefficient_scaling: bool
     cost_bps: float
@@ -66,6 +67,7 @@ def resolve_execution_costs(
     slippage_model = str(merged.get("slippage_model", "fixed")).strip().lower()
     impact_scaling = bool(merged.get("impact_coefficient_scaling", False))
     cost = float(cost_bps) if cost_bps is not None else float(fee + slippage)
+    round_trip_cost = float(2.0 * cost)
 
     execution_model_raw = merged.get("execution_model", {})
     execution_model = dict(execution_model_raw) if isinstance(execution_model_raw, dict) else {}
@@ -78,6 +80,7 @@ def resolve_execution_costs(
         "config_paths": [str(path) for path in paths],
         "fee_bps_per_side": float(fee),
         "slippage_bps_per_fill": float(slippage),
+        "round_trip_cost_bps": float(round_trip_cost),
         "slippage_model": slippage_model,
         "impact_coefficient_scaling": impact_scaling,
         "cost_bps": float(cost),
@@ -89,6 +92,7 @@ def resolve_execution_costs(
         config=merged,
         fee_bps_per_side=float(fee),
         slippage_bps_per_fill=float(slippage),
+        round_trip_cost_bps=float(round_trip_cost),
         slippage_model=slippage_model,
         impact_coefficient_scaling=impact_scaling,
         cost_bps=float(cost),

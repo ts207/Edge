@@ -91,14 +91,15 @@ def candidate_cost_fields(
     cost_values = cost_bps_series.to_numpy(dtype=float)
     finite_cost = bool(cost_values.size > 0 and np.isfinite(cost_values).all())
     cost_model_valid = bool(cost_input_coverage >= COST_INPUT_COVERAGE_MIN and finite_cost)
-    cost_per_trade = float(np.nanmean((cost_values * turnover) / 10_000.0))
-    cost_per_trade = max(0.0, cost_per_trade)
-    after_cost = float(expectancy_per_trade - cost_per_trade)
+    transaction_cost_per_trade = float(np.nanmean((cost_values * turnover) / 10_000.0))
+    transaction_cost_per_trade = max(0.0, transaction_cost_per_trade)
+    round_trip_cost_per_trade = 2.0 * transaction_cost_per_trade
+    after_cost = float(expectancy_per_trade - round_trip_cost_per_trade)
     stressed_after_cost = float(
-        expectancy_per_trade - (float(stressed_cost_multiplier) * cost_per_trade)
+        expectancy_per_trade - (float(stressed_cost_multiplier) * round_trip_cost_per_trade)
     )
-    gross_proxy = max(1e-9, abs(float(expectancy_per_trade)) + cost_per_trade)
-    cost_ratio = float(min(2.0, max(0.0, cost_per_trade / gross_proxy)))
+    gross_proxy = max(1e-9, abs(float(expectancy_per_trade)) + round_trip_cost_per_trade)
+    cost_ratio = float(min(2.0, max(0.0, round_trip_cost_per_trade / gross_proxy)))
     return {
         "after_cost_expectancy_per_trade": after_cost,
         "stressed_after_cost_expectancy_per_trade": stressed_after_cost,

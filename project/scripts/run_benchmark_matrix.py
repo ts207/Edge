@@ -206,7 +206,7 @@ def main() -> int:
     parser.add_argument(
         "--out_dir",
         default=None,
-        help="Output directory. Defaults to data/reports/perf_benchmarks/<matrix_id>_<timestamp>.",
+        help="Output directory. Defaults to data/reports/benchmarks/<matrix_id>_<timestamp>.",
     )
     parser.add_argument(
         "--execute", type=int, default=0, help="If 1, execute commands. If 0, dry-run only."
@@ -227,7 +227,7 @@ def main() -> int:
     out_dir = (
         Path(args.out_dir).resolve()
         if args.out_dir
-        else DATA_ROOT / "reports" / "perf_benchmarks" / f"{matrix_id}_{timestamp}"
+        else DATA_ROOT / "reports" / "benchmarks" / f"{matrix_id}_{timestamp}"
     )
     _ensure_dir(out_dir)
 

@@ -475,7 +475,7 @@ class BroadDiscoveryConfig:
     timeframe: str = "5m"
     lookback_days: int = 90
     horizon_bars: tuple[int, ...] = (12, 24)
-    entry_lags: tuple[int, ...] = (0,)
+    entry_lags: tuple[int, ...] = (1,)
     directions: tuple[str, ...] = ("long", "short")
     objective_name: str = "retail_profitability"
     promotion_profile: str = "research"

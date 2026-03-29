@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 import yaml
 
+from project.research.context_labels import canonicalize_contexts
 from project.research.knowledge.knobs import build_agent_knob_rows
 
 
@@ -40,13 +41,13 @@ def _normalize_contexts(values: Any) -> Dict[str, List[str]]:
         return {}
     if not isinstance(values, dict):
         raise ValueError("contexts must be a mapping of dimension -> allowed values")
-    out: Dict[str, List[str]] = {}
+    raw_out: Dict[str, List[str]] = {}
     for key, raw in sorted(values.items()):
         name = str(key).strip()
         if not name:
             continue
-        out[name] = _as_str_list(raw, field_name=f"contexts.{name}")
-    return out
+        raw_out[name] = _as_str_list(raw, field_name=f"contexts.{name}")
+    return canonicalize_contexts(raw_out)
 
 
 def _normalize_trigger_space(values: Any) -> Dict[str, Any]:

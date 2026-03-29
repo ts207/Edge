@@ -184,7 +184,7 @@ def evaluate_structural_robustness(
 
     if returns_raw is not None and costs_bps is not None:
         raw = pd.to_numeric(returns_raw, errors="coerce")
-        cst = pd.to_numeric(costs_bps, errors="coerce")
+        cst = pd.to_numeric(costs_bps, errors="coerce").fillna(0.0).clip(lower=0.0)
 
         for mult in cost_stress_multipliers:
             stressed_pnl = raw - cst * float(mult) / 10000.0

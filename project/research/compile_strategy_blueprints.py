@@ -88,6 +88,17 @@ def _safe_float(value: object, default: float = 0.0) -> float:
     return safe_float(value, default)
 
 
+def _stable_blueprint_family_cluster_key(blueprint: Blueprint) -> int:
+    payload = {
+        "event_type": str(blueprint.event_type).strip().upper(),
+        "template_verb": str(blueprint.lineage.template_verb or "").strip().lower(),
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return int(digest[:16], 16)
+
+
 def _validate_promoted_candidates_frame(df: pd.DataFrame, source_label: str = "") -> None:
     if df.empty:
         return
@@ -660,7 +671,7 @@ def main() -> int:
             
             for i, bp in enumerate(blueprints):
                 # We cluster by event_type and template_verb as a proxy for "alpha family"
-                cluster_key = hash((bp.event_type, bp.lineage.template_verb)) % 1000
+                cluster_key = _stable_blueprint_family_cluster_key(bp)
                 if cluster_key not in clusters:
                     clusters[cluster_key] = []
                 clusters[cluster_key].append(bp.id)

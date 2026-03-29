@@ -38,6 +38,17 @@ def _load_json(path: Path) -> dict:
     return payload
 
 
+def _resolve_phase2_artifact(phase2_dir: Path, filename: str) -> Path | None:
+    candidates = [
+        phase2_dir / "search_engine" / filename,
+        phase2_dir / filename,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _verify_contracts(repo_root: Path) -> None:
     _run(
         [sys.executable, "-m", "project.scripts.regime_routing_audit", "--check"],
@@ -55,12 +66,12 @@ def _verify_experiment_artifacts(
 ) -> None:
     run_manifest = data_root / "runs" / run_id / "run_manifest.json"
     phase2_dir = data_root / "reports" / "phase2" / run_id
-    phase2_candidates = phase2_dir / "phase2_candidates.parquet"
-    phase2_diagnostics = phase2_dir / "phase2_diagnostics.json"
+    phase2_candidates = _resolve_phase2_artifact(phase2_dir, "phase2_candidates.parquet")
+    phase2_diagnostics = _resolve_phase2_artifact(phase2_dir, "phase2_diagnostics.json")
     promotion_dir = data_root / "reports" / "promotions" / run_id
 
     required = [run_manifest, phase2_candidates, phase2_diagnostics, promotion_dir]
-    missing = [str(path) for path in required if not path.exists()]
+    missing = [str(path) for path in required if not path or not path.exists()]
     if missing:
         raise FileNotFoundError("missing required run artifacts: " + ", ".join(missing))
 

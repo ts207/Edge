@@ -290,7 +290,7 @@ def build_research_stages(
 
         for event_type, script_name, extra_args in selected_chain:
             for tf in timeframes:
-                phase1_script = project_root / "pipelines" / "research" / script_name
+                phase1_script = project_root / "research" / script_name
                 phase1_args = [
                     "--run_id",
                     run_id,
@@ -319,7 +319,7 @@ def build_research_stages(
                 stages.append(
                     (
                         registry_stage_name,
-                        project_root / "pipelines" / "research" / "build_event_registry.py",
+                        project_root / "research" / "build_event_registry.py",
                         [
                             "--run_id",
                             run_id,
@@ -337,7 +337,7 @@ def build_research_stages(
                 stages.append(
                     (
                         canonical_stage_name,
-                        project_root / "pipelines" / "research" / "canonicalize_event_episodes.py",
+                        project_root / "research" / "canonicalize_event_episodes.py",
                         [
                             "--run_id",
                             run_id,
@@ -360,7 +360,7 @@ def build_research_stages(
         stages.append(
             (
                 "phase1_correlation_clustering",
-                project_root / "pipelines" / "research" / "phase1_correlation_clustering.py",
+                project_root / "research" / "phase1_correlation_clustering.py",
                 [
                     "--run_id",
                     run_id,
@@ -404,7 +404,7 @@ def build_research_stages(
         stages.append(
             (
                 "phase2_search_engine",
-                project_root / "pipelines" / "research" / "phase2_search_engine.py",
+                project_root / "research" / "phase2_search_engine.py",
                 search_args,
             )
         )
@@ -413,7 +413,7 @@ def build_research_stages(
         stages.append(
             (
                 "summarize_discovery_quality",
-                project_root / "pipelines" / "research" / "summarize_discovery_quality.py",
+                project_root / "research" / "summarize_discovery_quality.py",
                 ["--run_id", run_id],
             )
         )
@@ -423,7 +423,7 @@ def build_research_stages(
             stages.append(
                 (
                     "evaluate_naive_entry",
-                    project_root / "pipelines" / "research" / "evaluate_naive_entry.py",
+                    project_root / "research" / "evaluate_naive_entry.py",
                     [
                         "--run_id",
                         run_id,
@@ -449,7 +449,7 @@ def build_research_stages(
         stages.append(
             (
                 "export_edge_candidates",
-                project_root / "pipelines" / "research" / "export_edge_candidates.py",
+                project_root / "research" / "export_edge_candidates.py",
                 [
                     "--run_id",
                     run_id,
@@ -465,7 +465,6 @@ def build_research_stages(
                 (
                     "generate_negative_control_summary",
                     project_root
-                    / "pipelines"
                     / "research"
                     / "generate_negative_control_summary.py",
                     [
@@ -515,7 +514,7 @@ def build_research_stages(
             stages.append(
                 (
                     "promote_candidates",
-                    project_root / "pipelines" / "research" / "promote_candidates.py",
+                    project_root / "research" / "cli" / "promotion_cli.py",
                     promote_args,
                 )
             )
@@ -527,7 +526,7 @@ def build_research_stages(
         ):
             registry_args = ["--run_id", run_id]
             if script_supports_flag(
-                project_root / "pipelines" / "research" / "update_edge_registry.py",
+                project_root / "research" / "update_edge_registry.py",
                 "--retail_profile",
             ):
                 registry_args.extend(["--retail_profile", str(args.retail_profile)])
@@ -535,7 +534,7 @@ def build_research_stages(
             stages.append(
                 (
                     "update_edge_registry",
-                    project_root / "pipelines" / "research" / "update_edge_registry.py",
+                project_root / "research" / "update_edge_registry.py",
                     registry_args,
                 )
             )
@@ -548,7 +547,7 @@ def build_research_stages(
         stages.append(
             (
                 "update_campaign_memory",
-                project_root / "pipelines" / "research" / "update_campaign_memory.py",
+                project_root / "research" / "update_campaign_memory.py",
                 [
                     "--run_id",
                     run_id,
@@ -578,7 +577,7 @@ def build_research_stages(
 
     if int(args.run_expectancy_analysis):
         expectancy_script = (
-            project_root / "pipelines" / "research" / "analyze_conditional_expectancy.py"
+            project_root / "research" / "analyze_conditional_expectancy.py"
         )
         expectancy_args = ["--run_id", run_id, "--symbols", symbols]
         if script_supports_flag(expectancy_script, "--retail_profile"):
@@ -597,7 +596,7 @@ def build_research_stages(
             stages.append(
                 (
                     "validate_expectancy_traps",
-                    project_root / "pipelines" / "research" / "validate_expectancy_traps.py",
+                    project_root / "research" / "validate_expectancy_traps.py",
                     [
                         "--run_id",
                         run_id,
@@ -615,10 +614,7 @@ def build_research_stages(
             stages.append(
                 (
                     "generate_recommendations_checklist",
-                    project_root
-                    / "pipelines"
-                    / "research"
-                    / "generate_recommendations_checklist.py",
+                    project_root / "research" / "generate_recommendations_checklist.py",
                     [
                         "--run_id",
                         run_id,
@@ -634,7 +630,7 @@ def build_research_stages(
             stages.append(
                 (
                     "analyze_interaction_lift",
-                    project_root / "pipelines" / "research" / "analyze_interaction_lift.py",
+                    project_root / "research" / "analyze_interaction_lift.py",
                     ["--run_id", run_id],
                 )
             )
@@ -643,7 +639,7 @@ def build_research_stages(
         stages.append(
             (
                 "finalize_experiment",
-                project_root / "pipelines" / "research" / "finalize_experiment.py",
+                project_root / "research" / "finalize_experiment.py",
                 [
                     "--run_id",
                     run_id,

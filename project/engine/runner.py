@@ -62,6 +62,9 @@ def _spec_metadata_payload(raw_spec: Any) -> Dict[str, Any]:
     else:
         return {}
     metadata = payload.get("metadata", {}) if isinstance(payload.get("metadata"), dict) else {}
+    research_origin = (
+        payload.get("research_origin", {}) if isinstance(payload.get("research_origin"), dict) else {}
+    )
     return {
         "proposal_id": str(metadata.get("proposal_id", "")).strip(),
         "run_id": str(metadata.get("run_id", "")).strip(),
@@ -71,6 +74,12 @@ def _spec_metadata_payload(raw_spec: Any) -> Dict[str, Any]:
         "canonical_event_type": str(metadata.get("canonical_event_type", "")).strip(),
         "canonical_regime": str(metadata.get("canonical_regime", "")).strip(),
         "routing_profile_id": str(metadata.get("routing_profile_id", "")).strip(),
+        "ontology_spec_hash": str(research_origin.get("ontology_spec_hash", "")).strip(),
+        "promotion_track": str(research_origin.get("promotion_track", "")).strip(),
+        "wf_status": str(research_origin.get("wf_status", "")).strip(),
+        "wf_evidence_hash": str(research_origin.get("wf_evidence_hash", "")).strip(),
+        "source_path": str(research_origin.get("source_path", "")).strip(),
+        "compiler_version": str(research_origin.get("compiler_version", "")).strip(),
     }
 
 

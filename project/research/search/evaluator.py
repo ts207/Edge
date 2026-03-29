@@ -86,6 +86,8 @@ METRICS_COLUMNS = [
     "invalid_reason",
 ]
 
+_EVALUATION_SPLIT_LABELS = {"train", "validation", "test"}
+
 
 def _normal_p_value(stat: float) -> float:
     if not np.isfinite(stat):
@@ -144,6 +146,37 @@ def _is_supported_profile(spec: HypothesisSpec) -> tuple[bool, str]:
     if str(spec.objective_profile).strip().lower() != "mean_return":
         return False, "unsupported_objective_profile"
     return True, ""
+
+
+def _resolved_split_label_for_window(
+    *,
+    features: pd.DataFrame,
+    event_index: Any,
+    entry_lag_bars: int,
+    horizon_bars: int,
+    position_lookup: pd.Series,
+) -> str | None:
+    if "split_label" not in features.columns:
+        return None
+    if event_index not in position_lookup.index:
+        return None
+    pos = position_lookup.get(event_index)
+    if pos is None or pd.isna(pos):
+        return None
+    entry_pos = int(pos) + int(entry_lag_bars)
+    future_pos = entry_pos + int(horizon_bars)
+    if entry_pos < 0 or future_pos >= len(features):
+        return None
+    window = features.iloc[entry_pos : future_pos + 1]["split_label"].astype(str)
+    labels = [str(label).strip().lower() for label in window.tolist()]
+    labels = [label for label in labels if label and label not in {"nan", "none", "null"}]
+    if not labels:
+        return None
+    unique = set(labels)
+    if len(unique) != 1:
+        return None
+    label = next(iter(unique))
+    return label if label in _EVALUATION_SPLIT_LABELS else None
 
 
 def evaluate_hypothesis_batch(
@@ -214,6 +247,7 @@ def evaluate_hypothesis_batch(
     # Pre-calculate shared masks for robustness evaluation
     regime_labels = label_regimes(features)
     stress_masks = {s["name"]: _apply_stress_mask(s, features) for s in STRESS_SCENARIOS}
+    position_lookup = pd.Series(np.arange(len(features), dtype=int), index=features.index)
 
     rows: List[Dict[str, Any]] = []
     regime_rows: List[Dict[str, Any]] = []  # Phase 4.2 — per-hypothesis regime breakdown
@@ -277,6 +311,25 @@ def evaluate_hypothesis_batch(
 
         fwd = fwd_cache[hbars]
         event_returns = fwd[mask].dropna()
+        if "split_label" in features.columns and not event_returns.empty:
+            resolved_split_labels: Dict[Any, str] = {}
+            kept_indices: List[Any] = []
+            for idx in event_returns.index:
+                split_label = _resolved_split_label_for_window(
+                    features=features,
+                    event_index=idx,
+                    entry_lag_bars=int(spec.entry_lag),
+                    horizon_bars=int(hbars),
+                    position_lookup=position_lookup,
+                )
+                if split_label is None:
+                    continue
+                resolved_split_labels[idx] = split_label
+                kept_indices.append(idx)
+            event_returns = event_returns.loc[kept_indices]
+            if event_returns.empty:
+                rows.append(_null_row(spec, 0, "no_split_compatible_events"))
+                continue
         n = len(event_returns)
         split_counts = {
             "train_n_obs": 0,
@@ -286,7 +339,11 @@ def evaluate_hypothesis_batch(
             "test_samples": 0,
         }
         if "split_label" in features.columns and not event_returns.empty:
-            split_labels = features.loc[event_returns.index, "split_label"].astype(str)
+            split_labels = pd.Series(
+                [resolved_split_labels.get(idx, "") for idx in event_returns.index],
+                index=event_returns.index,
+                dtype=object,
+            )
             split_counts["train_n_obs"] = int((split_labels == "train").sum())
             split_counts["validation_n_obs"] = int((split_labels == "validation").sum())
             split_counts["test_n_obs"] = int((split_labels == "test").sum())

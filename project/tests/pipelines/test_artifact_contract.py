@@ -141,8 +141,8 @@ def test_e2e_artifact_contract_directional_and_multi(mock_data_root, tmp_path):
     """
     run_id = "test_contract_complex"
     symbols = "BTCUSDT"
-    registry_script = PROJECT_ROOT / "pipelines" / "research" / "build_event_registry.py"
-    discovery_script = PROJECT_ROOT / "pipelines" / "research" / "phase2_candidate_discovery.py"
+    registry_script = PROJECT_ROOT / "research" / "build_event_registry.py"
+    discovery_script = PROJECT_ROOT / "research" / "cli" / "candidate_discovery_cli.py"
 
     custom_analyzer_content = textwrap.dedent(f"""
     import pandas as pd
@@ -315,11 +315,11 @@ def test_e2e_artifact_contract_deterministic(mock_data_root, tmp_path):
     symbols = "BTCUSDT"
     entry_lag_bars = 2
 
-    registry_script = PROJECT_ROOT / "pipelines" / "research" / "build_event_registry.py"
-    discovery_script = PROJECT_ROOT / "pipelines" / "research" / "phase2_candidate_discovery.py"
-    bridge_script = PROJECT_ROOT / "pipelines" / "research" / "bridge_evaluate_phase2.py"
-    promote_script = PROJECT_ROOT / "pipelines" / "research" / "promote_candidates.py"
-    compile_script = PROJECT_ROOT / "pipelines" / "research" / "compile_strategy_blueprints.py"
+    registry_script = PROJECT_ROOT / "research" / "build_event_registry.py"
+    discovery_script = PROJECT_ROOT / "research" / "cli" / "candidate_discovery_cli.py"
+    bridge_script = PROJECT_ROOT / "research" / "bridge_evaluate_phase2.py"
+    promote_script = PROJECT_ROOT / "research" / "cli" / "promotion_cli.py"
+    compile_script = PROJECT_ROOT / "research" / "compile_strategy_blueprints.py"
 
     # Use explicit relaxed objective/profile specs for deterministic contract
     # validation. This avoids coupling this fixture to production retail floors.

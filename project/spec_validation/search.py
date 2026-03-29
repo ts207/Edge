@@ -10,6 +10,24 @@ from project.spec_validation.ontology import (
     get_event_family,
 )
 
+_UNSUPPORTED_SEARCH_FIELDS = frozenset({"cost_profiles", "conditioning_intersections"})
+
+
+def validate_search_spec_doc(search_cfg: Dict[str, Any], *, source: str = "<memory>") -> None:
+    if not isinstance(search_cfg, dict):
+        raise ValueError(f"Search spec must resolve to a mapping: {source}")
+
+    unsupported = sorted(
+        field_name for field_name in _UNSUPPORTED_SEARCH_FIELDS if field_name in search_cfg
+    )
+    if unsupported:
+        raise ValueError(
+            f"Search spec '{source}' contains unsupported fields: {', '.join(unsupported)}"
+        )
+
+    # Resolve and validate entry lags eagerly so stale same-bar configs fail before generation.
+    resolve_entry_lags(search_cfg)
+
 
 def expand_triggers(search_cfg: Dict[str, Any]) -> Dict[str, Any]:
     triggers = search_cfg.get("triggers", {})
@@ -95,9 +113,21 @@ def resolve_entry_lags(search_cfg: Dict[str, Any]) -> List[int]:
     # Support both 'entry_lag' and legacy 'entry_lags'
     lags = search_cfg.get("entry_lag", search_cfg.get("entry_lags", []))
     if lags == "*":
-        return list(get_domain_registry().default_entry_lags())
+        resolved = list(get_domain_registry().default_entry_lags())
+    elif lags is None or lags == "" or lags == [] or lags == ():
+        resolved = [1]  # Default to 1 bar lag
+    else:
+        resolved = [lags] if isinstance(lags, int) else list(lags)
 
-    if not lags:
-        return [1]  # Default to 1 bar lag
-
-    return [lags] if isinstance(lags, int) else lags
+    normalized: List[int] = []
+    seen: set[int] = set()
+    for raw in resolved:
+        lag = int(raw)
+        if lag < 1:
+            raise ValueError(
+                "entry_lag/entry_lags must be >= 1 to prevent same-bar entry leakage"
+            )
+        if lag not in seen:
+            normalized.append(lag)
+            seen.add(lag)
+    return normalized

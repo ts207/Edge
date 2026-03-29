@@ -426,7 +426,7 @@ def test_promotion_helper_imports_use_research_compat():
 
 def test_research_pipeline_wrappers_only_depend_on_cli_services_and_specs() -> None:
     allowed_import_prefixes = {
-        "project.pipelines.research.cli",
+        "project.research.cli",
         "project.research.services",
         "project.specs.gates",
     }

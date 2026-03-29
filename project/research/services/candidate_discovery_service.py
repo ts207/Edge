@@ -240,6 +240,7 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                     "cost_bps": float(total_cost_bps),
                     "fee_bps_per_side": float(fee_bps),
                     "slippage_bps_per_fill": float(slippage_bps),
+                    "round_trip_cost_bps": float(2.0 * total_cost_bps),
                 },
             )()
         cost_calibrator = ToBRegimeCostCalibrator(
@@ -337,6 +338,9 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 "cost_bps": float(cost_estimate.cost_bps),
                 "fee_bps_per_side": float(cost_estimate.fee_bps_per_side),
                 "slippage_bps_per_fill": float(cost_estimate.slippage_bps_per_fill),
+                "round_trip_cost_bps": float(
+                    getattr(cost_estimate, "round_trip_cost_bps", 2.0 * float(cost_estimate.cost_bps))
+                ),
                 "avg_dynamic_cost_bps": float(cost_estimate.avg_dynamic_cost_bps),
                 "cost_input_coverage": float(cost_estimate.cost_input_coverage),
                 "cost_model_valid": bool(cost_estimate.cost_model_valid),
@@ -419,10 +423,18 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 cost_coordinate={
                     "config_digest": str(getattr(resolved_costs, "config_digest", "") or ""),
                     "execution_model": dict(getattr(resolved_costs, "execution_model", {}) or {}),
-                    "after_cost_includes_funding_carry": True,
+                    "after_cost_includes_funding_carry": False,
                     "fee_bps_per_side": float(getattr(resolved_costs, "fee_bps_per_side", 0.0) or 0.0),
                     "slippage_bps_per_fill": float(getattr(resolved_costs, "slippage_bps_per_fill", 0.0) or 0.0),
                     "cost_bps": float(getattr(resolved_costs, "cost_bps", 0.0) or 0.0),
+                    "round_trip_cost_bps": float(
+                        getattr(
+                            resolved_costs,
+                            "round_trip_cost_bps",
+                            2.0 * float(getattr(resolved_costs, "cost_bps", 0.0) or 0.0),
+                        )
+                        or 0.0
+                    ),
                 },
             )
             symbol_diag["post_split_candidate_rows"] = int(len(candidates))
@@ -520,8 +532,15 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                     "cost_bps": float(resolved_costs.cost_bps),
                     "fee_bps_per_side": float(resolved_costs.fee_bps_per_side),
                     "slippage_bps_per_fill": float(resolved_costs.slippage_bps_per_fill),
+                    "round_trip_cost_bps": float(
+                        getattr(
+                            resolved_costs,
+                            "round_trip_cost_bps",
+                            2.0 * float(resolved_costs.cost_bps),
+                        )
+                    ),
                     "execution_model": dict(getattr(resolved_costs, "execution_model", {}) or {}),
-                    "after_cost_includes_funding_carry": True,
+                    "after_cost_includes_funding_carry": False,
                 },
                 "symbols_requested": list(config.symbols),
                 "symbols_with_candidates": sorted(symbol_candidates),

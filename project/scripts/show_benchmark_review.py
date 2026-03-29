@@ -9,11 +9,39 @@ from typing import Any, Dict, List
 from project.core.config import get_data_root
 
 
+def _benchmark_roots(data_root: Path) -> list[Path]:
+    return [
+        data_root / "reports" / "benchmarks",
+        data_root / "reports" / "perf_benchmarks",
+    ]
+
+
+def _history_review_candidates(root: Path, matrix_id: str | None = None) -> List[Path]:
+    history_dir = root / "history"
+    if not history_dir.exists():
+        return []
+    runs = [
+        d
+        for d in history_dir.iterdir()
+        if d.is_dir() and (not matrix_id or d.name.startswith(f"{matrix_id}_"))
+    ]
+    runs.sort(key=lambda path: path.name, reverse=True)
+    reviews: List[Path] = []
+    for run_dir in runs:
+        review_file = run_dir / "benchmark_review.json"
+        if review_file.exists():
+            reviews.append(review_file)
+    return reviews
+
+
 def find_latest_review(data_root: Path) -> Path | None:
-    # Check benchmarks/latest first
-    latest_link = data_root / "reports" / "benchmarks" / "latest" / "benchmark_review.json"
-    if latest_link.exists():
-        return latest_link
+    for root in _benchmark_roots(data_root):
+        latest_link = root / "latest" / "benchmark_review.json"
+        if latest_link.exists():
+            return latest_link
+        history_reviews = _history_review_candidates(root)
+        if history_reviews:
+            return history_reviews[0]
 
     # Check /tmp/
     tmp_path = Path("/tmp")
@@ -26,24 +54,18 @@ def find_latest_review(data_root: Path) -> Path | None:
 
 
 def find_historical_reviews(matrix_id: str, limit: int = 5) -> List[Path]:
-    data_root = get_data_root()
-    h_path = data_root / "reports" / "benchmarks" / "history"
-    if not h_path.exists():
-        return []
-
-    runs = sorted(
-        [d for d in h_path.iterdir() if d.is_dir() and d.name.startswith(f"{matrix_id}_")],
-        key=lambda x: x.name,
-        reverse=True,
-    )
-
     reviews = []
-    for r in runs:
-        review_file = r / "benchmark_review.json"
-        if review_file.exists():
+    data_root = get_data_root()
+    seen: set[Path] = set()
+    for root in _benchmark_roots(data_root):
+        for review_file in _history_review_candidates(root, matrix_id=matrix_id):
+            resolved = review_file.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
             reviews.append(review_file)
             if len(reviews) >= limit:
-                break
+                return reviews
     return reviews
 
 

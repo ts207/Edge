@@ -127,6 +127,75 @@ def test_run_promotion_service_smoke(monkeypatch, tmp_path):
     assert "decision_summary" in result.diagnostics
 
 
+def test_run_promotion_service_fails_closed_when_promoted_row_lacks_evidence_bundle(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(svc, "get_data_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "load_run_manifest",
+        lambda run_id: {"run_mode": "confirmatory", "discovery_profile": "standard"},
+    )
+    monkeypatch.setattr(
+        svc,
+        "resolve_objective_profile_contract",
+        lambda **kwargs: SimpleNamespace(
+            min_net_expectancy_bps=5.0,
+            max_fee_plus_slippage_bps=10.0,
+            max_daily_turnover_multiple=5.0,
+            require_retail_viability=False,
+            require_low_capital_contract=False,
+        ),
+    )
+    monkeypatch.setattr(svc, "ontology_spec_hash", lambda root: "hash")
+    monkeypatch.setattr(svc, "_load_gates_spec", lambda root: {"promotion_confirmatory_gates": {}})
+    monkeypatch.setattr(svc, "_load_negative_control_summary", lambda run_id: {})
+    monkeypatch.setattr(svc, "_load_dynamic_min_events_by_event", lambda run_id: {})
+
+    cand_path = tmp_path / "reports" / "edge_candidates" / "r1"
+    cand_path.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK",
+                "q_value": 0.01,
+                "confirmatory_locked": True,
+                "frozen_spec_hash": "hash",
+            }
+        ]
+    ).to_csv(cand_path / "edge_candidates_normalized.csv", index=False)
+
+    audit_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK",
+                "promotion_decision": "promoted",
+                "promotion_track": "standard",
+                "promotion_metrics_trace": "{}",
+                "evidence_bundle_json": "",
+            }
+        ]
+    )
+    promoted_df = pd.DataFrame(
+        [{"candidate_id": "cand_1", "event_type": "VOL_SHOCK", "status": "PROMOTED"}]
+    )
+    monkeypatch.setattr(
+        svc,
+        "promote_candidates",
+        lambda **kwargs: (audit_df.copy(), promoted_df.copy(), {"promoted": 1}),
+    )
+    monkeypatch.setattr(svc, "build_promotion_statistical_audit", lambda **kwargs: audit_df.copy())
+    monkeypatch.setattr(
+        svc, "stabilize_promoted_output_schema", lambda promoted_df, audit_df: promoted_df.copy()
+    )
+
+    result = _run_promotion(tmp_path)
+
+    assert result.exit_code == 1
+
+
 def test_annotate_promotion_audit_decisions_derives_failed_stage_summary():
     audit_df = pd.DataFrame(
         [

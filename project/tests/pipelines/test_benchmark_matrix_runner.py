@@ -4,6 +4,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from datetime import datetime, timezone
 
 from project.tests.conftest import PROJECT_ROOT
 
@@ -67,6 +68,45 @@ def test_benchmark_matrix_dry_run_writes_manifest(tmp_path, monkeypatch):
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert summary["matrix_id"] == "unit_matrix"
     assert summary["status_counts"]["dry_run"] == 1
+
+
+def test_benchmark_matrix_defaults_to_canonical_benchmark_root(tmp_path, monkeypatch):
+    module = _load_runner_module()
+    data_root = tmp_path / "data"
+    matrix_path = tmp_path / "matrix_default.yaml"
+    matrix_path.write_text(
+        "version: 1\n"
+        "matrix_id: canonical_matrix\n"
+        "runs:\n"
+        "  - run_id: canonical_run_1\n"
+        "    symbols: BTCUSDT\n"
+        "    start: 2024-01-01\n"
+        "    end: 2024-01-02\n",
+        encoding="utf-8",
+    )
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(module, "DATA_ROOT", data_root)
+    monkeypatch.setattr(module, "datetime", FixedDatetime)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_benchmark_matrix.py",
+            "--matrix",
+            str(matrix_path),
+        ],
+    )
+    rc = module.main()
+    assert rc == 0
+
+    expected_dir = data_root / "reports" / "benchmarks" / "canonical_matrix_20260101_000000"
+    assert expected_dir.exists()
+    assert (expected_dir / "matrix_manifest.json").exists()
 
 
 def test_benchmark_matrix_execute_records_success(tmp_path, monkeypatch):

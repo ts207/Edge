@@ -19,18 +19,45 @@ from project import PROJECT_ROOT
 _LOG = logging.getLogger(__name__)
 
 
+def _canonical_execution_style(blueprint: DSLBlueprint) -> str:
+    mode = str(blueprint.execution.mode).strip().lower()
+    urgency = str(blueprint.execution.urgency).strip().lower()
+
+    if mode == "market":
+        return "market"
+    if mode == "limit":
+        if urgency == "passive":
+            return "passive"
+        if urgency == "delayed_aggressive":
+            return "passive_then_cross"
+        return "limit"
+
+    raise ValueError(
+        f"unsupported blueprint execution mode for canonical StrategySpec: {blueprint.execution.mode}"
+    )
+
+
+def _canonical_direction(blueprint: DSLBlueprint) -> str:
+    direction = str(blueprint.direction).strip().lower()
+    if direction == "long":
+        return "LONG"
+    if direction == "short":
+        return "SHORT"
+    raise ValueError(
+        f"unsupported blueprint direction for canonical StrategySpec: {blueprint.direction}"
+    )
+
+
 def transform_blueprint_to_spec(blueprint: DSLBlueprint) -> StrategySpec:
     """
     Transforms a research DSL Blueprint into a canonical StrategySpec.
     """
+    execution_style = _canonical_execution_style(blueprint)
+    direction = _canonical_direction(blueprint)
+
     # 1. Map Data Requirements
     # Mandate 1m bars if execution style requires it for realistic simulation
-    requires_high_fidelity = blueprint.execution.mode in [
-        "limit",
-        "passive",
-        "passive_then_cross",
-        "close",
-    ]
+    requires_high_fidelity = execution_style in {"limit", "passive", "passive_then_cross"}
 
     data_reqs = DataRequirements(
         bars=["1m"] if requires_high_fidelity else ["5m"],
@@ -56,9 +83,7 @@ def transform_blueprint_to_spec(blueprint: DSLBlueprint) -> StrategySpec:
     entry_spec = CanonicalEntrySpec(
         event_family=blueprint.event_type,
         conditions=canonical_conditions,
-        direction=blueprint.direction.upper()
-        if blueprint.direction in ["long", "short"]
-        else "LONG",  # Fallback
+        direction=direction,
     )
 
     # 3. Map Exit Logic
@@ -90,10 +115,8 @@ def transform_blueprint_to_spec(blueprint: DSLBlueprint) -> StrategySpec:
 
     # 5. Map Execution
     execution_spec = CanonicalExecutionSpec(
-        style=blueprint.execution.mode
-        if blueprint.execution.mode in ["market", "passive", "limit"]
-        else "market",
-        post_only_preference=blueprint.execution.mode == "limit",
+        style=execution_style,
+        post_only_preference=execution_style in {"limit", "passive", "passive_then_cross"},
         slippage_assumption_bps=blueprint.execution.max_slippage_bps,
         cost_assumption_bps=blueprint.evaluation.cost_model.get("fees_bps", 1.0),
     )

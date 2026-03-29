@@ -16,4 +16,4 @@ limits:
 defaults:
   horizons_bars: [1, 3, 12, 24, 72] # 5m, 15m, 1h, 2h, 6h
   directions: [long, short]
-  entry_lags: [0, 1, 2]
+  entry_lags: [1, 2]

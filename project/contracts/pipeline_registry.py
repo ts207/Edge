@@ -147,7 +147,6 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "build_cleaned_*",
             "build_features*",
             "build_universe_snapshots",
-            "build_context_features*",
             "build_market_context*",
             "build_microstructure_rollup*",
             "validate_feature_integrity*",
@@ -158,7 +157,6 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "pipelines/clean/build_cleaned_bars.py",
             "pipelines/features/build_features.py",
             "pipelines/ingest/build_universe_snapshots.py",
-            "pipelines/features/build_context_features.py",
             "pipelines/features/build_market_context.py",
             "pipelines/features/build_microstructure_rollup.py",
             "pipelines/clean/validate_feature_integrity.py",
@@ -185,16 +183,16 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
         family="phase1_analysis",
         stage_patterns=("analyze_*", "phase1_correlation_clustering"),
         script_patterns=(
-            "pipelines/research/analyze_*.py",
-            "pipelines/research/phase1_correlation_clustering.py",
+            "research/analyze_*.py",
+            "research/phase1_correlation_clustering.py",
         ),
     ),
     StageFamilyContract(
         family="phase2_event_registry",
         stage_patterns=("build_event_registry*", "canonicalize_event_episodes*"),
         script_patterns=(
-            "pipelines/research/build_event_registry.py",
-            "pipelines/research/canonicalize_event_episodes.py",
+            "research/build_event_registry.py",
+            "research/canonicalize_event_episodes.py",
         ),
     ),
     StageFamilyContract(
@@ -207,11 +205,11 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "finalize_experiment",
         ),
         script_patterns=(
-            "pipelines/research/phase2_candidate_discovery.py",
-            "pipelines/research/bridge_evaluate_phase2.py",
-            "pipelines/research/summarize_discovery_quality.py",
-            "pipelines/research/phase2_search_engine.py",
-            "pipelines/research/finalize_experiment.py",
+            "research/cli/candidate_discovery_cli.py",
+            "research/bridge_evaluate_phase2.py",
+            "research/summarize_discovery_quality.py",
+            "research/phase2_search_engine.py",
+            "research/finalize_experiment.py",
         ),
     ),
     StageFamilyContract(
@@ -225,12 +223,12 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "export_edge_candidates",
         ),
         script_patterns=(
-            "pipelines/research/evaluate_naive_entry.py",
-            "pipelines/research/generate_negative_control_summary.py",
-            "pipelines/research/promote_candidates.py",
-            "pipelines/research/update_edge_registry.py",
-            "pipelines/research/update_campaign_memory.py",
-            "pipelines/research/export_edge_candidates.py",
+            "research/evaluate_naive_entry.py",
+            "research/generate_negative_control_summary.py",
+            "research/cli/promotion_cli.py",
+            "research/update_edge_registry.py",
+            "research/update_campaign_memory.py",
+            "research/export_edge_candidates.py",
         ),
     ),
     StageFamilyContract(
@@ -241,9 +239,9 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "generate_recommendations_checklist",
         ),
         script_patterns=(
-            "pipelines/research/analyze_conditional_expectancy.py",
-            "pipelines/research/validate_expectancy_traps.py",
-            "pipelines/research/generate_recommendations_checklist.py",
+            "research/analyze_conditional_expectancy.py",
+            "research/validate_expectancy_traps.py",
+            "research/generate_recommendations_checklist.py",
         ),
     ),
     StageFamilyContract(
@@ -254,9 +252,9 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "select_profitable_strategies",
         ),
         script_patterns=(
-            "pipelines/research/compile_strategy_blueprints.py",
+            "research/compile_strategy_blueprints.py",
             "research/build_strategy_candidates.py",
-            "pipelines/research/select_profitable_strategies.py",
+            "research/select_profitable_strategies.py",
         ),
     ),
 )
@@ -319,12 +317,6 @@ STAGE_ARTIFACT_REGISTRY: tuple[StageArtifactContract, ...] = (
         inputs=("clean.perp.*",),
         outputs=("metadata.universe_snapshots",),
         external_inputs=("clean.perp.*",),
-    ),
-    StageArtifactContract(
-        stage_patterns=("build_context_features*",),
-        inputs=("features.perp.v2",),
-        outputs=("context.features",),
-        external_inputs=("features.perp.v2",),
     ),
     StageArtifactContract(
         stage_patterns=("build_market_context*",),
@@ -724,6 +716,27 @@ def _to_rel_posix(path: Path, project_root: Path) -> str:
     return str(rel).replace("\\", "/")
 
 
+def _resolve_existing_script_path(script_path: Path, project_root: Path) -> Path | None:
+    path = Path(script_path)
+    candidates = [path]
+    if not path.is_absolute():
+        candidates.extend(
+            [
+                project_root / path,
+                project_root.parent / path,
+            ]
+        )
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve() if candidate.is_absolute() else candidate.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if resolved.exists():
+            return resolved
+    return None
+
+
 def _matching_family_contracts(stage_name: str) -> List[StageFamilyContract]:
     matched = []
     for contract in STAGE_FAMILY_REGISTRY:
@@ -740,7 +753,11 @@ def validate_stage_plan_contract(stages: Sequence[StageSpec], project_root: Path
             issues.append(f"unknown stage family for stage '{stage_name}'")
             continue
         contract = contracts[0]
-        rel_script = _to_rel_posix(script_path, project_root)
+        resolved_script = _resolve_existing_script_path(script_path, project_root)
+        if resolved_script is None:
+            issues.append(f"stage '{stage_name}' script path '{script_path}' does not exist")
+            continue
+        rel_script = _to_rel_posix(resolved_script, project_root)
         if not any(fnmatch(rel_script, pat) for pat in contract.script_patterns):
             issues.append(f"stage '{stage_name}' script '{rel_script}' violated allowed patterns")
     return issues

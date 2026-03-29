@@ -79,3 +79,13 @@ def parse_promotion_argv(argv: Optional[List[str]] = None) -> PromotionConfig:
 
 def run_promotion_cli(argv: Optional[List[str]] = None) -> PromotionServiceResult:
     return execute_promotion(parse_promotion_argv(argv))
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    return int(run_promotion_cli(argv).exit_code)
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main(sys.argv[1:]))

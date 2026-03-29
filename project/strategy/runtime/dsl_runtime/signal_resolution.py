@@ -37,6 +37,12 @@ def signal_mask(signal: str, frame: pd.DataFrame, blueprint: Blueprint) -> pd.Se
         return (frame["spread_abs"] <= max_desync).fillna(False)
 
     if signal == "funding_normalization_pass":
+        funding_available = frame.get("funding_rate_scaled_available")
+        if funding_available is None or not funding_available.astype(bool).any():
+            raise ValueError(
+                f"Blueprint `{blueprint.id}` requires canonical funding_rate_scaled for "
+                "funding_normalization_pass"
+            )
         max_funding = first_overlay_param(
             blueprint, "funding_guard", "max_abs_funding_bps", default=15.0
         )

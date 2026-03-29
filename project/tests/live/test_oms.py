@@ -301,6 +301,147 @@ def test_build_live_order_from_strategy_result_returns_none_without_position_del
     assert build_live_order_from_strategy_result(result, client_order_id="flat-order") is None
 
 
+def test_build_live_order_from_strategy_result_rejects_forged_runtime_provenance() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=1, freq="5min", tz="UTC"),
+            "symbol": ["BTCUSDT"],
+            "target_position": [1000.0],
+            "prior_executed_position": [0.0],
+            "fill_price": [100.0],
+            "close": [100.0],
+            "expected_return_bps": [20.0],
+            "expected_adverse_bps": [5.0],
+            "expected_cost_bps": [3.0],
+            "expected_net_edge_bps": [12.0],
+        }
+    )
+
+    from project.engine.strategy_executor import StrategyResult
+
+    forged = StrategyResult(
+        name="forged",
+        data=frame,
+        diagnostics={},
+        strategy_metadata={},
+        trace=pd.DataFrame(),
+    )
+
+    with pytest.raises(OrderSubmissionBlocked, match="validated runtime provenance"):
+        build_live_order_from_strategy_result(forged, client_order_id="forged-order")
+
+
+def test_build_live_order_from_dsl_blueprint_result_rejects_non_spec_provenance() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=1, freq="5min", tz="UTC"),
+            "symbol": ["BTCUSDT"],
+            "target_position": [1000.0],
+            "prior_executed_position": [0.0],
+            "fill_price": [100.0],
+            "close": [100.0],
+            "expected_return_bps": [20.0],
+            "expected_adverse_bps": [5.0],
+            "expected_cost_bps": [3.0],
+            "expected_net_edge_bps": [12.0],
+        }
+    )
+    metadata = {
+        "engine_execution_lag_bars_used": 1,
+        "strategy_effective_lag_bars": 1,
+        "fp_def_version": "fp_v1",
+        "live_order_metadata_template": {
+            "strategy": "dsl_interpreter_v1__bp_exec",
+            "signal_timestamp": "2024-01-01T00:00:00+00:00",
+            "volatility_regime": "elevated",
+            "microstructure_regime": "healthy",
+            "expected_entry_price": 100.0,
+            "expected_return_bps": 20.0,
+            "expected_adverse_bps": 5.0,
+            "expected_cost_bps": 3.0,
+            "expected_net_edge_bps": 12.0,
+            "realized_fee_bps": 0.0,
+        },
+        "contract_source": "dsl_blueprint",
+        "blueprint_id": "bp_exec",
+        "run_id": "r_exec",
+    }
+
+    from project.engine.strategy_executor import StrategyResult
+
+    raw_blueprint_result = StrategyResult(
+        name="dsl_interpreter_v1__bp_exec",
+        data=frame,
+        diagnostics={},
+        strategy_metadata=metadata,
+        trace=pd.DataFrame(),
+    )
+
+    with pytest.raises(OrderSubmissionBlocked, match="executable_strategy_spec-backed provenance"):
+        build_live_order_from_strategy_result(raw_blueprint_result, client_order_id="dsl-blueprint")
+
+
+def test_build_live_order_from_executable_spec_backed_dsl_result() -> None:
+    frame = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=1, freq="5min", tz="UTC"),
+            "symbol": ["BTCUSDT"],
+            "target_position": [1000.0],
+            "prior_executed_position": [0.0],
+            "fill_price": [100.0],
+            "close": [100.0],
+            "expected_return_bps": [20.0],
+            "expected_adverse_bps": [5.0],
+            "expected_cost_bps": [3.0],
+            "expected_net_edge_bps": [12.0],
+        }
+    )
+    metadata = {
+        "engine_execution_lag_bars_used": 1,
+        "strategy_effective_lag_bars": 1,
+        "fp_def_version": "fp_v1",
+        "live_order_metadata_template": {
+            "strategy": "dsl_interpreter_v1__bp_exec",
+            "signal_timestamp": "2024-01-01T00:00:00+00:00",
+            "volatility_regime": "elevated",
+            "microstructure_regime": "healthy",
+            "expected_entry_price": 100.0,
+            "expected_return_bps": 20.0,
+            "expected_adverse_bps": 5.0,
+            "expected_cost_bps": 3.0,
+            "expected_net_edge_bps": 12.0,
+            "realized_fee_bps": 0.0,
+        },
+        "contract_source": "executable_strategy_spec",
+        "runtime_provenance_validated": True,
+        "runtime_provenance_source": "executable_strategy_spec",
+        "run_id": "r_exec",
+        "candidate_id": "cand_exec",
+        "blueprint_id": "bp_exec",
+        "source_path": "reports/strategy_blueprints/r_exec/blueprints.jsonl",
+        "compiler_version": "strategy_dsl_v1",
+        "generated_at_utc": "2026-01-01T00:00:00Z",
+        "ontology_spec_hash": "sha256:abc123",
+        "promotion_track": "standard",
+        "wf_status": "pass",
+    }
+
+    from project.engine.strategy_executor import StrategyResult
+
+    executable_result = StrategyResult(
+        name="dsl_interpreter_v1__bp_exec",
+        data=frame,
+        diagnostics={},
+        strategy_metadata=metadata,
+        trace=pd.DataFrame(),
+    )
+
+    order = build_live_order_from_strategy_result(executable_result, client_order_id="dsl-exec")
+    assert order is not None
+    assert order.client_order_id == "dsl-exec"
+    assert order.metadata["strategy"] == "dsl_interpreter_v1__bp_exec"
+
+
 def test_submit_order_blocks_on_microstructure_breakdown():
     mgr = OrderManager()
     kill_switch = KillSwitchManager(LiveStateStore())

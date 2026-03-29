@@ -22,6 +22,28 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return {}
 
 
+def _benchmark_roots(data_root: Path) -> list[Path]:
+    return [
+        data_root / "reports" / "benchmarks",
+        data_root / "reports" / "perf_benchmarks",
+    ]
+
+
+def _benchmark_run_dirs(data_root: Path) -> list[Path]:
+    run_dirs: list[Path] = []
+    for root in _benchmark_roots(data_root):
+        latest = root / "latest"
+        if latest.exists():
+            run_dirs.append(latest)
+        history_dir = root / "history"
+        if not history_dir.exists():
+            continue
+        runs = [d for d in history_dir.iterdir() if d.is_dir()]
+        runs.sort(key=lambda path: path.name, reverse=True)
+        run_dirs.extend(runs)
+    return run_dirs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Show combined promotion readiness report.")
     parser.add_argument("--review", help="Path to benchmark_review.json")
@@ -33,14 +55,24 @@ def main() -> int:
 
     # Defaults
     data_root = get_data_root()
-    DEFAULT_DIR = data_root / "reports" / "benchmarks" / "latest"
-    review_path = Path(args.review) if args.review else DEFAULT_DIR / "benchmark_review.json"
-    cert_path = Path(args.cert) if args.cert else DEFAULT_DIR / "benchmark_certification.json"
+    if args.review or args.cert:
+        review_path = Path(args.review) if args.review else None
+        cert_path = Path(args.cert) if args.cert else None
+    else:
+        review_path = None
+        cert_path = None
+        for run_dir in _benchmark_run_dirs(data_root):
+            candidate_review = run_dir / "benchmark_review.json"
+            candidate_cert = run_dir / "benchmark_certification.json"
+            if candidate_review.exists() and candidate_cert.exists():
+                review_path = candidate_review
+                cert_path = candidate_cert
+                break
 
-    if not review_path.exists():
+    if not review_path or not review_path.exists():
         print(f"Error: Review file not found: {review_path}")
         return 1
-    if not cert_path.exists():
+    if not cert_path or not cert_path.exists():
         print(f"Error: Certification file not found: {cert_path}")
         return 1
 

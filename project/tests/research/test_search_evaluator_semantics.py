@@ -171,3 +171,24 @@ def test_non_default_profiles_fail_closed_in_canonical_evaluator(monkeypatch):
         "unsupported_cost_profile",
         "unsupported_objective_profile",
     ]
+
+
+def test_evaluate_hypothesis_batch_drops_boundary_crossing_event_windows(monkeypatch):
+    _patch_robustness(monkeypatch)
+    features = _base_features()
+    signal_col = EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column
+    features[signal_col] = False
+    features.loc[2, signal_col] = True
+    features["split_label"] = ["train"] * 3 + ["validation"] * 2 + ["test"] * (len(features) - 5)
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("VOL_SHOCK"),
+        direction="long",
+        horizon="4b",
+        template_id="continuation",
+    )
+
+    metrics = evaluate_hypothesis_batch([spec], features, min_sample_size=1)
+
+    assert bool(metrics.loc[0, "valid"]) is False
+    assert metrics.loc[0, "invalid_reason"] == "no_split_compatible_events"

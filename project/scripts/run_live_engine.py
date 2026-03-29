@@ -24,10 +24,6 @@ class VenueConnectivityError(RuntimeError):
     pass
 
 
-def _default_config_path() -> Path:
-    return PROJECT_ROOT / "configs" / "golden_certification.yaml"
-
-
 def _normalize_runtime_mode(config: Dict[str, Any], *, config_path: Path) -> str:
     runtime_mode = str(config.get("runtime_mode", "")).strip().lower()
     if runtime_mode not in {"monitor_only", "trading"}:
@@ -141,7 +137,6 @@ def validate_live_runtime_environment(
     environ: Dict[str, str] | None = None,
 ) -> Dict[str, str]:
     config = load_live_engine_config(config_path)
-    environment_name = _resolve_runtime_environment(config, config_path=config_path)
     runtime_mode = str(config.get("runtime_mode", "monitor_only")).strip().lower()
     strategy_runtime = config.get("strategy_runtime", {})
     if runtime_mode == "trading" and not bool(strategy_runtime.get("implemented", False)):
@@ -149,8 +144,16 @@ def validate_live_runtime_environment(
             "runtime_mode 'trading' requires strategy_runtime.implemented=true"
         )
     env = dict(environ or os.environ)
+    environment_name = _resolve_runtime_environment(config, config_path=config_path)
+    if runtime_mode == "monitor_only":
+        return {
+            "environment": environment_name,
+            "venue": str(env.get("EDGE_VENUE", "")).strip().lower(),
+        }
     if not environment_name:
-        return {}
+        raise LiveRuntimeConfigError(
+            f"runtime_mode 'trading' requires a resolvable environment name: {config_path}"
+        )
 
     errors: list[str] = []
     edge_environment = str(env.get("EDGE_ENVIRONMENT", "")).strip().lower()
@@ -394,7 +397,7 @@ def build_live_runner(
         snapshot_path=snapshot_path,
     )
     order_manager = None
-    if environment is not None:
+    if environment is not None and session_metadata["runtime_mode"] == "trading":
         from project.live.binance_client import BinanceFuturesClient
         from project.live.oms import OrderManager
 
@@ -431,7 +434,7 @@ def build_live_runner(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the live engine with persistent state.")
     parser.add_argument(
-        "--config", default=str(_default_config_path()), help="Live engine config YAML path."
+        "--config", required=True, help="Live engine config YAML path."
     )
     parser.add_argument(
         "--symbols",
@@ -451,6 +454,8 @@ def main(argv: list[str] | None = None) -> int:
     symbols = [s.strip().lower() for s in str(args.symbols).split(",") if s.strip()]
     resolved_config_path = Path(args.config)
     resolved_snapshot_path = str(args.snapshot_path).strip() or None
+    config = load_live_engine_config(resolved_config_path)
+    runtime_mode = str(config.get("runtime_mode", "monitor_only")).strip().lower()
 
     if args.print_session_metadata:
         print(
@@ -466,28 +471,33 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    runtime_environment = validate_live_runtime_environment(
-        config_path=resolved_config_path,
-        snapshot_path=resolved_snapshot_path,
-    )
+    runtime_environment: Dict[str, str] = {}
+    if runtime_mode == "trading":
+        runtime_environment = validate_live_runtime_environment(
+            config_path=resolved_config_path,
+            snapshot_path=resolved_snapshot_path,
+        )
     runner = build_live_runner(
         config_path=resolved_config_path,
         symbols=symbols or None,
         snapshot_path=resolved_snapshot_path,
-        environment=runtime_environment,
-    )
-    runner.account_snapshot_fetcher = lambda: fetch_binance_futures_account_snapshot(
-        environment=runtime_environment
+        environment=runtime_environment if runtime_mode == "trading" else None,
     )
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
-        preflight = asyncio.run(preflight_binance_venue_connectivity(environment=runtime_environment))
-        validate_binance_account_preflight(preflight)
-        initial_account_snapshot = asyncio.run(
-            fetch_binance_futures_account_snapshot(environment=runtime_environment)
-        )
-        runner.state_store.update_from_exchange_snapshot(initial_account_snapshot)
+        if runtime_mode == "trading":
+            runner.account_snapshot_fetcher = lambda: fetch_binance_futures_account_snapshot(
+                environment=runtime_environment
+            )
+            preflight = asyncio.run(
+                preflight_binance_venue_connectivity(environment=runtime_environment)
+            )
+            validate_binance_account_preflight(preflight)
+            initial_account_snapshot = asyncio.run(
+                fetch_binance_futures_account_snapshot(environment=runtime_environment)
+            )
+            runner.state_store.update_from_exchange_snapshot(initial_account_snapshot)
         asyncio.run(runner.start())
     except KeyboardInterrupt:
         return 0

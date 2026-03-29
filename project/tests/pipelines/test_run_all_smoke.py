@@ -7,6 +7,7 @@ import json
 import uuid
 from pathlib import Path
 
+from project.pipelines import run_all
 from project.tests.conftest import REPO_ROOT
 
 _REPO_ROOT = str(REPO_ROOT)
@@ -104,3 +105,26 @@ def test_run_all_dry_run():
     assert payload["normalized_timeframes"] == ["5m"]
     assert payload["effective_behavior"]["phase2_event_type"] == "VOL_SHOCK"
     assert payload["effective_behavior"]["run_expectancy_analysis"] is True
+
+
+def test_export_runtime_mode_env_sets_certification_flags(monkeypatch):
+    monkeypatch.delenv("BACKTEST_STRICT_RUN_SCOPED_READS", raising=False)
+    monkeypatch.delenv("BACKTEST_REQUIRE_STAGE_MANIFEST", raising=False)
+
+    run_all._export_runtime_mode_env(
+        {
+            "strict_run_scoped_reads": True,
+            "require_stage_manifests": True,
+        }
+    )
+    assert os.environ["BACKTEST_STRICT_RUN_SCOPED_READS"] == "1"
+    assert os.environ["BACKTEST_REQUIRE_STAGE_MANIFEST"] == "1"
+
+    run_all._export_runtime_mode_env(
+        {
+            "strict_run_scoped_reads": False,
+            "require_stage_manifests": False,
+        }
+    )
+    assert os.environ["BACKTEST_STRICT_RUN_SCOPED_READS"] == "0"
+    assert os.environ["BACKTEST_REQUIRE_STAGE_MANIFEST"] == "0"

@@ -219,6 +219,41 @@ def test_main_writes_feature_quality_report_with_baseline(monkeypatch, tmp_path)
     assert payload["quality"]["baseline"]["label"] == "baseline_run"
 
 
+def test_main_fails_when_no_feature_artifacts_are_produced(monkeypatch, tmp_path):
+    finalized: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "project.core.config.get_data_root", lambda: tmp_path / "data"
+    )
+    monkeypatch.setattr(build_features, "start_manifest", lambda *args, **kwargs: {})
+
+    def fake_finalize_manifest(manifest, status, **kwargs):
+        finalized["status"] = status
+        finalized["error"] = kwargs.get("error")
+        finalized["stats"] = kwargs.get("stats")
+
+    monkeypatch.setattr(build_features, "finalize_manifest", fake_finalize_manifest)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_features.py",
+            "--run_id",
+            "r_empty_outputs",
+            "--symbols",
+            "",
+            "--timeframe",
+            "5m",
+        ],
+    )
+
+    rc = build_features.main()
+
+    assert rc == 1
+    assert finalized["status"] == "failed"
+    assert "no feature artifacts" in str(finalized["error"])
+
+
 def test_filter_time_window_respects_start_and_end() -> None:
     bars = pd.DataFrame(
         {

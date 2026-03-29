@@ -113,6 +113,63 @@ def finalize_successful_run(
     write_run_comparison_report: Any | None = None,
     data_root: Path | None = None,
 ) -> int:
+    if data_root is not None:
+        try:
+            from project.pipelines.pipeline_provenance import (
+                reconcile_run_manifest_from_stage_manifests,
+            )
+
+            reconciled = reconcile_run_manifest_from_stage_manifests(
+                run_id,
+                data_root=data_root,
+            )
+        except Exception as exc:
+            run_manifest["reconciliation_status"] = "failed"
+            run_manifest["reconciliation_error"] = str(exc)
+            finalize_run_manifest(
+                run_manifest=run_manifest,
+                status="failed",
+                stage_timings=stage_timings,
+                stage_instance_timings=stage_instance_timings,
+                checklist_decision=stage_execution.get("checklist_decision"),
+                auto_continue_applied=bool(stage_execution.get("auto_continue_applied")),
+                auto_continue_reason=str(stage_execution.get("auto_continue_reason")),
+                non_production_overrides=list(stage_execution.get("non_production_overrides", [])),
+                failed_stage="run_reconciliation",
+                failed_stage_instance="run_reconciliation",
+            )
+            write_run_manifest(run_id, run_manifest)
+            write_run_kpi_scorecard(run_id, run_manifest)
+            print(
+                f"Run reconciliation failed before success finalization: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+        if str(reconciled.get("status", "")).strip().lower() != "success":
+            run_manifest["reconciliation_status"] = str(reconciled.get("status", ""))
+            run_manifest["reconciliation_error"] = (
+                "required stage outputs missing or incomplete"
+            )
+            finalize_run_manifest(
+                run_manifest=run_manifest,
+                status="failed",
+                stage_timings=stage_timings,
+                stage_instance_timings=stage_instance_timings,
+                checklist_decision=stage_execution.get("checklist_decision"),
+                auto_continue_applied=bool(stage_execution.get("auto_continue_applied")),
+                auto_continue_reason=str(stage_execution.get("auto_continue_reason")),
+                non_production_overrides=list(stage_execution.get("non_production_overrides", [])),
+                failed_stage="run_reconciliation",
+                failed_stage_instance="run_reconciliation",
+            )
+            write_run_manifest(run_id, run_manifest)
+            write_run_kpi_scorecard(run_id, run_manifest)
+            print(
+                "Run reconciliation did not confirm required outputs; refusing success finalization",
+                file=sys.stderr,
+            )
+            return 1
+
     finalize_run_manifest(
         run_manifest=run_manifest,
         status="success",

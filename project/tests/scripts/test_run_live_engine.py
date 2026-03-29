@@ -135,14 +135,51 @@ def test_validate_live_runtime_environment_accepts_paper_contract() -> None:
     assert out["venue"] == "binance"
 
 
-def test_validate_live_runtime_environment_rejects_missing_production_credentials() -> None:
+def test_validate_live_runtime_environment_accepts_monitor_only_without_trading_credentials() -> None:
+    out = run_live_engine.validate_live_runtime_environment(
+        config_path=Path("project/configs/live_paper.yaml"),
+        environ={
+            "EDGE_ENVIRONMENT": "",
+            "EDGE_VENUE": "",
+            "EDGE_LIVE_CONFIG": "",
+            "EDGE_LIVE_SNAPSHOT_PATH": "",
+        },
+    )
+
+    assert out["environment"] == "paper"
+    assert out["venue"] == ""
+
+
+def test_validate_live_runtime_environment_rejects_missing_production_credentials(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "live_trading_production.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workflow_id: live_production_v1",
+                "runtime_mode: trading",
+                "freshness_streams:",
+                "  - symbol: BTCUSDT",
+                "    stream: kline_5m",
+                "oms_lineage:",
+                "  order_source: production_oms",
+                "live_state_snapshot_path: state/live_state.json",
+                "strategy_runtime:",
+                "  implemented: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     try:
         run_live_engine.validate_live_runtime_environment(
-            config_path=Path("project/configs/live_production.yaml"),
+            config_path=config_path,
             environ={
                 "EDGE_ENVIRONMENT": "production",
                 "EDGE_VENUE": "binance",
-                "EDGE_LIVE_CONFIG": "/opt/edge/project/configs/live_production.yaml",
+                "EDGE_LIVE_CONFIG": str(config_path),
                 "EDGE_LIVE_SNAPSHOT_PATH": "/var/lib/edge/live_state_production.json",
             },
         )
@@ -215,7 +252,18 @@ def test_run_live_engine_print_session_metadata_skips_runtime_env_validation(
     assert called["count"] == 0
 
 
-def test_run_live_engine_start_validates_runtime_environment_before_start(monkeypatch) -> None:
+def test_run_live_engine_missing_config_fails_fast() -> None:
+    try:
+        run_live_engine.main([])
+    except SystemExit as exc:
+        assert exc.code != 0
+    else:
+        raise AssertionError("expected SystemExit for missing --config")
+
+
+def test_run_live_engine_start_validates_runtime_environment_before_start(
+    monkeypatch, tmp_path: Path
+) -> None:
     class _DummyStateStore:
         def update_from_exchange_snapshot(self, snapshot) -> None:
             self.snapshot = snapshot
@@ -232,6 +280,26 @@ def test_run_live_engine_start_validates_runtime_environment_before_start(monkey
     called = {"count": 0}
 
     monkeypatch.setattr(run_live_engine, "build_live_runner", lambda **kwargs: dummy_runner)
+
+    config_path = tmp_path / "live_trading.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workflow_id: live_paper_v1",
+                "runtime_mode: trading",
+                "freshness_streams:",
+                "  - symbol: BTCUSDT",
+                "    stream: kline_5m",
+                "oms_lineage:",
+                "  order_source: paper_oms",
+                "live_state_snapshot_path: state/live_state.json",
+                "strategy_runtime:",
+                "  implemented: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     def _validate(**kwargs):
         called["count"] += 1
@@ -265,7 +333,7 @@ def test_run_live_engine_start_validates_runtime_environment_before_start(monkey
         ),
     )
 
-    assert run_live_engine.main(["--config", "project/configs/live_paper.yaml"]) == 0
+    assert run_live_engine.main(["--config", str(config_path)]) == 0
     assert called["count"] == 1
     assert dummy_runner.started is True
 
@@ -462,7 +530,9 @@ def test_fetch_binance_futures_account_snapshot_normalizes_payload(monkeypatch) 
     assert out["positions"][0]["margin_type"] == "CROSS"
 
 
-def test_run_live_engine_start_blocks_when_venue_preflight_fails(monkeypatch) -> None:
+def test_run_live_engine_start_blocks_when_venue_preflight_fails(
+    monkeypatch, tmp_path: Path
+) -> None:
     class _DummyRunner:
         def __init__(self) -> None:
             self.started = False
@@ -472,6 +542,25 @@ def test_run_live_engine_start_blocks_when_venue_preflight_fails(monkeypatch) ->
 
     dummy_runner = _DummyRunner()
     monkeypatch.setattr(run_live_engine, "build_live_runner", lambda **kwargs: dummy_runner)
+    config_path = tmp_path / "live_trading.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workflow_id: live_production_v1",
+                "runtime_mode: trading",
+                "freshness_streams:",
+                "  - symbol: BTCUSDT",
+                "    stream: kline_5m",
+                "oms_lineage:",
+                "  order_source: production_oms",
+                "live_state_snapshot_path: state/live_state.json",
+                "strategy_runtime:",
+                "  implemented: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         run_live_engine,
         "validate_live_runtime_environment",
@@ -484,7 +573,7 @@ def test_run_live_engine_start_blocks_when_venue_preflight_fails(monkeypatch) ->
     monkeypatch.setattr(run_live_engine, "preflight_binance_venue_connectivity", _fail_preflight)
 
     try:
-        run_live_engine.main(["--config", "project/configs/live_production.yaml"])
+        run_live_engine.main(["--config", str(config_path)])
     except run_live_engine.VenueConnectivityError as exc:
         assert str(exc) == "boom"
     else:
@@ -493,7 +582,9 @@ def test_run_live_engine_start_blocks_when_venue_preflight_fails(monkeypatch) ->
     assert dummy_runner.started is False
 
 
-def test_run_live_engine_start_hydrates_initial_account_snapshot_before_start(monkeypatch) -> None:
+def test_run_live_engine_start_hydrates_initial_account_snapshot_before_start(
+    monkeypatch, tmp_path: Path
+) -> None:
     class _DummyStateStore:
         def __init__(self) -> None:
             self.snapshots = []
@@ -511,6 +602,25 @@ def test_run_live_engine_start_hydrates_initial_account_snapshot_before_start(mo
 
     dummy_runner = _DummyRunner()
     monkeypatch.setattr(run_live_engine, "build_live_runner", lambda **kwargs: dummy_runner)
+    config_path = tmp_path / "live_trading.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workflow_id: live_paper_v1",
+                "runtime_mode: trading",
+                "freshness_streams:",
+                "  - symbol: BTCUSDT",
+                "    stream: kline_5m",
+                "oms_lineage:",
+                "  order_source: paper_oms",
+                "live_state_snapshot_path: state/live_state.json",
+                "strategy_runtime:",
+                "  implemented: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         run_live_engine,
         "validate_live_runtime_environment",
@@ -543,7 +653,7 @@ def test_run_live_engine_start_hydrates_initial_account_snapshot_before_start(mo
         ),
     )
 
-    assert run_live_engine.main(["--config", "project/configs/live_paper.yaml"]) == 0
+    assert run_live_engine.main(["--config", str(config_path)]) == 0
     assert dummy_runner.state_store.snapshots == [
         {
             "wallet_balance": 111.0,

@@ -32,6 +32,7 @@ def _resolve_phase2_costs(
         "cost_bps": costs.cost_bps,
         "fee_bps_per_side": costs.fee_bps_per_side,
         "slippage_bps_per_fill": costs.slippage_bps_per_fill,
+        "round_trip_cost_bps": costs.round_trip_cost_bps,
     }
     return costs.cost_bps, coordinate
 

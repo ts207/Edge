@@ -115,6 +115,21 @@ def _normalize_string_token(value: Any) -> str:
     return "" if text.lower() in {"", "nan", "none", "null"} else text
 
 
+def _int_field_with_presence(payload: Mapping[str, Any], key: str) -> tuple[int, bool]:
+    if key not in payload:
+        return 0, False
+    raw = payload.get(key)
+    if raw is None:
+        return 0, False
+    text = str(raw).strip()
+    if text.lower() in {"", "nan", "none", "null"}:
+        return 0, False
+    try:
+        return int(raw), True
+    except (TypeError, ValueError):
+        return 0, False
+
+
 def _manifest_symbol_universe(manifest: Mapping[str, Any]) -> list[str]:
     symbols = manifest.get("normalized_symbols")
     if isinstance(symbols, list):
@@ -128,15 +143,16 @@ def _manifest_symbol_universe(manifest: Mapping[str, Any]) -> list[str]:
 
 
 def _phase2_contract_summary(diagnostics: Mapping[str, Any], manifest: Mapping[str, Any]) -> Dict[str, Any]:
-    return {
+    summary = {
         "discovery_profile": _normalize_string_token(diagnostics.get("discovery_profile", manifest.get("discovery_profile", ""))),
         "search_spec": _normalize_string_token(diagnostics.get("search_spec", manifest.get("search_spec", ""))),
         "split_scheme_id": _normalize_string_token(manifest.get("split_scheme_id", "")),
-        "entry_lag_bars": _as_int(manifest.get("entry_lag_bars", 0)),
-        "horizon_bars": _as_int(manifest.get("horizon_bars", 0)),
-        "purge_bars": _as_int(manifest.get("purge_bars", 0)),
-        "embargo_bars": _as_int(manifest.get("embargo_bars", 0)),
     }
+    for key in ("entry_lag_bars", "horizon_bars", "purge_bars", "embargo_bars"):
+        value, present = _int_field_with_presence(manifest, key)
+        summary[key] = value
+        summary[f"{key}__present"] = present
+    return summary
 
 
 def _edge_candidate_metadata(frame: pd.DataFrame) -> Dict[str, Any]:
@@ -180,13 +196,18 @@ def _compare_value_sets(
     label: str,
     reasons: list[str],
     notes: list[str],
+    strict_missing: bool = False,
 ) -> None:
     base = [value for value in baseline_values if _normalize_string_token(value)]
     cand = [value for value in candidate_values if _normalize_string_token(value)]
     if base and cand and base != cand:
         reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
     elif (base and not cand) or (cand and not base):
-        notes.append(f"{label} unavailable for one run; strict compatibility could not be verified")
+        message = f"{label} unavailable for one run; strict compatibility could not be verified"
+        if strict_missing:
+            reasons.append(message)
+        else:
+            notes.append(message)
 
 
 def _build_run_comparison_compatibility(
@@ -222,27 +243,31 @@ def _build_run_comparison_compatibility(
     for label in ("entry_lag_bars", "horizon_bars", "purge_bars", "embargo_bars"):
         base = _as_int(baseline_contract.get(label, 0))
         cand = _as_int(candidate_contract.get(label, 0))
-        if base > 0 and cand > 0 and base != cand:
+        base_present = bool(baseline_contract.get(f"{label}__present", False))
+        cand_present = bool(candidate_contract.get(f"{label}__present", False))
+        if base_present and cand_present and base != cand:
             reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
-        elif (base > 0 and cand <= 0) or (cand > 0 and base <= 0):
+        elif base_present != cand_present:
             notes.append(f"{label} unavailable for one run; strict compatibility could not be verified")
 
     baseline_coordinate = dict(baseline_phase2_diag.get("cost_coordinate", {}))
     candidate_coordinate = dict(candidate_phase2_diag.get("cost_coordinate", {}))
-    base_digest = _normalize_string_token(baseline_coordinate.get("config_digest", ""))
-    cand_digest = _normalize_string_token(candidate_coordinate.get("config_digest", ""))
-    if base_digest and cand_digest and base_digest != cand_digest:
-        reasons.append(f"cost digest mismatch: baseline={base_digest} candidate={cand_digest}")
-    elif (base_digest and not cand_digest) or (cand_digest and not base_digest):
-        notes.append("cost digest unavailable for one run; strict compatibility could not be verified")
-
-    base_funding_flag = _normalize_string_token(baseline_coordinate.get("after_cost_includes_funding_carry", ""))
-    cand_funding_flag = _normalize_string_token(candidate_coordinate.get("after_cost_includes_funding_carry", ""))
-    if base_funding_flag and cand_funding_flag and base_funding_flag != cand_funding_flag:
-        reasons.append(
-            "after-cost funding-carry policy mismatch: "
-            f"baseline={base_funding_flag} candidate={cand_funding_flag}"
-        )
+    for label in (
+        "config_digest",
+        "fee_bps_per_side",
+        "slippage_bps_per_fill",
+        "cost_bps",
+        "round_trip_cost_bps",
+        "after_cost_includes_funding_carry",
+    ):
+        base = _normalize_string_token(baseline_coordinate.get(label, ""))
+        cand = _normalize_string_token(candidate_coordinate.get(label, ""))
+        if base and cand and base != cand:
+            reasons.append(f"{label} mismatch: baseline={base} candidate={cand}")
+        elif (base and not cand) or (cand and not base) or (not base and not cand):
+            reasons.append(
+                f"{label} unavailable for one run; confirmatory cost identity requires both sides"
+            )
 
     baseline_edge_meta = _edge_candidate_metadata(baseline_edge_frame)
     candidate_edge_meta = _edge_candidate_metadata(candidate_edge_frame)
@@ -258,6 +283,7 @@ def _build_run_comparison_compatibility(
         label="edge cost digest",
         reasons=reasons,
         notes=notes,
+        strict_missing=True,
     )
     _compare_value_sets(
         baseline_values=baseline_edge_meta["cost_model_sources"],
@@ -265,6 +291,7 @@ def _build_run_comparison_compatibility(
         label="edge cost model sources",
         reasons=reasons,
         notes=notes,
+        strict_missing=True,
     )
     _compare_value_sets(
         baseline_values=baseline_edge_meta["after_cost_includes_funding_carry"],
@@ -272,6 +299,7 @@ def _build_run_comparison_compatibility(
         label="edge after-cost funding-carry flags",
         reasons=reasons,
         notes=notes,
+        strict_missing=True,
     )
 
     return {

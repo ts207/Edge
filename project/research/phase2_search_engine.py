@@ -49,6 +49,7 @@ from project.research.services.pathing import (
     phase2_run_dir,
 )
 from project.research.regime_routing import annotate_regime_metadata
+from project.spec_validation.search import validate_search_spec_doc
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ def _load_search_spec_doc(search_spec: str) -> dict:
         doc = loaders.load_search_spec(raw)
     if not isinstance(doc, dict):
         raise ValueError(f"Search spec must resolve to a mapping: {search_spec}")
+    validate_search_spec_doc(doc, source=str(search_spec))
     return dict(doc)
 
 

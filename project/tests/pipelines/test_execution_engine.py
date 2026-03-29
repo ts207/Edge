@@ -523,8 +523,7 @@ def test_run_stage_cache_hit_rejected_when_declared_output_missing(monkeypatch, 
         current_stage_instance_id=None,
         stage_cache_meta=stage_cache_meta,
     )
-    assert ok is True
-    # Should HAVE called popen because cache was rejected
+    assert ok is False
     assert len(popen_called) == 1
     assert stage_cache_meta[stage_instance]["cache_hit"] is False
     assert stage_cache_meta[stage_instance]["cache_reason"] == "miss_or_invalid_manifest_or_outputs"

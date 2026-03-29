@@ -67,6 +67,10 @@ minimum-green-gate:
 	PYTHONPATH=. $(PYTHON) project/scripts/ontology_consistency_audit.py --output docs/generated/ontology_audit.json --check
 	PYTHONPATH=. $(PYTHON) project/scripts/build_system_map.py --check
 	PYTHONPATH=. $(PYTHON) project/scripts/build_architecture_metrics.py --check
+	PYTHONPATH=. $(PYTHON) -m pytest -q \
+		project/tests/regressions/test_monitor_only_venue_immutability.py \
+		project/tests/regressions/test_run_success_requires_outputs.py \
+		project/tests/regressions/test_stage_registry_path_validity.py
 	PYTHONPATH=. $(PYTHON) project/scripts/run_golden_regression.py --run_id smoke_run
 	PYTHONPATH=. $(PYTHON) project/scripts/run_golden_workflow.py
 	@echo "Minimum green gate PASSED."

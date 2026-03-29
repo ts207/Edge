@@ -113,6 +113,15 @@ def _data_fingerprint(symbols, run_id, **kwargs):
     return digest, lineage
 
 
+def _export_runtime_mode_env(run_manifest: Dict[str, Any]) -> None:
+    os.environ["BACKTEST_STRICT_RUN_SCOPED_READS"] = (
+        "1" if bool(run_manifest.get("strict_run_scoped_reads", False)) else "0"
+    )
+    os.environ["BACKTEST_REQUIRE_STAGE_MANIFEST"] = (
+        "1" if bool(run_manifest.get("require_stage_manifests", False)) else "0"
+    )
+
+
 
 def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     # Synchronize environment with current DATA_ROOT for downstream helpers
@@ -213,6 +222,7 @@ def _run_all_impl(raw_argv: List[str] | None = None) -> int:
     run_manifest = bootstrap.run_manifest
     if effective_behavior:
         run_manifest["effective_behavior"] = effective_behavior
+    _export_runtime_mode_env(run_manifest)
 
     seed_run_manifest(
         run_manifest=run_manifest,

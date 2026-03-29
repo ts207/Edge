@@ -206,6 +206,77 @@ def test_dsl_rejects_unknown_non_registry_signal():
         )
 
 
+def test_dsl_runtime_allows_non_funding_strategies_without_funding_column():
+    bars = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01T00:00:00Z",
+                    "2026-01-01T00:05:00Z",
+                    "2026-01-01T00:10:00Z",
+                ],
+                utc=True,
+            ),
+            "open": [100.0, 101.0, 102.0],
+            "high": [101.0, 102.0, 103.0],
+            "low": [99.0, 100.0, 101.0],
+            "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
+            "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
+        }
+    )
+    features = bars[["timestamp", "close", "quote_volume"]].assign(spread_bps=1.0).copy()
+
+    strategy = DslInterpreterV1()
+    positions = strategy.generate_positions(
+        bars=bars,
+        features=features,
+        params={
+            "strategy_symbol": "BTCUSDT",
+            "dsl_blueprint": _base_blueprint(),
+        },
+    )
+
+    assert len(positions) == len(bars)
+    assert int(positions.iloc[0]) == 0
+
+
+def test_dsl_runtime_rejects_funding_guard_without_canonical_funding_column():
+    bars = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01T00:00:00Z",
+                    "2026-01-01T00:05:00Z",
+                    "2026-01-01T00:10:00Z",
+                ],
+                utc=True,
+            ),
+            "open": [100.0, 101.0, 102.0],
+            "high": [101.0, 102.0, 103.0],
+            "low": [99.0, 100.0, 101.0],
+            "close": [100.0, 101.0, 102.0],
+            "volume": [10.0, 10.0, 10.0],
+            "quote_volume": [1_000_000.0, 1_000_000.0, 1_000_000.0],
+        }
+    )
+    features = bars[["timestamp", "close", "quote_volume"]].assign(spread_bps=1.0).copy()
+    blueprint = _base_blueprint()
+    blueprint["entry"]["confirmations"] = ["funding_normalization_pass"]
+    blueprint["overlays"] = [{"name": "funding_guard", "params": {"max_abs_funding_bps": 12.0}}]
+
+    strategy = DslInterpreterV1()
+    with pytest.raises(ValueError, match="requires canonical funding_rate_scaled"):
+        strategy.generate_positions(
+            bars=bars,
+            features=features,
+            params={
+                "strategy_symbol": "BTCUSDT",
+                "dsl_blueprint": blueprint,
+            },
+        )
+
+
 def test_dsl_enforces_fail_on_zero_trigger_coverage():
     bars = pd.DataFrame(
         {

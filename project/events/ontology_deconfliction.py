@@ -6,6 +6,7 @@ from typing import Dict
 import pandas as pd
 
 from project.domain.compiled_registry import get_domain_registry
+from project.events.event_aliases import resolve_event_alias
 
 
 _ONTOLOGY_COLUMNS = [
@@ -47,12 +48,13 @@ def attach_canonical_event_bundle(events: pd.DataFrame) -> pd.DataFrame:
         return events.copy()
     out = events.copy()
     bundles = _event_bundle_map()
-    mapped = out["event_type"].astype(str).str.upper().map(bundles)
+    canonical_event_type = out["event_type"].astype(str).map(resolve_event_alias)
+    mapped = canonical_event_type.str.upper().map(bundles)
     for column in _ONTOLOGY_COLUMNS:
         out[column] = mapped.map(
             lambda row, key=column: row.get(key) if isinstance(row, dict) else None
         )
-    out["raw_event_type"] = out["raw_event_type"].fillna(out["event_type"].astype(str).str.upper())
+    out["raw_event_type"] = out["raw_event_type"].fillna(canonical_event_type.str.upper())
     return out
 
 

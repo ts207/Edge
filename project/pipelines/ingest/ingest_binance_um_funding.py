@@ -259,6 +259,22 @@ def _missing_expected_timestamps(
     return [t for t in expected_ts if t not in got]
 
 
+def _funding_coverage_failure_message(
+    *,
+    symbol: str,
+    expected_ts: List[pd.Timestamp],
+    missing_ts: List[pd.Timestamp],
+) -> str | None:
+    if not expected_ts:
+        return None
+    if not missing_ts:
+        return None
+    return (
+        f"{symbol}: missing required funding coverage for {len(missing_ts)} "
+        f"of {len(expected_ts)} expected timestamps"
+    )
+
+
 def _missing_timestamp_ranges(missing_ts: List[pd.Timestamp]) -> List[Tuple[datetime, datetime]]:
     if not missing_ts:
         return []
@@ -331,6 +347,7 @@ def main() -> int:
     manifest = start_manifest("ingest_binance_um_funding", run_id, params, inputs, outputs)
 
     stats: Dict[str, object] = {"symbols": {}}
+    failures: List[str] = []
 
     try:
         out_root = Path(args.out_root)
@@ -390,6 +407,23 @@ def main() -> int:
                         & (df_month["timestamp"] < range_end_exclusive)
                     ]
                     month_frames.append(df_month)
+                    outputs.append(
+                        {
+                            "path": str(out_path),
+                            "rows": int(len(df_month)),
+                            "start_ts": (
+                                df_month["timestamp"].min().isoformat()
+                                if not df_month.empty
+                                else None
+                            ),
+                            "end_ts": (
+                                df_month["timestamp"].max().isoformat()
+                                if not df_month.empty
+                                else None
+                            ),
+                            "storage": "parquet",
+                        }
+                    )
                     continue
 
                 monthly_url = join_url(
@@ -563,6 +597,13 @@ def main() -> int:
                 partitions_written.append(str(written_path))
 
             missing_after_all = _missing_expected_timestamps(combined, expected_ts_all)
+            coverage_failure = _funding_coverage_failure_message(
+                symbol=symbol,
+                expected_ts=expected_ts_all,
+                missing_ts=missing_after_all,
+            )
+            if coverage_failure:
+                failures.append(coverage_failure)
 
             coverage_start = combined["timestamp"].min().isoformat() if not combined.empty else None
             coverage_end = combined["timestamp"].max().isoformat() if not combined.empty else None
@@ -587,6 +628,9 @@ def main() -> int:
                 "partitions_skipped": sorted(set(partitions_skipped)),
             }
 
+        if failures:
+            raise RuntimeError("; ".join(failures))
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
 

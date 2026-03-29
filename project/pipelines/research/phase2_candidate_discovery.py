@@ -17,7 +17,7 @@ from typing import List, Optional
 
 
 def _make_parser() -> argparse.ArgumentParser:
-    from project.pipelines.research.cli.candidate_discovery_cli import (
+    from project.research.cli.candidate_discovery_cli import (
         build_candidate_discovery_parser,
     )
 
@@ -25,13 +25,13 @@ def _make_parser() -> argparse.ArgumentParser:
 
 
 def _run_candidate_discovery_impl(argv: Optional[List[str]] = None) -> int:
-    from project.pipelines.research.cli.candidate_discovery_cli import run_candidate_discovery_cli
+    from project.research.cli.candidate_discovery_cli import run_candidate_discovery_cli
 
     return int(run_candidate_discovery_cli(argv).exit_code)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    from project.pipelines.research.cli.candidate_discovery_cli import run_candidate_discovery_cli
+    from project.research.cli.candidate_discovery_cli import run_candidate_discovery_cli
 
     return int(run_candidate_discovery_cli(argv).exit_code)
 

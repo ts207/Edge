@@ -69,3 +69,29 @@ def test_proposal_schema_accepts_canonical_regimes_without_explicit_events():
 
     assert proposal.trigger_space["canonical_regimes"] == ["LIQUIDITY_STRESS"]
     assert proposal.trigger_space["events"] == {}
+
+
+def test_proposal_schema_canonicalizes_carry_state_aliases():
+    from project.research.agent_io.proposal_schema import load_agent_proposal
+
+    payload = {
+        "program_id": "carry_campaign",
+        "objective": "test",
+        "symbols": ["BTCUSDT"],
+        "timeframe": "5m",
+        "start": "2024-01-01",
+        "end": "2024-06-01",
+        "trigger_space": {
+            "allowed_trigger_types": ["EVENT"],
+            "events": {"include": ["VOL_SHOCK"]},
+        },
+        "templates": ["continuation"],
+        "contexts": {"carry_state": ["positive", "negative", "neutral"]},
+        "horizons_bars": [12],
+        "directions": ["long"],
+        "entry_lags": [1],
+    }
+
+    proposal = load_agent_proposal(payload)
+
+    assert proposal.contexts["carry_state"] == ["funding_pos", "funding_neg", "neutral"]

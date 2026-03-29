@@ -5,6 +5,7 @@ from typing import List, Tuple
 from project.spec_validation.ontology import validate_ontology
 from project.spec_validation.grammar import validate_grammar
 from project.spec_validation.loaders import load_search_spec, SEARCH_DIR
+from project.spec_validation.search import validate_search_spec_doc
 
 
 def run_all_validations() -> int:
@@ -20,8 +21,11 @@ def run_all_validations() -> int:
     print("Running Search spec validation...")
     for p in SEARCH_DIR.glob("*.yaml"):
         print(f"  Checking {p.name}...")
-        # (Add search-specific validation logic here if needed)
-        pass
+        try:
+            doc = load_search_spec(str(p))
+            validate_search_spec_doc(doc, source=str(p))
+        except Exception as exc:
+            all_errors.append((str(p), str(exc)))
 
     if not all_errors:
         print("\nSUCCESS: All specs are consistent.")

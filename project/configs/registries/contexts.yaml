@@ -2,9 +2,9 @@ version: 1
 
 context_dimensions:
   vol_regime:
-    allowed_values: [low, medium, high, extreme]
+    allowed_values: [low, high]
   carry_state:
-    allowed_values: [positive, negative, neutral]
+    allowed_values: [funding_pos, funding_neg]
   funding_bps:
     allowed_values: [extreme_positive, positive, neutral, negative, extreme_negative]
   ms_trend_state:

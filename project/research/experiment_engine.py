@@ -11,6 +11,7 @@ import pandas as pd
 import yaml
 
 from project.domain.hypotheses import HypothesisSpec
+from project.research.context_labels import canonicalize_contexts
 from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
     ContextSelection,
@@ -66,6 +67,8 @@ __all__ = [
 
 def load_agent_experiment_config(path: Path) -> AgentExperimentRequest:
     raw = yaml.safe_load(path.read_text())
+    raw_contexts = dict(raw.get("contexts") or {})
+    raw_contexts["include"] = canonicalize_contexts(raw_contexts.get("include", {}))
     return AgentExperimentRequest(
         program_id=raw["program_id"],
         run_mode=raw["run_mode"],
@@ -74,7 +77,7 @@ def load_agent_experiment_config(path: Path) -> AgentExperimentRequest:
         trigger_space=TriggerSpace(**raw["trigger_space"]),
         templates=TemplateSelection(**raw["templates"]),
         evaluation=EvaluationConfig(**raw["evaluation"]),
-        contexts=ContextSelection(**raw["contexts"]),
+        contexts=ContextSelection(**raw_contexts),
         search_control=SearchControl(**raw["search_control"]),
         promotion=PromotionConfig(**raw["promotion"]),
         artifacts=raw.get("artifacts", {}),

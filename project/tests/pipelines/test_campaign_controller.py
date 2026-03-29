@@ -189,5 +189,5 @@ def test_context_for_proposal_uses_registry_dimensions(test_env):
     controller = test_env
     assert controller._context_for_proposal() == {
         "vol_regime": ["low", "high"],
-        "carry_state": ["positive", "negative", "neutral"],
+        "carry_state": ["funding_pos", "funding_neg"],
     }

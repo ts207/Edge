@@ -53,10 +53,14 @@ def build_signal_frame(merged: pd.DataFrame) -> pd.DataFrame:
     frame["spread_bps"] = spread_bps
     frame["spread_abs"] = spread_bps.abs()
 
-    if "funding_rate_scaled" not in frame.columns:
-        raise ValueError("build_signal_frame requires canonical funding_rate_scaled")
-    funding_rate = pd.to_numeric(frame.get("funding_rate_scaled"), errors="coerce")
+    if "funding_rate_scaled" in frame.columns:
+        funding_rate = pd.to_numeric(frame.get("funding_rate_scaled"), errors="coerce")
+        funding_available = funding_rate.notna()
+    else:
+        funding_rate = pd.Series(0.0, index=frame.index, dtype=float)
+        funding_available = pd.Series(False, index=frame.index, dtype=bool)
     frame["funding_rate_scaled"] = funding_rate
+    frame["funding_rate_scaled_available"] = funding_available.astype(bool)
     frame["funding_bps_abs"] = (funding_rate * 10_000.0).abs()
 
     ret_1 = close.pct_change().replace([np.inf, -np.inf], np.nan).fillna(0.0)

@@ -9,6 +9,7 @@ from typing import List
 from project.domain.compiled_registry import get_domain_registry
 from project.research.search.feasibility import check_hypothesis_feasibility
 from project.domain.hypotheses import HypothesisSpec, TriggerType
+from project.research.context_labels import canonicalize_context_label
 
 VALID_DIRECTIONS = {"long", "short", "both"}
 VALID_HORIZONS = {"1m", "5m", "15m", "30m", "60m", "1h", "4h", "1d"}
@@ -73,7 +74,7 @@ def validate_hypothesis_spec(spec: HypothesisSpec) -> List[str]:
                     errors.append(
                         f"Context family {family!r} not found in compiled domain registry"
                     )
-                elif label not in labels:
+                elif canonicalize_context_label(family, label) not in labels:
                     errors.append(
                         f"Context label {label!r} not found for family {family!r} in compiled domain registry"
                     )

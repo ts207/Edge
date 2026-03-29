@@ -33,7 +33,7 @@ evaluation:
     - long
     - short
   entry_lags:
-    - 0
+    - 1
 contexts:
   include: {}
 search_control:

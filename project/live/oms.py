@@ -25,6 +25,46 @@ from project.live.execution_attribution import (
 
 LOGGER = logging.getLogger(__name__)
 
+_LIVE_STRATEGY_RESULT_REQUIRED_METADATA = frozenset(
+    {
+        "engine_execution_lag_bars_used",
+        "strategy_effective_lag_bars",
+        "fp_def_version",
+        "live_order_metadata_template",
+    }
+)
+
+_LIVE_EXECUTABLE_SPEC_REQUIRED_METADATA = frozenset(
+    {
+        "runtime_provenance_validated",
+        "runtime_provenance_source",
+        "run_id",
+        "candidate_id",
+        "blueprint_id",
+        "source_path",
+        "compiler_version",
+        "generated_at_utc",
+        "ontology_spec_hash",
+        "promotion_track",
+        "wf_status",
+    }
+)
+
+_LIVE_ORDER_METADATA_TEMPLATE_KEYS = frozenset(
+    {
+        "strategy",
+        "signal_timestamp",
+        "volatility_regime",
+        "microstructure_regime",
+        "expected_entry_price",
+        "expected_return_bps",
+        "expected_adverse_bps",
+        "expected_cost_bps",
+        "expected_net_edge_bps",
+        "realized_fee_bps",
+    }
+)
+
 
 class OrderSubmissionBlocked(RuntimeError):
     """Raised when a pre-trade guard rejects an order before OMS activation."""
@@ -430,6 +470,77 @@ class OrderManager:
             await result
 
 
+def _validate_live_strategy_result_provenance(result: StrategyResult) -> None:
+    metadata = getattr(result, "strategy_metadata", None)
+    if not isinstance(metadata, dict):
+        raise OrderSubmissionBlocked(
+            "live trading requires a StrategyResult with validated runtime provenance"
+        )
+
+    missing = sorted(_LIVE_STRATEGY_RESULT_REQUIRED_METADATA - set(metadata.keys()))
+    if missing:
+        raise OrderSubmissionBlocked(
+            "live trading requires validated runtime provenance fields: "
+            + ", ".join(missing)
+        )
+
+    template = metadata.get("live_order_metadata_template")
+    if not isinstance(template, dict):
+        raise OrderSubmissionBlocked(
+            "live trading requires a validated live_order_metadata_template mapping"
+        )
+
+    template_missing = sorted(_LIVE_ORDER_METADATA_TEMPLATE_KEYS - set(template.keys()))
+    if template_missing:
+        raise OrderSubmissionBlocked(
+            "live trading requires validated live order metadata fields: "
+            + ", ".join(template_missing)
+        )
+
+    contract_source = str(metadata.get("contract_source", "")).strip()
+    provenance_source = str(metadata.get("runtime_provenance_source", "")).strip()
+    is_dsl_runtime = str(getattr(result, "name", "")).startswith("dsl_interpreter_v1__")
+    if contract_source == "dsl_blueprint" or (
+        is_dsl_runtime and not provenance_source and not bool(metadata.get("runtime_provenance_validated"))
+    ):
+        raise OrderSubmissionBlocked(
+            "live trading requires executable_strategy_spec-backed provenance for DSL strategies"
+        )
+
+    if provenance_source == "executable_strategy_spec" or contract_source == "executable_strategy_spec":
+        missing_exec = sorted(_LIVE_EXECUTABLE_SPEC_REQUIRED_METADATA - set(metadata.keys()))
+        if missing_exec:
+            raise OrderSubmissionBlocked(
+                "live trading requires executable strategy provenance fields: "
+                + ", ".join(missing_exec)
+            )
+        if not bool(metadata.get("runtime_provenance_validated")):
+            raise OrderSubmissionBlocked(
+                "live trading requires validated executable strategy provenance"
+            )
+        required_non_empty = (
+            "run_id",
+            "candidate_id",
+            "blueprint_id",
+            "source_path",
+            "compiler_version",
+            "generated_at_utc",
+            "ontology_spec_hash",
+            "promotion_track",
+            "wf_status",
+        )
+        blank = [key for key in required_non_empty if not str(metadata.get(key, "")).strip()]
+        if blank:
+            raise OrderSubmissionBlocked(
+                "live trading requires non-empty executable strategy provenance fields: "
+                + ", ".join(blank)
+            )
+        if provenance_source != "executable_strategy_spec":
+            raise OrderSubmissionBlocked(
+                "live trading requires executable_strategy_spec-backed runtime provenance"
+            )
+
+
 def build_live_order_from_strategy_result(
     result: StrategyResult,
     *,
@@ -438,6 +549,11 @@ def build_live_order_from_strategy_result(
     order_type: OrderType = OrderType.MARKET,
     realized_fee_bps: float = 0.0,
 ) -> LiveOrder | None:
+    if not isinstance(result, StrategyResult):
+        raise OrderSubmissionBlocked(
+            "live trading requires a project.engine.strategy_executor.StrategyResult"
+        )
+
     frame = result.data.copy()
     if frame.empty:
         return None
@@ -459,6 +575,8 @@ def build_live_order_from_strategy_result(
     delta_notional = current_target - prior_position
     if abs(delta_notional) <= 1e-12 or expected_entry_price <= 0.0:
         return None
+
+    _validate_live_strategy_result_provenance(result)
 
     side = OrderSide.BUY if delta_notional > 0 else OrderSide.SELL
     quantity = abs(delta_notional) / expected_entry_price

@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List
 
 import yaml
 from project import PROJECT_ROOT
+from project.spec_registry import load_unified_event_registry
 
 REPO_ROOT = PROJECT_ROOT.parent
 
@@ -19,6 +20,7 @@ from project.specs.ontology import (
     normalize_state_registry_records,
     ontology_spec_paths,
     state_id_to_context_column,
+    validate_state_registry_source_events,
 )
 
 
@@ -211,7 +213,7 @@ def run_audit(repo_root: Path) -> Dict[str, Any]:
     research_root = project_root / "research"
 
     taxonomy = _load_yaml(spec_paths["taxonomy"])
-    canonical = _load_yaml(spec_paths["canonical_event_registry"])
+    canonical = load_unified_event_registry() or _load_yaml(spec_paths["canonical_event_registry"])
     state_registry = _load_yaml(spec_paths["state_registry"])
 
     registry_backed = sorted({_norm(ev) for ev in EVENT_REGISTRY_SPECS.keys() if _norm(ev)})
@@ -292,10 +294,14 @@ def run_audit(repo_root: Path) -> Dict[str, Any]:
         state["state_id"] for state in states if state["state_id"] not in materialized_ids
     )
     materialized_not_in_registry = sorted(materialized_ids - registry_state_ids)
+    state_source_event_issues = validate_state_registry_source_events(
+        state_registry=state_registry,
+        canonical_event_types=registry_backed,
+    )
     states_with_missing_source_event = sorted(
         state["state_id"]
         for state in states
-        if state["source_event_type"] not in set(canonical_events)
+        if state["source_event_type"] not in set(registry_backed)
     )
     materialized_state_columns = {
         state_id: state_id_to_context_column(state_id) for state_id in registry_materialized_ids
@@ -328,6 +334,8 @@ def run_audit(repo_root: Path) -> Dict[str, Any]:
         failures.append(
             "materialized_states_unregistered=" + ",".join(materialized_not_in_registry)
         )
+    if state_source_event_issues:
+        failures.append("state_source_event_issues=" + ",".join(state_source_event_issues))
 
     return {
         "counts": {
@@ -366,6 +374,7 @@ def run_audit(repo_root: Path) -> Dict[str, Any]:
             "state_registry_not_materialized": state_registry_not_materialized,
             "materialized_not_in_registry": materialized_not_in_registry,
             "states_with_missing_source_event": states_with_missing_source_event,
+            "state_source_event_issues": state_source_event_issues,
         },
         "failures": failures,
     }
@@ -462,6 +471,10 @@ def main() -> int:
         "missing_phase2_chain_entries"
     ):
         print("\nFATAL: Unmapped active event detected. Failing audit closed.", file=sys.stderr)
+        return 1
+
+    if report.get("failures"):
+        print("\nFATAL: Ontology contract issues detected. Failing audit closed.", file=sys.stderr)
         return 1
 
     if args.fail_on_missing and report.get("failures"):

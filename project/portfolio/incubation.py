@@ -34,9 +34,14 @@ class IncubationLedger:
 
     def is_graduated(self, strategy_id: str) -> bool:
         strat = self._data["strategies"].get(strategy_id)
-        if not strat or strat["status"] != "incubating":
+        if not strat:
             return False
-            
+
+        if str(strat.get("status", "")).strip().lower() == "live":
+            return True
+        if str(strat.get("status", "")).strip().lower() != "incubating":
+            return False
+
         start_time = datetime.fromisoformat(strat["start_time"])
         required_days = strat.get("days_required", 30)
         return (datetime.now(timezone.utc) - start_time) >= timedelta(days=required_days)

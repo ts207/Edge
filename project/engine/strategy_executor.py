@@ -17,6 +17,7 @@ from project.engine.pnl import compute_pnl_ledger
 from project.engine.schema import validate_strategy_frame_schema, validate_trace_schema
 from project.features.funding_persistence import FP_DEF_VERSION
 from project.portfolio import calculate_execution_aware_target_notional
+from project.compilers import ExecutableStrategySpec
 from project.strategy.runtime import get_strategy
 
 LOGGER = logging.getLogger(__name__)
@@ -97,6 +98,41 @@ def _is_carry_strategy(strategy_name: str, strategy_metadata: Dict[str, Any]) ->
         return True
     name = str(strategy_name).strip().lower()
     return "carry" in name or "funding_extreme_reversal" in name
+
+
+def _validated_executable_spec_provenance(params: Dict[str, Any]) -> Dict[str, Any]:
+    raw_spec = params.get("executable_strategy_spec")
+    if raw_spec is None:
+        return {}
+
+    spec = (
+        raw_spec
+        if isinstance(raw_spec, ExecutableStrategySpec)
+        else ExecutableStrategySpec.model_validate(dict(raw_spec))
+    )
+    return {
+        "runtime_provenance_validated": True,
+        "runtime_provenance_source": "executable_strategy_spec",
+        "proposal_id": str(spec.metadata.proposal_id).strip(),
+        "run_id": str(spec.metadata.run_id).strip(),
+        "hypothesis_id": str(spec.metadata.hypothesis_id).strip(),
+        "candidate_id": str(spec.metadata.candidate_id).strip(),
+        "blueprint_id": str(spec.metadata.blueprint_id).strip(),
+        "canonical_event_type": str(spec.metadata.canonical_event_type).strip(),
+        "canonical_regime": str(spec.metadata.canonical_regime).strip(),
+        "routing_profile_id": str(spec.metadata.routing_profile_id).strip(),
+        "event_type": str(spec.metadata.event_type).strip(),
+        "direction": str(spec.metadata.direction).strip(),
+        "retail_profile": str(spec.metadata.retail_profile).strip(),
+        "source_path": str(spec.research_origin.source_path).strip(),
+        "compiler_version": str(spec.research_origin.compiler_version).strip(),
+        "generated_at_utc": str(spec.research_origin.generated_at_utc).strip(),
+        "ontology_spec_hash": str(spec.research_origin.ontology_spec_hash).strip(),
+        "promotion_track": str(spec.research_origin.promotion_track).strip(),
+        "wf_status": str(spec.research_origin.wf_status).strip(),
+        "wf_evidence_hash": str(spec.research_origin.wf_evidence_hash).strip(),
+        "template_verb": str(spec.research_origin.template_verb).strip(),
+    }
 
 
 def _classify_volatility_regime(vol_bps: float) -> str:
@@ -228,6 +264,8 @@ def calculate_strategy_returns(
     strategy_metadata = (
         positions.attrs.get("strategy_metadata", {}) if hasattr(positions, "attrs") else {}
     )
+    strategy_metadata = dict(strategy_metadata)
+    strategy_metadata.update(_validated_executable_spec_provenance(params))
 
     timestamp_index = pd.DatetimeIndex(pd.to_datetime(bars["timestamp"], utc=True))
     allow_continuous_position = bool(int(params.get("allow_continuous_position", 0) or 0))

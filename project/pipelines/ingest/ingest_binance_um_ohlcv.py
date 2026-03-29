@@ -205,6 +205,22 @@ def _partition_complete(path: Path, expected_rows: int) -> bool:
         return False
 
 
+def _symbol_month_results_are_complete(
+    results: List[Dict[str, object]], *, symbol: str
+) -> tuple[bool, str | None]:
+    statuses = [str(res.get("status", "")).strip().lower() for res in results]
+    required_statuses = [status for status in statuses if status != "noop"]
+    if not required_statuses:
+        return True, None
+    if any(status in {"written", "skipped"} for status in required_statuses):
+        return True, None
+    return (
+        False,
+        f"{symbol}: no required OHLCV partitions were written "
+        f"(statuses={sorted(set(required_statuses))})",
+    )
+
+
 async def _download_archive(
     session: aiohttp.ClientSession, url: str, max_retries: int, backoff_sec: float
 ) -> Optional[bytes]:
@@ -348,6 +364,8 @@ async def async_main(args: argparse.Namespace) -> Dict[str, object]:
     concurrency = args.concurrency
 
     stats: Dict[str, object] = {"symbols": {}}
+    outputs: List[Dict[str, object]] = []
+    failures: List[str] = []
     semaphore = asyncio.Semaphore(concurrency)
 
     async with aiohttp.ClientSession() as session:
@@ -385,8 +403,24 @@ async def async_main(args: argparse.Namespace) -> Dict[str, object]:
                 elif status == "written":
                     partitions_written.append(res.get("partition"))
                     bars_written_total += res.get("bars", 0)
+                    if res.get("partition"):
+                        outputs.append(
+                            {
+                                "path": str(res.get("partition")),
+                                "rows": int(res.get("bars", 0) or 0),
+                                "storage": "parquet",
+                            }
+                        )
                 elif status == "skipped":
                     partitions_skipped.append(res.get("partition"))
+                    if res.get("partition"):
+                        outputs.append(
+                            {
+                                "path": str(res.get("partition")),
+                                "rows": int(res.get("bars", 0) or 0),
+                                "storage": "parquet",
+                            }
+                        )
                 # noop and empty statuses contribute nothing
             stats["symbols"][symbol] = {
                 "missing_archives": missing_archives,
@@ -394,7 +428,10 @@ async def async_main(args: argparse.Namespace) -> Dict[str, object]:
                 "partitions_skipped": partitions_skipped,
                 "bars_written_total": bars_written_total,
             }
-    return stats
+            complete, reason = _symbol_month_results_are_complete(results, symbol=symbol)
+            if not complete and reason:
+                failures.append(reason)
+    return {"stats": stats, "outputs": outputs, "failures": failures}
 
 
 def main() -> int:
@@ -459,14 +496,24 @@ def main() -> int:
         f"ingest_binance_um_ohlcv_{args.timeframe}", run_id, params, inputs, outputs
     )
 
+    result: Dict[str, object] = {"stats": {"symbols": {}}, "outputs": [], "failures": []}
     try:
-        stats = asyncio.run(async_main(args))
-        finalize_manifest(manifest, "success", stats=stats)
+        result = asyncio.run(async_main(args))
+        failures = list(result.get("failures", []))
+        if failures:
+            raise RuntimeError("; ".join(str(item) for item in failures))
+        manifest["outputs"] = list(result.get("outputs", []))
+        finalize_manifest(manifest, "success", stats=result.get("stats", {"symbols": {}}))
+        return 0
     except Exception as exc:
         logging.exception("Unexpected error during ingestion: %s", exc)
-        finalize_manifest(manifest, "failed", error=str(exc))
-        raise
-    return 0
+        finalize_manifest(
+            manifest,
+            "failed",
+            error=str(exc),
+            stats=result.get("stats", {"symbols": {}}),
+        )
+        return 1
 
 
 if __name__ == "__main__":

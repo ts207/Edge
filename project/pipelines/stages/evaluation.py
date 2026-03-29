@@ -21,6 +21,8 @@ def build_evaluation_stages(
 
     stages: List[Tuple[str, Path, List[str]]] = []
 
+    research_root = project_root / "research"
+
     # 1. Blueprint Compilation (The "Final Artifact")
     if int(args.run_strategy_blueprint_compiler):
         promoted_candidates_path = (
@@ -32,7 +34,7 @@ def build_evaluation_stages(
         stages.append(
             (
                 "compile_strategy_blueprints",
-                project_root / "pipelines" / "research" / "compile_strategy_blueprints.py",
+                research_root / "compile_strategy_blueprints.py",
                 [
                     "--run_id",
                     run_id,
@@ -98,7 +100,7 @@ def build_evaluation_stages(
         stages.append(
             (
                 "select_profitable_strategies",
-                project_root / "pipelines" / "research" / "select_profitable_strategies.py",
+                research_root / "select_profitable_strategies.py",
                 [
                     "--run_id",
                     run_id,

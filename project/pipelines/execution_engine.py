@@ -304,8 +304,35 @@ def run_stage(
                         input_hash=input_hash,
                     )
                 return False
-            # Stamp input_hash into stage manifest on success for future cache reads.
             manifest_payload: Dict[str, object] | None = None
+            try:
+                payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    manifest_payload = payload
+            except (OSError, UnicodeDecodeError, JSONDecodeError, TypeError, ValueError) as exc:
+                print(f"[WARN] Failed to load manifest {manifest_path}: {exc}", file=sys.stderr)
+            if manifest_payload is not None and str(manifest_payload.get("status", "")).strip().lower() == "success":
+                outputs_ok = _manifest_declared_outputs_exist(manifest_path, manifest_payload)
+                if not outputs_ok:
+                    error = (
+                        f"stage manifest declared outputs missing or empty ({manifest_path})"
+                    )
+                    print(error, file=sys.stderr)
+                    if require_manifest:
+                        _synthesize_stage_manifest_if_missing(
+                            manifest_path=manifest_path,
+                            stage=stage,
+                            stage_instance_id=stage_instance_id,
+                            run_id=run_id,
+                            script_path=script_path,
+                            base_args=base_args,
+                            log_path=log_path,
+                            status="failed",
+                            error=error,
+                            input_hash=input_hash,
+                        )
+                    return False
+            # Stamp input_hash into stage manifest on success for future cache reads.
             if input_hash and manifest_path.exists():
                 try:
                     mdata = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -318,15 +345,6 @@ def run_stage(
                         f"[WARN] Failed to stamp input_hash into {manifest_path}: {exc}",
                         file=sys.stderr,
                     )
-
-            if manifest_payload is None and manifest_path.exists():
-                try:
-                    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-                    if isinstance(payload, dict):
-                        manifest_payload = payload
-                except (OSError, UnicodeDecodeError, JSONDecodeError) as exc:
-                    print(f"[WARN] Failed to load manifest {manifest_path}: {exc}", file=sys.stderr)
-                    manifest_payload = None
 
             if manifest_payload is not None and str(
                 os.environ.get("BACKTEST_EXPERIMENT_STORE", "0")

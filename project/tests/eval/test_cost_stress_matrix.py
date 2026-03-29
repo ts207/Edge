@@ -104,3 +104,25 @@ class TestCostStressMatrix:
         assert "cost_stress_3x_pass" in result
         assert "cost_stress_7x_pass" in result
         assert "cost_stress_5x_pass" not in result  # not requested
+
+    def test_negative_costs_do_not_improve_stress_results(self):
+        """Negative transaction costs must be clipped so stress cannot look better than zero cost."""
+        pnl = _make_pnl(mean_bps=10.0)
+        negative_costs = pd.Series(np.full(len(pnl), -5.0))
+        zero_costs = pd.Series(np.zeros(len(pnl)))
+
+        negative_result = evaluate_structural_robustness(
+            base_pnl=pnl,
+            returns_raw=pnl,
+            costs_bps=negative_costs,
+        )
+        zero_result = evaluate_structural_robustness(
+            base_pnl=pnl,
+            returns_raw=pnl,
+            costs_bps=zero_costs,
+        )
+
+        for mult in (1, 2, 5, 10):
+            key = f"cost_stress_{mult}x_retention"
+            assert negative_result[key] == pytest.approx(zero_result[key], abs=1e-12)
+            assert negative_result[f"cost_stress_{mult}x_pass"] == zero_result[f"cost_stress_{mult}x_pass"]

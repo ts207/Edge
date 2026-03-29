@@ -18,6 +18,7 @@ from project.domain.compiled_registry import get_domain_registry
 from project.domain.hypotheses import HypothesisSpec, TriggerType
 from project.core.column_registry import ColumnRegistry
 from project.events.event_specs import EVENT_REGISTRY_SPECS
+from project.research.context_labels import canonicalize_context_label
 
 log = logging.getLogger(__name__)
 
@@ -222,7 +223,8 @@ def context_mask(
 
     combined = pd.Series(True, index=features.index)
     for family, label in context.items():
-        state_id = _CACHED_CONTEXT_MAP.get((family, label))
+        canonical_label = canonicalize_context_label(family, label)
+        state_id = _CACHED_CONTEXT_MAP.get((family, canonical_label))
         if state_id is None:
             log.debug("No state mapping for context (%r, %r) — context unresolvable", family, label)
             return None

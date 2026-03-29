@@ -83,4 +83,8 @@ def load_search_spec(name: str) -> Dict[str, Any]:
     if not path.exists():
         # fallback for direct paths
         path = Path(name)
-    return load_yaml(path)
+    doc = load_yaml(path)
+    from project.spec_validation.search import validate_search_spec_doc
+
+    validate_search_spec_doc(doc, source=str(path))
+    return doc

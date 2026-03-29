@@ -23,6 +23,7 @@ from project.research.regime_routing import annotate_regime_metadata
 from project.research.validation.evidence_bundle import (
     bundle_to_flat_record,
     serialize_evidence_bundles,
+    validate_evidence_bundle,
 )
 from project.specs.gates import load_gates_spec as _load_gates_spec
 from project.specs.manifest import finalize_manifest, load_run_manifest, start_manifest
@@ -129,6 +130,29 @@ def _trace_payload(raw: Any) -> Dict[str, Any]:
             return {}
         return payload if isinstance(payload, dict) else {}
     return {}
+
+
+def _is_promoted_audit_row(row: Dict[str, Any]) -> bool:
+    for key in ("promotion_status", "promotion_decision"):
+        if str(row.get(key, "")).strip().lower() == "promoted":
+            return True
+    return bool(row.get("eligible", False))
+
+
+def _parse_valid_evidence_bundle(raw: Any) -> Dict[str, Any] | None:
+    if raw is None:
+        return None
+    if isinstance(raw, dict):
+        validate_evidence_bundle(raw)
+        return dict(raw)
+    text = str(raw).strip()
+    if not text:
+        return None
+    payload = json.loads(text)
+    if not isinstance(payload, dict):
+        raise ValueError("evidence_bundle_json must decode to an object")
+    validate_evidence_bundle(payload)
+    return payload
 
 
 def _failed_stages_from_trace(raw: Any) -> List[str]:
@@ -827,15 +851,33 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         promoted_df = annotate_regime_metadata(promoted_df)
 
         evidence_bundles = []
-        if not audit_df.empty and "evidence_bundle_json" in audit_df.columns:
-            for raw in audit_df["evidence_bundle_json"].astype(str).tolist():
-                raw = raw.strip()
-                if not raw:
-                    continue
+        invalid_promoted_rows: list[str] = []
+        if not audit_df.empty:
+            for row in audit_df.to_dict(orient="records"):
+                candidate_id = str(row.get("candidate_id", "")).strip()
+                if not candidate_id:
+                    candidate_id = str(row.get("hypothesis_id", "")).strip()
+                raw = row.get("evidence_bundle_json")
                 try:
-                    evidence_bundles.append(json.loads(raw))
-                except json.JSONDecodeError:
+                    bundle = _parse_valid_evidence_bundle(raw)
+                except (json.JSONDecodeError, ValueError) as exc:
+                    if _is_promoted_audit_row(row):
+                        invalid_promoted_rows.append(
+                            f"{candidate_id or '<unknown>'}: {exc}"
+                        )
                     continue
+                if bundle is None:
+                    if _is_promoted_audit_row(row):
+                        invalid_promoted_rows.append(
+                            f"{candidate_id or '<unknown>'}: missing evidence bundle"
+                        )
+                    continue
+                evidence_bundles.append(bundle)
+        if invalid_promoted_rows:
+            raise ValueError(
+                "Promoted rows are missing valid evidence bundles: "
+                + "; ".join(invalid_promoted_rows)
+            )
         serialize_evidence_bundles(evidence_bundles, out_dir / "evidence_bundles.jsonl")
         evidence_bundle_summary = pd.DataFrame(
             [bundle_to_flat_record(bundle) for bundle in evidence_bundles]

@@ -25,6 +25,7 @@ from project.spec_validation import (
     resolve_entry_lags,
     resolve_filter_templates,
 )
+from project.spec_validation.search import validate_search_spec_doc
 
 log = logging.getLogger(__name__)
 
@@ -149,6 +150,7 @@ def generate_hypotheses_with_audit(
         doc = load_yaml_path(Path(search_space_path))
     else:
         doc = loaders.load_search_spec(search_spec_name)
+    validate_search_spec_doc(doc, source=str(search_spec_name))
 
     # Expand triggers from families and explicit lists
     expanded = expand_triggers(doc)

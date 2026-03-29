@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
+from project import PROJECT_ROOT
 from project.contracts.artifacts import build_artifact_specs, validate_artifact_registry_definitions
+from project.contracts.pipeline_registry import assert_stage_registry_contract
 from project.contracts.schemas import normalize_dataframe_for_schema, validate_dataframe_for_schema
 from project.contracts.stage_dag import build_stage_specs
 
@@ -27,6 +30,51 @@ def test_canonicalize_event_episodes_contract_fields_are_tuple_shaped() -> None:
     assert spec.inputs == ("phase2.event_registry.{event_type}",)
     assert spec.outputs == ("phase2.event_episodes.{event_type}",)
     assert spec.external_inputs == ("phase2.event_registry.{event_type}",)
+
+
+def test_stage_registry_contract_rejects_missing_script_paths() -> None:
+    stages = [
+        (
+            "compile_strategy_blueprints",
+            PROJECT_ROOT / "pipelines" / "research" / "compile_strategy_blueprints.py",
+            [],
+        )
+    ]
+    with pytest.raises(ValueError, match="does not exist"):
+        assert_stage_registry_contract(stages, PROJECT_ROOT)
+
+
+def test_stage_registry_contract_accepts_real_strategy_packaging_paths() -> None:
+    assert_stage_registry_contract(
+        [
+            (
+                "analyze_conditional_expectancy",
+                PROJECT_ROOT / "research" / "analyze_conditional_expectancy.py",
+                [],
+            ),
+            (
+                "validate_expectancy_traps",
+                PROJECT_ROOT / "research" / "validate_expectancy_traps.py",
+                [],
+            ),
+            (
+                "generate_recommendations_checklist",
+                PROJECT_ROOT / "research" / "generate_recommendations_checklist.py",
+                [],
+            ),
+            (
+                "compile_strategy_blueprints",
+                PROJECT_ROOT / "research" / "compile_strategy_blueprints.py",
+                [],
+            ),
+            (
+                "select_profitable_strategies",
+                PROJECT_ROOT / "research" / "select_profitable_strategies.py",
+                [],
+            ),
+        ],
+        PROJECT_ROOT,
+    )
 
 
 def test_schema_normalization_and_validation() -> None:

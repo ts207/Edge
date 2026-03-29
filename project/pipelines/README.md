@@ -7,7 +7,7 @@ The pipelines layer handles data ingestion, feature generation, orchestration, m
 - `run_all.py` and its helper modules for full-pipeline orchestration
 - ingestion, clean, feature, and context stage scripts
 - pipeline planning, execution, provenance, and summary utilities
-- research-facing stage entrypoints under `project/pipelines/research/`
+- compatibility wrappers and replay shims under `project/pipelines/research/` for canonical research stages that now live under `project/research/`
 
 ## Non-Ownership
 

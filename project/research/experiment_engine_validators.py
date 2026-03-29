@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.domain.compiled_registry import get_domain_registry
 from project.events.event_aliases import resolve_executable_event_alias
+from project.research.context_labels import canonicalize_context_label
 from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
     RegistryBundle,
@@ -214,7 +215,8 @@ def _validate_contexts(request: AgentExperimentRequest, registries: RegistryBund
         if dim not in allowed_contexts:
             raise ValueError(f"Context dimension '{dim}' is not in the authoritative registry.")
         for val in values:
-            if val not in allowed_contexts[dim].get("allowed_values", []):
+            canonical_value = canonicalize_context_label(dim, val)
+            if canonical_value not in allowed_contexts[dim].get("allowed_values", []):
                 raise ValueError(f"Value '{val}' is not allowed for context dimension '{dim}'.")
 
 
@@ -229,6 +231,9 @@ def _validate_search_limits(request: AgentExperimentRequest, registries: Registr
         raise ValueError("Exceeded max_horizons_per_run limit.")
     if len(request.evaluation.directions) > limits.get("max_directions_per_run", 2):
         raise ValueError("Exceeded max_directions_per_run limit.")
+    invalid_entry_lags = [int(lag) for lag in request.evaluation.entry_lags if int(lag) < 1]
+    if invalid_entry_lags:
+        raise ValueError("entry_lags must be >= 1 to prevent same-bar entry leakage.")
 
 
 def _validate_event_trigger(request: AgentExperimentRequest, registries: RegistryBundle) -> None:

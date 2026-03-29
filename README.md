@@ -100,11 +100,11 @@ Installed console scripts from `pyproject.toml`:
 - `edge-backtest`
 - `edge-run-all`
 - `edge-live-engine`
-- `edge-phase2-discovery`
-- `edge-promote`
+- `edge-phase2-discovery` via `project.research.cli.candidate_discovery_cli`
+- `edge-promote` via `project.research.cli.promotion_cli`
 - `edge-smoke`
-- `compile-strategy-blueprints`
-- `build-strategy-candidates`
+- `compile-strategy-blueprints` via `project.research.compile_strategy_blueprints`
+- `build-strategy-candidates` via `project.research.build_strategy_candidates`
 - `ontology-consistency-audit`
 
 Maintained `make` targets:

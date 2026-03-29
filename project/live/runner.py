@@ -92,6 +92,8 @@ class LiveEngineRunner:
         self.account_sync_failure_count = 0
         self.runtime_mode = str(runtime_mode or "monitor_only").strip().lower()
         self.strategy_runtime = dict(strategy_runtime or {})
+        if order_manager is None and self.runtime_mode != "trading":
+            self.order_manager = OrderManager()
         
         # Phase 5: Incubation Ledger
         self.incubation_ledger = IncubationLedger(
@@ -283,13 +285,30 @@ class LiveEngineRunner:
         )
         if order is None:
             return None
-            
-        # Phase 5: Graduation Check
-        strategy_id = order.metadata.get("strategy")
-        if strategy_id and not self.incubation_ledger.is_graduated(strategy_id):
-            _LOG.info(f"Strategy {strategy_id} is still in incubation. Forcing PAPER mode.")
-            order.metadata["is_paper"] = True
-            
+
+        # Fail closed: a trading submission must already be fully graduated.
+        strategy_id = str(order.metadata.get("strategy", "")).strip()
+        if not strategy_id:
+            order.update_status(OrderStatus.REJECTED)
+            self.order_manager.order_history.append(order)
+            return order, {
+                "accepted": False,
+                "client_order_id": order.client_order_id,
+                "blocked_by": "missing_strategy_provenance",
+            }
+        if not self.incubation_ledger.is_graduated(strategy_id):
+            _LOG.warning(
+                "Strategy %s is still in incubation; rejecting live submission.", strategy_id
+            )
+            order.update_status(OrderStatus.REJECTED)
+            self.order_manager.order_history.append(order)
+            return order, {
+                "accepted": False,
+                "client_order_id": order.client_order_id,
+                "blocked_by": "incubation_gate",
+                "strategy_id": strategy_id,
+            }
+
         degradation = self._assess_execution_degradation(order)
         order.metadata["execution_degradation_action"] = str(degradation["action"])
         order.metadata["execution_degradation_sample_count"] = float(degradation["sample_count"])
@@ -467,8 +486,9 @@ class LiveEngineRunner:
         _LOG.critical("Actuating kill-switch %s: %s", reason.name, message)
         try:
             await self._shutdown_runtime()
-            await self.order_manager.cancel_all_orders()
-            await self.order_manager.flatten_all_positions(self.state_store)
+            if self.runtime_mode == "trading":
+                await self.order_manager.cancel_all_orders()
+                await self.order_manager.flatten_all_positions(self.state_store)
         except Exception as exc:
             _LOG.error("Kill-switch actuation failed: %s", exc)
 

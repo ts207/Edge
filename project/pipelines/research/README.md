@@ -6,21 +6,21 @@ This directory contains research-facing CLI entrypoints, stage scripts, and adap
 
 - orchestration and CLI wiring can live here
 - reusable workflow logic should live in `project/research/services/`
-- parser construction and `argv -> config` translation should live in `project/pipelines/research/cli/`
-- thin entrypoint wrappers are acceptable when they only adapt args and stage metadata
+- parser construction and `argv -> config` translation should live in `project/research/cli/`
+- thin entrypoint wrappers are acceptable only for compatibility or replay, not as active planner targets
 
 ## Important Entry Points
 
-- `phase2_candidate_discovery.py`: phase-2 discovery entrypoint
-- `promote_candidates.py`: promotion entrypoint
-- `phase2_search_engine.py`: canonical search-backed discovery stage
-- `bridge_evaluate_phase2.py`: bridge validation stage
-- `export_edge_candidates.py`: normalized edge export stage
-- `update_edge_registry.py`: registry update stage
-- `update_campaign_memory.py`: memory update stage
-- `analyze_events.py`: detector execution entrypoint for event-family runs
-- `build_event_registry.py`: registry materialization from analyzer output
-- `canonicalize_event_episodes.py`: event-to-episode normalization
+- `phase2_candidate_discovery.py`: compatibility wrapper for the canonical discovery CLI in `project/research/cli/candidate_discovery_cli.py`
+- `promote_candidates.py`: compatibility wrapper for the canonical promotion CLI in `project/research/cli/promotion_cli.py`
+- `phase2_search_engine.py`: compatibility wrapper for the canonical search-backed discovery stage in `project/research/phase2_search_engine.py`
+- `bridge_evaluate_phase2.py`: compatibility wrapper for the canonical bridge validation stage in `project/research/bridge_evaluate_phase2.py`
+- `export_edge_candidates.py`: compatibility wrapper for the canonical normalized edge export stage in `project/research/export_edge_candidates.py`
+- `update_edge_registry.py`: compatibility wrapper for `project/research/update_edge_registry.py`
+- `update_campaign_memory.py`: compatibility wrapper for `project/research/update_campaign_memory.py`
+- `analyze_events.py`: compatibility wrapper for `project/research/analyze_events.py`
+- `build_event_registry.py`: compatibility wrapper for `project/research/build_event_registry.py`
+- `canonicalize_event_episodes.py`: compatibility wrapper for `project/research/canonicalize_event_episodes.py`
 
 ## Canonical Event Discovery Chain
 

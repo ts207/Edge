@@ -797,6 +797,7 @@ def main() -> int:
         f"build_features_{tf}" + ("_spot" if market == "spot" else ""), run_id, params, [], []
     )
     stats: dict[str, object] = {"symbols": {}}
+    outputs: list[dict[str, object]] = []
 
     try:
         for symbol in symbols:
@@ -808,11 +809,28 @@ def main() -> int:
                     symbol=symbol,
                     timeframe=tf,
                     feature_schema_version=feature_schema_version,
-                )
+                    )
                 if report_path.exists():
                     logging.info(f"Skipping {symbol} {tf} as quality report already exists: {report_path}")
-                    # We should still pop existing results into stats if we want manifest to be complete,
-                    # but for now simple skip is the MVP requested.
+                    existing_symbol_root = run_scoped_lake_path(
+                        data_root,
+                        run_id,
+                        "features",
+                        market,
+                        symbol,
+                        tf,
+                        feature_dataset_dir_name(feature_schema_version),
+                    )
+                    if existing_symbol_root.exists():
+                        for existing_path in list_parquet_files(existing_symbol_root):
+                            outputs.append({"path": str(existing_path), "rows": 0})
+                    outputs.append({"path": str(report_path), "rows": 1})
+                    stats["symbols"][symbol] = {
+                        "rows": 0,
+                        "feature_quality_report_path": str(report_path),
+                        "feature_quality_summary": {},
+                        "skipped_existing": True,
+                    }
                     continue
 
             # Load cleaned bars
@@ -909,6 +927,14 @@ def main() -> int:
                     )
                     write_parquet(group, out_path)
                     logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
+                    outputs.append(
+                        {
+                            "path": str(out_path),
+                            "rows": int(len(group)),
+                            "start_ts": group["timestamp"].min().isoformat(),
+                            "end_ts": group["timestamp"].max().isoformat(),
+                        }
+                    )
 
                 report_path = _feature_quality_report_path(
                     data_root,
@@ -933,12 +959,16 @@ def main() -> int:
                     ),
                 }
                 _write_feature_quality_report(report_path, quality_payload)
+                outputs.append({"path": str(report_path), "rows": 1})
                 stats["symbols"][symbol] = {
                     "rows": int(len(out)),
                     "feature_quality_report_path": str(report_path),
                     "feature_quality_summary": quality_payload["quality"],
                 }
 
+        if not outputs:
+            raise RuntimeError("build_features produced no feature artifacts")
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as e:

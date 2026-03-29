@@ -24,6 +24,13 @@ def test_compare_confirmatory_candidates_matches_by_structural_key(tmp_path):
                 "rule_template": "continuation",
                 "horizon": "60m",
                 "gate_bridge_tradable": "pass",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
                 "q_value": 0.01,
             },
             {
@@ -34,6 +41,13 @@ def test_compare_confirmatory_candidates_matches_by_structural_key(tmp_path):
                 "rule_template": "mean_reversion",
                 "horizon": "5m",
                 "gate_bridge_tradable": "pass",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
                 "q_value": 0.02,
             },
         ]
@@ -56,6 +70,13 @@ def test_compare_confirmatory_candidates_matches_by_structural_key(tmp_path):
                 "gate_c_regime_stable": True,
                 "gate_multiplicity_strict": True,
                 "bridge_eval_status": "tradable",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
                 "q_value": 0.03,
             },
             {
@@ -73,6 +94,13 @@ def test_compare_confirmatory_candidates_matches_by_structural_key(tmp_path):
                 "gate_c_regime_stable": True,
                 "gate_multiplicity_strict": False,
                 "bridge_eval_status": "rejected",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
                 "q_value": 0.50,
             },
         ]
@@ -335,6 +363,107 @@ def test_build_confirmatory_workflow_payload_recommends_promotion_review_for_str
                 "rule_template": "continuation",
                 "horizon": "60m",
                 "gate_bridge_tradable": "pass",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
+                "q_value": 0.01,
+            }
+        ]
+    ).to_parquet(origin_dir / "edge_candidates_normalized.parquet", index=False)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "target_a",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "gate_oos_validation": True,
+                "gate_after_cost_positive": True,
+                "gate_after_cost_stressed_positive": True,
+                "gate_bridge_tradable": True,
+                "gate_multiplicity": True,
+                "gate_c_regime_stable": True,
+                "gate_multiplicity_strict": True,
+                "bridge_eval_status": "tradable",
+                "cost_config_digest": "digest-a",
+                "fee_bps_per_side": 4.0,
+                "slippage_bps_per_fill": 2.0,
+                "cost_bps": 6.0,
+                "round_trip_cost_bps": 12.0,
+                "after_cost_includes_funding_carry": False,
+                "cost_model_source": "stub",
+                "q_value": 0.03,
+            }
+        ]
+    ).to_parquet(target_dir / "phase2_candidates.parquet", index=False)
+
+    payload = svc.build_confirmatory_workflow_payload(
+        data_root=data_root,
+        origin_run_id="origin_run",
+        target_run_id="target_run",
+    )
+
+    assert payload["workflow_status"] == "confirmatory_strict_pass"
+    assert payload["next_action"] == "promotion_review"
+
+
+def test_build_confirmatory_workflow_payload_blocks_missing_cost_identity(tmp_path):
+    data_root = tmp_path / "data"
+    origin_dir = data_root / "reports" / "edge_candidates" / "origin_run"
+    target_dir = data_root / "reports" / "phase2" / "target_run" / "search_engine"
+    origin_dir.mkdir(parents=True, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (data_root / "runs" / "origin_run").mkdir(parents=True, exist_ok=True)
+    (data_root / "runs" / "origin_run" / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "run_id": "origin_run",
+                "start": "2025-01-01",
+                "end": "2025-01-31",
+                "normalized_symbols": ["BTCUSDT"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (
+        data_root
+        / "lake"
+        / "raw"
+        / "binance"
+        / "perp"
+        / "BTCUSDT"
+        / "funding"
+        / "year=2025"
+        / "month=01"
+    ).mkdir(parents=True, exist_ok=True)
+    (
+        data_root
+        / "lake"
+        / "raw"
+        / "binance"
+        / "perp"
+        / "BTCUSDT"
+        / "funding"
+        / "year=2025"
+        / "month=02"
+    ).mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "origin_1",
+                "symbol": "BTCUSDT",
+                "event_type": "STATE_CHOP_STATE",
+                "direction": "long",
+                "rule_template": "continuation",
+                "horizon": "60m",
+                "gate_bridge_tradable": "pass",
                 "q_value": 0.01,
             }
         ]
@@ -367,8 +496,9 @@ def test_build_confirmatory_workflow_payload_recommends_promotion_review_for_str
         target_run_id="target_run",
     )
 
-    assert payload["workflow_status"] == "confirmatory_strict_pass"
-    assert payload["next_action"] == "promotion_review"
+    assert payload["workflow_status"] == "blocked"
+    assert payload["next_action"] == "repair_confirmatory_cost_identity"
+    assert payload["comparison"]["strict_matching_blocked"] is True
 
 
 
