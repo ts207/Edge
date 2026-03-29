@@ -1,0 +1,111 @@
+{
+  "agent_name": "architecture_contracts",
+  "scope_audited": [
+    "README.md",
+    "docs/",
+    "docs/generated/",
+    "project/contracts/",
+    "project/pipelines/run_all.py",
+    "project/* package boundaries"
+  ],
+  "real_architecture_summary": "Executable orchestration is centered on project/pipelines/run_all.py, with stage planning in project/pipelines/planner.py and family builders in project/pipelines/stages/*. Real execution uses wrapper and CLI modules under project/pipelines/research/* and project/research/cli/* more than the service-owner map declared in project/contracts/stage_dag.py and project/contracts/system_map.py.",
+  "top_invariants": [
+    "The planner output in project/pipelines/stages/* is the actual source of stage-family behavior, not docs or README prose.",
+    "Stage contracts only matter if project/contracts/pipeline_registry.py validates executable scripts and artifact production, not just name/path globs.",
+    "docs/generated is governance-facing, but runtime does not consume it; drift there must be treated as artifact drift, not runtime truth."
+  ],
+  "findings": [
+    {
+      "title": "Phase-2 contract registry still describes legacy conditional and bridge stages that the planner no longer schedules",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "contract_integrity",
+      "affected_files": [
+        "project/contracts/pipeline_registry.py",
+        "project/pipelines/stages/research.py",
+        "project/pipelines/research/README.md",
+        "project/tests/pipelines/test_pipeline_discovery_mode.py"
+      ],
+      "evidence": "project/contracts/pipeline_registry.py maps phase2_discovery to phase2_conditional_hypotheses* and bridge_evaluate_phase2*, but project/pipelines/stages/research.py appends phase2_search_engine instead, and project/tests/pipelines/test_pipeline_discovery_mode.py asserts the legacy stages are absent.",
+      "why_it_matters": "Governance/docs describe a discovery chain that does not actually execute, so operator expectations and contract audits can be wrong before runtime starts.",
+      "reproduction_or_validation": "Inspect build_research_stages in project/pipelines/stages/research.py and compare its emitted names to STAGE_FAMILY_REGISTRY in project/contracts/pipeline_registry.py.",
+      "suggested_remediation": "Either remove legacy conditional/bridge stages from the registry/docs or restore explicit scheduling paths and end-to-end planner tests."
+    },
+    {
+      "title": "Strategy packaging stages point at nonexistent wrapper scripts while contract validation still reports the plan valid",
+      "severity": "critical",
+      "confidence": "verified",
+      "category": "correctness",
+      "affected_files": [
+        "project/pipelines/stages/evaluation.py",
+        "project/contracts/pipeline_registry.py",
+        "project/tests/pipelines/test_stage_registry_contract.py"
+      ],
+      "evidence": "project/pipelines/stages/evaluation.py schedules project/pipelines/research/compile_strategy_blueprints.py and select_profitable_strategies.py, but those wrapper files do not exist. validate_stage_plan_contract() in project/contracts/pipeline_registry.py only checks glob patterns, and the corresponding test treats those missing paths as valid.",
+      "why_it_matters": "A plan can pass the contract layer and then fail only at execution time when Python cannot open the stage script.",
+      "reproduction_or_validation": "Build evaluation stages with run_strategy_blueprint_compiler=1 and run_profitable_selector=1, then check Path.exists() for the emitted script paths and compare with validate_stage_plan_contract().",
+      "suggested_remediation": "Point the planner and registry at real implementations under project/research/* or restore the missing wrappers, then make the registry validator reject nonexistent scripts."
+    },
+    {
+      "title": "README declares docs/generated authoritative, but required generated artifacts are missing and build_system_map --check fails",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "artifact_integrity",
+      "affected_files": [
+        "README.md",
+        "docs/generated/",
+        "project/scripts/build_system_map.py",
+        "project/scripts/regenerate_artifacts.sh"
+      ],
+      "evidence": "README lists docs/generated/system_map.* and event ontology artifacts as authoritative. The audited tree lacks several of them, and project/scripts/build_system_map.py --check fails because docs/generated/system_map.{md,json} are absent.",
+      "why_it_matters": "Governance-facing generated artifacts are incomplete and not reproducible from the checked-in regeneration path, so artifact trust is lower than the docs claim.",
+      "reproduction_or_validation": "List docs/generated/* and compare with README.md, then run project/scripts/build_system_map.py --format both --check.",
+      "suggested_remediation": "Narrow the documented generated surface or commit and continuously check the full declared set in CI."
+    },
+    {
+      "title": "System-map ownership points to services, but run_all actually executes wrappers and CLI modules",
+      "severity": "medium",
+      "confidence": "verified",
+      "category": "architecture",
+      "affected_files": [
+        "project/contracts/stage_dag.py",
+        "project/contracts/system_map.py",
+        "project/pipelines/run_all.py",
+        "project/pipelines/research/phase2_search_engine.py",
+        "project/research/cli/promotion_cli.py"
+      ],
+      "evidence": "project/contracts/stage_dag.py says phase2_discovery and promotion belong to candidate_discovery_service and promotion_service, but run_all traverses wrapper modules under project/pipelines/research/* and CLI adapters before or instead of those services.",
+      "why_it_matters": "The declared boundary map is not the real orchestration graph, which hides ownership and upgrade risk.",
+      "reproduction_or_validation": "Trace imports from project/pipelines/run_all.py through stage wrappers and compare them with owner modules in project/contracts/stage_dag.py.",
+      "suggested_remediation": "Either make wrappers call services directly as the canonical surface or update the stage_dag/system_map to reflect the actual wrapper chain."
+    },
+    {
+      "title": "Stage contracts are enforced by naming and glob patterns rather than executable or artifact proof",
+      "severity": "medium",
+      "confidence": "verified",
+      "category": "maintainability",
+      "affected_files": [
+        "project/contracts/pipeline_registry.py",
+        "project/tests/pipelines/test_stage_registry_contract.py"
+      ],
+      "evidence": "validate_stage_plan_contract() only verifies stage names and path globs. It does not check file existence, importability, or declared outputs, and tests reinforce that weak contract.",
+      "why_it_matters": "High-leverage failures survive planning and contract checks until runtime or later artifact review.",
+      "reproduction_or_validation": "Feed validate_stage_plan_contract() a stage tuple whose path matches the allowed glob but points to no real file.",
+      "suggested_remediation": "Add existence/import checks and at least one artifact-level smoke assertion per stage family."
+    }
+  ],
+  "test_coverage_assessment": "Architecture and contract tests exist, but they validate declarations in isolation. They do not prove script paths exist or that the generated governance artifacts promised by README are present and current.",
+  "docs_specs_code_contradictions": [
+    "README says docs/generated is authoritative, but required artifacts are missing and generators fail in --check mode.",
+    "project/pipelines/research/README.md still documents phase2_conditional_hypotheses/bridge_evaluate_phase2, while the planner emits phase2_search_engine.",
+    "project/contracts/stage_dag.py treats services as canonical owners, but execution routes through wrappers and CLI adapters."
+  ],
+  "suggested_regression_tests": [
+    "A planner/registry test that every emitted stage script exists on disk.",
+    "A registry-vs-planner test for phase-family name drift.",
+    "A generated-doc inventory test for README-promised docs/generated artifacts."
+  ],
+  "open_questions_or_unknowns": [
+    "Whether legacy bridge/conditional stages are intentionally retained as manual-only compatibility surfaces."
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "agent_name": "core_features_costs",
+  "scope_audited": [
+    "project/core/",
+    "project/features/",
+    "project/eval/",
+    "project/domain/",
+    "project/io/",
+    "project/research/ (cost/return integration cross-references only)",
+    "project/tests/core/",
+    "project/tests/features/",
+    "project/tests/eval/",
+    "project/tests/domain/"
+  ],
+  "real_architecture_summary": "Proposal/spec objects feed search and gating in project/research/search/evaluator.py and project/research/gating.py, which then feed candidate_discovery_scoring, eval robustness/cost models, bridge evaluation, and blueprint compilation. Cost semantics are split across project/core/execution_costs.py, project/eval/cost_model.py, and research-side helpers.",
+  "top_invariants": [
+    "PIT joins must never leak bars after the event timestamp.",
+    "Execution-cost units must be consistent across core, eval, search, and bridge paths.",
+    "Funding carry must not be repackaged as negative transaction cost in robustness stress panels."
+  ],
+  "findings": [
+    {
+      "title": "Execution cost units diverge across core, eval, and research paths",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "correctness",
+      "affected_files": [
+        "project/core/execution_costs.py",
+        "project/eval/cost_model.py",
+        "project/research/search/evaluator.py",
+        "project/research/phase2_cost_integration.py"
+      ],
+      "evidence": "project/core/execution_costs.py resolves a one-sided fee+slippage total, project/research/search/evaluator.py subtracts that once, while project/eval/cost_model.py applies 2 * (fee + slippage) as round-trip cost.",
+      "why_it_matters": "The same fee config produces different after-cost returns depending on the path that computed them.",
+      "reproduction_or_validation": "Compare resolve_execution_costs(), estimate_transaction_cost_bps(), apply_cost_model(), and evaluate_hypothesis_batch() under the same fee/slippage config.",
+      "suggested_remediation": "Adopt one repo-wide cost unit contract and rename fields/sites so per-side and round-trip values cannot be confused."
+    },
+    {
+      "title": "Funding carry can make stressed-cost robustness improve as costs are stressed",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "economic_realism",
+      "affected_files": [
+        "project/research/gating.py",
+        "project/research/services/candidate_discovery_scoring.py",
+        "project/eval/robustness.py"
+      ],
+      "evidence": "build_event_return_frame() records cost_return = per_trade_cost - funding_carry_return, which can go negative, and evaluate_structural_robustness() subtracts that negative cost again, making higher stress multipliers improve pnl retention.",
+      "why_it_matters": "A cost-stress panel can certify fragile candidates as more robust when stressed harder.",
+      "reproduction_or_validation": "Generate a short-side return frame with positive funding_rate_scaled and feed the negative costs_bps into evaluate_structural_robustness().",
+      "suggested_remediation": "Stress transaction costs separately from funding carry and clamp transaction-cost inputs to non-negative values."
+    },
+    {
+      "title": "Funding carry is applied as a flat trade adjustment independent of holding horizon",
+      "severity": "medium",
+      "confidence": "verified",
+      "category": "economic_realism",
+      "affected_files": [
+        "project/research/gating.py"
+      ],
+      "evidence": "_funding_carry_return() reads one scalar funding rate and applies it once per trade regardless of horizon length or funding-interval count.",
+      "why_it_matters": "A 5-minute hold and a 1-hour hold can receive identical funding carry, distorting horizon comparisons.",
+      "reproduction_or_validation": "Call build_event_return_frame() with the same event and constant funding rate but different horizons and compare funding_carry_return.",
+      "suggested_remediation": "Accrue carry over the actual holding window using aligned funding timestamps and interval counts."
+    },
+    {
+      "title": "Research helper integrate_execution_costs is broken and does not call the shared core utility correctly",
+      "severity": "medium",
+      "confidence": "verified",
+      "category": "architecture",
+      "affected_files": [
+        "project/research/cost_integration.py",
+        "project/core/execution_costs.py"
+      ],
+      "evidence": "integrate_execution_costs() calls resolve_execution_costs(symbol) positionally, but resolve_execution_costs is keyword-only and requires a full cost-config contract.",
+      "why_it_matters": "A purported shared research integration path fails immediately and cannot share semantics with the maintained core path.",
+      "reproduction_or_validation": "Import integrate_execution_costs() and call it on a dummy DataFrame and symbol.",
+      "suggested_remediation": "Delete the dead helper or rewrite it against the actual resolve_execution_costs() keyword contract."
+    },
+    {
+      "title": "The repo marks after-cost outputs as including funding carry even when actual carry coverage can be zero",
+      "severity": "medium",
+      "confidence": "likely",
+      "category": "contract_integrity",
+      "affected_files": [
+        "project/research/services/candidate_discovery_service.py",
+        "project/research/services/candidate_discovery_scoring.py",
+        "project/research/gating.py"
+      ],
+      "evidence": "candidate_discovery_service hard-codes after_cost_includes_funding_carry=True, while candidate_discovery_scoring separately computes funding_carry_eval_coverage and gating only includes carry when funding fields are present.",
+      "why_it_matters": "Consumers can assume net expectancy already includes carry economics when the observed coverage is actually zero.",
+      "reproduction_or_validation": "Trace the hard-coded flag in candidate_discovery_service.py and compare it with funding_carry_eval_coverage on candidate sets lacking funding columns.",
+      "suggested_remediation": "Derive the flag from observed coverage or split formula capability from observed carry coverage."
+    }
+  ],
+  "test_coverage_assessment": "Temporal/PIT tests are stronger than economic-consistency tests. Current coverage does not catch cross-path cost divergence, negative-cost stress improvement, horizon-insensitive funding accrual, or the broken research-side cost helper.",
+  "docs_specs_code_contradictions": [
+    "project/features/context_states.py::TEMPORAL_CONTRACT says uses_current_observation=False, but calculate_ms_trend_probabilities() uses current-bar rolling std by default.",
+    "after_cost_includes_funding_carry is documented in diagnostics as always true, while actual carry inclusion depends on available funding fields."
+  ],
+  "suggested_regression_tests": [
+    "A single fee-config equivalence test across core/eval/research.",
+    "A negative-cost stress test that must never improve under higher cost stress.",
+    "A horizon-sensitive funding-carry accrual test."
+  ],
+  "open_questions_or_unknowns": [
+    "What the canonical meaning of cost_bps is meant to be across the repo: per side, per fill, or round trip."
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "agent_name": "strategy_compilation",
+  "scope_audited": [
+    "project/strategy/",
+    "project/compilers/",
+    "project/research/compile_strategy_blueprints.py",
+    "project/research/build_strategy_candidates.py",
+    "spec/strategies/",
+    "project/tests/strategy*/",
+    "project/tests/strategies/"
+  ],
+  "real_architecture_summary": "The executable path is promoted candidate rows -> compile_blueprint() -> DSL Blueprint JSONL -> ExecutableStrategySpec.from_blueprint() -> engine.run_engine_for_specs() -> DslInterpreterV1.generate_positions(). spec/strategies/*.yaml and project/compilers/spec_transformer.py are side surfaces rather than the active runtime contract.",
+  "top_invariants": [
+    "Executable runtime contracts are ExecutableStrategySpec objects, not spec/strategies YAMLs.",
+    "Serialized blueprint lineage must survive the blueprint/spec/runtime boundary.",
+    "Compilation and clustering must be deterministic for the same inputs."
+  ],
+  "findings": [
+    {
+      "title": "Serialized blueprint lineage is silently reset when runtime rebuilds a blueprint",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "contract_integrity",
+      "affected_files": [
+        "project/strategy/dsl/normalize.py",
+        "project/strategy/dsl/schema.py",
+        "project/strategy/models/executable_strategy_spec.py",
+        "project/strategy/runtime/dsl_runtime/interpreter.py"
+      ],
+      "evidence": "build_blueprint() only maps a subset of LineageSpec fields, so fields such as proposal_id, wf_status, cost_config_digest, promotion_track, ontology_spec_hash, template_verb, and constraints revert to defaults during rebuild.",
+      "why_it_matters": "Artifact identity and provenance are lost exactly at the blueprint/spec -> runtime boundary.",
+      "reproduction_or_validation": "Serialize a Blueprint with populated lineage fields, rebuild it with build_blueprint(), and compare lineage before/after.",
+      "suggested_remediation": "Round-trip the full LineageSpec payload or validate the entire lineage dict directly instead of cherry-picking fields."
+    },
+    {
+      "title": "Runtime hard-requires funding_rate_scaled even for strategies that never reference funding",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "runtime_safety",
+      "affected_files": [
+        "project/strategy/runtime/dsl_runtime/execution_context.py",
+        "project/strategy/runtime/dsl_runtime/interpreter.py",
+        "project/tests/strategy_dsl/test_dsl_runtime_contracts.py"
+      ],
+      "evidence": "build_signal_frame() raises if funding_rate_scaled is absent, and DslInterpreterV1.generate_positions() calls it before interpreting the blueprint, even for non-funding strategies.",
+      "why_it_matters": "Legal strategies can fail at runtime because the runtime contract is broader than the declared trigger/condition set.",
+      "reproduction_or_validation": "Execute a non-funding blueprint with spread-only features and no funding columns.",
+      "suggested_remediation": "Make funding fields lazy or defaultable for strategies that do not use funding conditions."
+    },
+    {
+      "title": "Post-compile clustering is nondeterministic because it uses Python hash()",
+      "severity": "high",
+      "confidence": "verified",
+      "category": "artifact_integrity",
+      "affected_files": [
+        "project/research/compile_strategy_blueprints.py"
+      ],
+      "evidence": "compile_strategy_blueprints.py computes cluster_key = hash((event_type, template_verb)) % 1000, and Python salts hash() per process.",
+      "why_it_matters": "The same inputs can keep or drop different blueprints across separate runs.",
+      "reproduction_or_validation": "Run hash((event_type, template_verb)) % 1000 in separate interpreters and compare outputs.",
+      "suggested_remediation": "Use a stable digest or the explicit tuple as the clustering key."
+    },
+    {
+      "title": "Main blueprint compiler bypasses its own selection helper and ignores several exposed gating arguments",
+      "severity": "medium",
+      "confidence": "verified",
+      "category": "maintainability",
+      "affected_files": [
+        "project/research/compile_strategy_blueprints.py",
+        "project/tests/pipelines/research/test_compile_blueprint_module_wiring.py"
+      ],
+      "evidence": "_choose_event_rows() exists and understands max_per_event and fallback/quality gates, but main() iterates every promoted row directly and never calls it.",
+      "why_it_matters": "Operator-facing CLI knobs appear to control compilation but do not change the output set.",
+      "reproduction_or_validation": "Trace main() from argparse through the loop over edge_df.to_dict(\"records\") and compare output counts across different --max_per_event values.",
+      "suggested_remediation": "Route main() through _choose_event_rows() or delete the dead CLI knobs."
+    },
+    {
+      "title": "spec/strategies YAML files are not part of the executable pipeline and have drifted from runtime reality",
+      "severity": "low",
+      "confidence": "verified",
+      "category": "docs_drift",
+      "affected_files": [
+        "spec/strategies/liquidity_dislocation_mr.yaml",
+        "spec/strategies/context_state_smoke.yaml",
+        "project/compilers/spec_transformer.py",
+        "project/research/compile_strategy_blueprints.py"
+      ],
+      "evidence": "No executable path in scope loads spec/strategies/*.yaml; the engine consumes ExecutableStrategySpec objects built from DSL blueprints instead.",
+      "why_it_matters": "These YAML files look authoritative but do not govern runtime behavior.",
+      "reproduction_or_validation": "Search the repo for spec/strategies references and compare with compile_strategy_blueprints.py and engine/runner.py.",
+      "suggested_remediation": "Either wire these YAMLs into an enforced compile path or demote them to examples/tests and point operators at Blueprint/ExecutableStrategySpec as the source of truth."
+    }
+  ],
+  "test_coverage_assessment": "Tests cover DSL legality and some runtime contracts, but not lineage round-trip integrity, non-funding runtime execution without funding columns, clustering determinism, or the fact that main() ignores its own selection knobs.",
+  "docs_specs_code_contradictions": [
+    "spec/strategies files look canonical, but the executable pipeline never loads them.",
+    "spec_transformer.py implies a StrategySpec path, while the engine actually consumes ExecutableStrategySpec from DSL blueprints."
+  ],
+  "suggested_regression_tests": [
+    "A full Blueprint lineage round-trip test.",
+    "A non-funding runtime execution test without funding columns.",
+    "A multi-process determinism test for blueprint clustering."
+  ],
+  "open_questions_or_unknowns": [
+    "Whether candidate_id is guaranteed unique enough for audit row keying inside compile_strategy_blueprints.py."
+  ]
+}
