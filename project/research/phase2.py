@@ -14,7 +14,7 @@ import pandas as pd
 
 from project.core.coercion import safe_float, safe_int, as_bool
 from project.core.feature_schema import feature_dataset_dir_name
-from project.core.constants import HORIZON_BARS_BY_TIMEFRAME
+from project.core.constants import parse_horizon_bars
 from project.core.timeframes import normalize_timeframe, timeframe_to_minutes
 from project.domain.compiled_registry import get_domain_registry
 from project.events.registry import load_registry_episode_anchors
@@ -302,7 +302,7 @@ def prepare_events_dataframe(
 
     # Split labels assignment
     if "split_label" not in events_df.columns or events_df["split_label"].isna().all():
-        max_h = max([HORIZON_BARS_BY_TIMEFRAME.get(h, 0) for h in horizons] or [0])
+        max_h = max([parse_horizon_bars(h, default=0) for h in horizons] or [0])
         purge_bars = int(max_h) + int(entry_lag_bars)
         events_df = assign_event_split_labels(
             events_df,
@@ -469,7 +469,7 @@ def prepare_events_dataframe(
 
         try:
             resplit_attempted = True
-            max_h = max([HORIZON_BARS_BY_TIMEFRAME.get(h, 0) for h in horizons] or [0])
+            max_h = max([parse_horizon_bars(h, default=0) for h in horizons] or [0])
             purge_bars = int(max_h) + int(entry_lag_bars)
             events_df = assign_event_split_labels(
                 events_df,

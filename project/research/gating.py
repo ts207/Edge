@@ -17,7 +17,7 @@ except ModuleNotFoundError:
     from project.core.stats import stats
 
 from project.core.stats import bh_adjust, newey_west_t_stat_for_mean
-from project.core.constants import HORIZON_BARS_BY_TIMEFRAME
+from project.core.constants import parse_horizon_bars
 from project.core.validation import ts_ns_utc
 from project.research.direction_semantics import resolve_effect_sign
 from project.research.holdout_integrity import assert_no_lookahead_join
@@ -66,7 +66,7 @@ def two_sided_p_from_t(t_stat: float, df: int) -> float:
 
 
 def horizon_to_bars(horizon: str) -> int:
-    return HORIZON_BARS_BY_TIMEFRAME.get(horizon.lower().strip(), 12)
+    return parse_horizon_bars(horizon, default=12)
 
 
 def join_events_to_features(

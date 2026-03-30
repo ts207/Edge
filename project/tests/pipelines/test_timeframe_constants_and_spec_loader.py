@@ -12,6 +12,7 @@ from project.core.constants import (
     BARS_PER_YEAR_BY_TIMEFRAME,
     DEFAULT_EVENT_HORIZON_BARS,
     HORIZON_BARS_BY_TIMEFRAME,
+    parse_horizon_bars,
 )
 from project.research.services.phase2_support import horizon_to_bars
 from project.research import validate_event_quality
@@ -24,7 +25,13 @@ def test_runner_uses_canonical_bars_per_year_map():
 def test_horizon_lookup_uses_canonical_mapping():
     assert horizon_to_bars("5m") == HORIZON_BARS_BY_TIMEFRAME["5m"]
     assert horizon_to_bars("60m") == HORIZON_BARS_BY_TIMEFRAME["60m"]
+    assert horizon_to_bars("72b") == 72
     assert horizon_to_bars("unknown_horizon") == 12
+
+
+def test_parse_horizon_bars_accepts_arbitrary_bar_count_labels():
+    assert parse_horizon_bars("72b") == 72
+    assert parse_horizon_bars("72") == 72
 
 
 def test_default_event_horizon_grid_is_stable():

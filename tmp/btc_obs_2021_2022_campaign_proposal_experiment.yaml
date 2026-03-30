@@ -1,0 +1,59 @@
+program_id: btc_obs_2021_2022_campaign
+run_mode: research
+description: Observation-only BTC 2021-2022 campaign focused on volatility expansion,
+  breakout continuation, and breakout failure. Use outputs for hypothesis formation,
+  not promotion.
+objective_name: retail_profitability
+promotion_profile: disabled
+instrument_scope:
+  instrument_classes:
+  - crypto
+  symbols:
+  - BTCUSDT
+  timeframe: 5m
+  start: '2021-01-01'
+  end: '2022-12-31'
+trigger_space:
+  allowed_trigger_types:
+  - EVENT
+  events:
+    include:
+    - VOL_SHOCK
+    - RANGE_BREAKOUT
+    - FALSE_BREAKOUT
+    - BREAKOUT_TRIGGER
+  canonical_regimes: []
+  subtypes: []
+  phases: []
+  evidence_modes: []
+  states: {}
+  sequences: {}
+  transitions: {}
+  feature_predicates: {}
+  interactions: {}
+templates:
+  include:
+  - continuation
+evaluation:
+  horizons_bars:
+  - 12
+  - 24
+  - 72
+  directions:
+  - long
+  - short
+  entry_lags:
+  - 1
+  - 2
+contexts:
+  include: {}
+search_control:
+  max_hypotheses_total: 150
+  max_hypotheses_per_template: 80
+  max_hypotheses_per_event_family: 100
+  random_seed: 42
+promotion:
+  enabled: false
+  track: standard
+  multiplicity_scope: program_id
+artifacts: {}

@@ -62,6 +62,8 @@ METRICS_COLUMNS = [
     "direction",
     "horizon",
     "template_id",
+    "entry_lag",
+    "entry_lag_bars",
     "n",
     "train_n_obs",
     "validation_n_obs",

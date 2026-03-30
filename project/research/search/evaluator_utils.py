@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from project.core.constants import HORIZON_BARS_BY_TIMEFRAME, horizon_bars_for_label
+from project.core.constants import parse_horizon_bars
 from project.research.direction_semantics import normalize_side_policy, resolve_effect_sign
 from project.domain.compiled_registry import get_domain_registry
 from project.domain.hypotheses import HypothesisSpec, TriggerType
@@ -49,12 +49,7 @@ _DEFAULT_CONTEXT_MAX_ENTROPY = 0.90
 
 
 def horizon_bars(horizon: str) -> int:
-    h = horizon.lower().strip()
-    if h not in HORIZON_BARS_BY_TIMEFRAME:
-        raise ValueError(
-            f"Unknown horizon: {horizon!r}. Supported: {list(HORIZON_BARS_BY_TIMEFRAME.keys())}"
-        )
-    return horizon_bars_for_label(h)
+    return parse_horizon_bars(horizon)
 
 
 def forward_log_returns(close: pd.Series, horizon_bars: int) -> pd.Series:

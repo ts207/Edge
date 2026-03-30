@@ -125,6 +125,14 @@ def hypotheses_to_bridge_candidates(
     out["rule_template"] = filtered["template_id"].astype(str)
     out["template_verb"] = out["rule_template"]
     out["horizon"] = filtered["horizon"].astype(str)
+    raw_entry_lag = filtered.get("entry_lag_bars")
+    if raw_entry_lag is None:
+        raw_entry_lag = filtered.get("entry_lag")
+    if raw_entry_lag is None:
+        raw_entry_lag = pd.Series(1, index=filtered.index)
+    entry_lag_series = pd.to_numeric(raw_entry_lag, errors="coerce").fillna(1).astype(int)
+    out["entry_lag_bars"] = entry_lag_series
+    out["entry_lag"] = entry_lag_series
     out["t_stat"] = filtered["t_stat"].astype(float)
     out["n"] = filtered["n"].astype(int)
     out["sample_size"] = out["n"]

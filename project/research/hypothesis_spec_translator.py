@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import yaml
 
-from project.core.constants import HORIZON_BARS_BY_TIMEFRAME
+from project.core.constants import parse_horizon_bars
 from project.domain.compiled_registry import get_domain_registry
 from project.research.condition_key_contract import (
     format_available_key_sample,
@@ -115,8 +115,7 @@ def load_template_side_policy(repo_root: Path) -> Dict[str, str]:
 
 
 def _horizon_bars(horizon: str) -> int:
-    key = _norm(horizon).lower()
-    return int(HORIZON_BARS_BY_TIMEFRAME.get(key, 12))
+    return parse_horizon_bars(_norm(horizon), default=12)
 
 
 def _condition_signature(conditioning: Dict[str, Any]) -> str:

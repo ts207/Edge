@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Dict, List
 
 # Canonical annualization factors by timeframe.
@@ -36,6 +37,8 @@ HORIZON_BARS_BY_TIMEFRAME: Dict[str, int] = {
 # Default horizon grid for event quality / conditional analysis at 5m base bars.
 DEFAULT_EVENT_HORIZON_BARS: List[int] = [1, 3, 12]
 
+_ARBITRARY_BAR_HORIZON_RE = re.compile(r"^(?P<bars>\d+)(?:b)?$")
+
 
 def bars_per_year_for_timeframe(timeframe: str, default: int | None = None) -> int:
     key = str(timeframe or "").strip().lower()
@@ -44,6 +47,24 @@ def bars_per_year_for_timeframe(timeframe: str, default: int | None = None) -> i
     return int(BARS_PER_YEAR_BY_TIMEFRAME.get(key, int(default)))
 
 
-def horizon_bars_for_label(horizon: str, default: int = 12) -> int:
+def parse_horizon_bars(horizon: str | int | None, default: int | None = None) -> int:
     key = str(horizon or "").strip().lower()
-    return int(HORIZON_BARS_BY_TIMEFRAME.get(key, int(default)))
+    if key in HORIZON_BARS_BY_TIMEFRAME:
+        return int(HORIZON_BARS_BY_TIMEFRAME[key])
+
+    match = _ARBITRARY_BAR_HORIZON_RE.fullmatch(key)
+    if match:
+        return int(match.group("bars"))
+
+    if default is not None:
+        return int(default)
+
+    raise ValueError(
+        "Unknown horizon label "
+        f"{horizon!r}. Supported canonical labels: {list(HORIZON_BARS_BY_TIMEFRAME.keys())}; "
+        "arbitrary '<N>b' bar counts are also allowed."
+    )
+
+
+def horizon_bars_for_label(horizon: str | int | None, default: int = 12) -> int:
+    return parse_horizon_bars(horizon, default=default)

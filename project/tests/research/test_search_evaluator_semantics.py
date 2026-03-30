@@ -12,8 +12,8 @@ from project.research.search.evaluator import evaluate_hypothesis_batch
 from project.research.search.search_feature_utils import prepare_search_features_for_symbol
 
 
-def _base_features() -> pd.DataFrame:
-    timestamps = pd.date_range("2024-01-01", periods=40, freq="5min", tz="UTC")
+def _base_features(periods: int = 40) -> pd.DataFrame:
+    timestamps = pd.date_range("2024-01-01", periods=periods, freq="5min", tz="UTC")
     return pd.DataFrame(
         {
             "timestamp": timestamps,
@@ -158,6 +158,52 @@ def test_event_templates_use_spec_side_policy_in_canonical_evaluator(monkeypatch
         metrics.loc["continuation", "mean_return_bps"]
     )
     assert 0.0 <= float(metrics.loc["continuation", "p_value"]) <= 1.0
+
+
+def test_evaluated_hypotheses_materialize_entry_lag_metadata(monkeypatch):
+    _patch_robustness(monkeypatch)
+    features = _base_features(periods=120)
+    signal_col = EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column
+    features[signal_col] = False
+    features.loc[[0, 5, 10, 15], signal_col] = True
+    features[ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]] = np.nan
+    features.loc[[0, 5, 10, 15], ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]] = 1.0
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("VOL_SHOCK"),
+        direction="short",
+        horizon="24b",
+        template_id="continuation",
+        entry_lag=2,
+    )
+
+    metrics = evaluate_hypothesis_batch([spec], features, min_sample_size=1)
+
+    assert int(metrics.loc[0, "entry_lag"]) == 2
+    assert int(metrics.loc[0, "entry_lag_bars"]) == 2
+    assert bool(metrics.loc[0, "valid"]) is True
+
+
+def test_event_templates_accept_arbitrary_bar_count_horizons(monkeypatch):
+    _patch_robustness(monkeypatch)
+    features = _base_features(periods=120)
+    signal_col = EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column
+    features[signal_col] = False
+    features.loc[[0, 5, 10, 15], signal_col] = True
+    features[ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]] = np.nan
+    features.loc[[0, 5, 10, 15], ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]] = 1.0
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("VOL_SHOCK"),
+        direction="long",
+        horizon="72b",
+        template_id="continuation",
+    )
+
+    metrics = evaluate_hypothesis_batch([spec], features, min_sample_size=1)
+
+    assert bool(metrics.loc[0, "valid"]) is True
+    assert float(metrics.loc[0, "mean_return_bps"]) > 0.0
 
 
 def test_gate_templates_fail_closed_in_canonical_evaluator(monkeypatch):

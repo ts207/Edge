@@ -16,6 +16,8 @@ def test_hypotheses_to_bridge_candidates_respects_configured_bridge_thresholds()
                 "direction": "short",
                 "horizon": "60m",
                 "template_id": "continuation",
+                "entry_lag": 2,
+                "entry_lag_bars": 2,
                 "n": 64,
                 "train_n_obs": 30,
                 "validation_n_obs": 16,
@@ -53,6 +55,8 @@ def test_hypotheses_to_bridge_candidates_respects_configured_bridge_thresholds()
 
     assert bool(default.iloc[0]["gate_bridge_tradable"]) is False
     assert bool(relaxed.iloc[0]["gate_bridge_tradable"]) is True
+    assert int(relaxed.iloc[0]["entry_lag"]) == 2
+    assert int(relaxed.iloc[0]["entry_lag_bars"]) == 2
     assert bool(default.iloc[0]["gate_oos_validation"]) is False
     assert bool(relaxed.iloc[0]["gate_oos_validation"]) is True
     assert float(relaxed.iloc[0]["p_value"]) == 0.04

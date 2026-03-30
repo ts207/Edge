@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from project.core.config import get_data_root
-from project.core.constants import HORIZON_BARS_BY_TIMEFRAME
+from project.core.constants import parse_horizon_bars
 from project.core.timeframes import normalize_timeframe, timeframe_to_minutes
 from project.io.utils import ensure_dir, write_parquet
 from project.research.gating import calculate_expectancy_stats
@@ -52,7 +52,7 @@ def bool_mask_from_series(series: pd.Series) -> pd.Series:
 
 
 def horizon_to_bars(horizon: str) -> int:
-    return int(HORIZON_BARS_BY_TIMEFRAME.get(str(horizon), 12))
+    return parse_horizon_bars(horizon, default=12)
 
 
 def load_phase2_features(
