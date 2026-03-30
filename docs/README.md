@@ -16,14 +16,12 @@ Recommended reading order:
 
 Worked examples:
 
-10. [09_WORKED_EXAMPLE_VOL_SHOCK.md](09_WORKED_EXAMPLE_VOL_SHOCK.md)
-11. [10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md](10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md)
+
 12. [10b_WORKED_EXAMPLE_ENGINE_BACKTEST.md](10b_WORKED_EXAMPLE_ENGINE_BACKTEST.md)
 
 Reference:
 
-13. [11_AUDIT_MATRIX.md](11_AUDIT_MATRIX.md)
-14. [12_AUDIT_RUN_SCHEDULE.md](12_AUDIT_RUN_SCHEDULE.md)
+
 15. [13_TRIGGER_TYPES.md](13_TRIGGER_TYPES.md)
 16. [15_EVENT_REFERENCE.md](15_EVENT_REFERENCE.md)
 
@@ -31,7 +29,7 @@ Agent and operator contracts:
 
 17. [AGENT_CONTRACT.md](AGENT_CONTRACT.md) — allowed/forbidden actions, hypothesis definition, verification obligations
 18. [VERIFICATION.md](VERIFICATION.md) — verification script commands
-19. [RESEARCH_BACKLOG.md](RESEARCH_BACKLOG.md) — prioritized research backlog
+
 
 Architecture references:
 

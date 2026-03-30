@@ -6,11 +6,11 @@ RUFF ?= $(PYTHON) -m ruff
 RUN_ALL := -m project.pipelines.run_all
 CLEAN_SCRIPT := $(ROOT_DIR)/project/scripts/clean_data.sh
 
-RUN_ID ?= discovery_2020_2025
+RUN_ID ?= discovery_2021_2022
 SYMBOLS ?= BTCUSDT,ETHUSDT
 # Discovery defaults support multi-symbol idea generation under one RUN_ID.
-START ?= 2020-06-01
-END ?= 2025-07-10
+START ?= 2021-01-01
+END ?= 2022-12-31
 STRATEGIES ?=
 ENABLE_CROSS_VENUE_SPOT_PIPELINE ?= 0
 CHANGED_BASE ?= origin/main

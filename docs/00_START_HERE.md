@@ -31,10 +31,6 @@ Read in this order:
 2. [02_REPOSITORY_MAP.md](02_REPOSITORY_MAP.md)
 3. [03_OPERATOR_WORKFLOW.md](03_OPERATOR_WORKFLOW.md)
 4. [05_ARTIFACTS_AND_INTERPRETATION.md](05_ARTIFACTS_AND_INTERPRETATION.md)
-5. [09_WORKED_EXAMPLE_VOL_SHOCK.md](09_WORKED_EXAMPLE_VOL_SHOCK.md)
-6. [10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md](10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md)
-7. [11_AUDIT_MATRIX.md](11_AUDIT_MATRIX.md)
-8. [12_AUDIT_RUN_SCHEDULE.md](12_AUDIT_RUN_SCHEDULE.md)
 
 ## Source Of Truth Rule
 
@@ -57,7 +53,3 @@ If you are new, do these in order:
 
 If you cannot explain what was tested, where hypotheses died, and whether the failure was mechanical, statistical, or deployment-related, you are not done reading.
 
-Use [09_WORKED_EXAMPLE_VOL_SHOCK.md](09_WORKED_EXAMPLE_VOL_SHOCK.md) as the concrete model for that first completed-run read.
-Then read [10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md](10_WORKED_EXAMPLE_MECHANICAL_FAILURE.md) to see what an invalid run looks like even when the process exits successfully.
-Use [11_AUDIT_MATRIX.md](11_AUDIT_MATRIX.md) when you need to audit the repository systematically with multiple passes.
-Use [12_AUDIT_RUN_SCHEDULE.md](12_AUDIT_RUN_SCHEDULE.md) when you need the exact run order and commands for a full coding-agent audit.
