@@ -81,14 +81,41 @@ emit the exact commands needed to translate, plan, and execute it.
 
 ## Validation Rules (MUST enforce before emitting)
 
-### Horizon Validation
-Supported bar counts for 5m timeframe: 1, 3, 12, 24, 48, 72, 288
-These map to: 5m, 15m, 1h, 2h, 4h, 6h, 24h
+### Horizon Validation — CRITICAL: two execution surfaces exist
 
-If the mechanism hypothesis specifies a horizon NOT in this set, you MUST:
-1. Flag it as unsupported
-2. Suggest the nearest supported horizon
-3. Do NOT silently round or substitute
+The repo has TWO horizon validation paths. The compiler must satisfy BOTH.
+
+**Path A: Proposal → experiment engine → expand_hypotheses → evaluator**
+This is the path agent proposals take. Horizons are specified as integer bar
+counts in `horizons_bars: [12, 24, 72]`. The experiment engine formats them as
+`f"{horizon}b"` strings (e.g. `"12b"`, `"24b"`, `"72b"`). The evaluator resolves
+them via `parse_horizon_bars()` which accepts:
+- Named labels: 1m, 5m, 15m, 30m, 60m, 1h, 4h, 24h, 1d
+- Canonical Nb labels: 4b, 8b, 12b, 16b, 24b
+- Arbitrary `<N>b` or bare integers: any positive integer resolves
+
+This path has NO upper-bound validation — `72`, `100`, `500` all resolve.
+
+**Path B: Phase2 search engine → generate_hypotheses → validate_hypothesis_spec**
+This path uses `VALID_HORIZONS` from `project/research/search/validation.py`:
+`{"1m", "5m", "15m", "30m", "60m", "1h", "4h", "1d"}`
+Only these 8 time-label strings pass. `"12b"`, `"24b"`, `"72b"` are REJECTED.
+
+**What this means for proposals:**
+Agent proposals use Path A exclusively (via `expand_hypotheses`), so integer
+bar counts work. BUT if any downstream code or future refactor routes through
+Path B's `validate_hypothesis_spec`, bar-count horizons will be silently rejected.
+
+**Compiler rule:** Accept any positive integer bar count for `horizons_bars`.
+The canonical well-tested values for 5m timeframe are:
+`1, 3, 4, 8, 12, 16, 24, 48, 72, 288`
+These map to: 5m, 15m, 20m, 40m, 1h, 80m, 2h, 4h, 6h, 24h
+
+For horizons outside this canonical set:
+1. WARN that the value is non-canonical but technically supported
+2. Note the risk: if the search engine path is ever used, only horizons
+   mapping to `{1m, 5m, 15m, 30m, 60m, 1h, 4h, 1d}` survive
+3. Do NOT silently round or substitute — emit the warning and proceed
 
 ### Template Validation
 Templates must exist in `spec/templates/event_template_registry.yaml` under the

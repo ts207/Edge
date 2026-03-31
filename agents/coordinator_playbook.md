@@ -138,47 +138,93 @@ You MUST check for and prevent:
 If any drift is detected, REJECT the output back to the originating agent with
 the specific drift identified.
 
+## Explicit State Transitions
+
+The coordinator is always in exactly one of these states:
+
+| State | Entry Condition | Exit Condition | Next State |
+|-------|----------------|----------------|------------|
+| `GATHER` | Run completed or failed | All artifacts collected | `ANALYZE` |
+| `ANALYZE` | Artifacts gathered | Analyst report received | `TRIAGE` |
+| `TRIAGE` | Analyst report reviewed | Classification decided | `FORMULATE` or `STOP` or `PATCH_REPO` |
+| `PATCH_REPO` | Pipeline failure or data issue | Fix applied and verified | `GATHER` (re-run) |
+| `FORMULATE` | Triage says keep/modify | Hypotheses received | `VALIDATE_DRIFT` |
+| `VALIDATE_DRIFT` | Hypotheses received | All drift checks pass | `COMPILE` |
+| `COMPILE` | Drift-free hypotheses | Compiled proposal received | `TRANSLATE` |
+| `TRANSLATE` | Compiled proposal | Translation command succeeds | `PLAN` |
+| `PLAN` | Translation succeeded | Plan-only command succeeds | `REVIEW` |
+| `REVIEW` | Plan succeeded | User approves | `EXECUTE` |
+| `EXECUTE` | User approved | Run completes | `GATHER` (new cycle) |
+| `STOP` | Kill decision, or max cycles reached | Ledger updated | terminal |
+
+Transitions that loop back:
+- `VALIDATE_DRIFT` → `FORMULATE`: drift detected (max 2 cycles)
+- `COMPILE` → `FORMULATE`: compiler rejects hypothesis (max 2 cycles)
+- `TRANSLATE` → `COMPILE`: translation fails with fixable error
+- `PATCH_REPO` → `GATHER`: after repo fix, re-run same proposal
+
+Transitions that stop:
+- `TRIAGE` → `STOP`: analyst recommends kill with high confidence
+- `TRIAGE` → `STOP`: pipeline failure that requires human intervention
+- `VALIDATE_DRIFT` → `STOP`: 2 revision cycles exhausted, escalate to user
+- `REVIEW` → `STOP`: user declines execution
+
 ## Full Workflow Sequence
 
 ```
 1. USER provides run_id (or requests new experiment)
      │
-2. COORDINATOR gathers run artifacts
+2. COORDINATOR gathers run artifacts              [state: GATHER]
      │
-3. COORDINATOR ──> ANALYST (via handoff template)
+3. COORDINATOR ──> ANALYST (via handoff template) [state: ANALYZE]
      │
 4. ANALYST returns analyst_report
      │
-5. COORDINATOR reviews analyst_report
-   - If pipeline failure: STOP, report to user
-   - If kill recommendation: STOP, record kill
-   - If modify/keep: continue
+5. COORDINATOR reviews analyst_report             [state: TRIAGE]
+   - If pipeline failure: go to PATCH_REPO or STOP
+   - If kill recommendation: go to STOP, update ledger
+   - If modify/keep: go to FORMULATE
      │
-6. COORDINATOR ──> MECHANISM_HYPOTHESIS (via handoff template)
+6. COORDINATOR ──> MECHANISM_HYPOTHESIS           [state: FORMULATE]
      │
 7. MECHANISM_HYPOTHESIS returns 1-3 hypotheses
      │
-8. COORDINATOR validates hypotheses for scope drift
+8. COORDINATOR validates for scope drift          [state: VALIDATE_DRIFT]
    - If drift detected: REJECT back to step 6 (max 2 cycles)
      │
 9. For each hypothesis:
-   COORDINATOR ──> COMPILER (via handoff template)
+   COORDINATOR ──> COMPILER                       [state: COMPILE]
      │
 10. COMPILER returns proposal + commands + checklist
       │
-11. COORDINATOR reviews checklist
-    - If validation fails: REJECT back to step 6 (max 2 cycles)
+11. COORDINATOR runs translation command          [state: TRANSLATE]
       │
-12. COORDINATOR runs translation command
+12. COORDINATOR runs plan-only command            [state: PLAN]
       │
-13. COORDINATOR runs plan-only command
+13. COORDINATOR presents plan to user             [state: REVIEW]
       │
-14. COORDINATOR presents plan to user for approval
+14. On approval: COORDINATOR runs execution       [state: EXECUTE]
       │
-15. On approval: COORDINATOR runs execution command
+15. COORDINATOR updates campaign ledger
       │
-16. Return to step 2 with new run_id
+16. Return to step 2 with new run_id             [state: GATHER]
 ```
+
+## Campaign Ledger
+
+Every program MUST have a campaign ledger at
+`data/artifacts/experiments/<program_id>/campaign_ledger.md`
+
+Use the template from `agents/templates/campaign_ledger.md`.
+
+Update the ledger at these points:
+- After TRIAGE: record classification of the analyzed run
+- After COMPILE: record the new hypothesis_id and proposal_path
+- After EXECUTE: record the new run_id
+- At STOP: record the terminal classification and reasoning
+
+The ledger is the coordinator's persistent memory across cycles. Without it,
+long-running research loops lose context.
 
 ## Version Discipline
 

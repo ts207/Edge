@@ -57,42 +57,65 @@ In order of priority:
 
 ## What you produce
 
-Return a structured report with exactly these sections:
+Return a structured report with exactly these fields. This is a FIXED SCHEMA —
+every field must be present. Use `null` or `[]` for missing data, never omit a field.
 
 ```markdown
 # Analyst Report: <run_id>
 
+## Identity
+- run_id: <string>
+- program_id: <string>
+- proposal_path: <string>
+- analysis_date: <YYYY-MM-DD>
+
 ## Run Health
 - pipeline_status: success | partial_failure | full_failure
-- failed_stage: <stage> or none
-- stages_completed: N / M
-- data_quality_flags: [list]
+- failed_stage: <stage> | null
+- blocking_stage: <stage that consumed most time or had anomalies> | null
+- stages_completed: <N> / <M>
+- stages_skipped: [<list>] | []
+- data_quality_flags: [<list>] | []
+- checklist_decision: <from manifest> | null
 
 ## Funnel Summary
-- hypotheses_generated: N
-- feasible: N
-- evaluated: N
-- passed_phase2_gate: N
-- bridge_candidates: N
-- promoted: N
+- hypotheses_generated: <int>
+- feasible: <int>
+- rejected_at_generation: <int>
+- evaluated: <int>
+- passed_phase2_gate: <int>
+- bridge_candidates: <int>
+- promoted: <int>
+- funnel_collapse_stage: generation | feasibility | evaluation | gating | bridge | none
 
 ## Primary Rejection Mechanism
 - gate: <gate_name>
-- reason: <reason>
-- fraction_rejected_here: N%
+- reason: <reason string>
+- fraction_rejected_here: <N>%
 - interpretation: <one sentence>
 
-## Strongest Near-Misses (top 3)
+## Strongest Near-Misses (top 3, ordered by selection_score desc)
 For each:
-- candidate_id / event_type / template_verb / horizon / direction
-- effect_raw / p_value / q_value / selection_score
-- fail_gate_primary / fail_reason_primary
-- how close: <what would need to change>
+- candidate_id: <string>
+- event_type: <string>
+- template_verb: <string>
+- horizon: <int> bars
+- direction: long | short
+- effect_raw: <float> bps
+- effect_shrunk_state: <float> bps | null
+- p_value: <float>
+- q_value: <float>
+- selection_score: <float>
+- n_events: <int>
+- fail_gate_primary: <string>
+- fail_reason_primary: <string>
+- distance_to_pass: <what specifically would need to change>
 
 ## Asymmetry Read
 - long_vs_short: <summary>
 - horizon_pattern: <which horizons showed signal vs noise>
 - event_type_pattern: <which events drove results>
+- strongest_axis: event_type | template | horizon | direction
 
 ## Mechanistic Meaning
 - what_the_data_says: <1-3 sentences>
@@ -101,12 +124,18 @@ For each:
 
 ## Recommended Next Experiments (1-3)
 For each:
+- experiment_label: <short descriptive name>
 - rationale: <why this follows from the diagnosis>
-- change_type: narrow | shift | reframe
+- change_type: narrow | shift | reframe | kill
 - what_to_change: <specific knob or scope change>
 - what_to_freeze: <what must stay the same>
 - expected_information_gain: <what you learn if it works or fails>
 - stop_condition: <when to kill this line>
+
+## Classification
+- overall: keep | modify | kill
+- confidence: low | medium | high
+- reasoning: <1-2 sentences>
 ```
 
 ## Rules
