@@ -1,31 +1,13 @@
 {
-  "card_dir": "/mnt/data/work_next/Edge-irene/docs/generated/seed_thesis_cards",
-  "freshness_dates": {
-    "THESIS_LIQUIDATION_CASCADE": "2026-04-01",
-    "THESIS_LIQUIDITY_VACUUM": "2026-04-01",
-    "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM": "2026-04-01",
-    "THESIS_VOL_SHOCK": "2026-04-01",
-    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM": "2026-04-01"
-  },
-  "generated_at_utc": "2026-04-01T03:43:29Z",
-  "index_path": "/mnt/data/work_next/Edge-irene/data/live/theses/index.json",
-  "output_path": "/mnt/data/work_next/Edge-irene/data/live/theses/block_h_overlap_cluster_v1/promoted_theses.json",
-  "overlap_edge_count": 5,
-  "overlap_group_count": 5,
-  "package_run_id": "block_h_overlap_cluster_v1",
-  "packaged_count": 5,
-  "review_due_dates": {
-    "THESIS_LIQUIDATION_CASCADE": "2026-06-30",
-    "THESIS_LIQUIDITY_VACUUM": "2026-06-30",
-    "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM": "2026-04-22",
-    "THESIS_VOL_SHOCK": "2026-06-30",
-    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM": "2026-04-22"
-  },
-  "thesis_ids": [
-    "THESIS_LIQUIDATION_CASCADE",
-    "THESIS_LIQUIDITY_VACUUM",
-    "THESIS_VOL_SHOCK",
-    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM",
-    "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM"
-  ]
+  "card_dir": "docs/generated/seed_thesis_cards",
+  "freshness_dates": {},
+  "generated_at_utc": "2026-04-01T22:13:23Z",
+  "index_path": "/home/irene/Edge/data/live/theses/index.json",
+  "output_path": "/home/irene/Edge/data/live/theses/seed_founding_batch_v1/promoted_theses.json",
+  "overlap_edge_count": 0,
+  "overlap_group_count": 0,
+  "package_run_id": "seed_founding_batch_v1",
+  "packaged_count": 0,
+  "review_due_dates": {},
+  "thesis_ids": []
 }

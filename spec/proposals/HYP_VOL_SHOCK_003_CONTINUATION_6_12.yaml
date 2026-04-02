@@ -1,0 +1,58 @@
+# HYP_VOL_SHOCK_003_CONTINUATION_6_12 - VOL_SHOCK continuation hypothesis
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: Post-shock liquidity withdrawal and reflexive positioning can extend
+# the move for several bars after a VOL_SHOCK event. This proposal tests short
+# horizon continuation inside a high-volatility context rather than the killed
+# mean-reversion thesis.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  VOL_SHOCK continuation reframe (HYP_VOL_SHOCK_003_CONTINUATION_6_12).
+  The prior mean-reversion thesis failed across all evaluated cells. This follow-up
+  tests whether large volatility shocks instead initiate a brief forced-flow
+  propagation phase in already high-volatility conditions, with continuation over
+  the next 6-12 bars after a 1-bar lag.
+
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - VOL_SHOCK
+  canonical_regimes:
+    - VOLATILITY_TRANSITION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 6
+  - 12
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+contexts:
+  vol_regime:
+    - high
+
+search_control:
+  max_hypotheses_total: 100
+  max_hypotheses_per_template: 100
+  max_hypotheses_per_event_family: 100

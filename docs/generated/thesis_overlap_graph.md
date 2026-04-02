@@ -1,21 +1,13 @@
 # Thesis Overlap Graph
 
 - Schema version: `thesis_overlap_graph_v1`
-- Thesis count: 5
-- Overlap groups: 5
+- Thesis count: 0
+- Overlap groups: 0
 
 ## Groups
 
-- `LIQUIDATION_CASCADE::NO_EPISODE::ANY::trigger` — 1 member(s): THESIS_LIQUIDATION_CASCADE
-- `LIQUIDITY_VACUUM::NO_EPISODE::ANY::confirm` — 1 member(s): THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM
-- `LIQUIDITY_VACUUM::NO_EPISODE::ANY::trigger` — 1 member(s): THESIS_LIQUIDITY_VACUUM
-- `VOL_SHOCK::NO_EPISODE::ANY::confirm` — 1 member(s): THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM
-- `VOL_SHOCK::NO_EPISODE::ANY::trigger` — 1 member(s): THESIS_VOL_SHOCK
+_No groups available._
 
 ## Highest-overlap edges
 
-- `THESIS_LIQUIDITY_VACUUM` ↔ `THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM` — score 0.60; event_family:LIQUIDITY_VACUUM, event_contract_ids:LIQUIDITY_VACUUM
-- `THESIS_VOL_SHOCK` ↔ `THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM` — score 0.60; event_family:VOL_SHOCK, event_contract_ids:VOL_SHOCK
-- `THESIS_LIQUIDATION_CASCADE` ↔ `THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM` — score 0.25; event_contract_ids:LIQUIDATION_CASCADE
-- `THESIS_LIQUIDITY_VACUUM` ↔ `THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM` — score 0.25; event_contract_ids:LIQUIDITY_VACUUM
-- `THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM` ↔ `THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM` — score 0.25; event_contract_ids:LIQUIDITY_VACUUM
+_No overlap edges available._

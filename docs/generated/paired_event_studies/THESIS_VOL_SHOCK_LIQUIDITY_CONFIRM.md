@@ -1,7 +1,7 @@
 # Direct paired-event study — THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM
 
 - thesis_id: `THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM`
-- selected_horizon_bars: `24`
+- selected_horizon_bars: `8`
 - symbols: `BTCUSDT, ETHUSDT`
 - trigger_component: `VOL SHOCK`
 - confirm_component: `LIQUIDITY VACUUM`
@@ -11,16 +11,16 @@
 
 | Cohort | Events | Validation mean (bps) | Test mean (bps) | Total mean (bps) | Stability | Q-value |
 |---|---:|---:|---:|---:|---:|---:|
-| vol_shock_only | 3629 | 118.59 | 96.58 | 108.75 | 0.949 | 0.000000 |
-| liquidity_vacuum_only | 977 | 113.86 | 85.44 | 101.29 | 0.929 | 0.000000 |
-| joint_trigger | 110 | 130.65 | 71.95 | 103.43 | 0.855 | 0.000000 |
+| vol_shock_only | 3505 |  | 53.98 | 53.98 | 0.000 | 0.000000 |
+| liquidity_vacuum_only | 1102 |  | 36.93 | 36.93 | 0.000 | 0.000000 |
+| joint_trigger | 119 |  | 35.78 | 35.78 | 0.000 | 0.000000 |
 
 ## Pair advantage diagnostics
 
-- joint_minus_trigger_only_bps: `-5.321910999684334`
-- joint_minus_confirmation_only_bps: `2.140565929691732`
-- joint_test_advantage_vs_trigger_only_bps: `-24.629703644553203`
-- joint_test_advantage_vs_confirmation_only_bps: `-13.491398405575765`
+- joint_minus_trigger_only_bps: `-18.19896897623933`
+- joint_minus_confirmation_only_bps: `-1.143067252689967`
+- joint_test_advantage_vs_trigger_only_bps: `-18.19896897623933`
+- joint_test_advantage_vs_confirmation_only_bps: `-1.143067252689967`
 
 ## Interpretation
 

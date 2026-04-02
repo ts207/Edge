@@ -1,0 +1,59 @@
+# HYP_INT_VOLSHOCK_LIQVAC_002_BTC8_CONT_BIDIR - BTC vol shock with liquidity vacuum confirmation
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: Promotion-side paired-event evidence already exists for VOL_SHOCK
+# with nearby LIQUIDITY_VACUUM confirmation on BTCUSDT, with the selected
+# 8-bar horizon showing dense realized support. This proposal brings that pair
+# back into the bounded research loop as a native INTERACTION trigger so the
+# interaction lane is tested on a known plausible pair rather than on registry
+# motifs alone.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only interaction isolate for VOL_SHOCK confirmed by nearby
+  LIQUIDITY_VACUUM (HYP_INT_VOLSHOCK_LIQVAC_002_BTC8_CONT_BIDIR). This run
+  tests a CONFIRM interaction with a 6-bar confirmation window, 8-bar
+  continuation horizon, and both directions under discovery gates.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [INTERACTION]
+  interactions:
+    include:
+      - left: VOL_SHOCK
+        right: LIQUIDITY_VACUUM
+        op: CONFIRM
+        lag: 6
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 8
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 20
+  max_hypotheses_per_template: 20
+  max_hypotheses_per_event_family: 20
+
+discovery_profile: standard
+phase2_gate_profile: discovery

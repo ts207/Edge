@@ -1,0 +1,43 @@
+{
+  "name": "edge-agents",
+  "version": "0.1.0",
+  "description": "Repo-local Codex plugin for the Edge specialist-agent workflow.",
+  "author": {
+    "name": "irene",
+    "email": "irene@local.invalid",
+    "url": "https://github.com/ts207/Edge"
+  },
+  "homepage": "https://github.com/ts207/Edge",
+  "repository": "https://github.com/ts207/Edge",
+  "license": "UNLICENSED",
+  "keywords": [
+    "edge",
+    "agents",
+    "research",
+    "crypto-research",
+    "verification"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "interface": {
+    "displayName": "Edge Agents",
+    "shortDescription": "Agent-dir workflows for bounded research and repo work.",
+    "longDescription": "Project-local Codex plugin for Edge. It packages the existing agent specifications under agents/ into reusable Codex skills for repo orientation, coordination, diagnosis, bounded hypothesis formulation, and proposal compilation.",
+    "developerName": "Edge",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write",
+      "Code"
+    ],
+    "websiteURL": "https://github.com/ts207/Edge",
+    "privacyPolicyURL": "https://github.com/ts207/Edge",
+    "termsOfServiceURL": "https://github.com/ts207/Edge",
+    "defaultPrompt": [
+      "Diagnose an Edge run using the analyst workflow.",
+      "Turn an analyst report into bounded hypotheses.",
+      "Compile a mechanism hypothesis into proposal YAML."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

@@ -1,52 +1,8 @@
 {
   "name": "edge-plugins",
   "version": "0.1.0",
-  "description": "Project-local Codex plugin scaffold for the Edge research platform. No external MCP servers or app entries are configured in this snapshot.",
   "author": {
-    "name": "irene",
-    "email": "irene@local.invalid",
-    "url": "https://github.com/ts207/Edge"
-  },
-  "homepage": "https://github.com/ts207/Edge",
-  "repository": "https://github.com/ts207/Edge",
-  "license": "UNLICENSED",
-  "keywords": [
-    "edge",
-    "crypto-research",
-    "event-driven",
-    "alpha-discovery",
-    "verification"
-  ],
-  "skills": "./skills/",
-  "hooks": "./hooks.json",
-  "mcpServers": "./.mcp.json",
-  "apps": "./.app.json",
-  "interface": {
-    "displayName": "Edge Plugins",
-    "shortDescription": "Repo workflows for Edge research and runtime work.",
-    "longDescription": "Project-local plugin scaffold for Edge, focused on event detectors, specs, research pipelines, and verification workflows. This snapshot packages local skills and scripts only; external MCP servers and app registrations remain intentionally unconfigured.",
-    "developerName": "Edge",
-    "category": "Developer Tools",
-    "capabilities": [
-      "Interactive",
-      "Write",
-      "Code"
-    ],
-    "websiteURL": "https://github.com/ts207/Edge",
-    "privacyPolicyURL": "https://github.com/ts207/Edge",
-    "termsOfServiceURL": "https://github.com/ts207/Edge",
-    "defaultPrompt": [
-      "Trace detector changes to the owning Edge specs.",
-      "Summarize the next high-value Edge verification checks.",
-      "Audit a pipeline stage against its artifact contracts."
-    ],
-    "brandColor": "#0F766E",
-    "composerIcon": "./assets/icon.png",
-    "logo": "./assets/logo.png",
-    "screenshots": [
-      "./assets/screenshot1.png",
-      "./assets/screenshot2.png",
-      "./assets/screenshot3.png"
-    ]
+    "name": "Edge Team",
+    "email": "edge-team@example.org"
   }
 }

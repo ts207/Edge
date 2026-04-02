@@ -606,6 +606,53 @@ def _collect_phase2_candidates(run_id: str, run_symbols: Sequence[str]) -> List[
     if not phase2_root.exists():
         return rows
 
+    root_candidate_csv = phase2_root / "phase2_candidates.csv"
+    root_candidate_parquet = phase2_root / "phase2_candidates.parquet"
+    if root_candidate_csv.exists() or root_candidate_parquet.exists():
+        try:
+            root_df = (
+                pd.read_csv(root_candidate_csv)
+                if root_candidate_csv.exists()
+                else pd.read_parquet(root_candidate_parquet)
+            )
+        except Exception:
+            root_df = pd.DataFrame()
+        if not root_df.empty:
+            if "gate_all_research" in root_df.columns:
+                root_df = root_df[root_df["gate_all_research"].map(as_bool)].copy()
+            elif "gate_all" in root_df.columns:
+                root_df = root_df[root_df["gate_all"].map(as_bool)].copy()
+            if "gate_bridge_tradable" in root_df.columns:
+                root_df = root_df[root_df["gate_bridge_tradable"].map(as_bool)].copy()
+            if not root_df.empty:
+                source_path = root_candidate_csv if root_candidate_csv.exists() else root_candidate_parquet
+                for idx, row in root_df.iterrows():
+                    row_payload = row.to_dict()
+                    row_payload["status"] = (
+                        str(row_payload.get("status", "PROMOTED_RESEARCH")).strip()
+                        or "PROMOTED_RESEARCH"
+                    )
+                    event_name = (
+                        str(
+                            row_payload.get(
+                                "event_type",
+                                row_payload.get("event", row_payload.get("trigger_key", "phase2_root")),
+                            )
+                        ).strip()
+                        or "phase2_root"
+                    )
+                    rows.append(
+                        _phase2_row_to_candidate(
+                            run_id=run_id,
+                            event=event_name,
+                            row=row_payload,
+                            idx=idx,
+                            source_path=source_path,
+                            default_status="PROMOTED_RESEARCH",
+                            run_symbols=run_symbols,
+                        )
+                    )
+
     for event_dir in sorted([p for p in phase2_root.iterdir() if p.is_dir()]):
         candidate_root = event_dir
         if (

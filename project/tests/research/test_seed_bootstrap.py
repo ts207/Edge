@@ -41,6 +41,14 @@ def test_build_promotion_seed_inventory_contains_fallback_candidates(tmp_path: P
     assert "test_now" in statuses
 
 
+def test_build_promotion_seed_inventory_honors_explicit_max_candidates(tmp_path: Path) -> None:
+    out = build_promotion_seed_inventory(docs_dir=tmp_path, max_candidates=12)
+    with Path(out["csv_path"]).open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert len(rows) == 12
+
+
 def test_seed_promotion_policy_artifacts_render(tmp_path: Path) -> None:
     payload = load_seed_promotion_policy()
     out = write_seed_promotion_policy_artifacts(docs_dir=tmp_path)

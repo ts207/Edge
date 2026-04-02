@@ -1,0 +1,51 @@
+# HYP_FUNDING_PERSISTENCE_005_BTC24_LONG_CONT_2023_H1 - BTC FUNDING_PERSISTENCE_TRIGGER 24b continuation 2023 H1
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The BTC 2023 funding-persistence holdout survived while the 2022
+# mirror failed. This proposal tests whether the surviving 2023 effect is broad
+# through the first half of the year or concentrated later.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only 2023 H1 stability slice for FUNDING_PERSISTENCE_TRIGGER continuation
+  (HYP_FUNDING_PERSISTENCE_005_BTC24_LONG_CONT_2023_H1). The 2023 holdout
+  survived while the 2022 mirror failed. This run freezes the same BTCUSDT /
+  long / 24-bar continuation expression and tests only the first half of 2023.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2023-01-01"
+end: "2023-07-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FUNDING_PERSISTENCE_TRIGGER
+  canonical_regimes:
+    - BASIS_FUNDING_DISLOCATION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

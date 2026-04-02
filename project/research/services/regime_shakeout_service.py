@@ -333,8 +333,8 @@ def build_shakeout_proposal_payload(
             f"on {slice_def.symbol} during {slice_def.window_label}"
         ),
         "run_mode": str(defaults.get("run_mode", "research")).strip() or "research",
-        "promotion_profile": str(defaults.get("promotion_profile", "research")).strip()
-        or "research",
+        "promotion_profile": str(defaults.get("promotion_profile", "disabled")).strip()
+        or "disabled",
         "symbols": [slice_def.symbol],
         "timeframe": str(defaults.get("timeframe", "5m")).strip() or "5m",
         "start": slice_def.start,

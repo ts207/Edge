@@ -90,6 +90,32 @@ class ProjectDataRepository:
         candidates.append(
             self.data_root / "lake" / "features" / market / symbol / timeframe / "market_context"
         )
+        if self.run_id:
+            candidates.append(
+                run_scoped_lake_path(
+                    self.data_root,
+                    self.run_id,
+                    "context",
+                    "market_state",
+                    symbol,
+                    timeframe,
+                )
+            )
+        candidates.append(
+            self.data_root / "lake" / "context" / "market_state" / symbol / timeframe
+        )
+        if self.run_id:
+            candidates.append(
+                run_scoped_lake_path(
+                    self.data_root,
+                    self.run_id,
+                    "context",
+                    "market_state",
+                    symbol,
+                )
+            )
+        candidates.append(self.data_root / "lake" / "context" / "market_state" / symbol)
+        candidates.append(self.data_root / "features" / "context" / "market_state" / symbol)
 
         return self._read_partitioned_candidates(
             candidates, f"market context for {symbol} {timeframe}"

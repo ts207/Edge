@@ -461,6 +461,10 @@ def attach_event_market_features(
         bars = read_parquet(list_parquet_files(bars_src)) if bars_src else pd.DataFrame()
 
         context_candidates = [
+            run_scoped_lake_path(
+                DATA_ROOT, run_id, "features", "perp", symbol, timeframe, "market_context"
+            ),
+            DATA_ROOT / "lake" / "features" / "perp" / symbol / timeframe / "market_context",
             run_scoped_lake_path(DATA_ROOT, run_id, "context", "market_state", symbol, timeframe),
             DATA_ROOT / "lake" / "context" / "market_state" / symbol / timeframe,
         ]
@@ -516,6 +520,8 @@ def attach_event_market_features(
             "vol_regime_code",
             "carry_state",
             "carry_state_code",
+            "ms_trend_state",
+            "ms_spread_state",
         ]
         state_view = market_state[[col for col in state_cols if col in market_state.columns]].copy()
         if not state_view.empty:
@@ -540,6 +546,8 @@ def attach_event_market_features(
             "vol_regime_code",
             "carry_state",
             "carry_state_code",
+            "ms_trend_state",
+            "ms_spread_state",
         ]
         feat = feat[[col for col in keep_cols if col in feat.columns]]
         context_rows.append(feat)
@@ -577,6 +585,8 @@ def attach_event_market_features(
         "vol_regime_code",
         "carry_state",
         "carry_state_code",
+        "ms_trend_state",
+        "ms_spread_state",
     ]:
         ctx_col = f"{col}_ctx"
         if ctx_col in merged.columns:

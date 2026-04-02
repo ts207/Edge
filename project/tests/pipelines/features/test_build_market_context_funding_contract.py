@@ -40,6 +40,7 @@ def test_build_market_context_uses_canonical_funding_rate_scaled():
 
     assert out["funding_rate_bps"].tolist() == pytest.approx([2.0, -2.0, 3.0, -3.0])
     assert set(out["carry_state_code"].tolist()) == {1.0, -1.0}
+    assert out["carry_state"].tolist() == ["funding_pos", "funding_neg", "funding_pos", "funding_neg"]
 
 
 def test_build_market_context_requires_funding_rate_scaled_column():
@@ -74,6 +75,8 @@ def test_build_market_context_handles_fully_missing_funding(caplog):
         "funding_rate_scaled unavailable for BTCUSDT; defaulting all 4/4 rows to 0.0" in caplog.text
     )
     assert out["funding_rate_scaled"].tolist() == [0.0, 0.0, 0.0, 0.0]
+    assert out["carry_state_code"].tolist() == [0.0, 0.0, 0.0, 0.0]
+    assert out["carry_state"].tolist() == ["neutral", "neutral", "neutral", "neutral"]
 
 
 def test_build_market_context_materializes_canonical_state_columns():
@@ -92,6 +95,9 @@ def test_build_market_context_materializes_canonical_state_columns():
         "refill_lag_state",
         "aftershock_state",
         "compression_state_flag",
+        "vol_regime",
+        "vol_regime_code",
+        "carry_state",
         "high_vol_regime",
         "low_vol_regime",
         "crowding_state",
@@ -140,6 +146,8 @@ def test_build_market_context_materializes_canonical_state_columns():
     }
     assert expected_state_cols.issubset(set(out.columns))
     assert out["ms_context_state_code"].notna().all()
+    assert out["vol_regime_code"].equals(out["ms_vol_state"])
+    assert out["carry_state"].tolist() == ["funding_pos", "funding_neg", "funding_pos", "funding_neg"]
 
     probability_columns = [
         ["prob_vol_low", "prob_vol_mid", "prob_vol_high", "prob_vol_shock"],
@@ -243,3 +251,40 @@ def test_main_writes_context_quality_report(monkeypatch, tmp_path):
     assert payload["symbol"] == "BTCUSDT"
     assert payload["quality"]["dimension_count"] == 6
     assert "vol" in payload["quality"]["dimensions"]
+
+
+def test_main_records_market_context_outputs_in_manifest(monkeypatch, tmp_path):
+    features = _feature_frame()
+    features["funding_rate_scaled"] = [0.0002, -0.0002, 0.0003, -0.0003]
+    captured_manifest: dict[str, object] = {}
+
+    monkeypatch.setattr(build_market_context, "get_data_root", lambda: tmp_path / "data")
+    monkeypatch.setattr(build_market_context, "start_manifest", lambda *args, **kwargs: captured_manifest)
+    monkeypatch.setattr(build_market_context, "finalize_manifest", lambda *args, **kwargs: None)
+    monkeypatch.setattr(build_market_context, "choose_partition_dir", lambda paths: paths[0])
+    monkeypatch.setattr(
+        build_market_context, "list_parquet_files", lambda _path: [Path("dummy.parquet")]
+    )
+    monkeypatch.setattr(build_market_context, "read_parquet", lambda _files: features.copy())
+    monkeypatch.setattr(build_market_context, "write_parquet", lambda _df, path: path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_market_context.py",
+            "--run_id",
+            "r_outputs",
+            "--symbols",
+            "BTCUSDT",
+            "--timeframe",
+            "5m",
+        ],
+    )
+
+    rc = build_market_context.main()
+
+    assert rc == 0
+    outputs = captured_manifest.get("outputs")
+    assert isinstance(outputs, list)
+    assert any("market_context_BTCUSDT_2026-01.parquet" in item["path"] for item in outputs)
+    assert any("context_quality_report_v1.json" in item["path"] for item in outputs)

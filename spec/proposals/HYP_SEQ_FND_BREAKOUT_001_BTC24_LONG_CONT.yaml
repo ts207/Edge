@@ -1,0 +1,52 @@
+# HYP_SEQ_FND_BREAKOUT_001_BTC24_LONG_CONT - BTC funding extreme then breakout 24b long continuation
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: After the BTC funding-persistence event line exhausted without stable
+# promotion support, the next bounded sequence hypothesis is that explicit funding
+# dislocation followed by breakout timing yields a cleaner continuation pocket than
+# the single-event trigger alone.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only sequence isolate for funding extreme then breakout continuation
+  (HYP_SEQ_FND_BREAKOUT_001_BTC24_LONG_CONT). This run tests whether the
+  funding-crowding sequence behind FND_DISLOC -> BREAKOUT_TRIGGER produces a
+  cleaner BTCUSDT / long / 24-bar continuation signal than the exhausted
+  single-event funding-persistence line.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [SEQUENCE]
+  sequences:
+    include:
+      - [FND_DISLOC, BREAKOUT_TRIGGER]
+    max_gaps_bars: [12]
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

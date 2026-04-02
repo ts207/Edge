@@ -215,7 +215,7 @@ def _episode_candidate_row(episode_id: str) -> dict[str, str]:
     }
 
 
-def build_promotion_seed_inventory(*, docs_dir: str | Path | None = None, max_candidates: int = 12) -> dict[str, Path]:
+def build_promotion_seed_inventory(*, docs_dir: str | Path | None = None, max_candidates: int | None = None) -> dict[str, Path]:
     out_dir = _ensure_dir(Path(docs_dir) if docs_dir is not None else DOCS_GENERATED)
     csv_path = out_dir / "promotion_seed_inventory.csv"
     md_path = out_dir / "promotion_seed_inventory.md"
@@ -228,7 +228,8 @@ def build_promotion_seed_inventory(*, docs_dir: str | Path | None = None, max_ca
     for episode_id in DEFAULT_EPISODES:
         rows.append(_episode_candidate_row(episode_id))
 
-    rows = rows[: max(1, int(max_candidates))]
+    if max_candidates is not None:
+        rows = rows[: max(1, int(max_candidates))]
     fieldnames = [
         "candidate_id",
         "source_type",

@@ -17,7 +17,11 @@ from project.events.detectors.funding import (
 )
 from project.events.detectors.exhaustion import TrendExhaustionDetector, MomentumDivergenceDetector
 from project.events.detectors.liquidity import DirectLiquidityStressDetector, DepthCollapseDetector
-from project.events.detectors.volatility import VolSpikeDetector, VolRelaxationDetector
+from project.events.detectors.volatility import (
+    BreakoutTriggerDetector,
+    VolSpikeDetector,
+    VolRelaxationDetector,
+)
 from project.events.families.temporal import SpreadRegimeWideningDetector
 from project.events.detectors.trend import SREventDetector, TrendAccelerationDetector
 from project.events.policy import (
@@ -344,6 +348,28 @@ def test_false_breakout_distance_filtering():
     assert events["detected_ts"].iloc[0] == df["timestamp"].iloc[151]
 
 
+def test_false_breakout_direction_tracks_failed_breakout_side():
+    from project.events.detectors.trend import FalseBreakoutDetector
+
+    detector = FalseBreakoutDetector()
+    features = {
+        "close": pd.Series([100.0, 100.6, 99.4]),
+        "rolling_max": pd.Series([100.0, 100.0, 100.0]),
+        "rolling_min": pd.Series([100.0, 100.0, 100.0]),
+    }
+
+    assert detector.compute_direction(1, features) == "non_directional"
+    assert detector.compute_direction(2, features) == "up"
+
+    features = {
+        "close": pd.Series([100.0, 99.4, 100.6]),
+        "rolling_max": pd.Series([100.0, 100.0, 100.0]),
+        "rolling_min": pd.Series([100.0, 100.0, 100.0]),
+    }
+
+    assert detector.compute_direction(2, features) == "down"
+
+
 def test_deleveraging_wave_prefers_canonical_oi_decel_and_high_vol_states_when_present():
     detector = DeleveragingWaveDetector()
     index = pd.RangeIndex(2)
@@ -417,6 +443,18 @@ def test_trend_exhaustion_direction_prefers_canonical_trend_state():
     direction = detector.compute_direction(0, features)
 
     assert direction == "down"
+
+
+def test_breakout_trigger_direction_tracks_breakout_side():
+    detector = BreakoutTriggerDetector()
+    features = {
+        "close": pd.Series([101.0, 99.0]),
+        "rolling_hi": pd.Series([100.0, 100.0]),
+        "rolling_lo": pd.Series([100.0, 100.0]),
+    }
+
+    assert detector.compute_direction(0, features) == "up"
+    assert detector.compute_direction(1, features) == "down"
 
 
 def test_momentum_divergence_default_is_tighter():

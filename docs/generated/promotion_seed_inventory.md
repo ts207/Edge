@@ -1,7 +1,7 @@
 # Promotion seed inventory
 
-- candidate_count: `12`
-- status_counts: `{"test_now": 12}`
+- candidate_count: `13`
+- status_counts: `{"needs_repair": 1, "test_now": 12}`
 - source_mode: `governance-aware fallback queue from Wave 3 contracts and episode registry`
 
 ## Candidate queue
@@ -112,3 +112,12 @@
 - next_action: `run_seed_tests`
 - horizon_guess: `8-24 bars`
 - expected_direction_or_path: Expect volatility expansion and directional follow-through after onset.
+
+### THESIS_EP_DISLOCATION_REPAIR
+- source_type: `episode`
+- source_contract_ids: `EP_DISLOCATION_REPAIR`
+- governance: tier `C`, role `context`, disposition `context_only`
+- promotion_status: `needs_repair`
+- next_action: `repair_governance_or_role_conflict`
+- horizon_guess: `8-32 bars`
+- expected_direction_or_path: Expect bounded repair or convergence after the dislocation resolves.

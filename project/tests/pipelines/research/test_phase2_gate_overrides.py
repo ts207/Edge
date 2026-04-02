@@ -104,6 +104,15 @@ def test_resolve_phase2_gate_params_liquidity_vacuum_tuned_override():
     assert cfg["require_sign_stability"] is False
 
 
+def test_discovery_profile_relaxes_structural_phase2_gates():
+    REPO_ROOT = Path(__file__).resolve().parents[3]
+    gates_spec = load_gates_spec(REPO_ROOT)
+    gates = select_phase2_gate_spec(gates_spec, mode="research", gate_profile="auto")
+    cfg = resolve_phase2_gate_params(gates, "VOL_SHOCK")
+    assert cfg["regime_ess_min_regimes"] == 1
+    assert cfg["timeframe_consensus_min_timeframes"] == 1
+
+
 def test_promotion_profile_does_not_include_discovery_event_relaxation():
     REPO_ROOT = Path(__file__).resolve().parents[3]
     gates_spec = load_gates_spec(REPO_ROOT)
@@ -113,6 +122,15 @@ def test_promotion_profile_does_not_include_discovery_event_relaxation():
     assert cfg["min_after_cost_expectancy_bps"] == 0.1
     assert cfg["conservative_cost_multiplier"] == 1.5
     assert cfg["require_sign_stability"] is True
+
+
+def test_promotion_profile_keeps_strict_structural_phase2_gates():
+    REPO_ROOT = Path(__file__).resolve().parents[3]
+    gates_spec = load_gates_spec(REPO_ROOT)
+    gates = select_phase2_gate_spec(gates_spec, mode="production", gate_profile="auto")
+    cfg = resolve_phase2_gate_params(gates, "VOL_SHOCK")
+    assert cfg["regime_ess_min_regimes"] == 2
+    assert cfg["timeframe_consensus_min_timeframes"] == 2
 
 
 def test_load_family_spec_supports_conditioning_cols_override():

@@ -83,6 +83,7 @@ class AgentExperimentRequest:
     contexts: ContextSelection
     search_control: SearchControl
     promotion: PromotionConfig
+    avoid_region_keys: List[str] = field(default_factory=list)
     artifacts: Dict[str, bool] = field(default_factory=dict)
 
 @dataclass(frozen=True)

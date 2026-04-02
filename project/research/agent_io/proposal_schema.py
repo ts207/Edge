@@ -180,6 +180,7 @@ class AgentProposal:
     directions: List[str] = field(default_factory=lambda: ["long", "short"])
     entry_lags: List[int] = field(default_factory=lambda: [1])
     contexts: Dict[str, List[str]] = field(default_factory=dict)
+    avoid_region_keys: List[str] = field(default_factory=list)
     search_control: Dict[str, int] = field(default_factory=dict)
     artifacts: Dict[str, bool] = field(default_factory=dict)
     knobs: Dict[str, Any] = field(default_factory=dict)
@@ -207,6 +208,7 @@ class AgentProposal:
             "directions": list(self.directions),
             "entry_lags": list(self.entry_lags),
             "contexts": dict(self.contexts),
+            "avoid_region_keys": list(self.avoid_region_keys),
             "search_control": dict(self.search_control),
             "artifacts": dict(self.artifacts),
             "knobs": dict(self.knobs),
@@ -266,6 +268,10 @@ def load_agent_proposal(path_or_payload: str | Path | Dict[str, Any]) -> AgentPr
         directions=_as_str_list(raw.get("directions", ["long", "short"]), field_name="directions"),
         entry_lags=_as_int_list(raw.get("entry_lags", [1]), field_name="entry_lags"),
         contexts=_normalize_contexts(raw.get("contexts", {})),
+        avoid_region_keys=_as_str_list(
+            raw.get("avoid_region_keys", []),
+            field_name="avoid_region_keys",
+        ),
         search_control=dict(raw.get("search_control", {}) or {}),
         artifacts=dict(raw.get("artifacts", {}) or {}),
         knobs={str(key): value for key, value in knobs.items()},

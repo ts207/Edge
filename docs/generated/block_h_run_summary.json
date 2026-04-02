@@ -1,7 +1,10 @@
 {
   "package_run_id": "block_h_overlap_cluster_v1",
   "shadow_run_id": "block_h_shadow_live_v1",
-  "thesis_store": "/mnt/data/work_next/Edge-irene/data/live/theses/block_h_overlap_cluster_v1/promoted_theses.json",
-  "shadow_summary": "/mnt/data/work_next/Edge-irene/data/reports/shadow_live/block_h_shadow_live_v1/shadow_live_thesis_summary.json",
-  "data_root": "/mnt/data/work_next/Edge-irene/data"
+  "paired_theses": [
+    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM",
+    "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM"
+  ],
+  "data_root": "/home/irene/Edge/data",
+  "thesis_store": "/home/irene/Edge/data/live/theses/block_h_overlap_cluster_v1/promoted_theses.json"
 }

@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Sequence
 
+from project.core.column_registry import ColumnRegistry
 from project.io.utils import (
     choose_partition_dir,
     list_parquet_files,
@@ -31,6 +32,25 @@ def _signal_ts_column(signal_column: str) -> str:
     if signal.endswith("_event"):
         return f"{signal[:-6]}_signal"
     return f"{signal}_signal"
+
+
+def _direction_signal_column(signal_column: str) -> str:
+    signal = str(signal_column).strip()
+    for event_type, spec in EVENT_REGISTRY_SPECS.items():
+        if str(spec.signal_column).strip() == signal:
+            return ColumnRegistry.event_direction_cols(event_type)[0]
+    if signal.endswith("_event"):
+        return f"{signal[:-6]}_direction"
+    return f"{signal}_direction"
+
+
+def _direction_to_sign(direction: object) -> int:
+    token = str(direction or "").strip().lower()
+    if token in {"up", "long", "buy", "pos", "positive", "1", "+1"}:
+        return 1
+    if token in {"down", "short", "sell", "neg", "negative", "-1"}:
+        return -1
+    return 0
 
 
 def _load_symbol_timestamps(
@@ -93,20 +113,30 @@ def build_event_flags(
         if not ts.empty:
             grids.append(pd.DataFrame({"timestamp": ts_ns_utc(ts), "symbol": symbol}))
 
-    all_signals = []
+    all_bool_cols: list[str] = []
+    all_direction_cols: list[str] = []
     for sig in sorted(REGISTRY_BACKED_SIGNALS):
-        all_signals.append(sig)
-        all_signals.append(_active_signal_column(sig))
-        all_signals.append(_signal_ts_column(sig))
+        all_bool_cols.append(sig)
+        all_bool_cols.append(_active_signal_column(sig))
+        all_bool_cols.append(_signal_ts_column(sig))
+        all_direction_cols.append(_direction_signal_column(sig))
 
     if not grids:
-        return pd.DataFrame(columns=["timestamp", "symbol"] + all_signals)
+        return pd.DataFrame(columns=["timestamp", "symbol", *all_bool_cols, *all_direction_cols])
 
     full_grid = pd.concat(grids, ignore_index=True)
 
-    zero_data = np.zeros((len(full_grid), len(all_signals)), dtype=bool)
-    flags_part = pd.DataFrame(zero_data, columns=all_signals, index=full_grid.index)
-    full_grid = pd.concat([full_grid, flags_part], axis=1)
+    bool_part = pd.DataFrame(
+        np.zeros((len(full_grid), len(all_bool_cols)), dtype=bool),
+        columns=all_bool_cols,
+        index=full_grid.index,
+    )
+    direction_part = pd.DataFrame(
+        np.full((len(full_grid), len(all_direction_cols)), np.nan, dtype=float),
+        columns=all_direction_cols,
+        index=full_grid.index,
+    )
+    full_grid = pd.concat([full_grid, bool_part, direction_part], axis=1)
 
     if events.empty:
         return full_grid
@@ -120,6 +150,8 @@ def build_event_flags(
         ev["_detected_ts"] = ts_ns_utc(ev["detected_ts"])
     else:
         ev["_detected_ts"] = ev["enter_ts"]
+    if "direction" not in ev.columns:
+        ev["direction"] = "non_directional"
 
     ev = ev[ev["signal_column"].isin(REGISTRY_BACKED_SIGNALS)].copy()
     if ev.empty:
@@ -156,9 +188,24 @@ def build_event_flags(
         if valid_det.any():
             target_indices = grid_indices[idx_detection[valid_det]]
             target_signals = sym_events["signal_column"].values[valid_det]
+            target_directions = (
+                sym_events["direction"]
+                .map(_direction_to_sign)
+                .astype(float)
+                .values[valid_det]
+            )
             for sig_col in np.unique(target_signals):
                 hits = target_indices[target_signals == sig_col]
                 full_grid.loc[hits, sig_col] = True
+            for idx, sig_col, sign in zip(
+                target_indices, target_signals, target_directions, strict=False
+            ):
+                dir_col = _direction_signal_column(sig_col)
+                existing = full_grid.at[idx, dir_col]
+                if pd.isna(existing):
+                    full_grid.at[idx, dir_col] = float(sign)
+                elif float(existing) != float(sign):
+                    full_grid.at[idx, dir_col] = 0.0
 
         # 2. Tradable signal and Active window start (at t+1)
         # We use side="right" to find the open time of the bar AFTER detection.
@@ -206,7 +253,14 @@ def load_registry_flags(data_root: Path, run_id: str, symbol: str | None = None)
     if flags.empty:
         cols = ["timestamp", "symbol"]
         for signal in sorted(REGISTRY_BACKED_SIGNALS):
-            cols.extend([signal, _active_signal_column(signal), _signal_ts_column(signal)])
+            cols.extend(
+                [
+                    signal,
+                    _active_signal_column(signal),
+                    _signal_ts_column(signal),
+                    _direction_signal_column(signal),
+                ]
+            )
         return pd.DataFrame(columns=cols)
 
     flags["timestamp"] = pd.to_datetime(flags.get("timestamp"), utc=True, errors="coerce")
@@ -217,11 +271,20 @@ def load_registry_flags(data_root: Path, run_id: str, symbol: str | None = None)
 
     cols = ["timestamp", "symbol"]
     for signal in sorted(REGISTRY_BACKED_SIGNALS):
-        cols.extend([signal, _active_signal_column(signal), _signal_ts_column(signal)])
+        cols.extend(
+            [
+                signal,
+                _active_signal_column(signal),
+                _signal_ts_column(signal),
+                _direction_signal_column(signal),
+            ]
+        )
 
     missing = [c for c in cols if c not in flags.columns]
     if missing:
-        fill = pd.DataFrame({c: False for c in missing}, index=flags.index)
+        fill = pd.DataFrame(index=flags.index)
+        for c in missing:
+            fill[c] = np.nan if c.startswith("evt_direction_") or c.endswith("_direction") else False
         flags = pd.concat([flags, fill], axis=1)
     flags = flags[cols].copy()
 
@@ -231,6 +294,8 @@ def load_registry_flags(data_root: Path, run_id: str, symbol: str | None = None)
         flags[active_col] = flags[active_col].where(flags[active_col].notna(), False).astype(bool)
         ts_col = _signal_ts_column(signal)
         flags[ts_col] = flags[ts_col].where(flags[ts_col].notna(), False).astype(bool)
+        dir_col = _direction_signal_column(signal)
+        flags[dir_col] = pd.to_numeric(flags[dir_col], errors="coerce").astype(float)
 
     return flags.sort_values(["timestamp", "symbol"]).reset_index(drop=True)
 
@@ -252,6 +317,7 @@ def merge_event_flags_for_selected_event_types(
         selected_signal_cols.append(spec.signal_column)
         selected_signal_cols.append(_active_signal_column(spec.signal_column))
         selected_signal_cols.append(_signal_ts_column(spec.signal_column))
+        selected_signal_cols.append(_direction_signal_column(spec.signal_column))
     selected_signal_cols = list(dict.fromkeys(selected_signal_cols))
 
     keys = ["timestamp", "symbol"]
@@ -299,11 +365,20 @@ def merge_event_flags_for_selected_event_types(
 
     out_cols = ["timestamp", "symbol"]
     for signal in sorted(REGISTRY_BACKED_SIGNALS):
-        out_cols.extend([signal, _active_signal_column(signal), _signal_ts_column(signal)])
+        out_cols.extend(
+            [
+                signal,
+                _active_signal_column(signal),
+                _signal_ts_column(signal),
+                _direction_signal_column(signal),
+            ]
+        )
 
     missing = [c for c in out_cols if c not in merged.columns]
     if missing:
-        fill = pd.DataFrame({c: False for c in missing}, index=merged.index)
+        fill = pd.DataFrame(index=merged.index)
+        for c in missing:
+            fill[c] = np.nan if c.startswith("evt_direction_") or c.endswith("_direction") else False
         merged = pd.concat([merged, fill], axis=1)
     merged = merged[out_cols].copy()
 
@@ -315,5 +390,7 @@ def merge_event_flags_for_selected_event_types(
         )
         ts_col = _signal_ts_column(signal)
         merged[ts_col] = merged[ts_col].where(merged[ts_col].notna(), False).astype(bool)
+        dir_col = _direction_signal_column(signal)
+        merged[dir_col] = pd.to_numeric(merged[dir_col], errors="coerce").astype(float)
 
     return merged.sort_values(["timestamp", "symbol"]).reset_index(drop=True)

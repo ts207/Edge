@@ -11,6 +11,7 @@ import pandas as pd
 import yaml
 
 from project.domain.hypotheses import HypothesisSpec
+from project.io.utils import write_parquet
 from project.research.context_labels import canonicalize_contexts
 from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
@@ -78,6 +79,7 @@ def load_agent_experiment_config(path: Path) -> AgentExperimentRequest:
         templates=TemplateSelection(**raw["templates"]),
         evaluation=EvaluationConfig(**raw["evaluation"]),
         contexts=ContextSelection(**raw_contexts),
+        avoid_region_keys=[str(value).strip() for value in list(raw.get("avoid_region_keys") or []) if str(value).strip()],
         search_control=SearchControl(**raw["search_control"]),
         promotion=PromotionConfig(**raw["promotion"]),
         artifacts=raw.get("artifacts", {}),
@@ -258,9 +260,13 @@ def export_experiment_artifacts(
     ]:
         if column not in frame.columns:
             frame[column] = None
-
-    from project.io.utils import write_parquet
-
+    for column in frame.columns:
+        if frame[column].dtype == "object":
+            frame[column] = frame[column].map(
+                lambda value: json.dumps(value, sort_keys=True)
+                if isinstance(value, (dict, list))
+                else value
+            )
     write_parquet(frame, out_dir / "expanded_hypotheses.parquet")
 
 

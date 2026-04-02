@@ -76,13 +76,7 @@ def detect_kill_switches(
     if features.empty or "close" not in features.columns:
         return pd.DataFrame()
 
-    # 1. Trigger mask (with entry lag)
     mask_raw = trigger_mask(spec, features)
-    if spec.entry_lag > 0:
-        mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
-    else:
-        mask = mask_raw
-
     if spec.feature_condition is not None:
         fc_spec = HypothesisSpec(
             trigger=spec.feature_condition,
@@ -90,7 +84,13 @@ def detect_kill_switches(
             horizon=spec.horizon,
             template_id=spec.template_id,
         )
-        mask = mask & trigger_mask(fc_spec, features)
+        mask_raw = mask_raw & trigger_mask(fc_spec, features)
+
+    # 1. Trigger mask (with entry lag)
+    if spec.entry_lag > 0:
+        mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
+    else:
+        mask = mask_raw
 
     base_n = int(mask.sum())
     if base_n < min_n:

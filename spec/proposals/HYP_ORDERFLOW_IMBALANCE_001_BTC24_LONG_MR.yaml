@@ -1,0 +1,55 @@
+# HYP_ORDERFLOW_IMBALANCE_001_BTC24_LONG_MR - BTC ORDERFLOW_IMBALANCE_SHOCK 24b long mean-reversion
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: After exhausting the higher-quality ETH liquidity-dislocation
+# branches, the next remaining clean bounded near-miss in the corrected broad
+# rerun is BTC ORDERFLOW_IMBALANCE_SHOCK followed by 24-bar long mean reversion.
+# This proposal isolates that exact cell to determine whether the weaker broad
+# signal strengthens once unrelated event surfaces and family multiplicity are removed.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only ORDERFLOW_IMBALANCE_SHOCK mean-reversion isolate
+  (HYP_ORDERFLOW_IMBALANCE_001_BTC24_LONG_MR). After exhausting the stronger
+  ETH liquidity-dislocation branches, the next remaining bounded expression in
+  the corrected 2022-2023 rerun is BTCUSDT, long, 24-bar mean reversion after
+  ORDERFLOW_IMBALANCE_SHOCK. This run tests that exact cell without widening
+  symbols, regime, or template family.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - ORDERFLOW_IMBALANCE_SHOCK
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+
+templates:
+  - mean_reversion
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

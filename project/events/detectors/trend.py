@@ -250,6 +250,26 @@ class FalseBreakoutDetector(TrendBase):
             ((was_break_up & is_back_in_up) | (was_break_dn & is_back_in_dn)) & range_gate
         ).fillna(False)
 
+    def compute_direction(self, idx: int, features: Mapping[str, pd.Series], **params: Any) -> str:
+        del params
+        close = features["close"]
+        rolling_max = features["rolling_max"]
+        rolling_min = features["rolling_min"]
+
+        prev_idx = idx - 1
+        if prev_idx < 0:
+            return "non_directional"
+
+        prior_close = close.iloc[prev_idx]
+        prior_max = rolling_max.iloc[prev_idx]
+        prior_min = rolling_min.iloc[prev_idx]
+
+        if pd.notna(prior_close) and pd.notna(prior_max) and bool(prior_close > prior_max):
+            return "up"
+        if pd.notna(prior_close) and pd.notna(prior_min) and bool(prior_close < prior_min):
+            return "down"
+        return "non_directional"
+
 
 class PullbackPivotDetector(TrendBase):
     event_type = "PULLBACK_PIVOT"

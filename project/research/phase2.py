@@ -333,64 +333,92 @@ def prepare_events_dataframe(
             continue
 
         # Market State merge
-        ms_path = run_scoped_lake_path(
-            data_root, run_id, "context", "market_state", sym, f"{timeframe}.parquet"
-        )
-        if not ms_path.exists():
-            ms_path = data_root / "lake" / "context" / "market_state" / sym / f"{timeframe}.parquet"
-        if ms_path.exists():
-            ms_df = _read_csv_or_parquet(ms_path)
-            if "timestamp" in ms_df.columns:
-                ms_df["timestamp"] = pd.to_datetime(ms_df["timestamp"], utc=True, errors="coerce")
-                from project.core.audited_join import audited_merge_asof
+        ms_df = pd.DataFrame()
+        ms_candidates = [
+            run_scoped_lake_path(
+                data_root, run_id, "features", "perp", sym, timeframe, "market_context"
+            ),
+            data_root / "lake" / "features" / "perp" / sym / timeframe / "market_context",
+        ]
+        ms_dir = choose_partition_dir(ms_candidates)
+        if ms_dir:
+            ms_files = list_parquet_files(ms_dir)
+            if ms_files:
+                ms_df = read_parquet(ms_files)
+        if ms_df.empty:
+            legacy_ms_paths = [
+                run_scoped_lake_path(
+                    data_root, run_id, "context", "market_state", sym, f"{timeframe}.parquet"
+                ),
+                data_root / "lake" / "context" / "market_state" / sym / f"{timeframe}.parquet",
+            ]
+            for ms_path in legacy_ms_paths:
+                if ms_path.exists():
+                    ms_df = _read_csv_or_parquet(ms_path)
+                    break
+        if not ms_df.empty and "timestamp" in ms_df.columns:
+            ms_df["timestamp"] = pd.to_datetime(ms_df["timestamp"], utc=True, errors="coerce")
+            from project.core.audited_join import audited_merge_asof
 
-                sym_events = audited_merge_asof(
-                    sym_events,
-                    ms_df,
-                    left_on="enter_ts",
-                    right_on="timestamp",
-                    direction="backward",
-                    tolerance=pd.Timedelta("1h"),
-                    feature_name="market_state",
-                    stale_threshold_seconds=3600,
-                    audit_registry=audit_registry,
-                    symbol=sym,
-                    run_id=run_id,
-                )
-                if "timestamp" in sym_events.columns:
-                    sym_events = sym_events.drop(columns=["timestamp"])
+            sym_events = audited_merge_asof(
+                sym_events,
+                ms_df,
+                left_on="enter_ts",
+                right_on="timestamp",
+                direction="backward",
+                tolerance=pd.Timedelta("1h"),
+                feature_name="market_state",
+                stale_threshold_seconds=3600,
+                audit_registry=audit_registry,
+                symbol=sym,
+                run_id=run_id,
+            )
+            if "timestamp" in sym_events.columns:
+                sym_events = sym_events.drop(columns=["timestamp"])
 
         # Microstructure merge
-        micro_path = run_scoped_lake_path(
-            data_root, run_id, "context", "microstructure", sym, f"{timeframe}.parquet"
-        )
-        if not micro_path.exists():
-            micro_path = (
-                data_root / "lake" / "context" / "microstructure" / sym / f"{timeframe}.parquet"
-            )
-        if micro_path.exists():
-            micro_df = _read_csv_or_parquet(micro_path)
-            if "timestamp" in micro_df.columns:
-                micro_df["timestamp"] = pd.to_datetime(
-                    micro_df["timestamp"], utc=True, errors="coerce"
-                )
-                from project.core.audited_join import audited_merge_asof
+        micro_df = pd.DataFrame()
+        micro_candidates = [
+            run_scoped_lake_path(
+                data_root, run_id, "features", "perp", sym, timeframe, "microstructure"
+            ),
+            data_root / "lake" / "features" / "perp" / sym / timeframe / "microstructure",
+        ]
+        micro_dir = choose_partition_dir(micro_candidates)
+        if micro_dir:
+            micro_files = list_parquet_files(micro_dir)
+            if micro_files:
+                micro_df = read_parquet(micro_files)
+        if micro_df.empty:
+            legacy_micro_paths = [
+                run_scoped_lake_path(
+                    data_root, run_id, "context", "microstructure", sym, f"{timeframe}.parquet"
+                ),
+                data_root / "lake" / "context" / "microstructure" / sym / f"{timeframe}.parquet",
+            ]
+            for micro_path in legacy_micro_paths:
+                if micro_path.exists():
+                    micro_df = _read_csv_or_parquet(micro_path)
+                    break
+        if not micro_df.empty and "timestamp" in micro_df.columns:
+            micro_df["timestamp"] = pd.to_datetime(micro_df["timestamp"], utc=True, errors="coerce")
+            from project.core.audited_join import audited_merge_asof
 
-                sym_events = audited_merge_asof(
-                    sym_events,
-                    micro_df,
-                    left_on="enter_ts",
-                    right_on="timestamp",
-                    direction="backward",
-                    tolerance=pd.Timedelta("15min"),
-                    feature_name="microstructure",
-                    stale_threshold_seconds=900,
-                    audit_registry=audit_registry,
-                    symbol=sym,
-                    run_id=run_id,
-                )
-                if "timestamp" in sym_events.columns:
-                    sym_events = sym_events.drop(columns=["timestamp"])
+            sym_events = audited_merge_asof(
+                sym_events,
+                micro_df,
+                left_on="enter_ts",
+                right_on="timestamp",
+                direction="backward",
+                tolerance=pd.Timedelta("15min"),
+                feature_name="microstructure",
+                stale_threshold_seconds=900,
+                audit_registry=audit_registry,
+                symbol=sym,
+                run_id=run_id,
+            )
+            if "timestamp" in sym_events.columns:
+                sym_events = sym_events.drop(columns=["timestamp"])
 
         if not null_enter_ts.empty:
             sym_events = (

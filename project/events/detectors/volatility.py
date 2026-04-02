@@ -302,6 +302,22 @@ class BreakoutTriggerDetector(VolatilityBase):
             features["breakout_dist"].fillna(0.0) * (1.0 / features["comp_ratio"].clip(lower=0.1))
         ).clip(lower=0.0)
 
+    def compute_direction(self, idx: int, features: dict[str, pd.Series], **params: Any) -> str:
+        del params
+        close = pd.to_numeric(features.get("close"), errors="coerce")
+        rolling_hi = pd.to_numeric(features.get("rolling_hi"), errors="coerce")
+        rolling_lo = pd.to_numeric(features.get("rolling_lo"), errors="coerce")
+        if close is None or rolling_hi is None or rolling_lo is None:
+            return "non_directional"
+        price = float(close.iloc[idx])
+        prior_hi = float(rolling_hi.iloc[idx]) if pd.notna(rolling_hi.iloc[idx]) else np.nan
+        prior_lo = float(rolling_lo.iloc[idx]) if pd.notna(rolling_lo.iloc[idx]) else np.nan
+        if np.isfinite(prior_hi) and price > prior_hi:
+            return "up"
+        if np.isfinite(prior_lo) and price < prior_lo:
+            return "down"
+        return "non_directional"
+
 
 class VolShockRelaxationDetector(VolatilityBase):
     event_type = "VOL_SHOCK"

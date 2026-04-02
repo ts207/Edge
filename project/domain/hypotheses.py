@@ -21,6 +21,7 @@ class TriggerType:
 class TriggerSpec:
     trigger_type: str
     event_id: Optional[str] = None
+    event_direction: Optional[str] = None
     state_id: Optional[str] = None
     state_active: bool = True
     from_state: Optional[str] = None
@@ -34,6 +35,8 @@ class TriggerSpec:
     interaction_id: Optional[str] = None
     left: Optional[str] = None
     right: Optional[str] = None
+    left_direction: Optional[str] = None
+    right_direction: Optional[str] = None
     op: Optional[str] = None
     lag: Optional[int] = None
     _enable_validation: bool = field(default=True, init=False, repr=False)
@@ -57,6 +60,11 @@ class TriggerSpec:
                 raise ValueError("TriggerSpec(event) requires event_id")
             if not registry.has_event(self.event_id):
                 raise ValueError(f"Unknown event_id: {self.event_id!r}")
+            if self.event_direction and self.event_direction.lower() not in {"up", "down", "non_directional"}:
+                raise ValueError(
+                    f"Invalid event_direction: {self.event_direction!r}. "
+                    "Expected one of 'up', 'down', 'non_directional'."
+                )
         elif t == TriggerType.STATE:
             if not self.state_id:
                 raise ValueError("TriggerSpec(state) requires state_id")
@@ -97,6 +105,13 @@ class TriggerSpec:
                 )
             if self.op.lower() not in ["and", "or", "confirm", "exclude"]:
                 raise ValueError(f"Invalid interaction operator: {self.op!r}")
+            for direction_field in ("left_direction", "right_direction"):
+                direction_value = getattr(self, direction_field)
+                if direction_value and direction_value.lower() not in {"up", "down", "non_directional"}:
+                    raise ValueError(
+                        f"Invalid {direction_field}: {direction_value!r}. "
+                        "Expected one of 'up', 'down', 'non_directional'."
+                    )
             for side_id in [self.left, self.right]:
                 sid_up = side_id.upper()
                 in_events = registry.has_event(sid_up)
@@ -113,6 +128,8 @@ class TriggerSpec:
         d: Dict[str, Any] = {"trigger_type": t}
         if t == TriggerType.EVENT:
             d["event_id"] = self.event_id
+            if self.event_direction:
+                d["event_direction"] = self.event_direction
         elif t == TriggerType.STATE:
             d["state_id"] = self.state_id
             d["state_active"] = self.state_active
@@ -131,6 +148,8 @@ class TriggerSpec:
             d["interaction_id"] = self.interaction_id
             d["left"] = self.left
             d["right"] = self.right
+            d["left_direction"] = self.left_direction
+            d["right_direction"] = self.right_direction
             d["op"] = self.op
             d["lag"] = self.lag
         return d
@@ -138,6 +157,8 @@ class TriggerSpec:
     def label(self) -> str:
         t = self.trigger_type
         if t == TriggerType.EVENT:
+            if self.event_direction:
+                return f"event:{self.event_id}:{self.event_direction}"
             return f"event:{self.event_id}"
         if t == TriggerType.STATE:
             suffix = "" if self.state_active else ":inactive"
@@ -153,8 +174,12 @@ class TriggerSpec:
         return f"unknown:{t}"
 
     @classmethod
-    def event(cls, event_id: str) -> "TriggerSpec":
-        return cls(trigger_type=TriggerType.EVENT, event_id=event_id.upper().strip())
+    def event(cls, event_id: str, *, event_direction: str | None = None) -> "TriggerSpec":
+        return cls(
+            trigger_type=TriggerType.EVENT,
+            event_id=event_id.upper().strip(),
+            event_direction=event_direction,
+        )
 
     @classmethod
     def state(cls, state_id: str, active: bool = True) -> "TriggerSpec":
@@ -192,13 +217,23 @@ class TriggerSpec:
 
     @classmethod
     def interaction(
-        cls, interaction_id: str, left: str, right: str, op: str, lag: int = 6
+        cls,
+        interaction_id: str,
+        left: str,
+        right: str,
+        op: str,
+        lag: int = 6,
+        *,
+        left_direction: str | None = None,
+        right_direction: str | None = None,
     ) -> "TriggerSpec":
         return cls(
             trigger_type=TriggerType.INTERACTION,
             interaction_id=interaction_id.upper().strip(),
             left=left.upper().strip(),
             right=right.upper().strip(),
+            left_direction=left_direction,
+            right_direction=right_direction,
             op=op.lower().strip(),
             lag=lag,
         )
@@ -225,6 +260,10 @@ class TriggerSpec:
             if val is not None:
                 object.__setattr__(self, field_name, str(val).upper().strip())
         for field_name in ["operator", "op"]:
+            val = getattr(self, field_name)
+            if val is not None:
+                object.__setattr__(self, field_name, str(val).lower().strip())
+        for field_name in ["event_direction", "left_direction", "right_direction"]:
             val = getattr(self, field_name)
             if val is not None:
                 object.__setattr__(self, field_name, str(val).lower().strip())

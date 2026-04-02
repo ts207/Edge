@@ -154,6 +154,28 @@
     "recommended_next_action": "run_empirical_event_study"
   },
   {
+    "candidate_id": "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM",
+    "source_type": "event_plus_confirm",
+    "source_contract_ids": "LIQUIDITY_VACUUM|LIQUIDATION_CASCADE",
+    "governance_tier": "A",
+    "operational_role": "confirm",
+    "deployment_disposition": "seed_review_required",
+    "current_evidence_source": "event_contract_fallback:paired_confirmation",
+    "ontology_fidelity": 5,
+    "implementation_fidelity": 5,
+    "evidence_strength": 1,
+    "regime_clarity": 4,
+    "invalidation_clarity": 4,
+    "confounder_handling": 0,
+    "holdout_quality": 0,
+    "deployment_suitability": 4,
+    "total_score": 23,
+    "testing_decision": "needs_more_evidence",
+    "lifecycle_class": "candidate_thesis",
+    "evidence_gap_summary": "empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing",
+    "recommended_next_action": "run_empirical_event_study"
+  },
+  {
     "candidate_id": "THESIS_BASIS_FND_CONFIRM",
     "source_type": "event_plus_confirm",
     "source_contract_ids": "BASIS_DISLOC|FND_DISLOC",

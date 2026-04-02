@@ -32,6 +32,8 @@ _CONTEXT_COLUMNS = [
     "ms_liq_state",
     "ms_oi_state",
     "ms_funding_state",
+    "ms_trend_state",
+    "ms_spread_state",
     "ms_context_state_code",
 ]
 
@@ -48,7 +50,14 @@ def load_context_data(
     fp_df = read_parquet(fp_files) if fp_files else pd.DataFrame()
 
     ms_candidates = [
+        run_scoped_lake_path(
+            data_root, run_id, "features", "perp", symbol, timeframe, "market_context"
+        ),
+        data_root / "lake" / "features" / "perp" / symbol / timeframe / "market_context",
+        run_scoped_lake_path(data_root, run_id, "context", "market_state", symbol, timeframe),
+        data_root / "lake" / "context" / "market_state" / symbol / timeframe,
         run_scoped_lake_path(data_root, run_id, "context", "market_state", symbol),
+        data_root / "lake" / "context" / "market_state" / symbol,
         data_root / "features" / "context" / "market_state" / symbol,
     ]
     ms_dir = choose_partition_dir(ms_candidates)

@@ -81,6 +81,8 @@ gate_v1_phase2_profiles:
     min_after_cost_expectancy_bps: -0.5
     conservative_cost_multiplier: 1.1
     require_sign_stability: false
+    regime_ess_min_regimes: 1
+    timeframe_consensus_min_timeframes: 1
     event_overrides:
       OI_SPIKE_NEGATIVE:
         min_after_cost_expectancy_bps: -1.0

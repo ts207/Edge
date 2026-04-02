@@ -32,8 +32,8 @@ from project.io.utils import (
     read_parquet,
     write_parquet,
     choose_partition_dir,
-    resolve_raw_dataset_dir,
     list_parquet_files,
+    raw_dataset_dir_candidates,
     run_scoped_lake_path,
 )
 from project.specs.manifest import finalize_manifest, start_manifest
@@ -71,6 +71,26 @@ def _feature_quality_report_path(
 def _write_feature_quality_report(path: Path, payload: dict[str, object]) -> None:
     ensure_dir(path.parent)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _resolve_raw_dir(
+    data_root: Path,
+    *,
+    market: str,
+    symbol: str,
+    dataset: str,
+    run_id: str | None = None,
+    aliases: tuple[str, ...] = (),
+) -> Path | None:
+    candidates = raw_dataset_dir_candidates(
+        data_root,
+        market=market,
+        symbol=symbol,
+        dataset=dataset,
+        run_id=run_id,
+        aliases=aliases,
+    )
+    return choose_partition_dir(candidates) or (candidates[0] if candidates else None)
 
 
 def _load_baseline_features(
@@ -451,7 +471,7 @@ def _merge_optional_oi_liquidation(
 
     # Open interest
     oi_period = "5m"
-    oi_dir = resolve_raw_dataset_dir(
+    oi_dir = _resolve_raw_dir(
         data_root,
         market=market,
         symbol=symbol,
@@ -502,7 +522,7 @@ def _merge_optional_oi_liquidation(
             out.loc[stale, "oi_notional"] = np.nan
 
     # Liquidations
-    liq_dir = resolve_raw_dataset_dir(
+    liq_dir = _resolve_raw_dir(
         data_root,
         market=market,
         symbol=symbol,
@@ -524,32 +544,35 @@ def _merge_optional_oi_liquidation(
                 liq_notional_col = "notional_usd"
             elif "amount" in liq.columns:
                 liq_notional_col = "amount"
+            else:
+                liq = pd.DataFrame()
 
-        liq = liq.copy()
-        liq["timestamp"] = ts_ns_utc(pd.to_datetime(liq[liq_ts_col], utc=True, errors="coerce"))
-        bar_ts_ns = out["timestamp"].values.astype(np.int64)
-        liq_ts_ns = liq["timestamp"].values.astype(np.int64)
-        bar_width_ns = int(
-            pd.Timedelta(minutes=timeframe_to_minutes(normalize_timeframe(timeframe))).value
-        )
-
-        idx = np.searchsorted(bar_ts_ns, liq_ts_ns, side="right") - 1
-        in_window = (idx >= 0) & (idx < len(out))
-        # Ensure it falls WITHIN the bar (from bar_start to bar_start + width)
-        in_window[in_window] &= liq_ts_ns[in_window] < (bar_ts_ns[idx[in_window]] + bar_width_ns)
-
-        if in_window.any():
-            liq_notional = np.zeros(len(out))
-            liq_count = np.zeros(len(out))
-            liq_vals = (
-                pd.to_numeric(liq[liq_notional_col], errors="coerce")
-                .fillna(0.0)
-                .to_numpy(dtype=float)
+        if not liq.empty:
+            liq = liq.copy()
+            liq["timestamp"] = ts_ns_utc(pd.to_datetime(liq[liq_ts_col], utc=True, errors="coerce"))
+            bar_ts_ns = out["timestamp"].values.astype(np.int64)
+            liq_ts_ns = liq["timestamp"].values.astype(np.int64)
+            bar_width_ns = int(
+                pd.Timedelta(minutes=timeframe_to_minutes(normalize_timeframe(timeframe))).value
             )
-            np.add.at(liq_notional, idx[in_window], liq_vals[in_window])
-            np.add.at(liq_count, idx[in_window], 1)
-            out["liquidation_notional"] = liq_notional
-            out["liquidation_count"] = liq_count
+
+            idx = np.searchsorted(bar_ts_ns, liq_ts_ns, side="right") - 1
+            in_window = (idx >= 0) & (idx < len(out))
+            # Ensure it falls WITHIN the bar (from bar_start to bar_start + width)
+            in_window[in_window] &= liq_ts_ns[in_window] < (bar_ts_ns[idx[in_window]] + bar_width_ns)
+
+            if in_window.any():
+                liq_notional = np.zeros(len(out))
+                liq_count = np.zeros(len(out))
+                liq_vals = (
+                    pd.to_numeric(liq[liq_notional_col], errors="coerce")
+                    .fillna(0.0)
+                    .to_numpy(dtype=float)
+                )
+                np.add.at(liq_notional, idx[in_window], liq_vals[in_window])
+                np.add.at(liq_count, idx[in_window], 1)
+                out["liquidation_notional"] = liq_notional
+                out["liquidation_count"] = liq_count
 
     return out
 
@@ -879,7 +902,7 @@ def main() -> int:
             # Load funding (only for perp)
             funding = pd.DataFrame()
             if market == "perp":
-                funding_dir = resolve_raw_dataset_dir(
+                funding_dir = _resolve_raw_dir(
                     data_root,
                     market="perp",
                     symbol=symbol,

@@ -1,0 +1,53 @@
+# HYP_SEQ_FND_BREAKOUT_002_BTC24_LONG_CONT_GAP96 - BTC funding dislocation then breakout 24b long continuation, 96-bar gap
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The first true sequence probe established that the repo can now
+# evaluate SEQUENCE triggers end to end, but the BTC FND_DISLOC ->
+# BREAKOUT_TRIGGER chain produced zero hits with a 12-bar window. This bounded
+# mirror restores the wider 96-bar gap used by the canonical synthetic wrapper
+# to test whether the sequence exists on real BTC data before judging its edge.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only sequence isolate for funding dislocation then breakout continuation
+  (HYP_SEQ_FND_BREAKOUT_002_BTC24_LONG_CONT_GAP96). This run widens only the
+  ordered sequence window from 12 bars to 96 bars for FND_DISLOC ->
+  BREAKOUT_TRIGGER while keeping symbol, template, horizon, direction, and lag
+  fixed.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [SEQUENCE]
+  sequences:
+    include:
+      - [FND_DISLOC, BREAKOUT_TRIGGER]
+    max_gaps_bars: [96]
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

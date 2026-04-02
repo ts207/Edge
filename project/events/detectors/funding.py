@@ -108,7 +108,7 @@ class FundingExtremeOnsetDetector(BaseFundingDetector):
         extreme_pct = float(params.get("extreme_pct", self.defaults["extreme_pct"]))
         accel_pct = float(params.get("accel_pct", self.defaults["accel_pct"]))
         accel_lookback = int(params.get("accel_lookback", 12))
-        persistence_bars = int(params.get("persistence_bars", 8))
+        persistence_bars = int(params.get("persistence_bars", 1))
         threshold_window = int(params.get("threshold_window", 2880))
 
         accel = (f_abs - f_abs.shift(accel_lookback)).clip(lower=0.0)
@@ -130,6 +130,8 @@ class FundingExtremeOnsetDetector(BaseFundingDetector):
             "funding_signed": funding_signed,
             "accel_rank": accel_rank,
             "persistence_run": persistence_run.astype(float),
+            "accel_flag": accel_flag.astype(float),
+            "persist_flag": persist_flag.astype(float),
             "mask": onset,
         }
 

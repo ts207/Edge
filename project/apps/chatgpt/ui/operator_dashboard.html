@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Edge Operator Dashboard</title>
+    <style>
+      :root {
+        --paper: #f7f0e3;
+        --wash: #dbe7eb;
+        --panel: rgba(255, 252, 246, 0.9);
+        --panel-strong: rgba(255, 248, 236, 0.96);
+        --ink: #18313b;
+        --muted: #61767f;
+        --line: rgba(24, 49, 59, 0.12);
+        --accent: #ad4d19;
+        --accent-soft: rgba(173, 77, 25, 0.12);
+        --ok: #2f6f4e;
+        --ok-soft: rgba(47, 111, 78, 0.12);
+        --warn: #8b6317;
+        --warn-soft: rgba(139, 99, 23, 0.12);
+        --fail: #8b3131;
+        --fail-soft: rgba(139, 49, 49, 0.12);
+        --shadow: 0 18px 44px rgba(24, 49, 59, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: "Iosevka Curly", "IBM Plex Sans", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(173, 77, 25, 0.2), transparent 28%),
+          radial-gradient(circle at top right, rgba(24, 49, 59, 0.1), transparent 26%),
+          linear-gradient(180deg, var(--paper), var(--wash));
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(24, 49, 59, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(24, 49, 59, 0.03) 1px, transparent 1px);
+        background-size: 26px 26px;
+        opacity: 0.6;
+      }
+
+      .shell {
+        position: relative;
+        padding: 18px;
+      }
+
+      .frame {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero {
+        padding: 20px 20px 16px;
+        border-bottom: 1px solid var(--line);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 243, 228, 0.82)),
+          linear-gradient(180deg, rgba(24, 49, 59, 0.02), transparent);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 27px;
+        line-height: 1.05;
+      }
+
+      .subtitle {
+        margin: 10px 0 0;
+        max-width: 72ch;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .hero-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+
+      .status.pass {
+        color: var(--ok);
+        background: var(--ok-soft);
+        border-color: rgba(47, 111, 78, 0.18);
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: var(--warn-soft);
+        border-color: rgba(139, 99, 23, 0.2);
+      }
+
+      .status.fail,
+      .status.block {
+        color: var(--fail);
+        background: var(--fail-soft);
+        border-color: rgba(139, 49, 49, 0.22);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        padding: 16px 20px;
+      }
+
+      .metric {
+        padding: 13px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .metric-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        margin: 8px 0 0;
+        font-size: 17px;
+        font-weight: 700;
+        line-height: 1.2;
+        word-break: break-word;
+      }
+
+      .dashboard {
+        display: grid;
+        gap: 14px;
+        padding: 0 20px 20px;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr);
+      }
+
+      .column {
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel-strong);
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid rgba(24, 49, 59, 0.08);
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .panel-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .panel-body {
+        padding: 14px 16px 16px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .list-card {
+        border: 1px solid rgba(24, 49, 59, 0.08);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px 13px;
+      }
+
+      .list-card.active {
+        border-color: rgba(173, 77, 25, 0.26);
+        background: linear-gradient(180deg, rgba(255, 247, 236, 0.96), rgba(255, 255, 255, 0.78));
+      }
+
+      .card-topline {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .card-kicker {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .micro-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        margin-top: 10px;
+      }
+
+      .micro {
+        padding: 8px 9px;
+        border-radius: 12px;
+        background: rgba(24, 49, 59, 0.04);
+      }
+
+      .micro span {
+        display: block;
+      }
+
+      .micro-label {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .micro-value {
+        margin-top: 4px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .chip.muted {
+        background: rgba(24, 49, 59, 0.07);
+        color: var(--muted);
+      }
+
+      .keyvals {
+        display: grid;
+        gap: 10px;
+      }
+
+      .keyval {
+        display: grid;
+        gap: 4px;
+      }
+
+      .key {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .value {
+        font-size: 13px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .mono {
+        font-family: "Iosevka Curly", "IBM Plex Mono", monospace;
+        font-size: 12px;
+      }
+
+      .empty {
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px dashed rgba(24, 49, 59, 0.14);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+        background: rgba(255, 255, 255, 0.42);
+      }
+
+      .legacy {
+        padding: 0 20px 20px;
+      }
+
+      .legacy-sections {
+        display: grid;
+        gap: 10px;
+      }
+
+      @media (max-width: 860px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="frame">
+        <div class="hero">
+          <p class="eyebrow">Edge Operator</p>
+          <div class="hero-row">
+            <h1 id="title">Waiting for tool output</h1>
+            <div id="status" class="status" hidden></div>
+          </div>
+          <p id="subtitle" class="subtitle">Call a data tool and then render its structured payload here.</p>
+        </div>
+
+        <section id="metrics" class="metrics"></section>
+
+        <section id="dashboard" class="dashboard" hidden>
+          <div class="dashboard-grid">
+            <div class="column">
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Programs</h2>
+                  <p id="program-note" class="panel-note"></p>
+                </div>
+                <div id="programs" class="panel-body stack"></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Memory</h2>
+                  <p class="panel-note">Belief state, repairs, and carry-forward context.</p>
+                </div>
+                <div id="memory" class="panel-body stack"></div>
+              </section>
+            </div>
+
+            <div class="column">
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Selected Run</h2>
+                  <p class="panel-note">Pinned prior result and its run manifest highlights.</p>
+                </div>
+                <div id="selected-run" class="panel-body"></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Recent Runs</h2>
+                  <p class="panel-note">Latest bounded results for the active program.</p>
+                </div>
+                <div id="recent-runs" class="panel-body stack"></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Recent Proposals</h2>
+                  <p class="panel-note">Issued plans and runs recorded in proposal memory.</p>
+                </div>
+                <div id="recent-proposals" class="panel-body stack"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="legacy" class="legacy" hidden>
+          <div id="legacy-sections" class="legacy-sections"></div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const titleEl = document.getElementById("title");
+      const subtitleEl = document.getElementById("subtitle");
+      const statusEl = document.getElementById("status");
+      const metricsEl = document.getElementById("metrics");
+      const dashboardEl = document.getElementById("dashboard");
+      const legacyEl = document.getElementById("legacy");
+      const legacySectionsEl = document.getElementById("legacy-sections");
+      const programsEl = document.getElementById("programs");
+      const programNoteEl = document.getElementById("program-note");
+      const memoryEl = document.getElementById("memory");
+      const selectedRunEl = document.getElementById("selected-run");
+      const recentRunsEl = document.getElementById("recent-runs");
+      const recentProposalsEl = document.getElementById("recent-proposals");
+
+      function normalizePayload(payload) {
+        if (!payload || typeof payload !== "object") {
+          return {};
+        }
+        if (payload.dashboard && typeof payload.dashboard === "object") {
+          return payload.dashboard;
+        }
+        return payload;
+      }
+
+      function isDashboardPayload(payload) {
+        return (
+          payload.layout === "dashboard" ||
+          Array.isArray(payload.programs) ||
+          Array.isArray(payload.recent_runs) ||
+          Array.isArray(payload.recent_proposals) ||
+          (payload.memory && typeof payload.memory === "object")
+        );
+      }
+
+      function statusTone(status) {
+        const normalized = typeof status === "string" ? status.toLowerCase() : "";
+        if (["success", "pass", "executed", "completed", "planned", "ready"].includes(normalized)) {
+          return "pass";
+        }
+        if (["warning", "warn", "planned_warning"].includes(normalized)) {
+          return "warn";
+        }
+        if (["failed", "fail", "error", "aborted_stale_run", "block"].includes(normalized)) {
+          return "fail";
+        }
+        return normalized;
+      }
+
+      function setStatus(status) {
+        const normalized = statusTone(status);
+        statusEl.hidden = !normalized;
+        statusEl.className = "status" + (normalized ? " " + normalized : "");
+        statusEl.textContent = typeof status === "string" ? status : "";
+      }
+
+      function clearChildren(node) {
+        node.innerHTML = "";
+      }
+
+      function metricCard(label, value) {
+        const card = document.createElement("article");
+        card.className = "metric";
+        const labelEl = document.createElement("p");
+        labelEl.className = "metric-label";
+        labelEl.textContent = label.replaceAll("_", " ");
+        const valueEl = document.createElement("p");
+        valueEl.className = "metric-value";
+        valueEl.textContent = value === null || value === undefined || value === "" ? "n/a" : String(value);
+        card.appendChild(labelEl);
+        card.appendChild(valueEl);
+        return card;
+      }
+
+      function statusChip(status) {
+        if (!status) return null;
+        const chip = document.createElement("span");
+        chip.className = "status " + statusTone(status);
+        chip.textContent = String(status);
+        return chip;
+      }
+
+      function chip(text, muted = false) {
+        const el = document.createElement("span");
+        el.className = "chip" + (muted ? " muted" : "");
+        el.textContent = text;
+        return el;
+      }
+
+      function microGrid(items) {
+        const grid = document.createElement("div");
+        grid.className = "micro-grid";
+        items.forEach(([label, value]) => {
+          const item = document.createElement("div");
+          item.className = "micro";
+          const labelEl = document.createElement("span");
+          labelEl.className = "micro-label";
+          labelEl.textContent = label;
+          const valueEl = document.createElement("span");
+          valueEl.className = "micro-value";
+          valueEl.textContent = value === null || value === undefined || value === "" ? "n/a" : String(value);
+          item.appendChild(labelEl);
+          item.appendChild(valueEl);
+          grid.appendChild(item);
+        });
+        return grid;
+      }
+
+      function emptyCard(text) {
+        const el = document.createElement("div");
+        el.className = "empty";
+        el.textContent = text;
+        return el;
+      }
+
+      function renderMetrics(summary) {
+        clearChildren(metricsEl);
+        const entries = summary && typeof summary === "object" ? Object.entries(summary) : [];
+        if (!entries.length) {
+          metricsEl.appendChild(metricCard("widget", "operator_dashboard"));
+          return;
+        }
+        entries.forEach(([label, value]) => metricsEl.appendChild(metricCard(label, value)));
+      }
+
+      function renderPrograms(programs, activeProgramId) {
+        clearChildren(programsEl);
+        programNoteEl.textContent = activeProgramId ? `Active: ${activeProgramId}` : "No active program";
+        if (!Array.isArray(programs) || !programs.length) {
+          programsEl.appendChild(emptyCard("No proposal memory or prior runs were discovered yet."));
+          return;
+        }
+
+        programs.forEach((program) => {
+          const card = document.createElement("article");
+          card.className = "list-card" + (program.program_id === activeProgramId ? " active" : "");
+          const top = document.createElement("div");
+          top.className = "card-topline";
+          const title = document.createElement("p");
+          title.className = "card-title mono";
+          title.textContent = program.program_id || "unknown";
+          top.appendChild(title);
+          if (program.latest_run_status) {
+            top.appendChild(statusChip(program.latest_run_status));
+          }
+          const kicker = document.createElement("p");
+          kicker.className = "card-kicker";
+          kicker.textContent = `Latest activity ${program.latest_run_finished_at || program.latest_proposal_at || "not available"}`;
+          card.appendChild(top);
+          card.appendChild(kicker);
+          card.appendChild(
+            microGrid([
+              ["Proposals", program.proposal_count],
+              ["Runs", program.recent_run_count],
+              ["Repairs", program.repair_count],
+              ["Exploit", program.exploit_count],
+            ])
+          );
+          programsEl.appendChild(card);
+        });
+      }
+
+      function renderMemory(memory) {
+        clearChildren(memoryEl);
+        if (!memory || typeof memory !== "object" || !memory.available) {
+          memoryEl.appendChild(emptyCard("No memory store was found for the active program."));
+          return;
+        }
+
+        const belief = memory.belief_state && typeof memory.belief_state === "object" ? memory.belief_state : {};
+        const actions = memory.next_actions && typeof memory.next_actions === "object" ? memory.next_actions : {};
+
+        const beliefCard = document.createElement("article");
+        beliefCard.className = "list-card";
+        const beliefTitle = document.createElement("p");
+        beliefTitle.className = "card-title";
+        beliefTitle.textContent = "Belief state";
+        const beliefBody = document.createElement("div");
+        beliefBody.className = "keyvals";
+        [
+          ["Current focus", belief.current_focus || "none"],
+          ["Last reflection run", belief.last_reflection_run_id || "none"],
+        ].forEach(([label, value]) => {
+          const row = document.createElement("div");
+          row.className = "keyval";
+          const key = document.createElement("span");
+          key.className = "key";
+          key.textContent = label;
+          const val = document.createElement("span");
+          val.className = "value";
+          val.textContent = value;
+          row.appendChild(key);
+          row.appendChild(val);
+          beliefBody.appendChild(row);
+        });
+
+        const lists = document.createElement("div");
+        lists.className = "chips";
+        const promising = Array.isArray(belief.promising_regions) ? belief.promising_regions : [];
+        const avoid = Array.isArray(belief.avoid_regions) ? belief.avoid_regions : [];
+        if (promising.length) {
+          lists.appendChild(chip(`promising: ${promising.slice(0, 3).join(" | ")}`));
+        }
+        if (avoid.length) {
+          lists.appendChild(chip(`avoid: ${avoid.slice(0, 3).join(" | ")}`, true));
+        }
+        beliefCard.appendChild(beliefTitle);
+        beliefCard.appendChild(beliefBody);
+        if (lists.childNodes.length) {
+          beliefCard.appendChild(lists);
+        }
+        memoryEl.appendChild(beliefCard);
+
+        const actionCard = document.createElement("article");
+        actionCard.className = "list-card";
+        const actionTitle = document.createElement("p");
+        actionTitle.className = "card-title";
+        actionTitle.textContent = "Next actions";
+        actionCard.appendChild(actionTitle);
+        const actionGroups = [
+          ["repair", actions.repair],
+          ["exploit", actions.exploit],
+          ["explore_adjacent", actions.explore_adjacent],
+          ["hold", actions.hold],
+        ];
+        const actionStack = document.createElement("div");
+        actionStack.className = "keyvals";
+        actionGroups.forEach(([label, values]) => {
+          const row = document.createElement("div");
+          row.className = "keyval";
+          const key = document.createElement("span");
+          key.className = "key";
+          key.textContent = label;
+          const val = document.createElement("span");
+          val.className = "value";
+          val.textContent = Array.isArray(values) && values.length ? values.slice(0, 4).join("\n") : "none";
+          row.appendChild(key);
+          row.appendChild(val);
+          actionStack.appendChild(row);
+        });
+        actionCard.appendChild(actionStack);
+        memoryEl.appendChild(actionCard);
+
+        const reflectionRows = Array.isArray(memory.recent_reflections) ? memory.recent_reflections : [];
+        if (reflectionRows.length) {
+          const reflectionPanel = document.createElement("article");
+          reflectionPanel.className = "list-card";
+          const reflectionTitle = document.createElement("p");
+          reflectionTitle.className = "card-title";
+          reflectionTitle.textContent = "Recent reflections";
+          reflectionPanel.appendChild(reflectionTitle);
+          const stack = document.createElement("div");
+          stack.className = "stack";
+          reflectionRows.forEach((row) => {
+            const item = document.createElement("div");
+            item.className = "micro";
+            item.appendChild(chip(row.run_id || "reflection"));
+            const text = document.createElement("div");
+            text.className = "value";
+            text.textContent = row.recommended_next_action || row.market_findings || "No reflection summary.";
+            item.appendChild(text);
+            stack.appendChild(item);
+          });
+          reflectionPanel.appendChild(stack);
+          memoryEl.appendChild(reflectionPanel);
+        }
+      }
+
+      function renderSelectedRun(selectedRun) {
+        clearChildren(selectedRunEl);
+        if (!selectedRun || typeof selectedRun !== "object" || !selectedRun.run_id) {
+          selectedRunEl.appendChild(emptyCard("No run is pinned yet. The dashboard will show the latest recent run once one is available."));
+          return;
+        }
+
+        const shell = document.createElement("div");
+        shell.className = "stack";
+
+        const header = document.createElement("article");
+        header.className = "list-card active";
+        const top = document.createElement("div");
+        top.className = "card-topline";
+        const title = document.createElement("p");
+        title.className = "card-title mono";
+        title.textContent = selectedRun.run_id;
+        top.appendChild(title);
+        if (selectedRun.status) {
+          top.appendChild(statusChip(selectedRun.status));
+        }
+        const kicker = document.createElement("p");
+        kicker.className = "card-kicker";
+        kicker.textContent = `${selectedRun.objective_name || "objective n/a"} | ${selectedRun.finished_at || selectedRun.started_at || "no timestamp"}`;
+        header.appendChild(top);
+        header.appendChild(kicker);
+        header.appendChild(
+          microGrid([
+            ["Checklist", selectedRun.checklist_decision],
+            ["Artifacts", selectedRun.artifact_count],
+            ["Candidates", selectedRun.candidate_count],
+            ["Promoted", selectedRun.promoted_count],
+          ])
+        );
+        shell.appendChild(header);
+
+        const details = document.createElement("article");
+        details.className = "list-card";
+        const detailsTitle = document.createElement("p");
+        detailsTitle.className = "card-title";
+        detailsTitle.textContent = "Manifest highlights";
+        details.appendChild(detailsTitle);
+        const keyvals = document.createElement("div");
+        keyvals.className = "keyvals";
+        [
+          ["Program", selectedRun.program_id || "n/a"],
+          ["Date range", [selectedRun.start, selectedRun.end].filter(Boolean).join(" -> ") || "n/a"],
+          ["Symbols", Array.isArray(selectedRun.normalized_symbols) ? selectedRun.normalized_symbols.join(", ") : "n/a"],
+          ["Timeframes", Array.isArray(selectedRun.normalized_timeframes) ? selectedRun.normalized_timeframes.join(", ") : "n/a"],
+          ["Failed stage", selectedRun.failed_stage || "none"],
+        ].forEach(([label, value]) => {
+          const row = document.createElement("div");
+          row.className = "keyval";
+          const key = document.createElement("span");
+          key.className = "key";
+          key.textContent = label;
+          const val = document.createElement("span");
+          val.className = "value";
+          val.textContent = value;
+          row.appendChild(key);
+          row.appendChild(val);
+          keyvals.appendChild(row);
+        });
+        details.appendChild(keyvals);
+        shell.appendChild(details);
+
+        if (selectedRun.effective_behavior && typeof selectedRun.effective_behavior === "object" && Object.keys(selectedRun.effective_behavior).length) {
+          const behavior = document.createElement("article");
+          behavior.className = "list-card";
+          const behaviorTitle = document.createElement("p");
+          behaviorTitle.className = "card-title";
+          behaviorTitle.textContent = "Effective behavior";
+          behavior.appendChild(behaviorTitle);
+          behavior.appendChild(
+            microGrid(
+              Object.entries(selectedRun.effective_behavior)
+                .slice(0, 8)
+                .map(([label, value]) => [label.replaceAll("_", " "), value])
+            )
+          );
+          shell.appendChild(behavior);
+        }
+
+        if (Array.isArray(selectedRun.planned_stage_instances) && selectedRun.planned_stage_instances.length) {
+          const stages = document.createElement("article");
+          stages.className = "list-card";
+          const stagesTitle = document.createElement("p");
+          stagesTitle.className = "card-title";
+          stagesTitle.textContent = "Planned stages preview";
+          stages.appendChild(stagesTitle);
+          const chips = document.createElement("div");
+          chips.className = "chips";
+          selectedRun.planned_stage_instances.forEach((stage) => chips.appendChild(chip(stage, true)));
+          stages.appendChild(chips);
+          shell.appendChild(stages);
+        }
+
+        selectedRunEl.appendChild(shell);
+      }
+
+      function renderRuns(runs) {
+        clearChildren(recentRunsEl);
+        if (!Array.isArray(runs) || !runs.length) {
+          recentRunsEl.appendChild(emptyCard("No prior run manifests were found for the active program."));
+          return;
+        }
+        runs.forEach((run) => {
+          const card = document.createElement("article");
+          card.className = "list-card";
+          const top = document.createElement("div");
+          top.className = "card-topline";
+          const title = document.createElement("p");
+          title.className = "card-title mono";
+          title.textContent = run.run_id || "unknown";
+          top.appendChild(title);
+          if (run.status) {
+            top.appendChild(statusChip(run.status));
+          }
+          const kicker = document.createElement("p");
+          kicker.className = "card-kicker";
+          kicker.textContent = `${run.objective_name || "objective n/a"} | ${run.finished_at || run.started_at || "no timestamp"}`;
+          card.appendChild(top);
+          card.appendChild(kicker);
+          card.appendChild(
+            microGrid([
+              ["Checklist", run.checklist_decision],
+              ["Candidates", run.candidate_count],
+              ["Promoted", run.promoted_count],
+              ["Stages", `${run.completed_stage_count || 0}/${run.planned_stage_count || 0}`],
+            ])
+          );
+          recentRunsEl.appendChild(card);
+        });
+      }
+
+      function renderProposals(proposals) {
+        clearChildren(recentProposalsEl);
+        if (!Array.isArray(proposals) || !proposals.length) {
+          recentProposalsEl.appendChild(emptyCard("No proposal memory rows were found for the active program."));
+          return;
+        }
+        proposals.forEach((proposal) => {
+          const card = document.createElement("article");
+          card.className = "list-card";
+          const top = document.createElement("div");
+          top.className = "card-topline";
+          const title = document.createElement("p");
+          title.className = "card-title mono";
+          title.textContent = proposal.run_id || "proposal";
+          top.appendChild(title);
+          if (proposal.status) {
+            top.appendChild(statusChip(proposal.status));
+          }
+          const kicker = document.createElement("p");
+          kicker.className = "card-kicker";
+          kicker.textContent = `${proposal.objective_name || "objective n/a"} | ${proposal.issued_at || "no timestamp"}`;
+          card.appendChild(top);
+          card.appendChild(kicker);
+          card.appendChild(
+            microGrid([
+              ["Profile", proposal.promotion_profile],
+              ["Experiment", proposal.experiment_type],
+              ["Plan only", proposal.plan_only],
+              ["Return code", proposal.returncode],
+            ])
+          );
+          if (proposal.symbols || proposal.allowed_change_field || proposal.decision) {
+            const chips = document.createElement("div");
+            chips.className = "chips";
+            if (proposal.symbols) chips.appendChild(chip(`symbols: ${proposal.symbols}`));
+            if (proposal.allowed_change_field) chips.appendChild(chip(`change: ${proposal.allowed_change_field}`, true));
+            if (proposal.decision) chips.appendChild(chip(`decision: ${proposal.decision}`, true));
+            card.appendChild(chips);
+          }
+          recentProposalsEl.appendChild(card);
+        });
+      }
+
+      function renderLegacy(payload) {
+        dashboardEl.hidden = true;
+        legacyEl.hidden = false;
+        clearChildren(legacySectionsEl);
+        const sections = Array.isArray(payload.sections) ? payload.sections : [];
+        if (!sections.length) {
+          legacySectionsEl.appendChild(emptyCard("This widget is ready. Call a data tool and render its payload here."));
+          return;
+        }
+        sections.forEach((section) => {
+          const card = document.createElement("article");
+          card.className = "panel";
+          const body = document.createElement("div");
+          body.className = "panel-body";
+          const heading = document.createElement("p");
+          heading.className = "card-title";
+          heading.textContent = section.heading || "Detail";
+          const text = document.createElement("p");
+          text.className = "value";
+          text.textContent = section.body || "";
+          body.appendChild(heading);
+          body.appendChild(text);
+          card.appendChild(body);
+          legacySectionsEl.appendChild(card);
+        });
+      }
+
+      function renderDashboard(payload) {
+        legacyEl.hidden = true;
+        dashboardEl.hidden = false;
+        renderPrograms(payload.programs, payload.active_program_id);
+        renderMemory(payload.memory);
+        renderSelectedRun(payload.selected_run);
+        renderRuns(payload.recent_runs);
+        renderProposals(payload.recent_proposals);
+      }
+
+      function render(payload) {
+        const data = normalizePayload(payload);
+        titleEl.textContent = data.title || "Edge Operator Dashboard";
+        subtitleEl.textContent =
+          data.subtitle || "Call a data tool and then render its structured payload here.";
+        setStatus(data.status);
+        renderMetrics(data.summary);
+        if (isDashboardPayload(data)) {
+          renderDashboard(data);
+        } else {
+          renderLegacy(data);
+        }
+      }
+
+      render(window.openai?.toolOutput);
+
+      window.addEventListener(
+        "openai:set_globals",
+        (event) => {
+          render(event.detail?.globals?.toolOutput || window.openai?.toolOutput);
+        },
+        { passive: true }
+      );
+
+      window.addEventListener(
+        "message",
+        (event) => {
+          if (event.source !== window.parent) return;
+          if (event.data?.type === "ui/notifications/tool-result") {
+            render(event.data.toolOutput || window.openai?.toolOutput);
+          }
+        },
+        { passive: true }
+      );
+    </script>
+  </body>
+</html>

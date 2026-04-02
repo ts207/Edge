@@ -1,0 +1,60 @@
+# HYP_LIQUIDITY_GAP_013_ETH24_LONG_CONT_2024_01 - ETH LIQUIDITY_GAP_PRINT 24b continuation 2023-12 through 2024-01
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The ETH December 2023 liquidity-gap branch is the only live tradable
+# survivor remaining in the campaign. This proposal extends that bounded window
+# through the immediately adjacent January 2024 period to check whether the
+# effect persists or collapses as the sample is extended.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  ETH-only adjacent-window confirmation slice for LIQUIDITY_GAP_PRINT
+  continuation (HYP_LIQUIDITY_GAP_013_ETH24_LONG_CONT_2024_01). The December
+  2023 ETHUSDT / long / 24-bar continuation branch survived the full bridge
+  funnel. This run freezes the same expression and extends the end date through
+  January 2024 as the next bounded confirmation step.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2023-12-01"
+end: "2024-02-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - LIQUIDITY_GAP_PRINT
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10
+
+bounded:
+  baseline_run_id: prog_fresh_start_2026q2_20260401T220504Z_5f6cdc1b77
+  experiment_type: confirmation
+  allowed_change_field: end
+  change_reason: Extend the December survivor through the adjacent January 2024 period.
+  compare_to_baseline: true

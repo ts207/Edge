@@ -1,45 +1,24 @@
 {
   "action_counts": {
-    "trade_normal": 63,
-    "trade_small": 25
+    "reject": 92
   },
-  "chosen_thesis_counts": {
-    "THESIS_LIQUIDATION_CASCADE": 1,
-    "THESIS_LIQUIDITY_VACUUM": 18,
-    "THESIS_VOL_SHOCK": 68,
-    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM": 1
-  },
+  "chosen_thesis_counts": {},
   "confirmation_thesis_stats": {
-    "confirmation_match_cycles": 32,
-    "confirmation_missing_cycles": 144,
-    "eligible_cycles": 88,
-    "retrieved_cycles": 176,
-    "top_ranked_cycles": 1
+    "confirmation_match_cycles": 0,
+    "confirmation_missing_cycles": 0,
+    "eligible_cycles": 0,
+    "retrieved_cycles": 0,
+    "top_ranked_cycles": 0
   },
-  "confirmation_thesis_stats_by_id": {
-    "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM": {
-      "confirmation_match_cycles": 13,
-      "confirmation_missing_cycles": 75,
-      "eligible_cycles": 19,
-      "retrieved_cycles": 88,
-      "top_ranked_cycles": 0
-    },
-    "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM": {
-      "confirmation_match_cycles": 19,
-      "confirmation_missing_cycles": 69,
-      "eligible_cycles": 69,
-      "retrieved_cycles": 88,
-      "top_ranked_cycles": 1
-    }
-  },
-  "contexts_evaluated": 88,
-  "generated_at_utc": "2026-04-01T03:43:45Z",
+  "confirmation_thesis_stats_by_id": {},
+  "contexts_evaluated": 92,
+  "generated_at_utc": "2026-04-01T17:17:59Z",
   "quality_checks": {
-    "no_silent_thesis_matches": true,
+    "no_silent_thesis_matches": false,
     "no_unexplained_holds": true,
-    "overlap_metadata_missing_count": 0,
-    "overlap_metadata_visible_consistently": true,
-    "silent_match_count": 0,
+    "overlap_metadata_missing_count": 92,
+    "overlap_metadata_visible_consistently": false,
+    "silent_match_count": 92,
     "unexplained_hold_count": 0
   },
   "run_id": "block_h_shadow_live_v1",
@@ -47,11 +26,11 @@
     "BTCUSDT",
     "ETHUSDT"
   ],
-  "trace_path": "/mnt/data/work_next/Edge-irene/data/reports/shadow_live/block_h_shadow_live_v1/shadow_live_thesis_trace.jsonl",
+  "trace_path": "/home/irene/Edge/data/reports/shadow_live/block_h_shadow_live_v1/shadow_live_thesis_trace.jsonl",
   "window": {
     "context_window_bars": 3,
-    "end": "2022-12-31 23:55:00+00:00",
-    "start": "2022-12-17 23:55:00+00:00",
+    "end": "2026-02-28 23:55:00+00:00",
+    "start": "2026-02-14 23:55:00+00:00",
     "window_days": 14
   }
 }

@@ -1,0 +1,56 @@
+# HYP_LIQUIDITY_GAP_003_ETH24_LONG_CONT_LAG2 - ETH LIQUIDITY_GAP_PRINT 24b continuation lag-2
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The parent isolate discovered a bounded ETH LIQUIDITY_GAP_PRINT
+# continuation edge, but bridge robustness remained sub-threshold. The high-vol
+# context filter weakened the line. This follow-up keeps the parent isolate intact
+# and changes one variable only: delay entry to 2 bars to test whether skipping the
+# first post-gap bar improves stability around the event's documented invalidation
+# window.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  ETH-only LIQUIDITY_GAP_PRINT continuation isolate with lag-2 entry
+  (HYP_LIQUIDITY_GAP_003_ETH24_LONG_CONT_LAG2). The parent isolate confirmed a
+  search-level discovery at ETHUSDT / long / 24 bars, but bridge robustness
+  remained sub-threshold. The high-volatility context variant weakened the line.
+  This run keeps the original isolate and moves entry to 2 bars to test whether
+  immediate post-gap noise is degrading OOS stability.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - LIQUIDITY_GAP_PRINT
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 2
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

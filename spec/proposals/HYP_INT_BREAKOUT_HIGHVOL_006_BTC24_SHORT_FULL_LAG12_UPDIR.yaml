@@ -1,0 +1,66 @@
+# HYP_INT_BREAKOUT_HIGHVOL_006_BTC24_SHORT_FULL_LAG12_UPDIR - BTC breakout/high-vol exact broad retune with up-breakout source direction
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: the broad interaction line improved materially once the source
+# breakout side was recovered. The profitable subset is not generic breakout
+# confirmation; it is specifically prior up-breakout followed by high-vol
+# confirmation, then short continuation over 24 bars.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only bounded interaction-direction confirmation for
+  BREAKOUT_TRIGGER confirmed by HIGH_VOL_REGIME
+  (HYP_INT_BREAKOUT_HIGHVOL_006_BTC24_SHORT_FULL_LAG12_UPDIR). This proposal
+  keeps the exact broad 2022-2023 interaction shape from the prior run and
+  changes only trigger_space by requiring the source breakout leg to be an up
+  breakout before the short continuation hypothesis is evaluated.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [INTERACTION]
+  interactions:
+    include:
+      - left: BREAKOUT_TRIGGER
+        left_direction: up
+        right: HIGH_VOL_REGIME
+        op: CONFIRM
+        lag: 12
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 5
+  max_hypotheses_per_template: 5
+  max_hypotheses_per_event_family: 5
+
+discovery_profile: standard
+phase2_gate_profile: discovery
+
+bounded:
+  baseline_run_id: prog_fresh_start_2026q2_20260402T001902Z_24ef601166
+  experiment_type: confirmation
+  allowed_change_field: trigger_space
+  change_reason: Require the source breakout leg to be an up breakout.
+  compare_to_baseline: true

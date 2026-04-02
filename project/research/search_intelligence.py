@@ -210,11 +210,14 @@ def _build_frontier(
                 isinstance(cfg, dict)
                 and str(cfg.get("enabled", True)).strip().lower() in {"0", "false", "no"}
             )
-            and event_matches_filters(
-                str(event_id).strip(),
-                tiers=("A", "B"),
-                roles=("trigger", "confirm"),
-                trade_trigger_eligible=True,
+            and (
+                domain_registry.get_event(str(event_id).strip()) is None
+                or event_matches_filters(
+                    str(event_id).strip(),
+                    tiers=("A", "B"),
+                    roles=("trigger", "confirm"),
+                    trade_trigger_eligible=True,
+                )
             )
         ]
     else:

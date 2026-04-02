@@ -57,12 +57,25 @@ def test_trigger_spec_validation_label_and_dict_roundtrip(monkeypatch):
     round_trip = TriggerSpec.from_dict(inter.to_dict())
     assert round_trip.label() == inter.label()
 
+    directed = TriggerSpec.interaction(
+        "motif2",
+        "e1",
+        "e2",
+        "confirm",
+        lag=6,
+        left_direction="up",
+    )
+    assert directed.to_dict()["left_direction"] == "up"
+    assert TriggerSpec.from_dict(directed.to_dict()).left_direction == "up"
+
     with pytest.raises(ValueError):
         TriggerSpec.feature_predicate("rv", "!!", 1.0)
     with pytest.raises(ValueError):
         TriggerSpec.sequence("seqx", ["e1"], max_gap=[1])
     with pytest.raises(ValueError):
         TriggerSpec.interaction("m", "unknown", "e1", "or")
+    with pytest.raises(ValueError):
+        TriggerSpec.interaction("m2", "e1", "e2", "confirm", left_direction="sideways")
 
 
 def test_hypothesis_spec_hash_and_roundtrip(monkeypatch):

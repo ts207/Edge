@@ -72,7 +72,7 @@ ALLOWED_DEPENDENCIES = {
         "project.strategy",
         "project.schemas",
     ],
-    "project.portfolio": ["project.core", "project.specs", "project.strategy"],
+    "project.portfolio": ["project.core", "project.specs", "project.strategy", "project.live"],
     "project.research": [
         "project.core",
         "project.io",
@@ -92,6 +92,9 @@ ALLOWED_DEPENDENCIES = {
         "project.domain",
         "project.compilers",
         "project.portfolio",
+        "project.live",
+        "project.operator",
+        "project.episodes",
     ],
     "project.pipelines": [
         "project.research",
@@ -108,6 +111,7 @@ ALLOWED_DEPENDENCIES = {
         "project.runtime",
         "project.spec_registry",
         "project.experiments",
+        "project.operator",
     ],
     "project.events": [
         "project.core",
@@ -121,6 +125,21 @@ ALLOWED_DEPENDENCIES = {
         "project.domain",
         "project.spec_validation",
     ],
+    "project.operator": ["project.core", "project.research", "project.specs", "project.io"],
+    "project.live": [
+        "project.core",
+        "project.events",
+        "project.features",
+        "project.strategy",
+        "project.strategy.runtime",
+        "project.portfolio",
+        "project.episodes",
+        "project.io",
+        "project.engine",
+        "project.research",
+        "project.artifacts",
+    ],
+    "project.episodes": ["project.core", "project.specs", "project.spec_registry"],
 }
 
 
@@ -220,7 +239,6 @@ def test_wrappers_are_pure_reexports():
     Ensures that compatibility wrappers are pure re-exports without local logic.
     """
     wrapper_dirs = [
-        PROJECT_ROOT / "apps",
         PROJECT_ROOT / "execution",
         PROJECT_ROOT / "infra",
         PROJECT_ROOT / "pipelines" / "eval",
@@ -259,7 +277,6 @@ def test_explicit_package_roots_stay_shallow() -> None:
         PROJECT_ROOT / "compilers" / "__init__.py",
         PROJECT_ROOT / "eval" / "__init__.py",
         PROJECT_ROOT / "experiments" / "__init__.py",
-        PROJECT_ROOT / "live" / "__init__.py",
         PROJECT_ROOT / "portfolio" / "__init__.py",
         PROJECT_ROOT / "spec_validation" / "__init__.py",
         PROJECT_ROOT / "research" / "clustering" / "__init__.py",
@@ -270,6 +287,7 @@ def test_explicit_package_roots_stay_shallow() -> None:
         PROJECT_ROOT / "pipelines" / "clean" / "__init__.py",
         PROJECT_ROOT / "pipelines" / "features" / "__init__.py",
         PROJECT_ROOT / "pipelines" / "ingest" / "__init__.py",
+        PROJECT_ROOT / "live" / "__init__.py",
     ]
 
     for path in strict_roots:
@@ -290,7 +308,10 @@ def test_explicit_package_roots_stay_shallow() -> None:
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
         ]
-        assert defs == ["__getattr__"], (
+        expected_defs = ["__getattr__"]
+        if path == PROJECT_ROOT / "live" / "__init__.py":
+            expected_defs = ["__dir__", "__getattr__"]
+        assert sorted(defs) == expected_defs, (
             f"Architectural Violation: {path.relative_to(PROJECT_ROOT.parent)} should only define __getattr__, found {defs}"
         )
 

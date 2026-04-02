@@ -1,0 +1,58 @@
+# HYP_VOL_SHOCK_001 - VOL_SHOCK mean-reversion hypothesis
+# Program: PROG_FRESH_START_2026Q2 | Author: Operator | Date: 2026-04-01
+#
+# Mechanism: Large short-horizon vol shocks create temporary price dislocation
+# and inventory imbalance that partially mean-reverts over the next 6-24 bars
+# rather than continuing linearly. Template family: mean_reversion
+# (hypothesis specifies "event_response" which maps to mean_reversion for VOL_SHOCK).
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  VOL_SHOCK mean-reversion hypothesis (HYP_VOL_SHOCK_001).
+  Large short-horizon volatility shocks create temporary price dislocation and
+  inventory imbalance that should partially mean-revert over the next few bars
+  rather than continue linearly. BTC and ETH perp markets exhibit crowding,
+  stop cascades, and temporary spread widening around abrupt moves; the shock bar
+  embeds temporary overreaction relative to subsequent short-horizon equilibrium.
+  Expected: partial reversion over 6-24 bars, strongest after 1-bar lag.
+
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - VOL_SHOCK
+  canonical_regimes:
+    - VOLATILITY_TRANSITION
+
+templates:
+  - mean_reversion
+
+horizons_bars:
+  - 6
+  - 12
+  - 24
+  - 48
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+search_control:
+  max_hypotheses_total: 200
+  max_hypotheses_per_template: 200
+  max_hypotheses_per_event_family: 200

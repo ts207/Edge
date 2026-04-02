@@ -201,3 +201,27 @@ def test_expand_and_resolve_interaction(registry_root, tmp_path):
     assert "D1" in plan.required_detectors
     assert "f1" in plan.required_features
     assert "S1" in plan.required_states
+
+
+def test_expand_and_resolve_interaction_with_left_direction(registry_root, tmp_path):
+    conf = _make_config(
+        tmp_path,
+        trigger_space={
+            "allowed_trigger_types": ["INTERACTION"],
+            "interactions": {
+                "include": [
+                    {
+                        "left": "E1",
+                        "right": "E2",
+                        "op": "CONFIRM",
+                        "left_direction": "up",
+                    }
+                ]
+            },
+        },
+    )
+    plan = build_experiment_plan(conf, registry_root)
+    assert len(plan.hypotheses) == 1
+    trigger = plan.hypotheses[0].trigger
+    assert trigger.left_direction == "up"
+    assert trigger.right_direction is None

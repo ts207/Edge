@@ -16,12 +16,16 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import numpy as np
 import pandas as pd
 import yaml
 
 from project import PROJECT_ROOT
+from project.core.column_registry import ColumnRegistry
 from project.core.logging_utils import build_stage_log_handlers
 from project.domain.compiled_registry import get_domain_registry
+from project.domain.hypotheses import TriggerType
+from project.events.event_specs import EVENT_REGISTRY_SPECS
 from project.spec_registry import load_yaml_path
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.specs.gates import load_gates_spec, select_bridge_gate_spec, select_phase2_gate_spec
@@ -32,6 +36,7 @@ from project.research.search.evaluator import (
     evaluated_records_from_metrics,
 )
 from project.research.search.bridge_adapter import (
+    canonical_bridge_event_type,
     hypotheses_to_bridge_candidates,
     split_bridge_candidates,
 )
@@ -51,6 +56,7 @@ from project.research.services.pathing import (
     phase2_run_dir,
 )
 from project.research.regime_routing import annotate_regime_metadata
+from project.research.knowledge.schemas import canonical_json, region_key, stable_hash
 from project.spec_validation import validate_search_spec_doc
 
 log = logging.getLogger(__name__)
@@ -166,6 +172,16 @@ def _annotate_candidate_regime_metadata(frame: pd.DataFrame) -> pd.DataFrame:
     return annotate_regime_metadata(frame)
 
 
+def _attach_candidate_run_lineage(frame: pd.DataFrame, *, run_id: str) -> pd.DataFrame:
+    out = frame.copy()
+    if "run_id" not in out.columns:
+        out["run_id"] = str(run_id)
+    else:
+        out["run_id"] = out["run_id"].fillna("").astype(str)
+        out.loc[out["run_id"].str.strip() == "", "run_id"] = str(run_id)
+    return out
+
+
 def _classify_metrics_counts(
     metrics: pd.DataFrame,
     *,
@@ -222,6 +238,303 @@ def _resolve_search_min_t_stat(
         return float(explicit_min_t_stat)
     raw = phase2_gates.get("min_t_stat", _DEFAULT_PHASE2_MIN_T_STAT)
     return float(raw)
+
+
+def _bool_mask(frame: pd.DataFrame, column: str) -> pd.Series:
+    if frame.empty or column not in frame.columns:
+        return pd.Series(False, index=frame.index, dtype=bool)
+    return frame[column].fillna(False).astype(bool)
+
+
+def _first_present_column(columns: list[str], available_columns: pd.Index) -> str | None:
+    available = {str(column) for column in available_columns}
+    for column in columns:
+        if column in available:
+            return column
+    return None
+
+
+def _event_signal_candidates(event_id: str) -> list[str]:
+    event_spec = EVENT_REGISTRY_SPECS.get(str(event_id or "").strip().upper())
+    signal_col = event_spec.signal_column if event_spec is not None else None
+    return ColumnRegistry.event_cols(str(event_id or "").strip().upper(), signal_col=signal_col)
+
+
+def _state_signal_candidates(state_id: str) -> list[str]:
+    return ColumnRegistry.state_cols(str(state_id or "").strip().upper())
+
+
+def _resolve_component_column(component_id: str, available_columns: pd.Index) -> str | None:
+    token = str(component_id or "").strip().upper()
+    if not token:
+        return None
+    event_column = _first_present_column(_event_signal_candidates(token), available_columns)
+    if event_column is not None:
+        return event_column
+    return _first_present_column(_state_signal_candidates(token), available_columns)
+
+
+def _materialize_sequence_trigger_columns(
+    features: pd.DataFrame,
+    hypotheses: list[Any],
+) -> pd.DataFrame:
+    if features.empty or not hypotheses:
+        return features
+
+    out = features.copy()
+    available_columns = out.columns
+
+    for hypothesis in hypotheses:
+        trigger = getattr(hypothesis, "trigger", None)
+        if trigger is None or getattr(trigger, "trigger_type", "") != TriggerType.SEQUENCE:
+            continue
+
+        sequence_id = str(getattr(trigger, "sequence_id", "") or "").strip()
+        events = list(getattr(trigger, "events", None) or [])
+        max_gaps = [int(value) for value in list(getattr(trigger, "max_gap", None) or [])]
+        if not sequence_id or len(events) < 2:
+            continue
+
+        sequence_cols = ColumnRegistry.sequence_cols(sequence_id)
+        if _first_present_column(sequence_cols, available_columns) is not None:
+            continue
+
+        event_masks: list[pd.Series] = []
+        for event_id in events:
+            event_col = _first_present_column(_event_signal_candidates(event_id), available_columns)
+            if event_col is None:
+                event_masks = []
+                break
+            event_masks.append(out[event_col].fillna(False).astype(bool))
+        if not event_masks:
+            out[sequence_cols[0]] = False
+            available_columns = out.columns
+            continue
+
+        sequence_mask = event_masks[0]
+        for step_idx, next_mask in enumerate(event_masks[1:]):
+            max_gap = max_gaps[step_idx] if step_idx < len(max_gaps) else 1
+            prior_completed = (
+                sequence_mask.shift(1)
+                .rolling(window=max(int(max_gap), 1), min_periods=1)
+                .max()
+                .fillna(0)
+                .astype(bool)
+            )
+            sequence_mask = (prior_completed & next_mask).fillna(False)
+
+        out[sequence_cols[0]] = sequence_mask.astype(bool)
+        available_columns = out.columns
+
+    return out
+
+
+def _interaction_lag_steps(features: pd.DataFrame, raw_lag: Any) -> int:
+    if features.empty or "timestamp" not in features.columns:
+        try:
+            return max(int(raw_lag), 1)
+        except Exception:
+            return 1
+
+    timestamps = pd.to_datetime(features["timestamp"], utc=True, errors="coerce").dropna()
+    if len(timestamps) < 2:
+        try:
+            return max(int(raw_lag), 1)
+        except Exception:
+            return 1
+
+    bar_minutes = float(
+        (timestamps.diff().dropna().dt.total_seconds().median() or 300.0) / 60.0
+    )
+    if bar_minutes <= 0:
+        bar_minutes = 5.0
+
+    if hasattr(raw_lag, "total_seconds"):
+        lag_minutes = float(raw_lag.total_seconds()) / 60.0
+    else:
+        try:
+            lag_minutes = float(raw_lag)
+        except Exception:
+            lag_minutes = bar_minutes
+
+    return max(int(lag_minutes // bar_minutes), 1)
+
+
+def _direction_requirement_to_sign(required_direction: Any) -> float | None:
+    if required_direction is None:
+        return None
+    value = str(required_direction).strip().lower()
+    if not value:
+        return None
+    if value == "up":
+        return 1.0
+    if value == "down":
+        return -1.0
+    if value == "non_directional":
+        return 0.0
+    return None
+
+
+def _resolve_component_direction_series(
+    component_id: str,
+    features: pd.DataFrame,
+    required_direction: Any,
+) -> pd.Series | None:
+    required_sign = _direction_requirement_to_sign(required_direction)
+    if required_sign is None:
+        return None
+    for col in ColumnRegistry.event_direction_cols(component_id):
+        if col in features.columns:
+            return pd.to_numeric(features[col], errors="coerce")
+    return pd.Series(np.nan, index=features.index, dtype=float)
+
+
+def _apply_component_direction_filter(
+    *,
+    mask: pd.Series,
+    direction_series: pd.Series | None,
+    required_direction: Any,
+) -> pd.Series:
+    required_sign = _direction_requirement_to_sign(required_direction)
+    if required_sign is None:
+        return mask
+    if direction_series is None:
+        return pd.Series(False, index=mask.index, dtype=bool)
+    return (mask.astype(bool) & (direction_series == required_sign).fillna(False)).astype(bool)
+
+
+def _materialize_interaction_trigger_columns(
+    features: pd.DataFrame,
+    hypotheses: list[Any],
+) -> pd.DataFrame:
+    if features.empty or not hypotheses:
+        return features
+
+    out = features.copy()
+    available_columns = out.columns
+
+    for hypothesis in hypotheses:
+        trigger = getattr(hypothesis, "trigger", None)
+        if trigger is None or getattr(trigger, "trigger_type", "") != TriggerType.INTERACTION:
+            continue
+
+        interaction_id = str(getattr(trigger, "interaction_id", "") or "").strip()
+        if not interaction_id:
+            continue
+        interaction_cols = ColumnRegistry.interaction_cols(interaction_id)
+        if _first_present_column(interaction_cols, available_columns) is not None:
+            continue
+
+        left_col = _resolve_component_column(getattr(trigger, "left", ""), available_columns)
+        right_col = _resolve_component_column(getattr(trigger, "right", ""), available_columns)
+        if left_col is None or right_col is None:
+            out[interaction_cols[0]] = False
+            available_columns = out.columns
+            continue
+
+        left_mask = out[left_col].fillna(False).astype(bool)
+        right_mask = out[right_col].fillna(False).astype(bool)
+        left_direction_series = _resolve_component_direction_series(
+            str(getattr(trigger, "left", "") or ""),
+            out,
+            getattr(trigger, "left_direction", None),
+        )
+        right_direction_series = _resolve_component_direction_series(
+            str(getattr(trigger, "right", "") or ""),
+            out,
+            getattr(trigger, "right_direction", None),
+        )
+        left_mask = _apply_component_direction_filter(
+            mask=left_mask,
+            direction_series=left_direction_series,
+            required_direction=getattr(trigger, "left_direction", None),
+        )
+        right_mask = _apply_component_direction_filter(
+            mask=right_mask,
+            direction_series=right_direction_series,
+            required_direction=getattr(trigger, "right_direction", None),
+        )
+        lag_steps = _interaction_lag_steps(out, getattr(trigger, "lag", 1))
+        op = str(getattr(trigger, "op", "") or "").strip().lower()
+
+        future_right = (
+            right_mask.shift(-1)
+            .iloc[::-1]
+            .rolling(window=lag_steps, min_periods=1)
+            .max()
+            .iloc[::-1]
+            .fillna(0)
+            .astype(bool)
+        )
+        future_left = (
+            left_mask.shift(-1)
+            .iloc[::-1]
+            .rolling(window=lag_steps, min_periods=1)
+            .max()
+            .iloc[::-1]
+            .fillna(0)
+            .astype(bool)
+        )
+
+        if op == "and":
+            interaction_mask = left_mask & future_right
+        elif op == "confirm":
+            prior_left = (
+                left_mask.shift(1)
+                .rolling(window=lag_steps, min_periods=1)
+                .max()
+                .fillna(0)
+                .astype(bool)
+            )
+            interaction_mask = right_mask & prior_left
+        elif op == "exclude":
+            interaction_mask = left_mask & (~future_right)
+        elif op == "or":
+            interaction_mask = left_mask | right_mask
+        else:
+            interaction_mask = pd.Series(False, index=out.index, dtype=bool)
+
+        out[interaction_cols[0]] = interaction_mask.astype(bool)
+        available_columns = out.columns
+
+    return out
+
+
+def _build_gate_funnel(
+    *,
+    hypotheses_generated: int,
+    feasible_hypotheses: int,
+    metrics: pd.DataFrame,
+    candidate_universe: pd.DataFrame,
+    written_candidates: pd.DataFrame,
+    min_n: int,
+) -> dict[str, int]:
+    valid_mask = _bool_mask(metrics, "valid")
+    n_values = pd.to_numeric(metrics.get("n", 0), errors="coerce").fillna(0)
+    pass_min_n = valid_mask & (n_values >= int(min_n))
+
+    funnel: dict[str, int] = {
+        "generated": int(hypotheses_generated),
+        "feasible": int(feasible_hypotheses),
+        "metrics_emitted": int(len(metrics)),
+        "valid_metrics": int(valid_mask.sum()),
+        "pass_min_sample_size": int(pass_min_n.sum()),
+        "bridge_candidate_universe": int(len(candidate_universe)),
+        "phase2_candidates_written": int(len(written_candidates)),
+    }
+
+    stage_mask = pd.Series(True, index=written_candidates.index, dtype=bool)
+    for label, column in (
+        ("pass_oos_validation", "gate_oos_validation"),
+        ("pass_after_cost_positive", "gate_after_cost_positive"),
+        ("pass_after_cost_stressed_positive", "gate_after_cost_stressed_positive"),
+        ("pass_multiplicity", "gate_multiplicity"),
+        ("pass_regime_stable", "gate_c_regime_stable"),
+        ("phase2_final", "gate_bridge_tradable"),
+    ):
+        stage_mask &= _bool_mask(written_candidates, column)
+        funnel[label] = int(stage_mask.sum())
+    return funnel
 
 
 # Phase 4.2 — regime-conditional candidate discovery signal columns
@@ -337,7 +650,87 @@ def _expected_event_ids_from_hypotheses(hypotheses) -> list[str]:
         if event_id and event_id not in seen:
             expected.append(event_id)
             seen.add(event_id)
+        if str(getattr(trigger, "trigger_type", "") or "").strip().lower() == TriggerType.SEQUENCE:
+            for component_event_id in list(getattr(trigger, "events", None) or []):
+                token = str(component_event_id or "").strip().upper()
+                if token and token not in seen:
+                    expected.append(token)
+                    seen.add(token)
+        if str(getattr(trigger, "trigger_type", "") or "").strip().lower() == TriggerType.INTERACTION:
+            for component_id in (getattr(trigger, "left", ""), getattr(trigger, "right", "")):
+                token = str(component_id or "").strip().upper()
+                if token in EVENT_REGISTRY_SPECS and token not in seen:
+                    expected.append(token)
+                    seen.add(token)
     return expected
+
+
+def _hypothesis_region_key(hypothesis: Any, *, program_id: str, symbol: str) -> str:
+    trigger = getattr(hypothesis, "trigger", None)
+    trigger_type = str(getattr(trigger, "trigger_type", "") or "").strip().lower()
+    trigger_label = str(trigger.label()).strip() if trigger is not None else ""
+
+    event_type = ""
+    if trigger_type == "event":
+        event_type = str(getattr(trigger, "event_id", "") or "").strip().upper()
+    elif trigger_type == "state":
+        state_id = str(getattr(trigger, "state_id", "") or "").strip().upper()
+        if state_id:
+            event_type = canonical_bridge_event_type("state", f"state:{state_id}")
+    elif trigger_type == "transition":
+        from_state = str(getattr(trigger, "from_state", "") or "").strip().upper()
+        to_state = str(getattr(trigger, "to_state", "") or "").strip().upper()
+        if from_state and to_state:
+            event_type = canonical_bridge_event_type(
+                "transition",
+                f"transition:{from_state}→{to_state}",
+            )
+    elif trigger_type == "feature_predicate":
+        feature = str(getattr(trigger, "feature", "") or "").strip().upper()
+        operator = str(getattr(trigger, "operator", "") or "").strip()
+        threshold = getattr(trigger, "threshold", None)
+        if feature and operator and threshold not in (None, ""):
+            event_type = canonical_bridge_event_type(
+                "feature_predicate",
+                f"pred:{feature}{operator}{threshold}",
+            )
+    elif trigger_type in {"sequence", "interaction"} and trigger_label:
+        event_type = canonical_bridge_event_type(trigger_type, trigger_label)
+
+    context_blob = canonical_json(getattr(hypothesis, "context", None) or {})
+    return region_key(
+        {
+            "program_id": str(program_id or "").strip(),
+            "symbol_scope": str(symbol or "").strip().upper(),
+            "event_type": event_type or trigger_label.upper(),
+            "trigger_type": trigger_type.upper(),
+            "template_id": str(getattr(hypothesis, "template_id", "") or "").strip(),
+            "direction": str(getattr(hypothesis, "direction", "") or "").strip(),
+            "horizon": str(getattr(hypothesis, "horizon", "") or "").strip(),
+            "entry_lag": int(getattr(hypothesis, "entry_lag", 0) or 0),
+            "context_hash": stable_hash((context_blob,)),
+        }
+    )
+
+
+def _filter_previously_tested_hypotheses(
+    hypotheses: list[Any],
+    *,
+    program_id: str,
+    symbol: str,
+    avoid_region_keys: set[str],
+) -> tuple[list[Any], int]:
+    if not hypotheses or not avoid_region_keys:
+        return list(hypotheses), 0
+
+    filtered: list[Any] = []
+    skipped = 0
+    for hypothesis in hypotheses:
+        if _hypothesis_region_key(hypothesis, program_id=program_id, symbol=symbol) in avoid_region_keys:
+            skipped += 1
+            continue
+        filtered.append(hypothesis)
+    return filtered, skipped
 
 
 def _write_hypothesis_audit_artifacts(out_dir: Path, symbol: str, audit: dict) -> None:
@@ -435,6 +828,8 @@ def run(
     all_candidates = []
     regime_conditional_inputs = []
     symbol_diagnostics = []
+    metrics_frames = []
+    candidate_universe_frames = []
 
     total_feature_rows = 0
     total_event_flag_rows = 0
@@ -454,9 +849,19 @@ def run(
 
     # Load experiment plan if provided
     experiment_plan = None
+    avoid_region_keys: set[str] = set()
     if experiment_config:
-        from project.research.experiment_engine import build_experiment_plan
+        from project.research.experiment_engine import (
+            build_experiment_plan,
+            load_agent_experiment_config,
+        )
 
+        experiment_request = load_agent_experiment_config(Path(experiment_config))
+        avoid_region_keys = {
+            str(value).strip()
+            for value in experiment_request.avoid_region_keys
+            if str(value).strip()
+        }
         experiment_plan = build_experiment_plan(Path(experiment_config), Path(registry_root))
         log.info("Loaded experiment plan with %d hypotheses", len(experiment_plan.hypotheses))
 
@@ -483,9 +888,31 @@ def run(
 
         # 2. Generate hypotheses
         if experiment_plan:
-            hypotheses = experiment_plan.hypotheses
-            generation_audit = {"counts": {"feasible": len(hypotheses)}}
-            log.info("Using %d hypotheses from experiment plan for %s", len(hypotheses), symbol)
+            planned_hypotheses = list(experiment_plan.hypotheses)
+            hypotheses, skipped_prior_regions = _filter_previously_tested_hypotheses(
+                planned_hypotheses,
+                program_id=experiment_plan.program_id,
+                symbol=symbol,
+                avoid_region_keys=avoid_region_keys,
+            )
+            generation_audit = {
+                "counts": {
+                    "generated": len(planned_hypotheses),
+                    "feasible": len(hypotheses),
+                    "rejected": skipped_prior_regions,
+                },
+                "rejection_reason_counts": (
+                    {"prior_tested_region": skipped_prior_regions}
+                    if skipped_prior_regions
+                    else {}
+                ),
+            }
+            log.info(
+                "Using %d experiment-plan hypotheses for %s after skipping %d prior-tested regions",
+                len(hypotheses),
+                symbol,
+                skipped_prior_regions,
+            )
         else:
             log.info("Generating hypotheses from spec for %s: %s", symbol, resolved_search_spec)
             hypotheses, generation_audit = generate_hypotheses_with_audit(
@@ -514,6 +941,9 @@ def run(
                 log.warning("Empty feature table for %s after expected-event materialization", symbol)
                 continue
 
+        features = _materialize_sequence_trigger_columns(features, hypotheses)
+        features = _materialize_interaction_trigger_columns(features, hypotheses)
+
         log.info(
             "Loaded features for %s: %d rows, %d columns",
             symbol,
@@ -532,7 +962,9 @@ def run(
         total_feature_rows += int(len(features))
         total_event_flag_rows += int(len(features)) if not sym_flags.empty else 0
 
-        total_hypotheses_generated += int(len(hypotheses))
+        total_hypotheses_generated += int(
+            generation_audit.get("counts", {}).get("generated", len(hypotheses))
+        )
         total_feasible_hypotheses += int(
             generation_audit.get("counts", {}).get("feasible", len(hypotheses))
         )
@@ -559,7 +991,9 @@ def run(
                     feature_columns=int(len(features.columns)),
                     event_flag_rows=int(len(sym_flags)),
                     event_flag_columns_merged=int(len(sym_flags.columns)),
-                    hypotheses_generated=0,
+                    hypotheses_generated=int(
+                        generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                    ),
                     feasible_hypotheses=0,
                     rejected_hypotheses=generation_rejected_hypotheses,
                     rejection_reason_counts=generation_rejection_reason_counts,
@@ -574,6 +1008,16 @@ def run(
                     min_n=resolved_min_n,
                     search_budget=search_budget,
                     use_context_quality=use_context_quality,
+                    gate_funnel=_build_gate_funnel(
+                        hypotheses_generated=int(
+                            generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                        ),
+                        feasible_hypotheses=0,
+                        metrics=pd.DataFrame(),
+                        candidate_universe=pd.DataFrame(),
+                        written_candidates=pd.DataFrame(),
+                        min_n=resolved_min_n,
+                    ),
                 )
             )
             continue
@@ -603,7 +1047,9 @@ def run(
                     feature_columns=int(len(features.columns)),
                     event_flag_rows=int(len(sym_flags)),
                     event_flag_columns_merged=int(len(sym_flags.columns)),
-                    hypotheses_generated=int(len(hypotheses)),
+                    hypotheses_generated=int(
+                        generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                    ),
                     feasible_hypotheses=int(
                         generation_audit.get("counts", {}).get("feasible", len(hypotheses))
                     ),
@@ -620,6 +1066,18 @@ def run(
                     min_n=resolved_min_n,
                     search_budget=search_budget,
                     use_context_quality=use_context_quality,
+                    gate_funnel=_build_gate_funnel(
+                        hypotheses_generated=int(
+                            generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                        ),
+                        feasible_hypotheses=int(
+                            generation_audit.get("counts", {}).get("feasible", len(hypotheses))
+                        ),
+                        metrics=pd.DataFrame(),
+                        candidate_universe=pd.DataFrame(),
+                        written_candidates=pd.DataFrame(),
+                        min_n=resolved_min_n,
+                    ),
                 )
             )
             continue
@@ -629,6 +1087,7 @@ def run(
             min_n=resolved_min_n,
             min_t_stat=resolved_min_t_stat,
         )
+        metrics_frames.append(metrics.copy())
         valid_mask = (
             metrics.get("valid", pd.Series(False, index=metrics.index)).fillna(False).astype(bool)
             if not metrics.empty
@@ -720,6 +1179,8 @@ def run(
                 mode="research",
                 min_sample_size=resolved_min_n,
             )
+        if not candidate_universe.empty:
+            candidate_universe_frames.append(candidate_universe.copy())
 
         if not candidate_universe.empty:
             candidates = candidate_universe[
@@ -751,7 +1212,9 @@ def run(
                 feature_columns=int(len(features.columns)),
                 event_flag_rows=int(len(sym_flags)),
                 event_flag_columns_merged=int(len(sym_flags.columns)),
-                hypotheses_generated=int(len(hypotheses)),
+                hypotheses_generated=int(
+                    generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                ),
                 feasible_hypotheses=int(
                     generation_audit.get("counts", {}).get("feasible", len(hypotheses))
                 ),
@@ -770,6 +1233,18 @@ def run(
                 min_n=resolved_min_n,
                 search_budget=search_budget,
                 use_context_quality=use_context_quality,
+                gate_funnel=_build_gate_funnel(
+                    hypotheses_generated=int(
+                        generation_audit.get("counts", {}).get("generated", len(hypotheses))
+                    ),
+                    feasible_hypotheses=int(
+                        generation_audit.get("counts", {}).get("feasible", len(hypotheses))
+                    ),
+                    metrics=metrics,
+                    candidate_universe=candidate_universe,
+                    written_candidates=candidates,
+                    min_n=resolved_min_n,
+                ),
             )
         )
 
@@ -786,6 +1261,7 @@ def run(
     log.info("Search engine produced %d total bridge candidates", len(final_df))
 
     final_df = _annotate_candidate_regime_metadata(final_df)
+    final_df = _attach_candidate_run_lineage(final_df, run_id=run_id)
 
     # 6. Write output
     write_parquet(final_df, output_path)
@@ -829,6 +1305,20 @@ def run(
         min_n=resolved_min_n,
         search_budget=search_budget,
         use_context_quality=use_context_quality,
+        gate_funnel=_build_gate_funnel(
+            hypotheses_generated=total_hypotheses_generated,
+            feasible_hypotheses=total_feasible_hypotheses,
+            metrics=(
+                pd.concat(metrics_frames, ignore_index=True) if metrics_frames else pd.DataFrame()
+            ),
+            candidate_universe=(
+                pd.concat(candidate_universe_frames, ignore_index=True)
+                if candidate_universe_frames
+                else pd.DataFrame()
+            ),
+            written_candidates=final_df,
+            min_n=resolved_min_n,
+        ),
     )
     if symbol_diagnostics:
         main_diag["symbol_diagnostics"] = symbol_diagnostics

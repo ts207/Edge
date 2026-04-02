@@ -334,6 +334,8 @@ def _validate_interaction_trigger(
         left = inter.get("left")
         right = inter.get("right")
         op = inter.get("op")
+        left_direction = str(inter.get("left_direction", "") or "").strip().lower()
+        right_direction = str(inter.get("right_direction", "") or "").strip().lower()
         if not left or not right or not op:
             raise ValueError("Interaction must specify left, right, and op.")
 
@@ -344,6 +346,22 @@ def _validate_interaction_trigger(
         for operand in [left, right]:
             if operand not in allowed_events and operand not in allowed_states:
                 raise ValueError(f"Interaction operand '{operand}' must be a known EVENT or STATE.")
+
+        for side_name, operand, direction_value in (
+            ("left", left, left_direction),
+            ("right", right, right_direction),
+        ):
+            if not direction_value:
+                continue
+            if direction_value not in {"up", "down", "non_directional"}:
+                raise ValueError(
+                    f"Unsupported {side_name}_direction '{direction_value}'. "
+                    "Expected one of: up, down, non_directional."
+                )
+            if operand not in allowed_events:
+                raise ValueError(
+                    f"{side_name}_direction is only valid for EVENT operands; got {operand!r}."
+                )
 
 
 def expand_hypotheses(
@@ -714,11 +732,16 @@ def _expand_interaction_triggers(
         right = inter["right"]
         op = inter["op"]
         lag = inter.get("lag", 6)
+        left_direction = str(inter.get("left_direction", "") or "").strip().lower() or None
+        right_direction = str(inter.get("right_direction", "") or "").strip().lower() or None
 
         # Generate deterministic interaction ID
         import hashlib
 
-        payload = f"{left}|{op}|{right}|lag={lag}"
+        payload = (
+            f"{left}|{op}|{right}|lag={lag}|"
+            f"left_direction={left_direction or ''}|right_direction={right_direction or ''}"
+        )
         int_id = "INT_" + hashlib.sha256(payload.encode()).hexdigest()[:12].upper()
 
         for tpl in request.templates.include:
@@ -726,7 +749,15 @@ def _expand_interaction_triggers(
                 for direction in request.evaluation.directions:
                     for lag_e in request.evaluation.entry_lags:
                         for ctx in context_slices:
-                            trigger = TriggerSpec.interaction(int_id, left, right, op, lag)
+                            trigger = TriggerSpec.interaction(
+                                int_id,
+                                left,
+                                right,
+                                op,
+                                lag,
+                                left_direction=left_direction,
+                                right_direction=right_direction,
+                            )
                             hyps.append(
                                 HypothesisSpec(
                                     trigger=trigger,

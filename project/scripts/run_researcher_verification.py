@@ -40,8 +40,8 @@ def _load_json(path: Path) -> dict:
 
 def _resolve_phase2_artifact(phase2_dir: Path, filename: str) -> Path | None:
     candidates = [
-        phase2_dir / "search_engine" / filename,
         phase2_dir / filename,
+        phase2_dir / "search_engine" / filename,
     ]
     for candidate in candidates:
         if candidate.exists():

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+import yaml
 
 from project.research.agent_io import proposal_to_experiment as p2e
 from project.tests.research.agent_io.test_issue_proposal import _write_proposal, _write_registry
@@ -63,3 +64,22 @@ def test_translate_and_validate_proposal_does_not_clobber_existing_config_on_fai
 
     assert config_path.read_text(encoding="utf-8") == "program_id: stable_bundle\n"
     assert not list(out_dir.glob(".experiment__staged__*.yaml"))
+
+
+def test_translate_and_validate_proposal_preserves_avoid_region_keys(tmp_path: Path) -> None:
+    registry_root = tmp_path / "registries"
+    proposal_path = tmp_path / "proposal.yaml"
+    _write_registry(registry_root)
+    _write_proposal(proposal_path)
+
+    payload = yaml.safe_load(proposal_path.read_text(encoding="utf-8"))
+    payload["avoid_region_keys"] = ["rk_1", "rk_2"]
+    proposal_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    result = p2e.translate_and_validate_proposal(
+        proposal_path,
+        registry_root=registry_root,
+        out_dir=tmp_path / "bundle",
+    )
+
+    assert result["experiment_config"]["avoid_region_keys"] == ["rk_1", "rk_2"]

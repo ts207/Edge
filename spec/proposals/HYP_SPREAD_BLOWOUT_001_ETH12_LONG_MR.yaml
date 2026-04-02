@@ -1,0 +1,55 @@
+# HYP_SPREAD_BLOWOUT_001_ETH12_LONG_MR - ETH SPREAD_BLOWOUT 12b long mean-reversion
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: After exhausting the LIQUIDITY_GAP_PRINT and SWEEP_STOPRUN branches,
+# the next clean bounded near-miss left in the corrected LIQUIDITY_DISLOCATION
+# rerun is ETH SPREAD_BLOWOUT followed by 12-bar long mean reversion. This
+# proposal isolates that exact cell to test whether the weaker broad-run signal
+# improves once family multiplicity and unrelated event surfaces are removed.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  ETH-only SPREAD_BLOWOUT mean-reversion isolate
+  (HYP_SPREAD_BLOWOUT_001_ETH12_LONG_MR). After the stronger ETH
+  LIQUIDITY_GAP_PRINT branch and the weaker ETH SWEEP_STOPRUN branch were both
+  exhausted, the next remaining bounded expression in the corrected 2022-2023
+  liquidity-dislocation rerun is ETHUSDT, long, 12-bar mean reversion after
+  SPREAD_BLOWOUT. This run tests that exact cell without widening scope.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - SPREAD_BLOWOUT
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+
+templates:
+  - mean_reversion
+
+horizons_bars:
+  - 12
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

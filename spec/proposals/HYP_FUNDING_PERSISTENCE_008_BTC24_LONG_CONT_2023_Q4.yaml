@@ -1,0 +1,53 @@
+# HYP_FUNDING_PERSISTENCE_008_BTC24_LONG_CONT_2023_Q4 - BTC FUNDING_PERSISTENCE_TRIGGER 24b continuation 2023 Q4
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The BTC 2023 H2 funding-persistence slice survived while the Q3
+# slice failed. This proposal tests whether the remaining H2 effect is
+# concentrated in Q4.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only 2023 Q4 concentration slice for FUNDING_PERSISTENCE_TRIGGER continuation
+  (HYP_FUNDING_PERSISTENCE_008_BTC24_LONG_CONT_2023_Q4). The 2023 H2 branch
+  survived at the search layer while the 2023 Q3 mirror failed. This run
+  freezes the same BTCUSDT / long / 24-bar continuation expression and tests
+  only Q4 to determine whether the remaining signal is concentrated in the last
+  quarter of 2023.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2023-10-01"
+end: "2024-01-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FUNDING_PERSISTENCE_TRIGGER
+  canonical_regimes:
+    - BASIS_FUNDING_DISLOCATION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

@@ -1,0 +1,67 @@
+# HYP_INT_BREAKOUT_HIGHVOL_010_BTC48_SHORT_FULL_LAG12_UPDIR_2024Q3 - BTC breakout/high-vol up-breakout short continuation 48b extended through 2024 Q3
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: the adjacent 2024 Q1 extension strengthened the branch materially
+# but still left the split geometry imbalanced at 4 validation samples versus 26
+# test samples. Start shifts do not fix that. This proposal extends the same
+# branch far enough to move the current late-2023 / early-2024 pocket out of the
+# extreme test tail and test whether validation support improves.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only further adjacent-window confirmation for the directed breakout/high-vol
+  48b interaction branch
+  (HYP_INT_BREAKOUT_HIGHVOL_010_BTC48_SHORT_FULL_LAG12_UPDIR_2024Q3). This
+  proposal freezes the same up-breakout interaction trigger and changes only the
+  end date, extending the branch through 2024 Q3 so the current test-heavy
+  pocket can be re-evaluated under a later split boundary.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2024-10-01"
+
+trigger_space:
+  allowed_trigger_types: [INTERACTION]
+  interactions:
+    include:
+      - left: BREAKOUT_TRIGGER
+        left_direction: up
+        right: HIGH_VOL_REGIME
+        op: CONFIRM
+        lag: 12
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 48
+
+directions:
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 5
+  max_hypotheses_per_template: 5
+  max_hypotheses_per_event_family: 5
+
+discovery_profile: standard
+phase2_gate_profile: discovery
+
+bounded:
+  baseline_run_id: prog_fresh_start_2026q2_20260402T010000Z_9457d4a2bf
+  experiment_type: confirmation
+  allowed_change_field: end
+  change_reason: Extend through 2024 Q3 to improve validation-side support under the time split.
+  compare_to_baseline: true

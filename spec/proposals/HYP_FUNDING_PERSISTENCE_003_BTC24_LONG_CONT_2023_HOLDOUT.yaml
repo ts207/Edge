@@ -1,0 +1,56 @@
+# HYP_FUNDING_PERSISTENCE_003_BTC24_LONG_CONT_2023_HOLDOUT - BTC FUNDING_PERSISTENCE_TRIGGER 24b continuation 2023 holdout
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The parent BTC funding-persistence isolate survived phase 2, while
+# the carry-state split over-conditioned the sample and missed the t-stat gate.
+# This follow-up keeps the exact same expression and asks one narrower question:
+# does the BTC 24-bar long continuation still hold inside the 2023 calendar
+# holdout, where event count remains above the minimum sample floor.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only 2023 temporal holdout for FUNDING_PERSISTENCE_TRIGGER continuation
+  (HYP_FUNDING_PERSISTENCE_003_BTC24_LONG_CONT_2023_HOLDOUT). The parent
+  2022-2023 isolate survived phase 2 and the carry-state refinement weakened at
+  the t-stat gate, which suggests over-conditioning rather than a cleaner
+  mechanism split. This run freezes the same event, template, horizon,
+  direction, and entry timing while narrowing the date window to 2023 only to
+  test whether the edge survives as a bounded calendar holdout.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2023-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FUNDING_PERSISTENCE_TRIGGER
+  canonical_regimes:
+    - BASIS_FUNDING_DISLOCATION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

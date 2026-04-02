@@ -1,0 +1,54 @@
+# HYP_VOL_SHOCK_004_ETH12_LONG_CONT - ETH VOL_SHOCK high-vol continuation
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: Within high-volatility conditions, ETH VOL_SHOCK events may trigger
+# a short-lived forced-flow continuation rather than immediate repair. This
+# proposal isolates the single strongest cell from the prior continuation reframe.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  ETH-only VOL_SHOCK continuation isolate (HYP_VOL_SHOCK_004_ETH12_LONG_CONT).
+  The broader continuation reframe improved one cell materially but still failed
+  phase 2. This follow-up narrows to ETHUSDT, long direction, 12-bar horizon,
+  and high-volatility context to test whether the strongest observed pocket can
+  survive the repo's discovery gates when isolated.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - VOL_SHOCK
+  canonical_regimes:
+    - VOLATILITY_TRANSITION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 12
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts:
+  vol_regime:
+    - high
+
+search_control:
+  max_hypotheses_total: 25
+  max_hypotheses_per_template: 25
+  max_hypotheses_per_event_family: 25

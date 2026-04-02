@@ -272,8 +272,19 @@ def evaluate_hypothesis_batch(
             1.0 if spec.direction == "long" else -1.0 if spec.direction == "short" else 1.0
         )
 
-        # Resolve trigger mask
+        # Resolve trigger mask on the trigger bar.
         mask_raw = _trigger_mask(spec, features)
+
+        # Feature conditions are defined over trigger rows, not shifted entry rows.
+        if spec.feature_condition is not None:
+            fc_spec = HypothesisSpec(
+                trigger=spec.feature_condition,
+                direction=spec.direction,
+                horizon=spec.horizon,
+                template_id=spec.template_id,
+            )
+            fc_mask = _trigger_mask(fc_spec, features)
+            mask_raw = mask_raw & fc_mask
 
         # Apply entry lag
         if spec.entry_lag < 1:
@@ -293,17 +304,6 @@ def evaluate_hypothesis_batch(
                 rows.append(_null_row(spec, 0, "context_unresolvable"))
                 continue
             mask = mask & ctx_mask
-
-        # Apply optional feature condition
-        if spec.feature_condition is not None:
-            fc_spec = HypothesisSpec(
-                trigger=spec.feature_condition,
-                direction=spec.direction,
-                horizon=spec.horizon,
-                template_id=spec.template_id,
-            )
-            fc_mask = _trigger_mask(fc_spec, features)
-            mask = mask & fc_mask
 
         if not mask.any():
             rows.append(_null_row(spec, 0, "no_trigger_hits"))

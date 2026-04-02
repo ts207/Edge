@@ -1,0 +1,56 @@
+# HYP_SEQ_VOL_BREAKOUT_001_BTC24_CONT_BIDIR - BTC compression then breakout 24b continuation, both sides
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: Use a denser volatility-transition chain after exhausting the sparse
+# funding and zero-hit liquidity-recovery branches. This probe tests whether
+# RANGE_COMPRESSION_END -> BREAKOUT_TRIGGER on BTCUSDT carries 24-bar
+# continuation expectancy, allowing both long and short because breakout sign is
+# part of the mechanism rather than assumed ex ante.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only sequence isolate for volatility compression then breakout
+  (HYP_SEQ_VOL_BREAKOUT_001_BTC24_CONT_BIDIR). This run tests the
+  RANGE_COMPRESSION_END -> BREAKOUT_TRIGGER chain with a 48-bar ordered window,
+  24-bar continuation horizon, and both directions under discovery gates.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [SEQUENCE]
+  sequences:
+    include:
+      - [RANGE_COMPRESSION_END, BREAKOUT_TRIGGER]
+    max_gaps_bars: [48]
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 20
+  max_hypotheses_per_template: 20
+  max_hypotheses_per_event_family: 20
+
+discovery_profile: standard
+phase2_gate_profile: discovery

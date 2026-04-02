@@ -55,13 +55,7 @@ def evaluate_by_regime(
     if features.empty or "close" not in features.columns:
         return pd.DataFrame()
 
-    # Trigger mask with explicit entry-lag guardrail
-    if spec.entry_lag < 1:
-        raise ValueError("entry_lag must be >= 1 to prevent same-bar entry leakage")
     mask_raw = trigger_mask(spec, features)
-    mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
-
-    # Feature condition
     if spec.feature_condition is not None:
         fc_spec = HypothesisSpec(
             trigger=spec.feature_condition,
@@ -70,7 +64,12 @@ def evaluate_by_regime(
             template_id=spec.template_id,
         )
         fc_mask = trigger_mask(fc_spec, features)
-        mask = mask & fc_mask
+        mask_raw = mask_raw & fc_mask
+
+    # Trigger mask with explicit entry-lag guardrail
+    if spec.entry_lag < 1:
+        raise ValueError("entry_lag must be >= 1 to prevent same-bar entry leakage")
+    mask = mask_raw.astype("boolean").shift(spec.entry_lag, fill_value=False).astype(bool)
 
     # Forward returns
     fwd = forward_log_returns(features["close"], horizon_bars)

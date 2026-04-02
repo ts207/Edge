@@ -44,6 +44,7 @@ Read the bounded lane first, then the bootstrap lane if you are trying to popula
 - [ARCHITECTURE_MAINTENANCE_CHECKLIST.md](ARCHITECTURE_MAINTENANCE_CHECKLIST.md)
 - [ARCHITECTURE_SURFACE_INVENTORY.md](ARCHITECTURE_SURFACE_INVENTORY.md)
 - [RESEARCH_CALIBRATION_BASELINE.md](RESEARCH_CALIBRATION_BASELINE.md)
+- [chatgpt_apps_sdk_plan.md](chatgpt_apps_sdk_plan.md)
 
 ## Operator templates
 

@@ -14,9 +14,9 @@ import pandas as pd
 from project.core.config import load_configs
 from project.io.utils import (
     choose_partition_dir,
-    resolve_raw_dataset_dir,
     ensure_dir,
     list_parquet_files,
+    raw_dataset_dir_candidates,
     read_parquet,
     run_scoped_lake_path,
     write_parquet,
@@ -205,6 +205,26 @@ def _write_data_quality_report(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _resolve_raw_dir(
+    data_root: Path,
+    *,
+    market: str,
+    symbol: str,
+    dataset: str,
+    run_id: str | None = None,
+    aliases: tuple[str, ...] = (),
+) -> Path | None:
+    candidates = raw_dataset_dir_candidates(
+        data_root,
+        market=market,
+        symbol=symbol,
+        dataset=dataset,
+        run_id=run_id,
+        aliases=aliases,
+    )
+    return choose_partition_dir(candidates) or (candidates[0] if candidates else None)
+
+
 def main() -> int:
     data_root = get_data_root()
     parser = argparse.ArgumentParser(description="Build cleaned bars for the requested timeframe")
@@ -256,7 +276,7 @@ def main() -> int:
 
     try:
         for symbol in symbols:
-            raw_dir = resolve_raw_dataset_dir(
+            raw_dir = _resolve_raw_dir(
                 data_root,
                 market=market,
                 symbol=symbol,
@@ -270,14 +290,14 @@ def main() -> int:
             funding_dir = None
             if market == "perp":
                 for _subdir in ("funding", "fundingRate"):
-                    _candidate = resolve_raw_dataset_dir(
+                    _candidate = _resolve_raw_dir(
                         data_root,
                         market=market,
                         symbol=symbol,
                         dataset=_subdir,
                         run_id=run_id,
                     )
-                    _files = list_parquet_files(_candidate)
+                    _files = list_parquet_files(_candidate) if _candidate else []
                     if _files:
                         funding_dir = _candidate
                         funding_files = _files

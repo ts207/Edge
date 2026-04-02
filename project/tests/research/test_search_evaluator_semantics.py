@@ -306,3 +306,30 @@ def test_evaluate_hypothesis_batch_logs_actual_invalid_reason_counts(monkeypatch
         evaluate_hypothesis_batch([incompatible, valid], features, min_sample_size=1)
 
     assert "1 valid, 1 invalid (incompatible_template_family=1)" in caplog.text
+
+
+def test_feature_condition_filters_trigger_rows_before_entry_lag(monkeypatch):
+    _patch_robustness(monkeypatch)
+    features = _base_features(periods=120)
+    signal_col = EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column
+    direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
+    features[signal_col] = False
+    features.loc[[0, 5, 10, 15], signal_col] = True
+    features[direction_col] = np.nan
+    features.loc[[0, 10], direction_col] = 1.0
+    features.loc[[5, 15], direction_col] = -1.0
+
+    spec = HypothesisSpec(
+        trigger=TriggerSpec.event("VOL_SHOCK"),
+        direction="long",
+        horizon="12b",
+        template_id="continuation",
+        entry_lag=1,
+        feature_condition=TriggerSpec.feature_predicate(direction_col, ">", 0.0),
+    )
+
+    metrics = evaluate_hypothesis_batch([spec], features, min_sample_size=1)
+
+    assert bool(metrics.loc[0, "valid"]) is True
+    assert int(metrics.loc[0, "n"]) == 2
+    assert float(metrics.loc[0, "mean_return_bps"]) > 0.0

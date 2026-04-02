@@ -90,11 +90,17 @@ def load_symbol_joined_condition_contract(
     feature_keys = _collect_columns_from_partition_candidates(feature_paths)
     keys.update(feature_keys)
 
-    context_file_paths = [
-        run_scoped_lake_path(data_root, rid, "context", "market_state", sym, f"{tf}.parquet"),
-        Path(data_root) / "lake" / "context" / "market_state" / sym / f"{tf}.parquet",
+    context_partition_paths = [
+        run_scoped_lake_path(data_root, rid, "features", "perp", sym, tf, "market_context"),
+        Path(data_root) / "lake" / "features" / "perp" / sym / tf / "market_context",
     ]
-    context_keys = _collect_columns_from_file_candidates(context_file_paths)
+    context_keys = _collect_columns_from_partition_candidates(context_partition_paths)
+    if not context_keys:
+        legacy_context_file_paths = [
+            run_scoped_lake_path(data_root, rid, "context", "market_state", sym, f"{tf}.parquet"),
+            Path(data_root) / "lake" / "context" / "market_state" / sym / f"{tf}.parquet",
+        ]
+        context_keys = _collect_columns_from_file_candidates(legacy_context_file_paths)
     keys.update(context_keys)
 
     keys.update(CANONICAL_EVENT_JOIN_KEYS)

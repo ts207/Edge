@@ -1,0 +1,51 @@
+# HYP_FUNDING_PERSISTENCE_001_BTC24_LONG_CONT - BTC FUNDING_PERSISTENCE_TRIGGER 24b continuation
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The broad POSITIONING_EXTREMES family run surfaced the first clearly
+# stronger search-level discovery of the cycle: BTC FUNDING_PERSISTENCE_TRIGGER
+# followed by 24-bar long continuation. This proposal isolates that exact cell to
+# test whether the effect survives as a bounded single-expression run.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only FUNDING_PERSISTENCE_TRIGGER continuation isolate
+  (HYP_FUNDING_PERSISTENCE_001_BTC24_LONG_CONT). The broad 2022-2023
+  POSITIONING_EXTREMES family run surfaced BTCUSDT / long / 24 bars /
+  continuation as the strongest corrected discovery candidate. This run isolates
+  that exact expression without broad-family multiplicity dilution.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2023-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FUNDING_PERSISTENCE_TRIGGER
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

@@ -88,9 +88,10 @@ def hypotheses_to_bridge_candidates(
     )
     if filtered.empty:
         return pd.DataFrame()
+    filtered = filtered.reset_index(drop=True)
 
     # Core Mappings
-    out = pd.DataFrame()
+    out = pd.DataFrame(index=filtered.index)
     event_types = [_sanitize_event_type(row) for _, row in filtered.iterrows()]
     out["event_type"] = event_types
     out["hypothesis_id"] = filtered["hypothesis_id"].astype(str)
@@ -116,9 +117,9 @@ def hypotheses_to_bridge_candidates(
     # Remove only STATE_/TRANSITION_ events that are high-frequency (regime labels)
     noise_mask = state_mask & high_frequency_mask
     if noise_mask.any():
-        filtered = filtered[~noise_mask].copy()
-        out = out[~noise_mask].copy()
-    
+        filtered = filtered.loc[~noise_mask].reset_index(drop=True)
+        out = out.loc[~noise_mask].reset_index(drop=True)
+
     if filtered.empty:
         return pd.DataFrame()
     out["direction"] = filtered["direction"].astype(str)

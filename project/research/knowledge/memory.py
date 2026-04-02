@@ -163,10 +163,14 @@ class MemoryPaths:
     failures: Path
     proposals: Path
     reflections: Path
-    evidence_ledger: Path
     belief_state: Path
     next_actions: Path
     proposals_dir: Path
+    evidence_ledger: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.evidence_ledger is None:
+            object.__setattr__(self, "evidence_ledger", self.root / "evidence_ledger.parquet")
 
 
 def memory_paths(program_id: str, *, data_root: Path | None = None) -> MemoryPaths:

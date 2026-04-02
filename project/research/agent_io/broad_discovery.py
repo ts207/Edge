@@ -83,25 +83,33 @@ def _load_family_events(
     tested_counts: Dict[str, int],
 ) -> List[FamilyEventConfig]:
     """Load all events in a family with their configurations."""
-    from project.domain.compiled_registry import get_domain_registry
+    from project.events.governance import get_event_governance_metadata
 
     normalized = str(family).strip().upper()
     configs = []
-    registry = get_domain_registry()
-    for event_type, spec in registry.event_definitions.items():
-        if normalized not in {
-            spec.canonical_regime,
-            spec.canonical_family,
-            spec.legacy_family,
-        }:
+    events_registry = registry_root / "events.yaml"
+    payload = {}
+    if events_registry.exists():
+        import yaml
+
+        payload = yaml.safe_load(events_registry.read_text(encoding="utf-8")) or {}
+    events = payload.get("events", {}) if isinstance(payload, dict) else {}
+    for event_type, spec in events.items():
+        if not isinstance(spec, dict):
             continue
-        if spec.is_composite or spec.is_context_tag or spec.is_strategy_construct:
+        if not bool(spec.get("enabled", False)):
+            continue
+        family_name = str(spec.get("family", "") or "").strip().upper()
+        if family_name != normalized:
+            continue
+        governance = get_event_governance_metadata(str(event_type).strip().upper())
+        if not bool(governance.get("trade_trigger_eligible", False)):
             continue
         weight = event_weights.get(event_type, 1.5)
         tested = tested_counts.get(event_type, 0)
         configs.append(
             FamilyEventConfig(
-                event_type=event_type,
+                event_type=str(event_type).strip().upper(),
                 weight=weight,
                 priority_score=weight,
                 tested_count=tested,
@@ -137,6 +145,59 @@ def _load_tested_counts(program_id: str, data_root: Path) -> Dict[str, int]:
         return counts
     except Exception:
         return {}
+
+
+def _load_avoid_region_keys(
+    *,
+    program_id: str,
+    data_root: Path,
+    symbols: Sequence[str],
+    event_types: Sequence[str],
+    templates: Sequence[str],
+    directions: Sequence[str],
+    horizon_bars: Sequence[int],
+    entry_lags: Sequence[int],
+) -> List[str]:
+    try:
+        tested = read_memory_table(program_id, "tested_regions", data_root=data_root)
+    except Exception:
+        return []
+    if tested.empty or "region_key" not in tested.columns:
+        return []
+
+    mask = pd.Series(True, index=tested.index)
+    if "symbol_scope" in tested.columns:
+        mask &= tested["symbol_scope"].astype(str).str.upper().isin(
+            {str(symbol).strip().upper() for symbol in symbols}
+        )
+    if "event_type" in tested.columns:
+        mask &= tested["event_type"].astype(str).str.upper().isin(
+            {str(event_type).strip().upper() for event_type in event_types}
+        )
+    if "template_id" in tested.columns:
+        mask &= tested["template_id"].astype(str).isin({str(template).strip() for template in templates})
+    if "direction" in tested.columns:
+        mask &= tested["direction"].astype(str).isin({str(direction).strip() for direction in directions})
+    if "horizon" in tested.columns:
+        requested_horizons = {
+            token
+            for horizon in horizon_bars
+            for token in (str(horizon).strip(), f"{int(horizon)}b")
+            if str(token).strip()
+        }
+        mask &= tested["horizon"].astype(str).isin(requested_horizons)
+    if "entry_lag" in tested.columns:
+        mask &= pd.to_numeric(tested["entry_lag"], errors="coerce").fillna(-1).astype(int).isin(
+            {int(entry_lag) for entry_lag in entry_lags}
+        )
+
+    return sorted(
+        {
+            str(value).strip()
+            for value in tested.loc[mask, "region_key"].tolist()
+            if str(value).strip()
+        }
+    )
 
 
 def _benjamini_hochberg(p_values: List[float]) -> List[float]:
@@ -242,6 +303,17 @@ def _build_broad_proposal(
     """Build a proposal that tests all events in a family."""
     start, end = _default_date_scope(config.lookback_days)
     event_types = [e.event_type for e in events[: config.max_events_per_family]]
+    templates = ["mean_reversion", "continuation", "trend_continuation"]
+    avoid_region_keys = _load_avoid_region_keys(
+        program_id=config.program_id,
+        data_root=Path(config.data_root) if config.data_root else get_data_root(),
+        symbols=config.symbols,
+        event_types=event_types,
+        templates=templates,
+        directions=config.directions,
+        horizon_bars=config.horizon_bars,
+        entry_lags=config.entry_lags,
+    )
 
     return {
         "program_id": config.program_id,
@@ -252,7 +324,7 @@ def _build_broad_proposal(
             "allowed_trigger_types": ["EVENT"],
             "events": {"include": event_types},
         },
-        "templates": ["mean_reversion", "continuation", "breakout"],
+        "templates": templates,
         "description": f"BroadDiscovery: {family} family ({len(event_types)} events)",
         "run_mode": "research",
         "objective_name": config.objective_name,
@@ -269,6 +341,7 @@ def _build_broad_proposal(
             "max_hypotheses_per_event_family": config.max_hypotheses_per_event * len(event_types),
             "random_seed": 42,
         },
+        "avoid_region_keys": avoid_region_keys,
         "artifacts": {
             "campaign_memory": True,
             "proposal_audit": True,

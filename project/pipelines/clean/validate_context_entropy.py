@@ -184,6 +184,10 @@ def main() -> int:
 
         candidates = [
             run_scoped_lake_path(
+                data_root, args.run_id, "features", args.market, symbol, "5m", "market_context"
+            ),
+            data_root / "lake" / "features" / args.market / symbol / "5m" / "market_context",
+            run_scoped_lake_path(
                 data_root, args.run_id, "context", "market_state", args.market, symbol, "5m"
             ),
             data_root / "lake" / "context" / "market_state" / args.market / symbol / "5m",

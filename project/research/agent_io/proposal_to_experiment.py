@@ -103,6 +103,7 @@ def proposal_to_experiment_config(
             "entry_lags": list(entry_lags),
         },
         "contexts": {"include": dict(proposal.contexts)},
+        "avoid_region_keys": list(proposal.avoid_region_keys),
         "search_control": search_control,
         "promotion": {
             "enabled": bool(promotion_enabled),

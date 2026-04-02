@@ -1,0 +1,67 @@
+# HYP_INT_BREAKOUT_HIGHVOL_011_BTC48_SHORT_2024Q2Q3_LAG12_UPDIR - BTC breakout/high-vol up-breakout short continuation 48b isolated 2024 Q2-Q3 segment
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: the broad directed 48-bar interaction branch remained a research
+# survivor through 2024 Q1 but flipped sign when extended through 2024 Q3. This
+# proposal isolates only the newly added 2024 Q2-Q3 segment to test whether the
+# added window is the source of the reversal.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only segment-isolation confirmation for the directed breakout/high-vol 48b
+  interaction branch
+  (HYP_INT_BREAKOUT_HIGHVOL_011_BTC48_SHORT_2024Q2Q3_LAG12_UPDIR). This
+  proposal freezes the same up-breakout interaction trigger and changes only the
+  start date versus the failed 2024 Q3 extension, isolating the adjacent
+  2024-04-01 through 2024-10-01 segment to test whether the new window is
+  directionally adverse on its own.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2024-04-01"
+end: "2024-10-01"
+
+trigger_space:
+  allowed_trigger_types: [INTERACTION]
+  interactions:
+    include:
+      - left: BREAKOUT_TRIGGER
+        left_direction: up
+        right: HIGH_VOL_REGIME
+        op: CONFIRM
+        lag: 12
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 48
+
+directions:
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 5
+  max_hypotheses_per_template: 5
+  max_hypotheses_per_event_family: 5
+
+discovery_profile: standard
+phase2_gate_profile: discovery
+
+bounded:
+  baseline_run_id: prog_fresh_start_2026q2_20260402T011940Z_ae0eaca6c2
+  experiment_type: confirmation
+  allowed_change_field: start
+  change_reason: Isolate the newly added 2024 Q2-Q3 segment after the broad extension flipped sign.
+  compare_to_baseline: true

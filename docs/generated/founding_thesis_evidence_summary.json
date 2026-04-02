@@ -1,50 +1,25 @@
 {
-  "generated": [
+  "generated": [],
+  "unsupported": [
     {
       "candidate_id": "THESIS_VOL_SHOCK",
-      "event_type": "VOL_SHOCK",
-      "symbols": "BTCUSDT|ETHUSDT",
-      "horizon_bars": 24,
-      "bundle_count": 2,
-      "sample_size_total": 3739,
-      "mean_net_expectancy_bps": 102.33351200036819
+      "reason": "insufficient_event_count_after_detection"
     },
     {
       "candidate_id": "THESIS_LIQUIDITY_VACUUM",
-      "event_type": "LIQUIDITY_VACUUM",
-      "symbols": "BTCUSDT|ETHUSDT",
-      "horizon_bars": 24,
-      "bundle_count": 2,
-      "sample_size_total": 1083,
-      "mean_net_expectancy_bps": 95.43203919257084
+      "reason": "insufficient_event_count_after_detection"
     },
     {
       "candidate_id": "THESIS_LIQUIDATION_CASCADE",
-      "event_type": "LIQUIDATION_CASCADE",
-      "symbols": "BTCUSDT|ETHUSDT",
-      "horizon_bars": 24,
-      "bundle_count": 2,
-      "sample_size_total": 329,
-      "mean_net_expectancy_bps": 121.4509562074671
+      "reason": "required_input_dataset_missing"
     },
     {
       "candidate_id": "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM",
-      "event_type": "VOL_SHOCK_LIQUIDITY_CONFIRM",
-      "symbols": "BTCUSDT|ETHUSDT",
-      "horizon_bars": 24,
-      "bundle_count": 2,
-      "sample_size_total": 110,
-      "mean_net_expectancy_bps": 96.70701477257583
+      "reason": "insufficient_event_count_after_detection"
     },
     {
       "candidate_id": "THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM",
-      "event_type": "LIQUIDITY_VACUUM_CASCADE_CONFIRM",
-      "symbols": "BTCUSDT|ETHUSDT",
-      "horizon_bars": 48,
-      "bundle_count": 1,
-      "sample_size_total": 39,
-      "mean_net_expectancy_bps": 145.95055478655877
+      "reason": "insufficient_event_count_after_detection"
     }
-  ],
-  "unsupported": []
+  ]
 }

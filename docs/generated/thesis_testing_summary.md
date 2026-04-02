@@ -4,8 +4,8 @@ This is a governance-first Block B testing pass over the seed queue.
 It scores ontology, implementation, invalidation clarity, and deployment readiness from current repo artifacts.
 It does **not** claim that empirical holdout/confounder testing exists where the evidence source is still a contract fallback.
 
-- candidates_reviewed: `12`
-- decision_counts: `needs_more_evidence=11`, `needs_repair=1`
+- candidates_reviewed: `13`
+- decision_counts: `needs_more_evidence=12`, `needs_repair=1`
 
 ## Key conclusion
 
@@ -22,8 +22,8 @@ This is the intended fail-closed behavior for Block B on a bootstrap-only invent
 | THESIS_LIQUIDITY_VACUUM | 24 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
 | THESIS_VOL_SHOCK | 24 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
 | THESIS_BASIS_FND_CONFIRM | 23 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
+| THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM | 23 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
 | THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM | 23 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
-| THESIS_LIQUIDITY_STRESS_DIRECT | 22 | needs_more_evidence | empirical_evidence_bundle_missing|holdout_check_missing|confounder_sanity_check_missing | run_empirical_event_study |
 
 ## Scoring rubric
 

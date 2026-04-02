@@ -1,31 +1,28 @@
 # Shadow live thesis summary
 
 - run_id: `block_h_shadow_live_v1`
-- contexts_evaluated: `88`
-- window: `2022-12-17 23:55:00+00:00` -> `2022-12-31 23:55:00+00:00`
+- contexts_evaluated: `92`
+- window: `2026-02-14 23:55:00+00:00` -> `2026-02-28 23:55:00+00:00`
 - symbols: `BTCUSDT, ETHUSDT`
-- trace_path: `/mnt/data/work_next/Edge-irene/data/reports/shadow_live/block_h_shadow_live_v1/shadow_live_thesis_trace.jsonl`
+- trace_path: `/home/irene/Edge/data/reports/shadow_live/block_h_shadow_live_v1/shadow_live_thesis_trace.jsonl`
 
 ## Action counts
 
-- `trade_normal`: `63`
-- `trade_small`: `25`
+- `reject`: `92`
 
 ## Confirmation thesis diagnostics
 
-- retrieved_cycles: `176`
-- eligible_cycles: `88`
-- confirmation_match_cycles: `32`
-- confirmation_missing_cycles: `144`
-- top_ranked_cycles: `1`
+- retrieved_cycles: `0`
+- eligible_cycles: `0`
+- confirmation_match_cycles: `0`
+- confirmation_missing_cycles: `0`
+- top_ranked_cycles: `0`
 
 ## Confirmation thesis breakdown
 
-- `THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM` — retrieved `88`, matches `13`, missing `75`, top-ranked `0`
-- `THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM` — retrieved `88`, matches `19`, missing `69`, top-ranked `1`
 
 ## Quality checks
 
-- no_silent_thesis_matches: `True`
+- no_silent_thesis_matches: `False`
 - no_unexplained_holds: `True`
-- overlap_metadata_visible_consistently: `True`
+- overlap_metadata_visible_consistently: `False`

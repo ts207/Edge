@@ -1,6 +1,7 @@
 # Repository Map
 
 This file explains where the important logic lives and what each layer owns.
+The `project/research/phase2_search_engine.py` module is the canonical planner-owned discovery stage.
 
 ## High-level layout
 

@@ -23,6 +23,7 @@ dependencies = [
   "pydantic==2.8.0",
   "aiohttp==3.9.5",
   "networkx",
+  "mcp[cli]",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,7 @@ include = ["project*"]
 edge = "project.cli:main"
 backtest = "project.cli:main"
 edge-backtest = "project.cli:main"
+edge-chatgpt-app = "project.apps.chatgpt.cli:main"
 edge-run-all = "project.pipelines.run_all:main"
 edge-live-engine = "project.scripts.run_live_engine:main"
 edge-phase2-discovery = "project.research.cli.candidate_discovery_cli:main"

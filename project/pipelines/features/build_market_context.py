@@ -40,6 +40,17 @@ _HIGH_VOL_PCT = 80
 _LOW_VOL_PCT = 20
 _SPREAD_ELEVATED_Z = 1.5
 _CROWDING_OI_DELTA_PCT = 0.05
+_VOL_REGIME_LABELS: dict[float, str] = {
+    0.0: "low",
+    1.0: "mid",
+    2.0: "high",
+    3.0: "shock",
+}
+_CARRY_STATE_LABELS: dict[float, str] = {
+    -1.0: "funding_neg",
+    0.0: "neutral",
+    1.0: "funding_pos",
+}
 
 
 def _context_quality_report_path(
@@ -90,6 +101,22 @@ def _normalize_utc_timestamp_column(
     return out
 
 
+def _label_from_state_code(series: pd.Series, mapping: dict[float, str]) -> pd.Series:
+    numeric = pd.to_numeric(series, errors="coerce").astype(float)
+    labels = numeric.map(mapping)
+    return labels.where(labels.notna(), pd.NA)
+
+
+def _written_path(write_result: object, requested_path: Path) -> Path:
+    if isinstance(write_result, tuple) and write_result:
+        candidate = write_result[0]
+        if isinstance(candidate, Path):
+            return candidate
+    if isinstance(write_result, Path):
+        return write_result
+    return requested_path
+
+
 def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     ensure_market_context_feature_definitions_registered()
     if "funding_rate_scaled" not in features.columns:
@@ -133,8 +160,13 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     fp_cols = [col for col in fp_state.columns if col != "timestamp"]
     out = out.merge(fp_state[["timestamp", *fp_cols]], on="timestamp", how="left")
 
-    # carry_state_code: +1 positive funding, -1 negative
-    out["carry_state_code"] = np.where(out["funding_rate_scaled"] >= 0, 1.0, -1.0)
+    # carry_state_code: +1 positive funding, 0 neutral funding, -1 negative funding
+    out["carry_state_code"] = np.where(
+        out["funding_rate_scaled"] > 0,
+        1.0,
+        np.where(out["funding_rate_scaled"] < 0, -1.0, 0.0),
+    ).astype(float)
+    out["carry_state"] = _label_from_state_code(out["carry_state_code"], _CARRY_STATE_LABELS)
 
     out["funding_persistence_state"] = (
         pd.to_numeric(out.get("fp_active", 0.0), errors="coerce").fillna(0.0) > 0
@@ -145,10 +177,14 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
         rv_pct = _normalize_percentile_scale(out["rv_pct_17280"])
         vol_probs = calculate_ms_vol_probabilities(rv_pct)
         out = pd.concat([out, vol_probs], axis=1)
+        out["vol_regime_code"] = pd.to_numeric(out["ms_vol_state"], errors="coerce").astype(float)
+        out["vol_regime"] = _label_from_state_code(out["vol_regime_code"], _VOL_REGIME_LABELS)
         out["high_vol_regime"] = (out["ms_vol_state"] >= 2.0).astype(float)
         out["low_vol_regime"] = (out["ms_vol_state"] == 0.0).astype(float)
     else:
         out["ms_vol_state"] = np.nan
+        out["vol_regime_code"] = np.nan
+        out["vol_regime"] = pd.Series(pd.NA, index=out.index, dtype="object")
         out["prob_vol_low"] = np.nan
         out["prob_vol_mid"] = np.nan
         out["prob_vol_high"] = np.nan
@@ -308,8 +344,15 @@ def main() -> int:
         level=logging.INFO, handlers=log_handlers, format="%(asctime)s %(levelname)s %(message)s"
     )
 
-    manifest = start_manifest("build_market_context", run_id, vars(args), [], [])
+    manifest = start_manifest(
+        f"build_market_context_{tf}" + ("_spot" if market == "spot" else ""),
+        run_id,
+        vars(args),
+        [],
+        [],
+    )
     stats: dict[str, object] = {"symbols": {}}
+    outputs: list[dict[str, object]] = []
 
     try:
         for symbol in symbols:
@@ -343,9 +386,17 @@ def main() -> int:
                 ):
                     out_dir = out_root / f"year={year}" / f"month={month:02d}"
                     out_path = out_dir / f"market_context_{symbol}_{year}-{month:02d}.parquet"
-                    write_parquet(group, out_path)
+                    actual_path = _written_path(write_parquet(group, out_path), out_path)
                     logging.info(
-                        f"Wrote market context for {symbol} {year}-{month:02d} to {out_path}"
+                        f"Wrote market context for {symbol} {year}-{month:02d} to {actual_path}"
+                    )
+                    outputs.append(
+                        {
+                            "path": str(actual_path),
+                            "rows": int(len(group)),
+                            "start_ts": group["timestamp"].min().isoformat(),
+                            "end_ts": group["timestamp"].max().isoformat(),
+                        }
                     )
 
                 report_path = _context_quality_report_path(
@@ -364,12 +415,16 @@ def main() -> int:
                     "quality": summarize_context_quality(result),
                 }
                 _write_context_quality_report(report_path, quality_payload)
+                outputs.append({"path": str(report_path), "rows": 1})
                 stats["symbols"][symbol] = {
                     "rows": int(len(result)),
                     "context_quality_report_path": str(report_path),
                     "context_quality_summary": quality_payload["quality"],
                 }
 
+        if not outputs:
+            raise RuntimeError("build_market_context produced no market context artifacts")
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as e:

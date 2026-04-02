@@ -1,0 +1,54 @@
+# HYP_FUNDING_PERSISTENCE_004_BTC24_LONG_CONT_2022_MIRROR - BTC FUNDING_PERSISTENCE_TRIGGER 24b continuation 2022 mirror
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: The 2023 holdout confirmed BTC 24-bar long continuation after
+# FUNDING_PERSISTENCE_TRIGGER. This mirror holdout keeps the same bounded
+# expression and tests whether the same signal survives in the adjacent 2022
+# slice, which is the cleanest remaining temporal confirmation for this event.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only 2022 temporal mirror for FUNDING_PERSISTENCE_TRIGGER continuation
+  (HYP_FUNDING_PERSISTENCE_004_BTC24_LONG_CONT_2022_MIRROR). The 2023 holdout
+  strengthened the base BTC 24-bar long continuation signal. This follow-up
+  freezes the same event, regime, template, horizon, direction, and entry
+  timing while narrowing the date window to 2022 only to test whether the
+  mechanism is stable across the adjacent calendar slice.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2022-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FUNDING_PERSISTENCE_TRIGGER
+  canonical_regimes:
+    - BASIS_FUNDING_DISLOCATION
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10
