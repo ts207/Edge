@@ -37,7 +37,6 @@ families:
     - overshoot_repair
     - only_if_liquidity
     - slippage_aware_filter
-    - liquidity_replenishment
     default_horizon: 15m
   VOLATILITY_TRANSITION:
     allowed_templates:
@@ -47,7 +46,6 @@ families:
     - volatility_expansion_follow
     - pullback_entry
     - only_if_regime
-    - structural_regime_shift
     default_horizon: 60m
   POSITIONING_EXTREMES:
     allowed_templates:
@@ -91,7 +89,6 @@ families:
     - mean_reversion
     - drawdown_filter
     - tail_risk_avoid
-    - structural_regime_shift
     default_horizon: 60m
   INFORMATION_DESYNC:
     allowed_templates:
@@ -100,12 +97,13 @@ families:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-    - basis_convergence
     default_horizon: 60m
   TEMPORAL_STRUCTURE:
     allowed_templates:
     - mean_reversion
     - continuation
+    - tail_risk_avoid
+    - only_if_no_news_window
     default_horizon: 15m
   EXECUTION_FRICTION:
     allowed_templates:
@@ -157,10 +155,6 @@ filter_templates:
     feature: basis_zscore
     operator: ">"
     threshold: 1.0
-  basis_convergence:
-    feature: basis_bps
-    operator: ">"
-    threshold: 5.0
   only_if_regime:
     feature: rv_pct_17280
     operator: ">"
@@ -197,3 +191,7 @@ filter_templates:
     feature: oi_delta_1h
     operator: "<"
     threshold: 0.0
+  only_if_no_news_window:
+    feature: calendar_event
+    operator: "=="
+    threshold: 0

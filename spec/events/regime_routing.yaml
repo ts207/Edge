@@ -28,7 +28,7 @@ regimes:
     profit_taking_profile: spread_recompression
   EXECUTION_FRICTION:
     bucket: trade_filtering
-    eligible_templates: [drawdown_filter, slippage_aware_filter, tail_risk_avoid]
+    eligible_templates: [slippage_aware_filter, tail_risk_avoid]
     forbidden_templates: [breakout_followthrough, mean_reversion]
     risk_posture: defensive
     execution_style: reduce_size_or_wait
@@ -59,7 +59,7 @@ regimes:
           risk_posture: reduced_size_high_confirmation
   POSITIONING_EXPANSION:
     bucket: trade_generating
-    eligible_templates: [trend_continuation, breakout_followthrough, volatility_expansion_follow]
+    eligible_templates: [continuation, convexity_capture, reversal_or_squeeze]
     forbidden_templates: [exhaustion_reversal]
     risk_posture: moderate
     execution_style: momentum_confirmed
@@ -77,7 +77,7 @@ regimes:
     profit_taking_profile: post_flush_rebound
   REGIME_TRANSITION:
     bucket: trade_generating
-    eligible_templates: [breakout_followthrough, trend_continuation, drawdown_filter]
+    eligible_templates: [continuation, only_if_regime, drawdown_filter]
     forbidden_templates: [range_reversion]
     risk_posture: moderate
     execution_style: transition_confirmed
@@ -86,7 +86,7 @@ regimes:
     profit_taking_profile: regime_follow_trail
   STATISTICAL_STRETCH_OVERSHOOT:
     bucket: trade_generating
-    eligible_templates: [overshoot_repair, mean_reversion, convergence]
+    eligible_templates: [overshoot_repair, mean_reversion]
     forbidden_templates: [trend_continuation]
     risk_posture: moderate
     execution_style: fade_extremes
@@ -104,7 +104,7 @@ regimes:
     profit_taking_profile: trailing_follow
   TREND_FAILURE_EXHAUSTION:
     bucket: trade_filtering
-    eligible_templates: [exhaustion_reversal, false_breakout_reversal, momentum_fade]
+    eligible_templates: [exhaustion_reversal, false_breakout_reversal, momentum_fade, mean_reversion]
     forbidden_templates: [trend_continuation]
     risk_posture: reduced_size_high_confirmation
     execution_style: wait_for_reclaim
@@ -113,7 +113,7 @@ regimes:
     profit_taking_profile: reclaim_then_scale
   VOLATILITY_EXPANSION:
     bucket: trade_generating
-    eligible_templates: [volatility_expansion_follow, breakout_followthrough, trend_continuation]
+    eligible_templates: [volatility_expansion_follow, trend_continuation]
     forbidden_templates: [mean_reversion]
     risk_posture: moderate
     execution_style: fast_follow
@@ -122,7 +122,7 @@ regimes:
     profit_taking_profile: volatility_trail
   VOLATILITY_RELAXATION_COMPRESSION_RELEASE:
     bucket: trade_filtering
-    eligible_templates: [breakout_followthrough, pullback_entry, drawdown_filter]
+    eligible_templates: [pullback_entry]
     forbidden_templates: [tail_risk_avoid]
     risk_posture: selective
     execution_style: await_break_confirmation
@@ -131,7 +131,7 @@ regimes:
     profit_taking_profile: breakout_extension
   VOLATILITY_TRANSITION:
     bucket: trade_generating
-    eligible_templates: [mean_reversion, continuation, trend_continuation, pullback_entry, only_if_regime]
+    eligible_templates: [mean_reversion, continuation, trend_continuation]
     forbidden_templates: [tail_risk_avoid]
     risk_posture: selective
     execution_style: normalization_confirmed

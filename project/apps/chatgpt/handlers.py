@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import contextlib
+import datetime as dt
 import json
 import shutil
-import subprocess
 import tempfile
+from collections import Counter
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
+import anyio
 import pandas as pd
 
 from project import PROJECT_ROOT
@@ -105,6 +107,51 @@ def _sort_records(records: list[dict[str, Any]], *keys: str) -> list[dict[str, A
         key=lambda row: tuple(str(row.get(key) or "") for key in keys),
         reverse=True,
     )
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        if pd.isna(value):
+            return 0
+    except Exception:
+        pass
+    try:
+        return int(value or 0)
+    except Exception:
+        return 0
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if pd.isna(value):
+            return None
+    except Exception:
+        pass
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _first_present(mapping: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = mapping.get(key)
+        if value in (None, ""):
+            continue
+        try:
+            if pd.isna(value):
+                continue
+        except Exception:
+            pass
+        return value
+    return None
+
+
+def _per_trade_to_bps(value: Any) -> float | None:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return None
+    return round(numeric * 10_000.0, 4)
 
 
 def _repo_root() -> Path:
@@ -447,37 +494,275 @@ def _selected_run_snapshot(run_id: str | None, data_root: Path) -> dict[str, Any
     return summary
 
 
-def _parse_codex_events(stdout: str) -> dict[str, Any]:
-    thread_id = ""
-    last_agent_message = ""
-    usage: dict[str, Any] = {}
-    event_types: list[str] = []
-
-    for line in str(stdout or "").splitlines():
-        text = str(line).strip()
-        if not text or not text.startswith("{"):
-            continue
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError:
-            continue
-        event_type = str(payload.get("type") or "").strip()
-        if event_type:
-            event_types.append(event_type)
-        if event_type == "thread.started":
-            thread_id = str(payload.get("thread_id") or thread_id)
-        elif event_type == "item.completed":
-            item = payload.get("item") if isinstance(payload.get("item"), dict) else {}
-            if str(item.get("type") or "").strip() == "agent_message":
-                last_agent_message = str(item.get("text") or last_agent_message)
-        elif event_type == "turn.completed" and isinstance(payload.get("usage"), dict):
-            usage = dict(payload["usage"])
-
+def _candidate_paths(run_id: str, data_root: Path) -> dict[str, Path]:
     return {
-        "thread_id": thread_id or None,
-        "last_agent_message": last_agent_message,
-        "usage": _clean_value(usage),
-        "event_types": event_types,
+        "phase2": data_root / "reports" / "phase2" / run_id / "phase2_candidates.parquet",
+        "edge": data_root / "reports" / "edge_candidates" / run_id / "edge_candidates_normalized.parquet",
+        "promotion_summary": data_root / "reports" / "promotions" / run_id / "promotion_summary.csv",
+        "phase2_diagnostics": data_root / "reports" / "phase2" / run_id / "phase2_diagnostics.json",
+    }
+
+
+def _candidate_label(row: dict[str, Any]) -> str:
+    event_type = str(_first_present(row, "event_type", "event", "trigger_type") or "unknown_event")
+    template = str(_first_present(row, "template_verb", "rule_template", "template_id", "template") or "unknown_template")
+    direction = str(_first_present(row, "direction") or "?")
+    horizon = str(_first_present(row, "horizon", "horizon_bars", "horizon_label") or "?")
+    return " / ".join([event_type, template, direction, horizon])
+
+
+def _candidate_metric_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    raw_bps = _safe_float(_first_present(row, "mean_return_bps", "bridge_gross_edge_bps_per_trade"))
+    if raw_bps is None:
+        raw_bps = _per_trade_to_bps(_first_present(row, "expectancy", "expectancy_per_trade", "expected_return_proxy"))
+    after_cost_bps = _safe_float(_first_present(row, "cost_adjusted_return_bps", "bridge_train_after_cost_bps"))
+    if after_cost_bps is None:
+        after_cost_bps = _per_trade_to_bps(_first_present(row, "after_cost_expectancy_per_trade"))
+    return {
+        "raw_bps": raw_bps,
+        "after_cost_bps": after_cost_bps,
+        "t_stat": _safe_float(_first_present(row, "t_stat", "t_value")),
+        "q_value": _safe_float(_first_present(row, "q_value", "q_value_family", "q_value_cluster")),
+        "n_events": _safe_int(_first_present(row, "n_events", "sample_size", "n")),
+    }
+
+
+def _candidate_row_score(row: dict[str, Any]) -> tuple[int, int, float, float, float]:
+    tradable = bool(
+        _first_present(row, "gate_bridge_tradable") is True
+        or str(_first_present(row, "bridge_eval_status", "status") or "").strip().lower() == "tradable"
+    )
+    promoted = str(_first_present(row, "status") or "").strip().lower() == "promoted"
+    metrics = _candidate_metric_snapshot(row)
+    t_stat = metrics["t_stat"] if metrics["t_stat"] is not None else float("-inf")
+    after_cost_bps = metrics["after_cost_bps"] if metrics["after_cost_bps"] is not None else float("-inf")
+    raw_bps = metrics["raw_bps"] if metrics["raw_bps"] is not None else float("-inf")
+    return (1 if promoted else 0, 1 if tradable else 0, t_stat, after_cost_bps, raw_bps)
+
+
+def _best_candidate_row(df: pd.DataFrame, *, source: str) -> dict[str, Any]:
+    if df.empty:
+        return {}
+    records = [_clean_value(record) for record in df.to_dict("records")]
+    best_row = max(records, key=_candidate_row_score)
+    metrics = _candidate_metric_snapshot(best_row)
+    return {
+        "source": source,
+        "candidate_id": _first_present(best_row, "candidate_id"),
+        "symbol": _first_present(best_row, "symbol", "candidate_symbol"),
+        "label": _candidate_label(best_row),
+        "event_type": _first_present(best_row, "event_type", "event", "trigger_type"),
+        "template": _first_present(best_row, "template_verb", "rule_template", "template_id", "template"),
+        "direction": _first_present(best_row, "direction"),
+        "horizon": _first_present(best_row, "horizon", "horizon_bars", "horizon_label"),
+        "bridge_eval_status": _first_present(best_row, "bridge_eval_status", "status"),
+        "gate_bridge_tradable": bool(_first_present(best_row, "gate_bridge_tradable") is True),
+        "primary_fail_gate": _first_present(best_row, "promotion_fail_gate_primary", "primary_fail_gate"),
+        **metrics,
+    }
+
+
+def _dominant_rejection_reason(diagnostics: dict[str, Any]) -> str | None:
+    counts = diagnostics.get("rejection_reason_counts")
+    if not isinstance(counts, dict) or not counts:
+        return None
+    sorted_counts = sorted(
+        ((str(key), _safe_int(value)) for key, value in counts.items()),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    return sorted_counts[0][0] if sorted_counts and sorted_counts[0][1] > 0 else None
+
+
+def _candidate_pipeline_status(
+    *,
+    promoted_count: int,
+    tradable_count: int,
+    phase2_count: int,
+    edge_count: int,
+    bridge_candidates_rows: int,
+    dominant_reject_reason: str | None,
+) -> str:
+    if promoted_count > 0:
+        return "promoted"
+    if tradable_count > 0:
+        return "tradable"
+    if phase2_count > 0 and bridge_candidates_rows > 0:
+        return "bridge_reject"
+    if phase2_count > 0:
+        return "phase2_survivor"
+    if edge_count > 0:
+        return "edge_candidate"
+    if dominant_reject_reason:
+        return "search_reject"
+    return "no_signal"
+
+
+def _candidate_pipeline_note(
+    *,
+    pipeline_status: str,
+    promoted_count: int,
+    tradable_count: int,
+    dominant_reject_reason: str | None,
+    best_candidate: dict[str, Any],
+) -> str:
+    if pipeline_status == "promoted":
+        return f"{promoted_count} promoted candidate(s)"
+    if pipeline_status == "tradable":
+        return f"{tradable_count} bridge-tradable candidate(s)"
+    if pipeline_status == "bridge_reject":
+        fail_gate = str(best_candidate.get("primary_fail_gate") or "").strip()
+        return f"Search pass, bridge reject{': ' + fail_gate if fail_gate else ''}"
+    if pipeline_status == "phase2_survivor":
+        return "Phase-2 survivor awaiting bridge confirmation"
+    if pipeline_status == "edge_candidate":
+        return "Exported edge candidate without promotion"
+    if pipeline_status == "search_reject" and dominant_reject_reason:
+        return f"Rejected at {dominant_reject_reason}"
+    return "No live candidate artifacts"
+
+
+def _run_candidate_snapshot(run_summary: dict[str, Any], data_root: Path) -> dict[str, Any]:
+    run_id = str(run_summary.get("run_id") or "").strip()
+    if not run_id:
+        return {}
+    paths = _candidate_paths(run_id, data_root)
+    phase2 = _read_table(paths["phase2"])
+    edge = _read_table(paths["edge"])
+    promotion_summary = _read_table(paths["promotion_summary"])
+    diagnostics = _read_json_dict(paths["phase2_diagnostics"])
+
+    phase2_count = int(len(phase2.index))
+    edge_count = int(len(edge.index))
+    promotion_summary_rows = int(len(promotion_summary.index))
+    promoted_count = _safe_int(run_summary.get("promoted_count"))
+    phase2_best = _best_candidate_row(phase2, source="phase2_candidates")
+    edge_best = _best_candidate_row(edge, source="edge_candidates")
+    best_candidate = edge_best or phase2_best
+
+    tradable_count = 0
+    if phase2_count:
+        phase2_tradable = phase2.copy()
+        if "gate_bridge_tradable" in phase2_tradable.columns:
+            tradable_count = int(phase2_tradable["gate_bridge_tradable"].fillna(False).astype(bool).sum())
+        elif "bridge_eval_status" in phase2_tradable.columns:
+            tradable_count = int(
+                phase2_tradable["bridge_eval_status"].astype(str).str.lower().eq("tradable").sum()
+            )
+
+    bridge_candidates_rows = _safe_int(diagnostics.get("bridge_candidates_rows"))
+    dominant_reject_reason = _dominant_rejection_reason(diagnostics)
+    pipeline_status = _candidate_pipeline_status(
+        promoted_count=promoted_count,
+        tradable_count=tradable_count,
+        phase2_count=phase2_count,
+        edge_count=edge_count,
+        bridge_candidates_rows=bridge_candidates_rows,
+        dominant_reject_reason=dominant_reject_reason,
+    )
+    return _clean_value(
+        {
+            "run_id": run_id,
+            "program_id": run_summary.get("program_id"),
+            "finished_at": run_summary.get("finished_at") or run_summary.get("started_at"),
+            "run_status": run_summary.get("status"),
+            "pipeline_status": pipeline_status,
+            "pipeline_note": _candidate_pipeline_note(
+                pipeline_status=pipeline_status,
+                promoted_count=promoted_count,
+                tradable_count=tradable_count,
+                dominant_reject_reason=dominant_reject_reason,
+                best_candidate=best_candidate,
+            ),
+            "phase2_candidate_count": phase2_count,
+            "edge_candidate_count": edge_count,
+            "bridge_candidate_count": bridge_candidates_rows,
+            "promotion_summary_rows": promotion_summary_rows,
+            "tradable_count": tradable_count,
+            "promoted_count": promoted_count,
+            "dominant_reject_reason": dominant_reject_reason,
+            "best_candidate": best_candidate,
+            "gate_funnel": _clean_value(diagnostics.get("gate_funnel") or {}),
+        }
+    )
+
+
+def _candidate_board(
+    run_summaries: list[dict[str, Any]],
+    *,
+    data_root: Path,
+    limit: int,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    board = [_run_candidate_snapshot(run_summary, data_root) for run_summary in run_summaries[:limit]]
+    status_counts = Counter(str(row.get("pipeline_status") or "") for row in board)
+    return (
+        {
+            "runs_tracked": len(board),
+            "phase2_survivors": sum(_safe_int(row.get("phase2_candidate_count")) for row in board),
+            "bridge_tradable": sum(_safe_int(row.get("tradable_count")) for row in board),
+            "promoted": sum(_safe_int(row.get("promoted_count")) for row in board),
+            "bridge_reject_runs": status_counts.get("bridge_reject", 0),
+            "search_reject_runs": status_counts.get("search_reject", 0),
+        },
+        board,
+    )
+
+
+def _import_codex_mcp_runtime() -> tuple[Any, Any, Any]:
+    try:
+        from mcp import ClientSession
+        from mcp.client.stdio import StdioServerParameters, stdio_client
+    except ImportError as exc:  # pragma: no cover - runtime dependency path
+        raise RuntimeError(
+            "The Python MCP SDK is required to proxy Codex through ChatGPT Apps. Install it with `pip install \"mcp[cli]\"`."
+        ) from exc
+    return ClientSession, StdioServerParameters, stdio_client
+
+
+def _codex_text_content(items: list[Any] | None) -> str:
+    messages: list[str] = []
+    for item in list(items or []):
+        if str(getattr(item, "type", "") or "") != "text":
+            continue
+        text = str(getattr(item, "text", "") or "").strip()
+        if text:
+            messages.append(text)
+    return "\n\n".join(messages)
+
+
+async def _run_codex_mcp_tool(
+    codex_path: str,
+    tool_name: str,
+    arguments: dict[str, Any],
+    timeout_sec: int,
+) -> dict[str, Any]:
+    ClientSession, StdioServerParameters, stdio_client = _import_codex_mcp_runtime()
+    server = StdioServerParameters(
+        command=str(codex_path),
+        args=["mcp-server"],
+        cwd=str(_repo_root()),
+    )
+
+    async with stdio_client(server) as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            with anyio.fail_after(timeout_sec):
+                await session.initialize()
+                result = await session.call_tool(
+                    tool_name,
+                    arguments=arguments,
+                    read_timeout_seconds=dt.timedelta(seconds=timeout_sec),
+                )
+
+    structured_content = _clean_value(result.structuredContent or {})
+    thread_id = str(structured_content.get("threadId") or "").strip() or None
+    final_message = str(structured_content.get("content") or "").strip() or _codex_text_content(result.content)
+    return {
+        "tool_name": tool_name,
+        "thread_id": thread_id,
+        "final_message": final_message,
+        "structured_content": structured_content,
+        "content": _clean_value([item.model_dump(mode="json") for item in list(result.content or [])]),
+        "is_error": bool(result.isError),
     }
 
 
@@ -544,6 +829,7 @@ def _diff_operator_state(before: dict[str, Any], after: dict[str, Any]) -> dict[
 def invoke_codex_operator(
     *,
     task: str,
+    thread_id: str | None = None,
     sandbox: str = "workspace-write",
     model: str | None = None,
     profile: str | None = None,
@@ -553,84 +839,75 @@ def invoke_codex_operator(
     if codex_path is None:
         raise RuntimeError("The `codex` CLI is not installed or not on PATH.")
     normalized_timeout_sec = _normalize_timeout_sec(timeout_sec)
+    normalized_thread_id = str(thread_id or "").strip() or None
     resolved_data_root = _resolve_data_root(None)
     before_state = _snapshot_operator_state(resolved_data_root)
+    tool_name = "codex-reply" if normalized_thread_id else "codex"
+    arguments: dict[str, Any] = {"prompt": str(task)}
+    if normalized_thread_id:
+        arguments["threadId"] = normalized_thread_id
+    else:
+        arguments["cwd"] = str(_repo_root())
+        arguments["sandbox"] = str(sandbox)
+        if model:
+            arguments["model"] = str(model)
+        if profile:
+            arguments["profile"] = str(profile)
 
-    with tempfile.NamedTemporaryFile(prefix="edge_codex_last_", suffix=".txt", delete=False) as handle:
-        last_message_path = Path(handle.name)
-
-    command = [
-        codex_path,
-        "exec",
-        "--json",
-        "--color",
-        "never",
-        "--ephemeral",
-        "--sandbox",
-        str(sandbox),
-        "--cd",
-        str(_repo_root()),
-        "--output-last-message",
-        str(last_message_path),
-    ]
-    if model:
-        command.extend(["--model", str(model)])
-    if profile:
-        command.extend(["--profile", str(profile)])
-    command.append(str(task))
-
-    completed: subprocess.CompletedProcess[str] | None = None
+    result_payload: dict[str, Any] = {}
     timeout_hit = False
-    stdout_text = ""
     stderr_text = ""
     try:
-        completed = subprocess.run(
-            command,
-            cwd=str(_repo_root()),
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=normalized_timeout_sec,
+        result_payload = anyio.run(
+            _run_codex_mcp_tool,
+            str(codex_path),
+            tool_name,
+            arguments,
+            normalized_timeout_sec,
         )
-        stdout_text = _coerce_text(completed.stdout)
-        stderr_text = _coerce_text(completed.stderr).strip()
-    except subprocess.TimeoutExpired as exc:
+    except TimeoutError:
         timeout_hit = True
-        stdout_text = _coerce_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
-        stderr_text = _coerce_text(getattr(exc, "stderr", None)).strip()
+        result_payload = {
+            "tool_name": tool_name,
+            "thread_id": normalized_thread_id,
+            "final_message": "",
+            "structured_content": {},
+            "content": [],
+            "is_error": False,
+        }
+    except Exception as exc:
+        stderr_text = _coerce_text(exc).strip()
+        result_payload = {
+            "tool_name": tool_name,
+            "thread_id": normalized_thread_id,
+            "final_message": "",
+            "structured_content": {},
+            "content": [],
+            "is_error": True,
+        }
 
-    parsed = _parse_codex_events(stdout_text)
-    try:
-        last_message_file = last_message_path.read_text(encoding="utf-8").strip()
-    except OSError:
-        last_message_file = ""
-    finally:
-        with contextlib.suppress(OSError):
-            last_message_path.unlink()
-
-    final_message = last_message_file or str(parsed.get("last_agent_message") or "")
     after_state = _snapshot_operator_state(resolved_data_root)
     post_run_probe = _diff_operator_state(before_state, after_state)
+    success = bool(result_payload) and not bool(result_payload.get("is_error"))
 
     return {
-        "status": (
-            "timeout"
-            if timeout_hit
-            else "success" if completed and completed.returncode == 0 else "failed"
-        ),
-        "exit_code": None if completed is None else int(completed.returncode),
+        "status": "timeout" if timeout_hit else "success" if success else "failed",
+        "exit_code": None,
         "task": str(task),
+        "tool_name": tool_name,
         "sandbox": str(sandbox),
         "model": str(model) if model else None,
         "profile": str(profile) if profile else None,
         "timeout_sec": normalized_timeout_sec,
         "timed_out": timeout_hit,
-        "repo_root": str(_repo_root()),
-        "thread_id": parsed.get("thread_id"),
-        "final_message": final_message,
+        "thread_id": result_payload.get("thread_id"),
+        "final_message": result_payload.get("final_message"),
+        "structured_content": result_payload.get("structured_content") or {},
+        "content": result_payload.get("content") or [],
+        "is_error": bool(result_payload.get("is_error")),
         "stderr": stderr_text or None,
-        "usage": parsed.get("usage") or {},
-        "event_types": list(parsed.get("event_types") or []),
+        "usage": {},
+        "event_types": [],
         "post_run_probe": post_run_probe,
     }
 
@@ -682,6 +959,11 @@ def get_operator_dashboard(
         program_id=active_program_id or None,
         limit=normalized_limit,
     )
+    candidate_summary, candidate_board = _candidate_board(
+        recent_runs,
+        data_root=resolved_data_root,
+        limit=normalized_limit,
+    )
     proposal_count = 0
     recent_proposals: list[dict[str, Any]] = []
     memory: dict[str, Any] = {}
@@ -695,6 +977,8 @@ def get_operator_dashboard(
 
     if not selected_run and recent_runs:
         selected_run = _selected_run_snapshot(str(recent_runs[0].get("run_id") or ""), resolved_data_root)
+    if selected_run:
+        selected_run["candidate_snapshot"] = _run_candidate_snapshot(selected_run, resolved_data_root)
 
     current_status = _dashboard_status(selected_run or {})
     subtitle = (
@@ -713,11 +997,16 @@ def get_operator_dashboard(
             "known_programs": len(program_cards),
             "recent_runs": len(recent_runs),
             "recent_proposals": proposal_count,
+            "phase2_survivors": candidate_summary["phase2_survivors"],
+            "bridge_tradable": candidate_summary["bridge_tradable"],
+            "promoted": candidate_summary["promoted"],
             "selected_run": selected_run.get("run_id") or "none",
         },
         "data_root": str(resolved_data_root),
         "active_program_id": active_program_id or None,
         "programs": program_cards,
+        "candidate_summary": candidate_summary,
+        "candidate_board": candidate_board,
         "memory": memory,
         "recent_proposals": recent_proposals,
         "recent_runs": recent_runs,

@@ -12,3 +12,5 @@
 - unexpected_regimes: []
 - non_routable_entries: []
 - invalid_templates: {}
+- bucket_mismatches: {}
+- empty_intersection_regimes: []

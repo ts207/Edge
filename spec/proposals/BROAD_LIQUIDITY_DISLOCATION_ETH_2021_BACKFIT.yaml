@@ -1,0 +1,56 @@
+program_id: PROG_FRESH_START_2026Q2
+start: "2021-01-01"
+end: "2021-12-31"
+symbols:
+  - ETHUSDT
+trigger_space:
+  allowed_trigger_types:
+    - EVENT
+  events:
+    include:
+      - ABSORPTION_EVENT
+      - DEPTH_COLLAPSE
+      - LIQUIDITY_GAP_PRINT
+      - LIQUIDITY_SHOCK
+      - LIQUIDITY_VACUUM
+      - ORDERFLOW_IMBALANCE_SHOCK
+      - SPREAD_BLOWOUT
+      - SWEEP_STOPRUN
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+templates:
+  - mean_reversion
+  - continuation
+  - trend_continuation
+description: >
+  ETH-only 2021 exploratory backfit over the registered LIQUIDITY_DISLOCATION
+  family. This run is intended to inspect which existing liquidity-stress events,
+  templates, directions, and 12/24-bar horizons align with 2021 data before
+  narrowing to a bounded follow-up proposal.
+run_mode: research
+objective_name: retail_profitability
+promotion_profile: disabled
+phase2_gate_profile: discovery
+timeframe: 5m
+instrument_classes:
+  - crypto
+horizons_bars:
+  - 12
+  - 24
+directions:
+  - long
+  - short
+entry_lags:
+  - 1
+contexts: {}
+search_control:
+  max_hypotheses_total: 5000
+  max_hypotheses_per_template: 500
+  max_hypotheses_per_event_family: 5000
+  random_seed: 42
+artifacts:
+  campaign_memory: true
+  proposal_audit: true
+  search_frontier: true
+knobs: {}
+search_spec: spec/search_space.yaml

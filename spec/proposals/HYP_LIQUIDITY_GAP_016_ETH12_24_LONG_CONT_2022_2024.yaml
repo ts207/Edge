@@ -1,0 +1,56 @@
+# HYP_LIQUIDITY_GAP_016_ETH12_24_LONG_CONT_2022_2024 - ETH LIQUIDITY_GAP_PRINT 12b/24b continuation 2022-2024 train/test
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-02
+#
+# Mechanism: The ETH LIQUIDITY_GAP_PRINT continuation branch produced multiple
+# phase-2 survivors in the December 2023 concentration slice. This confirmatory
+# extension keeps the same event family, regime, symbol, direction, template,
+# horizons, and entry timing, and changes one axis only: expand the in-sample
+# research window to 2022-2024 so the branch can be trained and tested on a
+# broader pre-holdout history before a separate 2025 validation run.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  ETH-only 2022-2024 train/test LIQUIDITY_GAP_PRINT continuation confirmation
+  (HYP_LIQUIDITY_GAP_016_ETH12_24_LONG_CONT_2022_2024). This run freezes the
+  ETHUSDT / long / LIQUIDITY_STRESS continuation mechanism and uses 12-bar and
+  24-bar horizons over the full 2022-2024 window before a separate 2025
+  holdout validation.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2025-01-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - LIQUIDITY_GAP_PRINT
+  canonical_regimes:
+    - LIQUIDITY_STRESS
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 12
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

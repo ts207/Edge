@@ -131,6 +131,15 @@ templates:
     supports_trigger_types:
     - EVENT
     - STATE
+  only_if_no_news_window:
+    enabled: true
+    supports_contexts: true
+    supports_directions:
+    - long
+    - short
+    supports_trigger_types:
+    - EVENT
+    - STATE
   only_if_oi:
     enabled: true
     supports_contexts: true

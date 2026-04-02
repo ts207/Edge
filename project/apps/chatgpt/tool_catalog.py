@@ -133,8 +133,8 @@ TOOL_CATALOG: tuple[ToolDefinition, ...] = (
     ),
     ToolDefinition(
         name="edge_invoke_operator",
-        title="Invoke Edge operator via Codex",
-        description="Run a Codex agent task inside the Edge repository to inspect, edit, and repair local files or tooling. Use this for repo maintenance through Codex, not for issuing a new Edge run.",
+        title="Invoke Edge operator via Codex MCP",
+        description="Run or continue a Codex MCP session inside the Edge repository to inspect, edit, and repair local files or tooling. Use this for repo maintenance through Codex, not for issuing a new Edge run.",
         handler="project.apps.chatgpt.handlers.invoke_codex_operator",
         input_model=_schema(CodexOperatorInvokeInput),
         input_schema=_json_schema(CodexOperatorInvokeInput),
@@ -145,7 +145,7 @@ TOOL_CATALOG: tuple[ToolDefinition, ...] = (
             read_only=False,
             destructive=True,
             open_world=False,
-            justification="Invokes an autonomous Codex agent against the local Edge workspace for repo inspection or repair, which may edit files, run commands, or perform irreversible local mutations depending on the task.",
+            justification="Invokes or continues a Codex MCP session against the local Edge workspace for repo inspection or repair, which may edit files, run commands, or perform irreversible local mutations depending on the task.",
         ),
     ),
     ToolDefinition(
@@ -202,7 +202,7 @@ TOOL_CATALOG: tuple[ToolDefinition, ...] = (
     ToolDefinition(
         name="edge_get_operator_dashboard",
         title="Get Edge operator dashboard",
-        description="Load proposal memory, recent proposals, and prior run results for the active Edge program so the dashboard can show what the operator already knows.",
+        description="Load proposal memory, recent proposals, prior run results, and the current candidate pipeline board for the active Edge program so operators can query project status in one place.",
         handler="project.apps.chatgpt.handlers.get_operator_dashboard",
         input_model=_schema(OperatorDashboardInput),
         input_schema=_json_schema(OperatorDashboardInput),

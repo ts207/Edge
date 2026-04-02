@@ -1,0 +1,56 @@
+# HYP_INT_LIQGAP_BEAR_021_ETH24_LONG_2021_SYNTH - ETH liquidity-gap confirmed by bear trend 2021 synthetic backfit
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-02
+#
+# 2021 replay note:
+# - ETH LIQUIDITY_GAP_PRINT 24-bar long expectancy improved materially inside
+#   bear-trend conditions during 2021
+# - this retune upgrades the annual event isolate to an event-state confirmation
+#   without changing the underlying event family
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: disabled
+run_mode: research
+discovery_profile: synthetic
+phase2_gate_profile: synthetic
+
+description: >
+  ETH-only synthetic backfit isolate for LIQUIDITY_GAP_PRINT confirmed by
+  BEAR_TREND_REGIME (HYP_INT_LIQGAP_BEAR_021_ETH24_LONG_2021_SYNTH). The 2021
+  replay showed cleaner 24-bar continuation after liquidity-gap prints inside
+  bear-trend conditions, so this run tunes only the trigger confirmation state.
+
+symbols:
+  - ETHUSDT
+
+timeframe: 5m
+start: "2021-01-01"
+end: "2021-12-31"
+
+trigger_space:
+  allowed_trigger_types: [INTERACTION]
+  interactions:
+    include:
+      - left: LIQUIDITY_GAP_PRINT
+        right: BEAR_TREND_REGIME
+        op: CONFIRM
+        lag: 3
+
+templates:
+  - continuation
+
+horizons_bars:
+  - 24
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 10
+  max_hypotheses_per_template: 10
+  max_hypotheses_per_event_family: 10

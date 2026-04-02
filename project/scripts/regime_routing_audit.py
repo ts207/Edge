@@ -24,8 +24,24 @@ def render_markdown(payload: dict) -> str:
         f"- unexpected_regimes: {payload.get('unexpected_regimes', [])}",
         f"- non_routable_entries: {payload.get('non_routable_entries', [])}",
         f"- invalid_templates: {payload.get('invalid_templates', {})}",
+        f"- bucket_mismatches: {payload.get('bucket_mismatches', {})}",
+        f"- empty_intersection_regimes: {payload.get('empty_intersection_regimes', [])}",
         "",
     ]
+    unsupported_templates = payload.get("eligible_templates_without_event_support", {})
+    unsupported_events = payload.get("events_without_supported_templates", {})
+    if unsupported_templates:
+        lines.append("## Routed Templates Without Event Support")
+        lines.append("")
+        for regime, templates in unsupported_templates.items():
+            lines.append(f"- `{regime}`: `{templates}`")
+        lines.append("")
+    if unsupported_events:
+        lines.append("## Executable Events Without Routed Template Support")
+        lines.append("")
+        for regime, events in unsupported_events.items():
+            lines.append(f"- `{regime}`: `{events}`")
+        lines.append("")
     return "\n".join(lines)
 
 

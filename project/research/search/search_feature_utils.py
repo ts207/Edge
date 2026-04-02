@@ -161,9 +161,14 @@ def prepare_search_features_for_symbol(
         if not sym_flags.empty:
             features = pd.merge(features, sym_flags, on=["timestamp", "symbol"], how="left")
             flag_cols = [c for c in sym_flags.columns if c not in ["timestamp", "symbol"]]
-            features[flag_cols] = features[flag_cols].apply(
-                lambda col: col.where(col.notna(), False).astype(bool)
-            )
+            direction_cols = [column for column in flag_cols if column.startswith("evt_direction_")]
+            bool_cols = [column for column in flag_cols if column not in direction_cols]
+            if bool_cols:
+                features[bool_cols] = features[bool_cols].apply(
+                    lambda col: col.where(col.notna(), False).astype(bool)
+                )
+            for column in direction_cols:
+                features[column] = pd.to_numeric(features[column], errors="coerce")
 
     registry_events = load_registry_events(
         data_root=data_root,
@@ -172,7 +177,27 @@ def prepare_search_features_for_symbol(
     )
     direction_frame = _build_event_direction_frame(registry_events)
     if not direction_frame.empty:
-        features = pd.merge(features, direction_frame, on=["timestamp", "symbol"], how="left")
+        overlap_cols = [
+            column
+            for column in direction_frame.columns
+            if column not in {"timestamp", "symbol"} and column in features.columns
+        ]
+        if overlap_cols:
+            renamed = {column: f"{column}__dir" for column in overlap_cols}
+            features = pd.merge(
+                features,
+                direction_frame.rename(columns=renamed),
+                on=["timestamp", "symbol"],
+                how="left",
+            )
+            for column in overlap_cols:
+                merged_col = renamed[column]
+                features[column] = pd.to_numeric(features[column], errors="coerce").combine_first(
+                    pd.to_numeric(features[merged_col], errors="coerce")
+                )
+                features = features.drop(columns=[merged_col])
+        else:
+            features = pd.merge(features, direction_frame, on=["timestamp", "symbol"], how="left")
 
     features = _ensure_expected_event_columns(
         features,

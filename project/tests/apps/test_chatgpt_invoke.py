@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from subprocess import CompletedProcess, TimeoutExpired
 
 from project.apps.chatgpt.handlers import invoke_codex_operator
 
 
-def test_invoke_codex_operator_runs_codex_exec(monkeypatch, tmp_path: Path) -> None:
-    calls: list[list[str]] = []
+def test_invoke_codex_operator_starts_codex_mcp_session(monkeypatch, tmp_path: Path) -> None:
+    calls: list[dict[str, object]] = []
     snapshots = iter(
         [
             {"data_root": str(tmp_path), "recent_run_ids": [], "proposal_counts": {}},
@@ -19,24 +18,31 @@ def test_invoke_codex_operator_runs_codex_exec(monkeypatch, tmp_path: Path) -> N
         assert name == "codex"
         return "/usr/bin/codex"
 
-    def fake_run(command, cwd, capture_output, text, check, timeout):
-        calls.append(list(command))
-        assert timeout == 90
-        output_index = command.index("--output-last-message") + 1
-        Path(command[output_index]).write_text("Codex completed task.\n", encoding="utf-8")
-        return CompletedProcess(
-            args=command,
-            returncode=0,
-            stdout=(
-                '{"type":"thread.started","thread_id":"thread-123"}\n'
-                '{"type":"item.completed","item":{"type":"agent_message","text":"fallback message"}}\n'
-                '{"type":"turn.completed","usage":{"input_tokens":12,"output_tokens":4}}\n'
-            ),
-            stderr="",
+    async def fake_run_codex_mcp_tool(
+        codex_path: str,
+        tool_name: str,
+        arguments: dict[str, object],
+        timeout_sec: int,
+    ) -> dict[str, object]:
+        calls.append(
+            {
+                "codex_path": codex_path,
+                "tool_name": tool_name,
+                "arguments": dict(arguments),
+                "timeout_sec": timeout_sec,
+            }
         )
+        return {
+            "tool_name": tool_name,
+            "thread_id": "thread-123",
+            "final_message": "Codex completed task.",
+            "structured_content": {"threadId": "thread-123", "content": "Codex completed task."},
+            "content": [{"type": "text", "text": "Codex completed task."}],
+            "is_error": False,
+        }
 
     monkeypatch.setattr("project.apps.chatgpt.handlers.shutil.which", fake_which)
-    monkeypatch.setattr("project.apps.chatgpt.handlers.subprocess.run", fake_run)
+    monkeypatch.setattr("project.apps.chatgpt.handlers._run_codex_mcp_tool", fake_run_codex_mcp_tool)
     monkeypatch.setattr("project.apps.chatgpt.handlers._resolve_data_root", lambda _value: tmp_path)
     monkeypatch.setattr("project.apps.chatgpt.handlers._snapshot_operator_state", lambda _root: next(snapshots))
     monkeypatch.setattr(
@@ -58,27 +64,30 @@ def test_invoke_codex_operator_runs_codex_exec(monkeypatch, tmp_path: Path) -> N
     )
 
     assert calls
-    command = calls[0]
-    assert command[:2] == ["/usr/bin/codex", "exec"]
-    assert "--json" in command
-    assert "--ephemeral" in command
-    assert command[command.index("--sandbox") + 1] == "read-only"
-    assert command[command.index("--model") + 1] == "gpt-5-codex"
-    assert command[command.index("--profile") + 1] == "default"
-    assert command[-1] == "Inspect the Edge operator surface."
+    call = calls[0]
+    assert call["codex_path"] == "/usr/bin/codex"
+    assert call["tool_name"] == "codex"
+    assert call["timeout_sec"] == 90
+    assert call["arguments"] == {
+        "prompt": "Inspect the Edge operator surface.",
+        "cwd": str(Path(__file__).parents[3]),
+        "sandbox": "read-only",
+        "model": "gpt-5-codex",
+        "profile": "default",
+    }
 
     assert result["status"] == "success"
     assert result["timeout_sec"] == 90
     assert result["timed_out"] is False
+    assert result["tool_name"] == "codex"
     assert result["thread_id"] == "thread-123"
     assert result["final_message"] == "Codex completed task."
-    assert result["usage"]["input_tokens"] == 12
-    assert result["usage"]["output_tokens"] == 4
+    assert result["structured_content"]["threadId"] == "thread-123"
     assert result["post_run_probe"]["dashboard_changed"] is True
     assert result["post_run_probe"]["new_run_ids"] == ["run-9"]
 
 
-def test_invoke_codex_operator_returns_partial_timeout_payload(monkeypatch, tmp_path: Path) -> None:
+def test_invoke_codex_operator_continues_existing_thread(monkeypatch, tmp_path: Path) -> None:
     snapshots = iter(
         [
             {"data_root": str(tmp_path), "recent_run_ids": [], "proposal_counts": {"prog": 1}},
@@ -86,22 +95,27 @@ def test_invoke_codex_operator_returns_partial_timeout_payload(monkeypatch, tmp_
         ]
     )
 
-    def fake_run(command, cwd, capture_output, text, check, timeout):
-        assert timeout == 45
-        output_index = command.index("--output-last-message") + 1
-        Path(command[output_index]).write_text("Partial Codex result.\n", encoding="utf-8")
-        raise TimeoutExpired(
-            cmd=command,
-            timeout=timeout,
-            output=(
-                '{"type":"thread.started","thread_id":"thread-timeout"}\n'
-                '{"type":"item.completed","item":{"type":"agent_message","text":"still working"}}\n'
-            ),
-            stderr="partial stderr",
-        )
+    async def fake_run_codex_mcp_tool(
+        codex_path: str,
+        tool_name: str,
+        arguments: dict[str, object],
+        timeout_sec: int,
+    ) -> dict[str, object]:
+        assert codex_path == "/usr/bin/codex"
+        assert timeout_sec == 45
+        assert tool_name == "codex-reply"
+        assert arguments == {"prompt": "Repair artifacts.", "threadId": "thread-timeout"}
+        return {
+            "tool_name": tool_name,
+            "thread_id": "thread-timeout",
+            "final_message": "Partial Codex result.",
+            "structured_content": {"threadId": "thread-timeout", "content": "Partial Codex result."},
+            "content": [{"type": "text", "text": "Partial Codex result."}],
+            "is_error": False,
+        }
 
     monkeypatch.setattr("project.apps.chatgpt.handlers.shutil.which", lambda _name: "/usr/bin/codex")
-    monkeypatch.setattr("project.apps.chatgpt.handlers.subprocess.run", fake_run)
+    monkeypatch.setattr("project.apps.chatgpt.handlers._run_codex_mcp_tool", fake_run_codex_mcp_tool)
     monkeypatch.setattr("project.apps.chatgpt.handlers._resolve_data_root", lambda _value: tmp_path)
     monkeypatch.setattr("project.apps.chatgpt.handlers._snapshot_operator_state", lambda _root: next(snapshots))
     monkeypatch.setattr(
@@ -117,22 +131,22 @@ def test_invoke_codex_operator_returns_partial_timeout_payload(monkeypatch, tmp_
     result = invoke_codex_operator(
         task="Repair artifacts.",
         sandbox="workspace-write",
+        thread_id="thread-timeout",
         timeout_sec=45,
     )
 
-    assert result["status"] == "timeout"
+    assert result["status"] == "success"
     assert result["exit_code"] is None
     assert result["timeout_sec"] == 45
-    assert result["timed_out"] is True
+    assert result["timed_out"] is False
+    assert result["tool_name"] == "codex-reply"
     assert result["thread_id"] == "thread-timeout"
     assert result["final_message"] == "Partial Codex result."
-    assert result["stderr"] == "partial stderr"
-    assert result["event_types"] == ["thread.started", "item.completed"]
     assert result["post_run_probe"]["dashboard_changed"] is True
     assert result["post_run_probe"]["new_run_ids"] == ["run-timeout"]
 
 
-def test_invoke_codex_operator_normalizes_missing_timeout(monkeypatch, tmp_path: Path) -> None:
+def test_invoke_codex_operator_returns_timeout_payload(monkeypatch, tmp_path: Path) -> None:
     snapshots = iter(
         [
             {"data_root": str(tmp_path), "recent_run_ids": [], "proposal_counts": {}},
@@ -140,14 +154,20 @@ def test_invoke_codex_operator_normalizes_missing_timeout(monkeypatch, tmp_path:
         ]
     )
 
-    def fake_run(command, cwd, capture_output, text, check, timeout):
-        assert timeout == 300
-        output_index = command.index("--output-last-message") + 1
-        Path(command[output_index]).write_text("", encoding="utf-8")
-        return CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+    async def fake_run_codex_mcp_tool(
+        codex_path: str,
+        tool_name: str,
+        arguments: dict[str, object],
+        timeout_sec: int,
+    ) -> dict[str, object]:
+        assert codex_path == "/usr/bin/codex"
+        assert tool_name == "codex"
+        assert arguments["prompt"] == "Repair the repo."
+        assert timeout_sec == 300
+        raise TimeoutError
 
     monkeypatch.setattr("project.apps.chatgpt.handlers.shutil.which", lambda _name: "/usr/bin/codex")
-    monkeypatch.setattr("project.apps.chatgpt.handlers.subprocess.run", fake_run)
+    monkeypatch.setattr("project.apps.chatgpt.handlers._run_codex_mcp_tool", fake_run_codex_mcp_tool)
     monkeypatch.setattr("project.apps.chatgpt.handlers._resolve_data_root", lambda _value: tmp_path)
     monkeypatch.setattr("project.apps.chatgpt.handlers._snapshot_operator_state", lambda _root: next(snapshots))
 
@@ -157,8 +177,10 @@ def test_invoke_codex_operator_normalizes_missing_timeout(monkeypatch, tmp_path:
         timeout_sec=None,
     )
 
-    assert result["status"] == "success"
+    assert result["status"] == "timeout"
     assert result["timeout_sec"] == 300
+    assert result["timed_out"] is True
+    assert result["tool_name"] == "codex"
 
 
 def test_invoke_codex_operator_reports_missing_cli(monkeypatch) -> None:

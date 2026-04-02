@@ -108,7 +108,24 @@ def trigger_mask(spec: HypothesisSpec, features: pd.DataFrame) -> pd.Series:
         for col in cols:
             if col in features.columns:
                 vals = features[col]
-                return vals.where(vals.notna(), False).astype(bool)
+                mask = vals.where(vals.notna(), False).astype(bool)
+                if not t.event_direction:
+                    return mask
+                direction_col = next(
+                    (candidate for candidate in ColumnRegistry.event_direction_cols(eid) if candidate in features.columns),
+                    None,
+                )
+                if direction_col is None:
+                    log.debug("Event direction column for %r not found in features", eid)
+                    return false_mask
+                direction_vals = pd.to_numeric(features[direction_col], errors="coerce")
+                if t.event_direction == "up":
+                    direction_mask = direction_vals > 0
+                elif t.event_direction == "down":
+                    direction_mask = direction_vals < 0
+                else:
+                    direction_mask = direction_vals == 0
+                return mask & direction_mask.fillna(False)
         log.debug("Event column for %r (signal_col=%r) not found in features", eid, signal_col)
         return false_mask
 

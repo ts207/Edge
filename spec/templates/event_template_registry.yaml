@@ -12,9 +12,6 @@ defaults:
   - continuation
   - trend_continuation
   - pullback_entry
-  - cross_asset_mean_reversion
-  - lead_lag_continuation
-  - relative_value_basket
   horizons:
   - 5m
   - 15m
@@ -69,7 +66,6 @@ families:
     - overshoot_repair
     - only_if_liquidity
     - slippage_aware_filter
-    - liquidity_replenishment
   VOLATILITY_TRANSITION:
     templates:
     - mean_reversion
@@ -78,7 +74,6 @@ families:
     - volatility_expansion_follow
     - pullback_entry
     - only_if_regime
-    - structural_regime_shift
   POSITIONING_EXTREMES:
     templates:
     - reversal_or_squeeze
@@ -117,7 +112,6 @@ families:
     - mean_reversion
     - drawdown_filter
     - tail_risk_avoid
-    - structural_regime_shift
   INFORMATION_DESYNC:
     templates:
     - desync_repair
@@ -125,10 +119,6 @@ families:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-    - basis_convergence
-    - cross_asset_mean_reversion
-    - lead_lag_continuation
-    - relative_value_basket
   TEMPORAL_STRUCTURE:
     templates:
     - mean_reversion
@@ -166,6 +156,18 @@ events:
     - 15m
     max_candidates_per_run: 600
   DEPTH_COLLAPSE:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  DEPTH_STRESS_PROXY:
     canonical_family: LIQUIDITY_DISLOCATION
     templates:
     - mean_reversion
@@ -226,6 +228,17 @@ events:
     horizons:
     - 15m
     max_candidates_per_run: 600
+  ABSORPTION_PROXY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   LIQUIDITY_GAP_PRINT:
     canonical_family: LIQUIDITY_DISLOCATION
     templates:
@@ -238,6 +251,53 @@ events:
     horizons:
     - 15m
     max_candidates_per_run: 600
+  LIQUIDITY_STRESS_DIRECT:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  LIQUIDITY_STRESS_PROXY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  PRICE_VOL_IMBALANCE_PROXY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
+  WICK_REVERSAL_PROXY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 500
   VOL_SHOCK:
     canonical_family: VOLATILITY_TRANSITION
     templates:
@@ -501,6 +561,42 @@ events:
     horizons:
     - 60m
     max_candidates_per_run: 500
+  FLOW_EXHAUSTION_PROXY:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
+  LIQUIDATION_EXHAUSTION_REVERSAL:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 400
+  POST_DELEVERAGING_REBOUND:
+    canonical_family: FORCED_FLOW_AND_EXHAUSTION
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 400
   RANGE_BREAKOUT:
     canonical_family: TREND_STRUCTURE
     templates:
@@ -764,14 +860,65 @@ events:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-    - cross_asset_mean_reversion
-    - lead_lag_continuation
-    - relative_value_basket
     horizons:
     - 5m
     - 15m
     - 60m
     max_candidates_per_run: 600
+  SEQ_FND_EXTREME_THEN_BREAKOUT:
+    canonical_family: POSITIONING_EXTREMES
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 250
+  SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
+    canonical_family: LIQUIDITY_DISLOCATION
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - continuation
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 400
+  SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
+    canonical_family: POSITIONING_EXTREMES
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 250
+  SEQ_VOL_COMP_THEN_BREAKOUT:
+    canonical_family: VOLATILITY_TRANSITION
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
   SESSION_OPEN_EVENT:
     canonical_family: TEMPORAL_STRUCTURE
     templates:

@@ -1,0 +1,54 @@
+# Reset-state bounded discovery contract.
+# TREND_STRUCTURE follow-up: FALSE_BREAKOUT reversal restricted to up events.
+
+program_id: BTC_FAILED_CONT_RESET_2026Q2
+objective_name: retail_profitability
+promotion_profile: disabled
+run_mode: research
+
+description: >
+  Reset-state event-direction isolate for BTC FALSE_BREAKOUT using the
+  false_breakout_reversal template. This proposal preserves the BTC-only, 5m,
+  2021-01-01 through 2022-12-31 discovery slice, short direction, 24-bar and
+  48-bar horizons, and 12 bps cost model while restricting triggers to upward
+  FALSE_BREAKOUT events only.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2021-01-01"
+end: "2022-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - event_id: FALSE_BREAKOUT
+        event_direction: up
+
+templates:
+  - false_breakout_reversal
+
+horizons_bars:
+  - 24
+  - 48
+
+directions:
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 2
+  max_hypotheses_per_template: 2
+  max_hypotheses_per_event_family: 2
+
+knobs:
+  cost_bps: 12.0
+
+discovery_profile: standard
+phase2_gate_profile: discovery

@@ -9,8 +9,10 @@ def test_get_operator_dashboard_reads_memory_and_runs(tmp_path) -> None:
     program_id = "PROG_TEST"
     memory_root = tmp_path / "artifacts" / "experiments" / program_id / "memory"
     run_root = tmp_path / "runs" / "run_demo_001"
+    phase2_root = tmp_path / "reports" / "phase2" / "run_demo_001"
     memory_root.mkdir(parents=True)
     run_root.mkdir(parents=True)
+    phase2_root.mkdir(parents=True)
 
     pd.DataFrame(
         [
@@ -114,17 +116,53 @@ def test_get_operator_dashboard_reads_memory_and_runs(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "BTCUSDT::cand_demo",
+                "event_type": "LIQUIDITY_GAP_PRINT",
+                "template_verb": "continuation",
+                "direction": "long",
+                "horizon": "24b",
+                "symbol": "BTCUSDT",
+                "n_events": 32,
+                "mean_return_bps": 43.8033,
+                "after_cost_expectancy_per_trade": 0.00418033,
+                "t_stat": 3.9191,
+                "q_value": 0.0023,
+                "bridge_eval_status": "tradable",
+                "gate_bridge_tradable": True,
+            }
+        ]
+    ).to_csv(phase2_root / "phase2_candidates.csv", index=False)
+    (phase2_root / "phase2_diagnostics.json").write_text(
+        json.dumps(
+            {
+                "bridge_candidates_rows": 1,
+                "rejection_reason_counts": {},
+                "gate_funnel": {
+                    "generated": 1,
+                    "phase2_candidates_written": 1,
+                    "phase2_final": 1,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     payload = get_operator_dashboard(program_id=program_id, data_root=str(tmp_path), limit=5)
 
     assert payload["layout"] == "dashboard"
     assert payload["active_program_id"] == program_id
     assert payload["summary"]["recent_proposals"] == 1
+    assert payload["summary"]["bridge_tradable"] == 1
     assert payload["recent_proposals"][0]["run_id"] == "run_demo_001"
     assert payload["recent_runs"][0]["run_id"] == "run_demo_001"
     assert payload["selected_run"]["run_id"] == "run_demo_001"
+    assert payload["selected_run"]["candidate_snapshot"]["pipeline_status"] == "promoted"
     assert payload["memory"]["belief_state"]["current_focus"] == "repair funding drift"
     assert payload["memory"]["next_actions"]["repair"] == ["repair manifest lineage"]
+    assert payload["candidate_board"][0]["best_candidate"]["label"] == "LIQUIDITY_GAP_PRINT / continuation / long / 24b"
 
 
 def test_render_operator_summary_passes_dashboard_payload_through() -> None:

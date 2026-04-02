@@ -1,0 +1,53 @@
+# HYP_FAILED_CONT_018_BTC12_LONG_EXHREV - BTC FAILED_CONTINUATION 12b long exhaustion-reversal mirror
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: the first FAILED_CONTINUATION cut was not merely sub-threshold; it
+# was wrong-signed on the short side. This bounded recalibration tests whether
+# the family resolves through the opposite directional unwind while keeping the
+# event, template, horizon, lag, and broad window fixed.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only event-surface recalibration for FAILED_CONTINUATION
+  (HYP_FAILED_CONT_018_BTC12_LONG_EXHREV). This run mirrors the first family
+  cut by flipping only direction from short to long while preserving the
+  exhaustion-reversal expression over 12 bars on 2022-01-01 through 2024-04-01.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2024-04-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - FAILED_CONTINUATION
+
+templates:
+  - exhaustion_reversal
+
+horizons_bars:
+  - 12
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 5
+  max_hypotheses_per_template: 5
+  max_hypotheses_per_event_family: 5
+
+discovery_profile: standard
+phase2_gate_profile: discovery

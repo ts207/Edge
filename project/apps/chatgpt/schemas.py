@@ -103,23 +103,27 @@ class CodexOperatorInvokeInput(BaseModel):
         description="Instruction passed to Codex for inspecting, editing, or repairing the Edge repository itself.",
         min_length=1,
     )
+    thread_id: str | None = Field(
+        default=None,
+        description="Optional Codex MCP thread ID. When provided, the app continues that Codex session via codex-reply instead of starting a new one.",
+    )
     sandbox: Literal["read-only", "workspace-write"] = Field(
         default="workspace-write",
-        description="Sandbox passed to codex exec. Use read-only for inspection and workspace-write for code or artifact changes.",
+        description="Sandbox passed to the initial Codex MCP session. Use read-only for inspection and workspace-write for code or artifact changes.",
     )
     model: str | None = Field(
         default=None,
-        description="Optional Codex model override.",
+        description="Optional Codex MCP model override for a new session.",
     )
     profile: str | None = Field(
         default=None,
-        description="Optional Codex CLI profile override.",
+        description="Optional Codex CLI profile override for a new session.",
     )
     timeout_sec: int = Field(
         default=300,
         ge=15,
         le=3600,
-        description="Maximum seconds to wait for Codex before returning a timeout payload with partial events and post-run probes. Increase this for larger repo fixes.",
+        description="Maximum seconds to wait for the Codex MCP tool call before returning a timeout payload and post-run probes. Increase this for larger repo fixes.",
     )
 
 

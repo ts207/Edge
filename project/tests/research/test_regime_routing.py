@@ -14,6 +14,19 @@ def test_regime_routing_spec_covers_all_executable_canonical_regimes():
     assert payload["is_valid"] is True
     assert payload["missing_regimes"] == []
     assert payload["invalid_templates"] == {}
+    assert payload["empty_intersection_regimes"] == []
+    assert payload["eligible_templates_without_event_support"] == {}
+    assert payload["events_without_supported_templates"] == {}
+    assert payload["event_template_support"]["POSITIONING_EXPANSION"]["OI_SPIKE_POSITIVE"] == [
+        "continuation",
+        "convexity_capture",
+        "reversal_or_squeeze",
+    ]
+    assert payload["event_template_support"]["REGIME_TRANSITION"]["VOL_REGIME_SHIFT_EVENT"] == [
+        "continuation",
+        "drawdown_filter",
+        "only_if_regime",
+    ]
 
 
 def test_annotate_regime_metadata_adds_bucket_and_routing_profile():
@@ -31,4 +44,4 @@ def test_annotate_regime_metadata_adds_bucket_and_routing_profile():
     assert annotated.loc[0, "regime_bucket"] == "trade_generating"
     assert annotated.loc[0, "routing_profile_id"] == routing_entry_for_regime("LIQUIDITY_STRESS").routing_profile_id
     assert annotated.loc[1, "evidence_mode"] == "hybrid"
-    assert annotated.loc[2, "recommended_bucket"] == "trade_filtering"
+    assert annotated.loc[2, "recommended_bucket"] == "context_only"

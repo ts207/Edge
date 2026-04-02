@@ -4,7 +4,7 @@ This package is the first scaffold for a ChatGPT app built on the Apps SDK and t
 
 ## Current shape
 
-- `handlers.py` wraps existing Edge operator and reporting functions.
+- `handlers.py` wraps existing Edge operator and reporting functions, including Codex via the documented `codex mcp-server` surface.
 - `tool_catalog.py` defines the initial tool list, input models, and reviewer-facing hint classifications.
 - `resources.py` exposes the widget URI and HTML resource payload.
 - `server.py` builds the MCP blueprint and reserves the live FastMCP binding point.

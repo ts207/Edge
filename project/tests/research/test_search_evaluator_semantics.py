@@ -81,6 +81,81 @@ def test_prepare_search_features_for_symbol_merges_event_direction_metadata(monk
     assert features.loc[0, direction_col] == 1.0
 
 
+def test_prepare_search_features_for_symbol_coalesces_duplicate_event_direction_columns(monkeypatch):
+    base = _base_features()
+    direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
+
+    monkeypatch.setattr(
+        "project.research.search.search_feature_utils.load_registry_flags",
+        lambda **kwargs: pd.DataFrame(
+            {
+                "timestamp": [base.loc[0, "timestamp"]],
+                "symbol": ["BTCUSDT"],
+                EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column: [True],
+                direction_col: [1.0],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "project.research.search.search_feature_utils.load_registry_events",
+        lambda **kwargs: pd.DataFrame(
+            {
+                "timestamp": [base.loc[0, "timestamp"]],
+                "symbol": ["BTCUSDT"],
+                "event_type": ["VOL_SHOCK"],
+                "sign": [1],
+                "direction": ["up"],
+            }
+        ),
+    )
+
+    features = prepare_search_features_for_symbol(
+        run_id="dummy",
+        symbol="BTCUSDT",
+        timeframe="5m",
+        data_root=Path("/tmp"),
+        load_features_fn=lambda **kwargs: base.copy(),
+    )
+
+    assert direction_col in features.columns
+    assert f"{direction_col}_x" not in features.columns
+    assert f"{direction_col}_y" not in features.columns
+    assert f"{direction_col}__dir" not in features.columns
+    assert features.loc[0, direction_col] == 1.0
+
+
+def test_prepare_search_features_for_symbol_preserves_direction_sign_from_flags(monkeypatch):
+    base = _base_features()
+    direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
+
+    monkeypatch.setattr(
+        "project.research.search.search_feature_utils.load_registry_flags",
+        lambda **kwargs: pd.DataFrame(
+            {
+                "timestamp": [base.loc[0, "timestamp"], base.loc[1, "timestamp"]],
+                "symbol": ["BTCUSDT", "BTCUSDT"],
+                EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column: [True, True],
+                direction_col: [1.0, -1.0],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "project.research.search.search_feature_utils.load_registry_events",
+        lambda **kwargs: pd.DataFrame(columns=["timestamp", "symbol", "event_type", "sign", "direction"]),
+    )
+
+    features = prepare_search_features_for_symbol(
+        run_id="dummy",
+        symbol="BTCUSDT",
+        timeframe="5m",
+        data_root=Path("/tmp"),
+        load_features_fn=lambda **kwargs: base.copy(),
+    )
+
+    assert features.loc[0, direction_col] == 1.0
+    assert features.loc[1, direction_col] == -1.0
+
+
 def test_prepare_search_features_for_symbol_materializes_expected_zero_hit_event_columns(
     monkeypatch,
 ):
@@ -158,6 +233,30 @@ def test_event_templates_use_spec_side_policy_in_canonical_evaluator(monkeypatch
         metrics.loc["continuation", "mean_return_bps"]
     )
     assert 0.0 <= float(metrics.loc["continuation", "p_value"]) <= 1.0
+
+
+def test_event_trigger_event_direction_filters_signal_rows(monkeypatch):
+    _patch_robustness(monkeypatch)
+    features = _base_features(periods=120)
+    signal_col = EVENT_REGISTRY_SPECS["VOL_SHOCK"].signal_column
+    direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
+    features[signal_col] = False
+    features.loc[[0, 10, 20, 30], signal_col] = True
+    features[direction_col] = np.nan
+    features.loc[[0, 20], direction_col] = 1.0
+    features.loc[[10, 30], direction_col] = -1.0
+
+    directed = HypothesisSpec(
+        trigger=TriggerSpec.event("VOL_SHOCK", event_direction="up"),
+        direction="long",
+        horizon="12b",
+        template_id="continuation",
+    )
+
+    metrics = evaluate_hypothesis_batch([directed], features, min_sample_size=1)
+
+    assert bool(metrics.loc[0, "valid"]) is True
+    assert int(metrics.loc[0, "n"]) == 2
 
 
 def test_evaluated_hypotheses_materialize_entry_lag_metadata(monkeypatch):

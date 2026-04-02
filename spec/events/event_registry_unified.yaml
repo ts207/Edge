@@ -23,9 +23,6 @@ defaults:
   - continuation
   - trend_continuation
   - pullback_entry
-  - cross_asset_mean_reversion
-  - lead_lag_continuation
-  - relative_value_basket
   horizons:
   - 5m
   - 15m
@@ -117,10 +114,6 @@ families:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-    - basis_convergence
-    - cross_asset_mean_reversion
-    - lead_lag_continuation
-    - relative_value_basket
   LEAD_LAG_BREAK:
     parameters: {}
   LIQUIDATION_CASCADE:
@@ -136,7 +129,6 @@ families:
     - overshoot_repair
     - only_if_liquidity
     - slippage_aware_filter
-    - liquidity_replenishment
   LIQUIDITY_GAP_PRINT:
     parameters: {}
   LIQUIDITY_SHOCK:
@@ -192,7 +184,6 @@ families:
     - mean_reversion
     - drawdown_filter
     - tail_risk_avoid
-    - structural_regime_shift
   SCHEDULED_NEWS_WINDOW_EVENT:
     parameters: {}
   SEQ_FND_EXTREME_THEN_BREAKOUT:
@@ -258,7 +249,6 @@ families:
     - volatility_expansion_follow
     - pullback_entry
     - only_if_regime
-    - structural_regime_shift
   VOL_CLUSTER_SHIFT:
     parameters: {}
   VOL_REGIME_SHIFT_EVENT:
@@ -496,6 +486,15 @@ events:
       min_history_bars: 288
       cooldown_bars: 96
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   BAND_BREAK:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
@@ -972,9 +971,6 @@ events:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-    - cross_asset_mean_reversion
-    - lead_lag_continuation
-    - relative_value_basket
     horizons:
     - 5m
     - 15m
@@ -1249,6 +1245,16 @@ events:
       min_history_bars: 288
       cooldown_bars: 96
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   FAILED_CONTINUATION:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
@@ -1450,6 +1456,16 @@ events:
       min_spacing: 24
       cooldown_bars: 12
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 500
   FND_DISLOC:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
@@ -2218,6 +2234,16 @@ events:
       post_cluster_lookback: 48
       cooldown_bars: 24
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 400
   LIQUIDITY_GAP_PRINT:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
@@ -2351,6 +2377,16 @@ events:
       depth_collapse_th: 0.5
       spread_spike_th: 3.0
       median_window: 288
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   LIQUIDITY_STRESS_PROXY:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
@@ -2391,6 +2427,16 @@ events:
       depth_collapse_th: 0.5
       spread_spike_th: 3.0
       median_window: 288
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   LIQUIDITY_VACUUM:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
@@ -2886,6 +2932,16 @@ events:
       post_cluster_lookback: 48
       cooldown_bars: 24
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - exhaustion_reversal
+    - momentum_fade
+    - range_reversion
+    - only_if_trend
+    - drawdown_filter
+    horizons:
+    - 60m
+    max_candidates_per_run: 400
   PRICE_VOL_IMBALANCE_PROXY:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
@@ -2934,6 +2990,16 @@ events:
       min_spacing: 24
       cooldown_bars: 24
       merge_gap_bars: 0
+    templates:
+    - mean_reversion
+    - continuation
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 600
   PULLBACK_PIVOT:
     canonical_family: TREND_CONTINUATION
     canonical_regime: TREND_CONTINUATION
@@ -3160,6 +3226,19 @@ events:
       cluster_id: funding_crowding
       max_gap_bars: 96
       cooldown_bars: 24
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 250
   SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
@@ -3196,6 +3275,16 @@ events:
       cluster_id: liquidity_stress
       max_gap_bars: 48
       cooldown_bars: 24
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - continuation
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 400
   SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
     canonical_family: POSITIONING_EXPANSION
     canonical_regime: POSITIONING_EXPANSION
@@ -3232,6 +3321,19 @@ events:
       cluster_id: oi_dynamic
       max_gap_bars: 48
       cooldown_bars: 24
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 60m
+    max_candidates_per_run: 250
   SEQ_VOL_COMP_THEN_BREAKOUT:
     canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
     canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
@@ -3268,6 +3370,16 @@ events:
       cluster_id: vol_regime
       max_gap_bars: 48
       cooldown_bars: 24
+    templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    - volatility_expansion_follow
+    - pullback_entry
+    - only_if_regime
+    horizons:
+    - 60m
+    max_candidates_per_run: 350
   SESSION_CLOSE_EVENT:
     canonical_family: SCHEDULED_TEMPORAL_WINDOW
     canonical_regime: SCHEDULED_TEMPORAL_WINDOW
@@ -4228,6 +4340,15 @@ events:
       cooldown_bars: 12
       merge_gap_bars: 0
       min_volume_quantile: 0.2
+    templates:
+    - mean_reversion
+    - stop_run_repair
+    - overshoot_repair
+    - only_if_liquidity
+    - slippage_aware_filter
+    horizons:
+    - 15m
+    max_candidates_per_run: 500
   ZSCORE_STRETCH:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT

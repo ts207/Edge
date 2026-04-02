@@ -40,11 +40,12 @@ def recommended_bucket_for_regime(canonical_regime: str) -> str:
     regime = str(canonical_regime or "").strip().upper()
     trade_filtering = {
         "EXECUTION_FRICTION",
-        "SCHEDULED_TEMPORAL_WINDOW",
         "TREND_FAILURE_EXHAUSTION",
         "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
     }
-    context_only = set()
+    context_only = {
+        "SCHEDULED_TEMPORAL_WINDOW",
+    }
     if regime in context_only:
         return "context_only"
     if regime in trade_filtering:
@@ -122,6 +123,11 @@ def validate_regime_routing_spec(path: Path | None = None) -> Dict[str, Any]:
     unexpected = sorted(set(routing) - executable)
     invalid_templates: Dict[str, Dict[str, list[str]]] = {}
     non_routable_entries: list[str] = []
+    eligible_templates_without_event_support: Dict[str, list[str]] = {}
+    events_without_supported_templates: Dict[str, list[str]] = {}
+    event_template_support: Dict[str, Dict[str, list[str]]] = {}
+    empty_intersection_regimes: list[str] = []
+    bucket_mismatches: Dict[str, Dict[str, str]] = {}
     for regime, entry in routing.items():
         invalid_eligible = sorted(set(entry.eligible_templates) - available_templates)
         invalid_forbidden = sorted(set(entry.forbidden_templates) - available_templates)
@@ -132,6 +138,34 @@ def validate_regime_routing_spec(path: Path | None = None) -> Dict[str, Any]:
             }
         if regime not in executable and entry.bucket != "context_only":
             non_routable_entries.append(regime)
+        recommended_bucket = recommended_bucket_for_regime(regime)
+        if entry.bucket != recommended_bucket:
+            bucket_mismatches[regime] = {
+                "configured_bucket": entry.bucket,
+                "recommended_bucket": recommended_bucket,
+            }
+        regime_event_support: Dict[str, list[str]] = {}
+        unsupported_events: list[str] = []
+        for event_id in registry.get_event_ids_for_regime(regime, executable_only=True):
+            event_templates = set(registry.event_row(event_id).get("templates", []) or [])
+            valid_templates = sorted(event_templates & set(entry.eligible_templates))
+            regime_event_support[event_id] = valid_templates
+            if not valid_templates:
+                unsupported_events.append(event_id)
+        event_template_support[regime] = regime_event_support
+        if unsupported_events:
+            events_without_supported_templates[regime] = sorted(unsupported_events)
+        unsupported_templates = sorted(
+            template_id
+            for template_id in entry.eligible_templates
+            if not any(
+                template_id in templates for templates in regime_event_support.values()
+            )
+        )
+        if unsupported_templates:
+            eligible_templates_without_event_support[regime] = unsupported_templates
+        if regime_event_support and not any(regime_event_support.values()):
+            empty_intersection_regimes.append(regime)
     is_valid = not missing and not unexpected and not invalid_templates and not non_routable_entries
     return {
         "is_valid": is_valid,
@@ -144,6 +178,11 @@ def validate_regime_routing_spec(path: Path | None = None) -> Dict[str, Any]:
         "unexpected_regimes": unexpected,
         "invalid_templates": invalid_templates,
         "non_routable_entries": non_routable_entries,
+        "bucket_mismatches": bucket_mismatches,
+        "eligible_templates_without_event_support": eligible_templates_without_event_support,
+        "events_without_supported_templates": events_without_supported_templates,
+        "empty_intersection_regimes": sorted(empty_intersection_regimes),
+        "event_template_support": event_template_support,
     }
 
 

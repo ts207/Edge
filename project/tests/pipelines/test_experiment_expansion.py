@@ -225,3 +225,18 @@ def test_expand_and_resolve_interaction_with_left_direction(registry_root, tmp_p
     trigger = plan.hypotheses[0].trigger
     assert trigger.left_direction == "up"
     assert trigger.right_direction is None
+
+
+def test_expand_event_trigger_with_event_direction(registry_root, tmp_path):
+    conf = _make_config(
+        tmp_path,
+        trigger_space={
+            "allowed_trigger_types": ["EVENT"],
+            "events": {"include": [{"event_id": "E1", "event_direction": "up"}]},
+        },
+    )
+    plan = build_experiment_plan(conf, registry_root)
+    assert len(plan.hypotheses) == 1
+    trigger = plan.hypotheses[0].trigger
+    assert trigger.event_id == "E1"
+    assert trigger.event_direction == "up"

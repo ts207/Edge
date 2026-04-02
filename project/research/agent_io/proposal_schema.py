@@ -346,7 +346,16 @@ def validate_proposal_with_warnings(
     proposal = load_agent_proposal(path_or_payload)
     warnings: list[str] = []
     proxy_events = _load_proxy_event_types()
-    included_events = set(proposal.trigger_space.get("events", {}).get("include", []))
+    included_events: set[str] = set()
+    for raw_event in proposal.trigger_space.get("events", {}).get("include", []):
+        if isinstance(raw_event, dict):
+            event_id = str(
+                raw_event.get("event_id", raw_event.get("id", raw_event.get("event", ""))) or ""
+            ).strip()
+        else:
+            event_id = str(raw_event).strip()
+        if event_id:
+            included_events.add(event_id)
     for event_type in sorted(included_events & proxy_events):
         warnings.append(
             f"[PROXY_TIER] {event_type} resolves to a proxy detector "

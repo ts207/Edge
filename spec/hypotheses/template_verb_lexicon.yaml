@@ -11,12 +11,10 @@ verbs:
   - pullback_entry
   - range_reversion
   - momentum_fade
-  - acceleration_follow
   - exhaustion_reversal
   - reversal_or_squeeze
   path_risk_tail:
   - volatility_expansion_follow
-  - volatility_contraction_fade
   - tail_risk_avoid
   - drawdown_filter
   - convexity_capture
@@ -215,17 +213,6 @@ operators:
     - TREND_STRUCTURE
     default_conditioning: {}
     risk_metrics_required: []
-  acceleration_follow:
-    operator_id: op.acceleration_follow
-    operator_version: v1
-    requires_direction: true
-    side_policy: directional
-    label_target: fwd_return_h
-    test_spec: mean_gt_0
-    compatible_families:
-    - TREND_STRUCTURE
-    default_conditioning: {}
-    risk_metrics_required: []
   exhaustion_reversal:
     operator_id: op.exhaustion_reversal
     operator_version: v1
@@ -263,17 +250,6 @@ operators:
     default_conditioning: {}
     risk_metrics_required:
     - drawdown_filter
-  volatility_contraction_fade:
-    operator_id: op.volatility_contraction_fade
-    operator_version: v1
-    requires_direction: false
-    side_policy: contrarian
-    label_target: fwd_return_h
-    test_spec: mean_gt_0
-    compatible_families:
-    - VOLATILITY_TRANSITION
-    default_conditioning: {}
-    risk_metrics_required: []
   tail_risk_avoid:
     operator_id: op.tail_risk_avoid
     operator_version: v1
@@ -458,6 +434,7 @@ operators:
     side_policy: both
     label_target: gate
     test_spec: binary_gate
-    compatible_families: []
+    compatible_families:
+    - TEMPORAL_STRUCTURE
     default_conditioning: {}
     risk_metrics_required: []

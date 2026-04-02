@@ -93,12 +93,14 @@ def test_runtime_wrapper_uses_schema_defaults_for_optional_fields() -> None:
     def handler(
         *,
         task: str,
+        thread_id: str | None = None,
         sandbox: str | None = None,
         model: str | None = None,
         profile: str | None = None,
         timeout_sec: int | None = None,
     ) -> dict[str, object]:
         captured["task"] = task
+        captured["thread_id"] = thread_id
         captured["sandbox"] = sandbox
         captured["model"] = model
         captured["profile"] = profile
@@ -111,6 +113,7 @@ def test_runtime_wrapper_uses_schema_defaults_for_optional_fields() -> None:
     result = wrapped(task="Repair the repo.")
 
     assert result["task"] == "Repair the repo."
+    assert result["thread_id"] is None
     assert result["sandbox"] == "workspace-write"
     assert result["model"] is None
     assert result["profile"] is None

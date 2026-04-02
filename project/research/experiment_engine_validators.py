@@ -409,11 +409,16 @@ def _resolve_requested_event_ids(
     registries: RegistryBundle,
 ) -> List[str]:
     allowed_events = registries.events.get("events", {})
-    explicit_events = [
-        str(event_id).strip()
-        for event_id in request.trigger_space.events.get("include", [])
-        if str(event_id).strip()
-    ]
+    explicit_events = []
+    for raw_event in request.trigger_space.events.get("include", []):
+        if isinstance(raw_event, dict):
+            event_id = str(
+                raw_event.get("event_id", raw_event.get("id", raw_event.get("event", ""))) or ""
+            ).strip()
+        else:
+            event_id = str(raw_event).strip()
+        if event_id:
+            explicit_events.append(event_id)
     requested_regimes = [
         str(regime).strip().upper()
         for regime in getattr(request.trigger_space, "canonical_regimes", [])
@@ -583,14 +588,29 @@ def _expand_event_triggers(
     context_slices: List[Optional[Dict[str, str]]],
 ) -> List[HypothesisSpec]:
     hyps = []
-    requested_events = _resolve_requested_event_ids(request, registries)
-    for event_id in requested_events:
+    explicit_event_specs: list[tuple[str, str | None]] = []
+    for raw_event in request.trigger_space.events.get("include", []):
+        if isinstance(raw_event, dict):
+            event_id = str(
+                raw_event.get("event_id", raw_event.get("id", raw_event.get("event", ""))) or ""
+            ).strip()
+            event_direction = str(raw_event.get("event_direction", "") or "").strip().lower() or None
+        else:
+            event_id = str(raw_event).strip()
+            event_direction = None
+        if event_id:
+            explicit_event_specs.append((event_id, event_direction))
+    if explicit_event_specs:
+        requested_events = explicit_event_specs
+    else:
+        requested_events = [(event_id, None) for event_id in _resolve_requested_event_ids(request, registries)]
+    for event_id, event_direction in requested_events:
         for tpl in request.templates.include:
             for horizon in request.evaluation.horizons_bars:
                 for direction in request.evaluation.directions:
                     for lag in request.evaluation.entry_lags:
                         for ctx in context_slices:
-                            trigger = TriggerSpec.event(event_id)
+                            trigger = TriggerSpec.event(event_id, event_direction=event_direction)
                             hyps.append(
                                 HypothesisSpec(
                                     trigger=trigger,

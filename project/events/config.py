@@ -262,10 +262,15 @@ def compose_config(
         .strip()
         .upper()
     )
+    event_parameters = row.get("parameters", {})
+    if not isinstance(event_parameters, dict):
+        event_parameters = {}
     legacy_family = str(row.get("legacy_family", "")).strip().upper()
     if not legacy_family or legacy_family == normalized or legacy_family == family_name:
         legacy_family = str(
-            row.get("family", _legacy_family_by_event().get(normalized, ""))
+            row.get("family")
+            or _legacy_family_by_event().get(normalized, "")
+            or event_parameters.get("canonical_family")
         ).strip().upper()
     family_defaults_all = unified.get("families", {})
     family_defaults = (
@@ -287,11 +292,6 @@ def compose_config(
             state_defaults.update(
                 global_state_overrides.get(normalized, {}).get(normalized_state, {})
             )
-
-    # Compose parameters (Detection related)
-    event_parameters = row.get("parameters", {})
-    if not isinstance(event_parameters, dict):
-        event_parameters = {}
 
     # Extract legacy top-level keys that aren't core or unified
     legacy_parameters = {
@@ -343,7 +343,7 @@ def compose_config(
     compatible_templates: list[str] = []
     family_candidates = {
         token
-        for token in (family_name, legacy_family)
+        for token in (family_name, legacy_family, event_parameters.get("canonical_family"))
         if isinstance(token, str) and token.strip()
     }
     for t_name in templates:

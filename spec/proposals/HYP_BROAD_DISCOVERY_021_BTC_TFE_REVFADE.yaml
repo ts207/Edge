@@ -1,0 +1,64 @@
+# HYP_BROAD_DISCOVERY_021_BTC_TFE_REVFADE - BTC broad discovery inside TREND_FAILURE_EXHAUSTION using reversal/fade templates
+# Program: PROG_FRESH_START_2026Q2 | Author: Codex | Date: 2026-04-01
+#
+# Mechanism: after exhausting the tuned FAILED_CONTINUATION confirmation line,
+# the next repo-safe widening is a single-regime discovery sweep across adjacent
+# TREND_FAILURE_EXHAUSTION events that share the same reversal/fade expression
+# family. This broadens event and template coverage without crossing regimes,
+# symbols, or timeframe.
+
+program_id: PROG_FRESH_START_2026Q2
+objective_name: retail_profitability
+promotion_profile: research
+run_mode: research
+
+description: >
+  BTC-only broad discovery within TREND_FAILURE_EXHAUSTION
+  (HYP_BROAD_DISCOVERY_021_BTC_TFE_REVFADE). This run scans three adjacent
+  exhaustion/failure events over one reversal/fade template family on 5m data,
+  testing 12, 24, and 48 bar responses in both directions from 2022-01-01
+  through 2024-10-01.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2022-01-01"
+end: "2024-10-01"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  canonical_regimes:
+    - TREND_FAILURE_EXHAUSTION
+  events:
+    include:
+      - CLIMAX_VOLUME_BAR
+      - FAILED_CONTINUATION
+      - TREND_EXHAUSTION_TRIGGER
+
+templates:
+  - mean_reversion
+  - exhaustion_reversal
+  - momentum_fade
+
+horizons_bars:
+  - 12
+  - 24
+  - 48
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 100
+  max_hypotheses_per_template: 100
+  max_hypotheses_per_event_family: 150
+
+discovery_profile: standard
+phase2_gate_profile: discovery

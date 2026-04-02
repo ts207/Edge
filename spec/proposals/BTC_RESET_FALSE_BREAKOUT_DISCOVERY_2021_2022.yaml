@@ -1,0 +1,55 @@
+# Reset-state bounded discovery contract.
+# One-axis change from the prior reset runs: event family only.
+
+program_id: BTC_FAILED_CONT_RESET_2026Q2
+objective_name: retail_profitability
+promotion_profile: disabled
+run_mode: research
+
+description: >
+  Reset-state bounded discovery for BTC FALSE_BREAKOUT exhaustions. This
+  proposal preserves the BTC-only, 5m, long-only, exhaustion-reversal, 24-bar
+  and 48-bar contract from the prior reset runs while changing only the event
+  family to FALSE_BREAKOUT on the 2021-01-01 through 2022-12-31 discovery
+  slice.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2021-01-01"
+end: "2022-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  canonical_regimes:
+    - TREND_FAILURE_EXHAUSTION
+  events:
+    include:
+      - FALSE_BREAKOUT
+
+templates:
+  - exhaustion_reversal
+
+horizons_bars:
+  - 24
+  - 48
+
+directions:
+  - long
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 2
+  max_hypotheses_per_template: 2
+  max_hypotheses_per_event_family: 2
+
+knobs:
+  cost_bps: 12.0
+
+discovery_profile: standard
+phase2_gate_profile: discovery

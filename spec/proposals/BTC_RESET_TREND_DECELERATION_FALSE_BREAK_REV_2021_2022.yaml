@@ -1,0 +1,53 @@
+# Reset-state bounded discovery contract.
+# TREND_STRUCTURE follow-up: TREND_DECELERATION with false-breakout reversal.
+
+program_id: BTC_FAILED_CONT_RESET_2026Q2
+objective_name: retail_profitability
+promotion_profile: disabled
+run_mode: research
+
+description: >
+  Reset-state alternate-template test for BTC TREND_DECELERATION using the
+  false_breakout_reversal template. This proposal preserves the BTC-only, 5m,
+  2021-01-01 through 2022-12-31 discovery slice, 24-bar and 48-bar horizons,
+  and 12 bps cost model while allowing long and short expressions.
+
+symbols:
+  - BTCUSDT
+
+timeframe: 5m
+start: "2021-01-01"
+end: "2022-12-31"
+
+trigger_space:
+  allowed_trigger_types: [EVENT]
+  events:
+    include:
+      - TREND_DECELERATION
+
+templates:
+  - false_breakout_reversal
+
+horizons_bars:
+  - 24
+  - 48
+
+directions:
+  - long
+  - short
+
+entry_lags:
+  - 1
+
+contexts: {}
+
+search_control:
+  max_hypotheses_total: 4
+  max_hypotheses_per_template: 4
+  max_hypotheses_per_event_family: 4
+
+knobs:
+  cost_bps: 12.0
+
+discovery_profile: standard
+phase2_gate_profile: discovery

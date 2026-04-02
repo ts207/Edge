@@ -392,6 +392,14 @@
 
               <section class="panel">
                 <div class="panel-head">
+                  <h2 class="panel-title">Candidate Board</h2>
+                  <p id="candidate-note" class="panel-note">Unified current candidate status across recent runs.</p>
+                </div>
+                <div id="candidate-board" class="panel-body stack"></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
                   <h2 class="panel-title">Memory</h2>
                   <p class="panel-note">Belief state, repairs, and carry-forward context.</p>
                 </div>
@@ -443,6 +451,8 @@
       const legacySectionsEl = document.getElementById("legacy-sections");
       const programsEl = document.getElementById("programs");
       const programNoteEl = document.getElementById("program-note");
+      const candidateBoardEl = document.getElementById("candidate-board");
+      const candidateNoteEl = document.getElementById("candidate-note");
       const memoryEl = document.getElementById("memory");
       const selectedRunEl = document.getElementById("selected-run");
       const recentRunsEl = document.getElementById("recent-runs");
@@ -462,6 +472,7 @@
         return (
           payload.layout === "dashboard" ||
           Array.isArray(payload.programs) ||
+          Array.isArray(payload.candidate_board) ||
           Array.isArray(payload.recent_runs) ||
           Array.isArray(payload.recent_proposals) ||
           (payload.memory && typeof payload.memory === "object")
@@ -473,10 +484,19 @@
         if (["success", "pass", "executed", "completed", "planned", "ready"].includes(normalized)) {
           return "pass";
         }
+        if (["promoted", "tradable"].includes(normalized)) {
+          return "pass";
+        }
         if (["warning", "warn", "planned_warning"].includes(normalized)) {
           return "warn";
         }
+        if (["phase2_survivor", "edge_candidate", "bridge_reject"].includes(normalized)) {
+          return "warn";
+        }
         if (["failed", "fail", "error", "aborted_stale_run", "block"].includes(normalized)) {
+          return "fail";
+        }
+        if (["search_reject", "no_signal"].includes(normalized)) {
           return "fail";
         }
         return normalized;
@@ -701,6 +721,79 @@
         }
       }
 
+      function candidateMetricEntries(candidate) {
+        if (!candidate || typeof candidate !== "object") {
+          return [];
+        }
+        return [
+          ["n events", candidate.n_events],
+          ["raw bps", candidate.raw_bps],
+          ["after cost bps", candidate.after_cost_bps],
+          ["t stat", candidate.t_stat],
+        ];
+      }
+
+      function renderCandidateBoard(summary, board) {
+        clearChildren(candidateBoardEl);
+        const candidateSummary = summary && typeof summary === "object" ? summary : {};
+        candidateNoteEl.textContent =
+          `Runs ${candidateSummary.runs_tracked || 0} | Phase-2 ${candidateSummary.phase2_survivors || 0} | Tradable ${candidateSummary.bridge_tradable || 0} | Promoted ${candidateSummary.promoted || 0}`;
+
+        if (!Array.isArray(board) || !board.length) {
+          candidateBoardEl.appendChild(emptyCard("No candidate history was found for the active program."));
+          return;
+        }
+
+        board.forEach((row) => {
+          const card = document.createElement("article");
+          card.className = "list-card";
+          const top = document.createElement("div");
+          top.className = "card-topline";
+          const title = document.createElement("p");
+          title.className = "card-title mono";
+          title.textContent = row.run_id || "run";
+          top.appendChild(title);
+          if (row.pipeline_status) {
+            top.appendChild(statusChip(row.pipeline_status));
+          }
+          const kicker = document.createElement("p");
+          kicker.className = "card-kicker";
+          kicker.textContent = row.pipeline_note || "No candidate note.";
+          card.appendChild(top);
+          card.appendChild(kicker);
+
+          const candidate = row.best_candidate && typeof row.best_candidate === "object" ? row.best_candidate : null;
+          if (candidate && candidate.label) {
+            const detail = document.createElement("div");
+            detail.className = "value";
+            detail.textContent = candidate.label;
+            card.appendChild(detail);
+            card.appendChild(microGrid(candidateMetricEntries(candidate)));
+          } else {
+            card.appendChild(
+              microGrid([
+                ["Phase-2 rows", row.phase2_candidate_count],
+                ["Tradable", row.tradable_count],
+                ["Promoted", row.promoted_count],
+                ["Reject", row.dominant_reject_reason || "n/a"],
+              ])
+            );
+          }
+
+          const chips = document.createElement("div");
+          chips.className = "chips";
+          if (candidate && candidate.source) chips.appendChild(chip(`source: ${candidate.source}`, true));
+          if (candidate && candidate.symbol) chips.appendChild(chip(`symbol: ${candidate.symbol}`));
+          if (candidate && candidate.bridge_eval_status) chips.appendChild(chip(`bridge: ${candidate.bridge_eval_status}`, true));
+          if (candidate && candidate.primary_fail_gate) chips.appendChild(chip(`fail: ${candidate.primary_fail_gate}`, true));
+          if (chips.childNodes.length) {
+            card.appendChild(chips);
+          }
+
+          candidateBoardEl.appendChild(card);
+        });
+      }
+
       function renderSelectedRun(selectedRun) {
         clearChildren(selectedRunEl);
         if (!selectedRun || typeof selectedRun !== "object" || !selectedRun.run_id) {
@@ -766,6 +859,45 @@
         });
         details.appendChild(keyvals);
         shell.appendChild(details);
+
+        const snapshot = selectedRun.candidate_snapshot && typeof selectedRun.candidate_snapshot === "object"
+          ? selectedRun.candidate_snapshot
+          : null;
+        if (snapshot && (snapshot.best_candidate || snapshot.pipeline_note)) {
+          const candidateCard = document.createElement("article");
+          candidateCard.className = "list-card";
+          const candidateTitle = document.createElement("p");
+          candidateTitle.className = "card-title";
+          candidateTitle.textContent = "Candidate status";
+          candidateCard.appendChild(candidateTitle);
+
+          if (snapshot.pipeline_status) {
+            candidateCard.appendChild(statusChip(snapshot.pipeline_status));
+          }
+
+          const candidateText = document.createElement("p");
+          candidateText.className = "card-kicker";
+          candidateText.textContent = snapshot.pipeline_note || "No candidate status note.";
+          candidateCard.appendChild(candidateText);
+
+          if (snapshot.best_candidate && snapshot.best_candidate.label) {
+            const label = document.createElement("div");
+            label.className = "value";
+            label.textContent = snapshot.best_candidate.label;
+            candidateCard.appendChild(label);
+            candidateCard.appendChild(microGrid(candidateMetricEntries(snapshot.best_candidate)));
+          } else {
+            candidateCard.appendChild(
+              microGrid([
+                ["Phase-2 rows", snapshot.phase2_candidate_count],
+                ["Tradable", snapshot.tradable_count],
+                ["Promoted", snapshot.promoted_count],
+                ["Reject", snapshot.dominant_reject_reason || "n/a"],
+              ])
+            );
+          }
+          shell.appendChild(candidateCard);
+        }
 
         if (selectedRun.effective_behavior && typeof selectedRun.effective_behavior === "object" && Object.keys(selectedRun.effective_behavior).length) {
           const behavior = document.createElement("article");
@@ -910,6 +1042,7 @@
         legacyEl.hidden = true;
         dashboardEl.hidden = false;
         renderPrograms(payload.programs, payload.active_program_id);
+        renderCandidateBoard(payload.candidate_summary, payload.candidate_board);
         renderMemory(payload.memory);
         renderSelectedRun(payload.selected_run);
         renderRuns(payload.recent_runs);

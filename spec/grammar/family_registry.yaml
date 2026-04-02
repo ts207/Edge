@@ -16,7 +16,6 @@ event_families:
       - overshoot_repair
       - only_if_liquidity
       - slippage_aware_filter
-      - liquidity_replenishment
   VOLATILITY_TRANSITION:
     description: "Shifts in realized volatility and range compression."
     searchable: true
@@ -27,7 +26,6 @@ event_families:
       - volatility_expansion_follow
       - pullback_entry
       - only_if_regime
-      - structural_regime_shift
   POSITIONING_EXTREMES:
     description: "Extreme funding rates and open interest flushes."
     searchable: true
@@ -76,7 +74,6 @@ event_families:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-      - structural_regime_shift
   INFORMATION_DESYNC:
     description: "Arbitrage opportunities from cross-venue desync."
     searchable: true
@@ -86,7 +83,6 @@ event_families:
       - basis_repair
       - lead_lag_follow
       - divergence_continuation
-      - basis_convergence
   TEMPORAL_STRUCTURE:
     description: "Time-based market structures (Open/Close)."
     searchable: true
