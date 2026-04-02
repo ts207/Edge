@@ -20,3 +20,47 @@ expected_behavior:
   disabled_regimes:
   - 'Low volume: vol computation noise-dominated'
 cluster_id: vol_regime
+identity:
+  canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+  legacy_family: VOLATILITY_TRANSITION
+  subtype: vol_compression_then_breakout
+  phase: confirmation
+  evidence_mode: sequence_confirmed
+  layer: composite
+  disposition: demote
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: composite_event
+  default_executable: false
+  research_only: true
+  strategy_only: false
+  context_tag: false
+  is_composite: true
+  maturity: ''
+  tier: D
+  operational_role: sequence_component
+  deployment_disposition: research_only
+  runtime_category: research_only
+runtime:
+  detector: EventSequenceDetector
+  enabled: true
+  signal_column: seq_vol_comp_then_breakout_event
+  events_file: event_sequences.parquet
+  reports_dir: event_sequences
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: false
+  runtime_tags:
+  - vol_regime
+  - sequence
+semantics:
+  cluster_id: vol_regime
+  notes: Composite compression-release hypothesis.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

@@ -19,3 +19,46 @@ expected_behavior:
   disabled_regimes:
   - 'Chop regime: no clear trend direction'
 cluster_id: trend_momentum
+identity:
+  canonical_regime: TREND_CONTINUATION
+  legacy_family: TREND_STRUCTURE
+  subtype: trend_acceleration
+  phase: persistence
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: keep
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: TrendAccelerationDetector
+  enabled: true
+  signal_column: trend_acceleration_event
+  events_file: trend_structure_events.parquet
+  reports_dir: trend_structure
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - trend_momentum
+semantics:
+  cluster_id: trend_momentum
+  notes: Continuation regime with accelerating trend.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

@@ -29,8 +29,8 @@ detector:
     shock_threshold[i] = trailing_quantile(shock_ratio, baseline_window, shock_quantile,
     lag=1)[i]
 
-    onset[i]         = shock_ratio[i-1] < shock_threshold[i-1] AND shock_ratio[i] >=
-    shock_threshold[i]
+    onset[i]         = shock_ratio[i-1] < shock_threshold[i-1] AND shock_ratio[i]
+    >= shock_threshold[i]
 
     relax_exit[j]    = first j >= i such that shock_ratio[j] <= relax_threshold for
     relax_consecutive_bars consecutive bars
@@ -65,7 +65,8 @@ calibration:
 
     '
   stability_requirement: 'Shock threshold and onset frequency should remain stable
-    across yearly splits and major symbols after accounting for realized-vol regime differences.
+    across yearly splits and major symbols after accounting for realized-vol regime
+    differences.
 
     '
   failure_modes:
@@ -92,3 +93,48 @@ trigger: Detector triggers on the first dynamic-threshold shock crossing
 confirmation: No separate detector-side confirmation gate; downstream research uses
   relaxation telemetry and post-event evaluation
 cluster_id: vol_regime
+identity:
+  canonical_regime: VOLATILITY_TRANSITION
+  legacy_family: VOLATILITY_TRANSITION
+  subtype: vol_shock
+  phase: shock
+  evidence_mode: statistical
+  layer: canonical
+  disposition: keep
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: VolShockRelaxationDetector
+  enabled: true
+  signal_column: vol_shock_relaxation_event
+  events_file: vol_shock_relaxation_events.parquet
+  reports_dir: vol_shock_relaxation
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - vol_regime
+  - high_urgency
+semantics:
+  cluster_id: vol_regime
+  notes: Canonical volatility shock; current detector implementation also models relaxation
+    boundary.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

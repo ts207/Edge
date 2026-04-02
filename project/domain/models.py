@@ -11,6 +11,7 @@ class EventDefinition:
     canonical_family: str
     canonical_regime: str
     legacy_family: str
+    event_kind: str
     reports_dir: str
     events_file: str
     signal_column: str
@@ -32,6 +33,21 @@ class EventDefinition:
     operational_role: str = ""
     deployment_disposition: str = ""
     runtime_category: str = "active_runtime_event"
+    maturity: str = ""
+    default_executable: bool = True
+    enabled: bool = True
+    detector_name: str = ""
+    instrument_classes: tuple[str, ...] = ()
+    requires_features: tuple[str, ...] = ()
+    runtime_tags: tuple[str, ...] = ()
+    sequence_eligible: bool = True
+    cluster_id: str = ""
+    collapse_target: str = ""
+    overlap_group: str = ""
+    precedence_rank: int = 0
+    routing_profile_ref: str = ""
+    suppresses: tuple[Any, ...] = ()
+    suppressed_by: tuple[Any, ...] = ()
     maturity_scores: Dict[str, Any] = field(default_factory=dict)
     parameters: Dict[str, Any] = field(default_factory=dict)
     raw: Dict[str, Any] = field(default_factory=dict)
@@ -74,15 +90,11 @@ class DomainRegistry:
     interaction_definitions: tuple[Dict[str, Any], ...] = ()
 
     def has_event(self, event_type: str) -> bool:
-        from project.events.event_aliases import resolve_event_alias
-
-        normalized = resolve_event_alias(str(event_type).strip().upper())
+        normalized = str(event_type).strip().upper()
         return normalized in self.event_definitions
 
     def get_event(self, event_type: str) -> EventDefinition | None:
-        from project.events.event_aliases import resolve_event_alias
-
-        normalized = resolve_event_alias(str(event_type).strip().upper())
+        normalized = str(event_type).strip().upper()
         return self.event_definitions.get(normalized)
 
     def has_state(self, state_id: str) -> bool:
@@ -214,7 +226,8 @@ class DomainRegistry:
             sorted(
                 event_type
                 for event_type, spec in self.event_definitions.items()
-                if spec.runtime_category == "active_runtime_event"
+                if spec.default_executable
+                and spec.runtime_category == "active_runtime_event"
                 and not spec.is_composite
                 and not spec.is_context_tag
                 and not spec.is_strategy_construct

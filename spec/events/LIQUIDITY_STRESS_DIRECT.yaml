@@ -24,3 +24,45 @@ expected_behavior:
   disabled_regimes:
   - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
 cluster_id: liquidity_stress
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: LIQUIDITY_STRESS_DIRECT
+  subtype: liquidity_stress
+  phase: shock
+  evidence_mode: direct
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: ''
+  enabled: true
+  signal_column: liquidity_stress_direct_event
+  events_file: liquidity_shock_events.parquet
+  reports_dir: liquidity_shock
+  instrument_classes: []
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags: []
+semantics:
+  summary: High-fidelity liquidity stress detection using explicit L2/L3 depth and
+    spread observables.
+  cluster_id: liquidity_stress
+  notes: Direct evidence mode for liquidity stress.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

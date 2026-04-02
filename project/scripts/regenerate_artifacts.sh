@@ -6,6 +6,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo "Regenerating repository artifacts..."
 
+echo "[registry] Rebuilding unified event registry..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_unified_event_registry.py"
+
+echo "[runtime] Regenerating runtime event registry..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_runtime_event_registry.py"
+
+echo "[sidecars] Regenerating compatibility sidecars..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_canonical_registry_sidecars.py"
+
 echo "[0/13] Regenerating Event Governance Artifacts..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_event_contract_artifacts.py"
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/event_ontology_audit.py"

@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Mapping
 from project import PROJECT_ROOT
 from project.domain.compiled_registry import get_domain_registry
 from project.events.event_aliases import EVENT_ALIASES, EXECUTABLE_EVENT_ALIASES
-from project.spec_registry import load_event_contract_overrides, load_yaml_path
+from project.spec_registry import load_yaml_path
 
 REPO_ROOT = PROJECT_ROOT.parent
 RUNTIME_SPEC_DIR = REPO_ROOT / "spec" / "events"
@@ -88,13 +88,6 @@ _TIER_BASELINE_SCORES: dict[str, dict[str, int]] = {
 def allowed_runtime_aliases() -> tuple[str, ...]:
     aliases = set(EVENT_ALIASES.keys()) | set(EXECUTABLE_EVENT_ALIASES.values())
     return tuple(sorted(str(alias).strip().upper() for alias in aliases if str(alias).strip()))
-
-
-@lru_cache(maxsize=1)
-def _overrides() -> dict[str, dict[str, Any]]:
-    payload = load_event_contract_overrides()
-    events = payload.get("events", {}) if isinstance(payload, dict) else {}
-    return {str(k).strip().upper(): dict(v) for k, v in events.items() if isinstance(v, dict)}
 
 
 def _load_runtime_spec(event_type: str) -> dict[str, Any]:
@@ -390,9 +383,8 @@ def _merged_row(event_type: str) -> dict[str, Any]:
         raise KeyError(f"Unknown event_type: {event_type}")
     row = dict(event_def.raw)
     runtime_spec = _load_runtime_spec(event_type)
-    overrides = _overrides().get(event_type, {})
 
-    for source in (runtime_spec, overrides):
+    for source in (runtime_spec,):
         for key, value in source.items():
             if key == "parameters":
                 continue
@@ -404,8 +396,6 @@ def _merged_row(event_type: str) -> dict[str, Any]:
         parameters.update(dict(row["parameters"]))
     if isinstance(runtime_spec.get("parameters"), Mapping):
         parameters.update(dict(runtime_spec["parameters"]))
-    if isinstance(overrides.get("parameters"), Mapping):
-        parameters.update(dict(overrides["parameters"]))
     row["parameters"] = parameters
     row.setdefault("event_type", event_type)
     row.setdefault("canonical_family", event_def.canonical_family)

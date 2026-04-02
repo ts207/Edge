@@ -55,18 +55,4 @@ family_precedence:
       Regime shifts are long-horizon; lowest precedence for intraday arbitration.
 
 # Per-event overrides supersede family precedence
-event_overrides:
-  - event_type: LIQUIDATION_CASCADE
-    override_priority: 2
-    rationale: >
-      Time-critical; evaluate immediately after temporal structure events.
-
-  - event_type: DEPTH_COLLAPSE
-    override_priority: 3
-    rationale: >
-      Book depth collapse gates execution; promote to volatility tier.
-
-  - event_type: SPREAD_BLOWOUT
-    override_priority: 1
-    rationale: >
-      Primary execution gate; highest possible priority.
+event_overrides: []

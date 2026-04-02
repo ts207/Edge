@@ -19,3 +19,47 @@ expected_behavior:
   disabled_regimes:
   - 'Low volume: vol computation noise-dominated'
 cluster_id: vol_regime
+identity:
+  canonical_regime: VOLATILITY_EXPANSION
+  legacy_family: VOLATILITY_TRANSITION
+  subtype: vol_spike
+  phase: shock
+  evidence_mode: direct
+  layer: canonical
+  disposition: keep
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: VolSpikeDetector
+  enabled: true
+  signal_column: vol_spike_event
+  events_file: volatility_transition_events.parquet
+  reports_dir: volatility_transition
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - vol_regime
+  - high_urgency
+semantics:
+  cluster_id: vol_regime
+  notes: Canonical realized-volatility expansion onset.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

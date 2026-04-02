@@ -7,10 +7,9 @@ from typing import Any, Mapping, Optional
 import numpy as np
 import pandas as pd
 
-from project import PROJECT_ROOT
+from project.domain.compiled_registry import get_domain_registry
 from project.events.detectors.base import BaseEventDetector
 from project.events.detectors.registry import get_detector
-from project.spec_registry import load_yaml_path
 from project.spec_validation import load_ontology_events
 
 log = logging.getLogger(__name__)
@@ -19,11 +18,16 @@ log = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def _load_registered_event_metadata() -> dict[str, dict[str, Any]]:
     try:
-        payload = load_yaml_path(PROJECT_ROOT / "project" / "configs" / "registries" / "events.yaml") or {}
+        registry = get_domain_registry()
     except Exception:
         return {}
-    events = payload.get("events", {})
-    return events if isinstance(events, dict) else {}
+    return {
+        event_type: {
+            "sequence_eligible": spec.sequence_eligible,
+            "enabled": spec.enabled,
+        }
+        for event_type, spec in registry.event_definitions.items()
+    }
 
 
 class EventSequenceDetector(BaseEventDetector):

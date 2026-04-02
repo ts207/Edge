@@ -20,3 +20,67 @@ expected_behavior:
   disabled_regimes:
   - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
 cluster_id: liquidity_stress
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: LIQUIDITY_DISLOCATION
+  subtype: spread_widening
+  phase: shock
+  evidence_mode: direct
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: SpreadBlowoutDetector
+  enabled: true
+  signal_column: spread_blowout_event
+  events_file: liquidity_dislocation_events.parquet
+  reports_dir: liquidity_dislocation
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - liquidity_stress
+  - execution_cost
+semantics:
+  cluster_id: liquidity_stress
+  notes: Spread blowout retained as liquidity-stress subtype.
+  precedence_rank: 1
+interaction:
+  suppresses:
+  - event_type: LIQUIDITY_VACUUM
+    penalty_factor: 0.3
+    block: false
+    reason: 'Spread elevation makes execution-heavy mean-reversion templates uneconomic. Penalize heavily but do not block entirely.'
+  - event_type: BREAKOUT_TRIGGER
+    penalty_factor: 0.3
+    block: false
+    reason: 'Spread elevation makes execution-heavy mean-reversion templates uneconomic. Penalize heavily but do not block entirely.'
+  - event_type: RANGE_BREAKOUT
+    penalty_factor: 0.3
+    block: false
+    reason: 'Spread elevation makes execution-heavy mean-reversion templates uneconomic. Penalize heavily but do not block entirely.'
+  - event_type: CROSS_VENUE_DESYNC
+    penalty_factor: 0.3
+    block: false
+    reason: 'Spread elevation makes execution-heavy mean-reversion templates uneconomic. Penalize heavily but do not block entirely.'
+  - event_type: DEPTH_COLLAPSE
+    penalty_factor: 0.3
+    block: false
+    reason: 'Spread elevation makes execution-heavy mean-reversion templates uneconomic. Penalize heavily but do not block entirely.'
+  suppressed_by: []
+routing: {}

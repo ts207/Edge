@@ -19,3 +19,46 @@ expected_behavior:
   disabled_regimes:
   - 'Stable regime: no transition to detect'
 cluster_id: regime_shift
+identity:
+  canonical_regime: REGIME_TRANSITION
+  legacy_family: REGIME_TRANSITION
+  subtype: correlation_breakdown
+  phase: transition
+  evidence_mode: inferred_cross_asset
+  layer: canonical
+  disposition: keep
+  asset_scope: cross_asset
+  venue_scope: multi_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: CorrelationBreakdownDetector
+  enabled: true
+  signal_column: correlation_breakdown_event
+  events_file: regime_transition_events.parquet
+  reports_dir: regime_transition
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - regime_shift
+semantics:
+  cluster_id: regime_shift
+  notes: Cross-asset regime transition via correlation instability.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

@@ -19,3 +19,46 @@ expected_behavior:
   disabled_regimes:
   - 'Low basis volatility: z-score undefined'
 cluster_id: basis_dislocation
+identity:
+  canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+  legacy_family: STATISTICAL_DISLOCATION
+  subtype: copula_pairs_trading
+  phase: strategy
+  evidence_mode: statistical
+  layer: strategy_construct
+  disposition: demote
+  asset_scope: cross_asset
+  venue_scope: multi_venue
+governance:
+  event_kind: strategy_construct
+  default_executable: false
+  research_only: false
+  strategy_only: true
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: D
+  operational_role: research_only
+  deployment_disposition: research_only
+  runtime_category: research_only
+runtime:
+  detector: CopulaPairsTradingDetector
+  enabled: true
+  signal_column: copula_pairs_trading_event
+  events_file: copula_pairs_events.parquet
+  reports_dir: copula_pairs
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - basis_dislocation
+semantics:
+  cluster_id: basis_dislocation
+  notes: Relative-value strategy/search construct, not a canonical market event.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

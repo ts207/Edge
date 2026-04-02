@@ -21,3 +21,46 @@ expected_behavior:
   disabled_regimes:
   - 'Low volume: flow signals unreliable'
 cluster_id: exhaustion
+identity:
+  canonical_regime: TREND_FAILURE_EXHAUSTION
+  legacy_family: FORCED_FLOW_AND_EXHAUSTION
+  subtype: momentum_divergence
+  phase: exhaustion
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: MomentumDivergenceDetector
+  enabled: true
+  signal_column: momentum_divergence_trigger_event
+  events_file: forced_flow_and_exhaustion_events.parquet
+  reports_dir: forced_flow_and_exhaustion
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - exhaustion
+semantics:
+  cluster_id: exhaustion
+  notes: Divergence-based exhaustion signal.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

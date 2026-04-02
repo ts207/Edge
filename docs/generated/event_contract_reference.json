@@ -15,7 +15,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "BasisDislocationDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "BASIS_DISLOC",
@@ -25,15 +25,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "BASIS_DISLOC",
         "max_candidates_per_run": 350,
         "notes": "Canonical basis dislocation surface.",
         "parameters": {
@@ -67,9 +64,7 @@
         "signal_column": "basis_dislocation_event",
         "strategy_only": false,
         "subtype": "basis_dislocation",
-        "tags": [
-          "basis_dislocation"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -99,7 +94,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "CrossVenueDesyncDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "CROSS_VENUE_DESYNC",
@@ -110,15 +105,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "INFORMATION_DESYNC",
+        "legacy_family": "CROSS_VENUE_DESYNC",
         "max_candidates_per_run": 600,
         "notes": "Cross-venue basis persistence folded into basis/funding dislocation.",
         "parameters": {
@@ -205,11 +197,68 @@
               "New shock within window_end bars of prior event"
             ]
           },
+          "governance": {
+            "context_tag": false,
+            "default_executable": true,
+            "deployment_disposition": "secondary_or_confirm",
+            "event_kind": "market_event",
+            "maturity": "standard",
+            "operational_role": "trigger",
+            "research_only": false,
+            "runtime_category": "active_runtime_event",
+            "strategy_only": false,
+            "tier": "B"
+          },
+          "identity": {
+            "canonical_regime": "BASIS_FUNDING_DISLOCATION",
+            "evidence_mode": "inferred_cross_asset",
+            "legacy_family": "INFORMATION_DESYNC",
+            "phase": "persistence",
+            "subtype": "cross_venue_desync"
+          },
+          "interaction": {
+            "suppressed_by": [
+              {
+                "block": true,
+                "event_type": "FUNDING_TIMESTAMP_EVENT",
+                "penalty_factor": 0.0
+              },
+              {
+                "block": false,
+                "event_type": "SPREAD_BLOWOUT",
+                "penalty_factor": 0.3
+              }
+            ]
+          },
           "merge_gap_bars": 1,
           "min_basis_bps": 35.0,
           "min_occurrences": 0,
           "persistence_bars": 2,
           "revert_z": 0.5,
+          "routing": {
+            "routing_profile_ref": "BASIS_FUNDING_DISLOCATION"
+          },
+          "runtime": {
+            "detector": "CrossVenueDesyncDetector",
+            "enabled": true,
+            "events_file": "cross_venue_desync_events.parquet",
+            "instrument_classes": [
+              "crypto",
+              "futures"
+            ],
+            "reports_dir": "cross_venue_desync",
+            "requires_features": [],
+            "runtime_tags": [
+              "desync"
+            ],
+            "sequence_eligible": true,
+            "signal_column": "cross_venue_desync_event"
+          },
+          "semantics": {
+            "cluster_id": "desync",
+            "overlap_group": "basis_desync",
+            "summary": "Cross-venue basis persistence folded into basis/funding dislocation."
+          },
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on cross venue desync pattern",
           "window_end": 32
@@ -221,9 +270,7 @@
         "signal_column": "cross_venue_desync_event",
         "strategy_only": false,
         "subtype": "cross_venue_desync",
-        "tags": [
-          "desync"
-        ],
+        "tags": [],
         "templates": [
           "desync_repair",
           "convergence",
@@ -258,7 +305,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "FndDislocDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FND_DISLOC",
@@ -268,15 +315,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "FND_DISLOC",
         "max_candidates_per_run": 350,
         "notes": "Funding dislocation folded into basis/funding regime.",
         "parameters": {
@@ -314,9 +358,7 @@
         "signal_column": "funding_dislocation_event",
         "strategy_only": false,
         "subtype": "funding_dislocation",
-        "tags": [
-          "basis_dislocation"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -347,7 +389,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "FundingExtremeOnsetDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FUNDING_EXTREME_ONSET",
@@ -357,15 +399,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "FUNDING_EXTREME_ONSET",
         "max_candidates_per_run": 500,
         "notes": "Funding extreme onset under basis/funding dislocation.",
         "parameters": {
@@ -460,8 +499,27 @@
           },
           "extreme_pct": 95.0,
           "funding_pct_window": 2880,
+          "governance": {
+            "context_tag": false,
+            "default_executable": true,
+            "deployment_disposition": "secondary_or_confirm",
+            "event_kind": "market_event",
+            "maturity": "standard",
+            "operational_role": "trigger",
+            "research_only": false,
+            "runtime_category": "active_runtime_event",
+            "strategy_only": false,
+            "tier": "B"
+          },
           "htf_lookback": 96,
           "htf_window": 384,
+          "identity": {
+            "canonical_regime": "BASIS_FUNDING_DISLOCATION",
+            "evidence_mode": "direct",
+            "legacy_family": "POSITIONING_EXTREMES",
+            "phase": "onset",
+            "subtype": "funding_extreme"
+          },
           "interaction_min_rows_per_year": 150,
           "liq_auc_horizon": 96,
           "liquidation_abs_return": 0.03,
@@ -478,6 +536,30 @@
           "phase_tolerance_bars": 16,
           "post_window": 96,
           "pre_window": 96,
+          "routing": {
+            "routing_profile_ref": "BASIS_FUNDING_DISLOCATION"
+          },
+          "runtime": {
+            "detector": "FundingExtremeOnsetDetector",
+            "enabled": true,
+            "events_file": "funding_episode_events.parquet",
+            "instrument_classes": [
+              "crypto",
+              "futures"
+            ],
+            "reports_dir": "funding_events",
+            "requires_features": [],
+            "runtime_tags": [
+              "funding_crowding"
+            ],
+            "sequence_eligible": true,
+            "signal_column": "funding_extreme_onset_event"
+          },
+          "semantics": {
+            "cluster_id": "funding_crowding",
+            "overlap_group": "basis_funding_extreme",
+            "summary": "Funding extreme onset under basis/funding dislocation."
+          },
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding extreme onset pattern",
           "vol_auc_horizon": 8,
@@ -490,9 +572,7 @@
         "signal_column": "funding_extreme_onset_event",
         "strategy_only": false,
         "subtype": "funding_extreme",
-        "tags": [
-          "funding_crowding"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -541,7 +621,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "FundingFlipDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FUNDING_FLIP",
@@ -551,15 +631,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "FUNDING_FLIP",
         "max_candidates_per_run": 500,
         "notes": "Funding sign inversion as subtype metadata.",
         "parameters": {
@@ -595,10 +672,7 @@
         "signal_column": "funding_flip_event",
         "strategy_only": false,
         "subtype": "funding_flip",
-        "tags": [
-          "funding_crowding",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -635,7 +709,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "FundingNormalizationDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FUNDING_NORMALIZATION_TRIGGER",
@@ -644,15 +718,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "FUNDING_NORMALIZATION_TRIGGER",
         "max_candidates_per_run": 500,
         "notes": "Normalization phase of funding dislocation.",
         "parameters": {
@@ -714,9 +785,7 @@
         "signal_column": "funding_normalization_event",
         "strategy_only": false,
         "subtype": "funding_normalization",
-        "tags": [
-          "funding_crowding"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -765,7 +834,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "FundingPersistenceDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FUNDING_PERSISTENCE_TRIGGER",
@@ -775,15 +844,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "FUNDING_PERSISTENCE_TRIGGER",
         "max_candidates_per_run": 500,
         "notes": "Persistence phase of funding dislocation.",
         "parameters": {
@@ -845,9 +911,7 @@
         "signal_column": "funding_persistence_event",
         "strategy_only": false,
         "subtype": "funding_persistence",
-        "tags": [
-          "funding_crowding"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -895,8 +959,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 30,
-        "default_executable": false,
-        "detector": "EventSequenceDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SEQ_FND_EXTREME_THEN_BREAKOUT",
@@ -906,15 +970,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": true,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "composite",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "SEQ_FND_EXTREME_THEN_BREAKOUT",
         "max_candidates_per_run": 250,
         "notes": "Composite research hypothesis, not a canonical event.",
         "parameters": {
@@ -942,14 +1003,11 @@
         "phase": "confirmation",
         "reports_dir": "event_sequences",
         "research_only": true,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "seq_fnd_extreme_then_breakout_event",
         "strategy_only": false,
         "subtype": "funding_extreme_then_breakout",
-        "tags": [
-          "funding_crowding",
-          "sequence"
-        ],
+        "tags": [],
         "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 24,
@@ -973,7 +1031,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "SpotPerpBasisShockDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "SPOT_PERP_BASIS_SHOCK",
@@ -984,15 +1042,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "INFORMATION_DESYNC",
+        "legacy_family": "SPOT_PERP_BASIS_SHOCK",
         "max_candidates_per_run": 500,
         "notes": "Spot/perp basis shock is a basis/funding subtype.",
         "parameters": {
@@ -1027,11 +1082,7 @@
         "signal_column": "spot_perp_basis_shock_event",
         "strategy_only": false,
         "subtype": "spot_perp_basis_shock",
-        "tags": [
-          "desync",
-          "basis_dislocation",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "desync_repair",
           "convergence",
@@ -1066,7 +1117,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "CrossAssetDesyncDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "CROSS_ASSET_DESYNC_EVENT",
@@ -1077,15 +1128,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "INFORMATION_DESYNC",
+        "legacy_family": "CROSS_ASSET_DESYNC_EVENT",
         "max_candidates_per_run": 600,
         "notes": "First-class cross-asset desynchronization regime.",
         "parameters": {
@@ -1172,16 +1220,8 @@
         "signal_column": "cross_asset_desync_event",
         "strategy_only": false,
         "subtype": "cross_asset_desync",
-        "tags": [
-          "desync"
-        ],
-        "templates": [
-          "desync_repair",
-          "convergence",
-          "basis_repair",
-          "lead_lag_follow",
-          "divergence_continuation"
-        ],
+        "tags": [],
+        "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 24,
           "lookback_window": 2880,
@@ -1206,7 +1246,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "IndexComponentDivergenceDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "INDEX_COMPONENT_DIVERGENCE",
@@ -1217,15 +1257,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "INFORMATION_DESYNC",
+        "legacy_family": "INDEX_COMPONENT_DIVERGENCE",
         "max_candidates_per_run": 500,
         "notes": "Cross-asset divergence between index and components.",
         "parameters": {
@@ -1258,9 +1295,7 @@
         "signal_column": "index_component_divergence_event",
         "strategy_only": false,
         "subtype": "index_component_divergence",
-        "tags": [
-          "desync"
-        ],
+        "tags": [],
         "templates": [
           "desync_repair",
           "convergence",
@@ -1291,7 +1326,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "LeadLagBreakDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "LEAD_LAG_BREAK",
@@ -1302,15 +1337,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "INFORMATION_DESYNC",
+        "legacy_family": "LEAD_LAG_BREAK",
         "max_candidates_per_run": 500,
         "notes": "Lead/lag structure break.",
         "parameters": {
@@ -1343,9 +1375,7 @@
         "signal_column": "lead_lag_break_event",
         "strategy_only": false,
         "subtype": "lead_lag_break",
-        "tags": [
-          "desync"
-        ],
+        "tags": [],
         "templates": [
           "desync_repair",
           "convergence",
@@ -1378,7 +1408,7 @@
         ],
         "deconflict_priority": 65,
         "default_executable": true,
-        "detector": "FeeRegimeChangeDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "FEE_REGIME_CHANGE_EVENT",
@@ -1388,15 +1418,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "EXECUTION_FRICTION",
+        "legacy_family": "FEE_REGIME_CHANGE_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Execution-cost regime shift.",
         "parameters": {
@@ -1429,9 +1456,7 @@
         "signal_column": "fee_regime_change_event",
         "strategy_only": false,
         "subtype": "fee_regime_change",
-        "tags": [
-          "execution_cost"
-        ],
+        "tags": [],
         "templates": [
           "slippage_aware_filter",
           "tail_risk_avoid"
@@ -1459,7 +1484,7 @@
         ],
         "deconflict_priority": 65,
         "default_executable": true,
-        "detector": "SlippageSpikeDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "SLIPPAGE_SPIKE_EVENT",
@@ -1469,15 +1494,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "EXECUTION_FRICTION",
+        "legacy_family": "SLIPPAGE_SPIKE_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Execution friction shock.",
         "parameters": {
@@ -1510,10 +1532,7 @@
         "signal_column": "slippage_spike_event",
         "strategy_only": false,
         "subtype": "slippage_spike",
-        "tags": [
-          "execution_cost",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "slippage_aware_filter",
           "tail_risk_avoid"
@@ -1541,7 +1560,7 @@
         ],
         "deconflict_priority": 65,
         "default_executable": true,
-        "detector": "SpreadRegimeWideningDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "SPREAD_REGIME_WIDENING_EVENT",
@@ -1551,15 +1570,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "EXECUTION_FRICTION",
+        "legacy_family": "SPREAD_REGIME_WIDENING_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Persistent execution-friction regime widening.",
         "parameters": {
@@ -1595,10 +1611,7 @@
         "signal_column": "spread_regime_widening_event",
         "strategy_only": false,
         "subtype": "spread_regime_widening",
-        "tags": [
-          "execution_cost",
-          "liquidity_stress"
-        ],
+        "tags": [],
         "templates": [
           "slippage_aware_filter",
           "tail_risk_avoid"
@@ -1631,7 +1644,7 @@
         ],
         "deconflict_priority": 100,
         "default_executable": true,
-        "detector": "LiquidationCascadeDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "LIQUIDATION_CASCADE",
@@ -1642,15 +1655,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "LIQUIDATION_CASCADE",
         "max_candidates_per_run": 300,
         "notes": "Structurally distinct canonical cascade regime.",
         "parameters": {
@@ -1685,10 +1695,7 @@
         "signal_column": "liquidation_cascade_event",
         "strategy_only": false,
         "subtype": "liquidation_cascade",
-        "tags": [
-          "forced_liquidation",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -1726,7 +1733,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "ABSORPTION_PROXY",
         "events_file": "liquidity_dislocation_events.parquet",
         "evidence_mode": "hybrid",
@@ -1738,7 +1745,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "ABSORPTION_PROXY",
         "max_candidates_per_run": 600,
         "notes": "Hybrid liquidity-stress evidence: direct imbalance-stall confirmation combined with spread and RV stress.",
         "parameters": {
@@ -1771,7 +1778,7 @@
         "phase": "persistence",
         "reports_dir": "liquidity_dislocation",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "absorption_proxy_event",
         "strategy_only": false,
         "subtype": "absorption",
@@ -1809,7 +1816,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "DepthCollapseDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "DEPTH_COLLAPSE",
@@ -1818,15 +1825,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "DEPTH_COLLAPSE",
         "max_candidates_per_run": 600,
         "notes": "Direct depth failure evidence for liquidity stress.",
         "parameters": {
@@ -1869,9 +1873,7 @@
         "signal_column": "depth_collapse_event",
         "strategy_only": false,
         "subtype": "depth_collapse",
-        "tags": [
-          "liquidity_stress"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -1911,7 +1913,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "DEPTH_STRESS_PROXY",
         "events_file": "liquidity_dislocation_events.parquet",
         "evidence_mode": "hybrid",
@@ -1923,7 +1925,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "DEPTH_STRESS_PROXY",
         "max_candidates_per_run": 600,
         "notes": "Hybrid liquidity-stress evidence: direct micro-depth depletion combined with spread and RV stress.",
         "parameters": {
@@ -1959,7 +1961,7 @@
         "phase": "collapse",
         "reports_dir": "liquidity_dislocation",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "depth_stress_proxy_event",
         "strategy_only": false,
         "subtype": "depth_collapse",
@@ -1998,7 +2000,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "LiquidityGapDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "LIQUIDITY_GAP_PRINT",
@@ -2007,15 +2009,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "LIQUIDITY_GAP_PRINT",
         "max_candidates_per_run": 600,
         "notes": "Gap print inside liquidity-stress regime.",
         "parameters": {
@@ -2049,9 +2048,7 @@
         "signal_column": "liquidity_gap_print_event",
         "strategy_only": false,
         "subtype": "gap_print",
-        "tags": [
-          "liquidity_stress"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -2084,7 +2081,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "LiquidityStressDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "LIQUIDITY_SHOCK",
@@ -2093,15 +2090,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "LIQUIDITY_SHOCK",
         "max_candidates_per_run": 600,
         "notes": "High-level liquidity stress onset.",
         "parameters": {
@@ -2135,10 +2129,7 @@
         "signal_column": "liquidity_shock_event",
         "strategy_only": false,
         "subtype": "liquidity_shock",
-        "tags": [
-          "liquidity_stress",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -2171,7 +2162,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "LIQUIDITY_STRESS_DIRECT",
         "events_file": "liquidity_shock_events.parquet",
         "evidence_mode": "direct",
@@ -2183,7 +2174,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "LIQUIDITY_STRESS_DIRECT",
         "max_candidates_per_run": 600,
         "notes": "Direct evidence mode for liquidity stress.",
         "parameters": {
@@ -2213,7 +2204,7 @@
         "phase": "shock",
         "reports_dir": "liquidity_shock",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "liquidity_stress_direct_event",
         "strategy_only": false,
         "subtype": "liquidity_stress",
@@ -2250,7 +2241,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "LIQUIDITY_STRESS_PROXY",
         "events_file": "liquidity_shock_events.parquet",
         "evidence_mode": "hybrid",
@@ -2262,7 +2253,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "LIQUIDITY_STRESS_PROXY",
         "max_candidates_per_run": 600,
         "notes": "Hybrid liquidity-stress evidence: direct book stress when available plus bar-range expansion and optional trade-flow collapse confirmation.",
         "parameters": {
@@ -2292,7 +2283,7 @@
         "phase": "shock",
         "reports_dir": "liquidity_shock",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "liquidity_stress_proxy_event",
         "strategy_only": false,
         "subtype": "liquidity_stress",
@@ -2320,7 +2311,7 @@
         "conditioning_cols": [],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "LiquidityVacuumDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "LIQUIDITY_VACUUM",
@@ -2329,15 +2320,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "LIQUIDITY_VACUUM",
         "max_candidates_per_run": 1000,
         "notes": "Thin-book vacuum regime.",
         "parameters": {
@@ -2448,10 +2436,7 @@
         "signal_column": "liquidity_vacuum_event",
         "strategy_only": false,
         "subtype": "liquidity_vacuum",
-        "tags": [
-          "liquidity_stress",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "stop_run_repair",
@@ -2494,7 +2479,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "OrderflowImbalanceDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "ORDERFLOW_IMBALANCE_SHOCK",
@@ -2503,15 +2488,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "ORDERFLOW_IMBALANCE_SHOCK",
         "max_candidates_per_run": 600,
         "notes": "Orderflow imbalance is treated as a liquidity-stress subtype.",
         "parameters": {
@@ -2553,9 +2535,7 @@
         "signal_column": "orderflow_imbalance_shock_event",
         "strategy_only": false,
         "subtype": "orderflow_imbalance",
-        "tags": [
-          "orderflow_imbalance"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -2597,7 +2577,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "PRICE_VOL_IMBALANCE_PROXY",
         "events_file": "liquidity_dislocation_events.parquet",
         "evidence_mode": "hybrid",
@@ -2609,7 +2589,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "PRICE_VOL_IMBALANCE_PROXY",
         "max_candidates_per_run": 600,
         "notes": "Hybrid liquidity-stress evidence via synchronized return, realized-volatility, volume, and flow-pressure imbalance.",
         "parameters": {
@@ -2645,7 +2625,7 @@
         "phase": "shock",
         "reports_dir": "liquidity_dislocation",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "price_vol_imbalance_proxy_event",
         "strategy_only": false,
         "subtype": "price_vol_imbalance",
@@ -2686,8 +2666,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 30,
-        "default_executable": false,
-        "detector": "EventSequenceDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
@@ -2696,15 +2676,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": true,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "composite",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
         "max_candidates_per_run": 400,
         "notes": "Composite liquidity repair motif.",
         "parameters": {
@@ -2732,15 +2709,11 @@
         "phase": "confirmation",
         "reports_dir": "event_sequences",
         "research_only": true,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "seq_liq_vacuum_then_depth_recovery_event",
         "strategy_only": false,
         "subtype": "liquidity_vacuum_then_depth_recovery",
-        "tags": [
-          "liquidity_stress",
-          "absorption_recovery",
-          "sequence"
-        ],
+        "tags": [],
         "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 24,
@@ -2764,7 +2737,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "SpreadBlowoutDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "SPREAD_BLOWOUT",
@@ -2773,15 +2746,12 @@
         "horizons": [
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "SPREAD_BLOWOUT",
         "max_candidates_per_run": 600,
         "notes": "Spread blowout retained as liquidity-stress subtype.",
         "parameters": {
@@ -2815,98 +2785,7 @@
         "signal_column": "spread_blowout_event",
         "strategy_only": false,
         "subtype": "spread_widening",
-        "tags": [
-          "liquidity_stress",
-          "execution_cost"
-        ],
-        "templates": [
-          "mean_reversion",
-          "continuation",
-          "stop_run_repair",
-          "overshoot_repair",
-          "only_if_liquidity",
-          "slippage_aware_filter"
-        ],
-        "threshold_parameters": {
-          "cooldown_bars": 12,
-          "lookback_window": 288,
-          "merge_gap_bars": 0,
-          "min_occurrences": 0,
-          "min_volume_quantile": 0.2,
-          "z_threshold": 3.0
-        },
-        "venue_scope": "single_venue"
-      },
-      {
-        "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
-        "canonical_regime": "LIQUIDITY_STRESS",
-        "conditioning_cols": [
-          "vol_regime",
-          "carry_state",
-          "funding_bps",
-          "ms_trend_state",
-          "ms_spread_state",
-          "severity_bucket"
-        ],
-        "deconflict_priority": 80,
-        "default_executable": true,
-        "detector": "StopRunDetector",
-        "disposition": "merge",
-        "enabled": true,
-        "event_type": "SWEEP_STOPRUN",
-        "events_file": "liquidity_dislocation_events.parquet",
-        "evidence_mode": "hybrid",
-        "horizons": [
-          "15m"
-        ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
-        "is_composite": false,
-        "is_context_tag": false,
-        "is_strategy_construct": false,
-        "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
-        "max_candidates_per_run": 600,
-        "notes": "Stop-run style liquidity stress.",
-        "parameters": {
-          "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
-          "cluster_id": "orderflow_imbalance",
-          "confirmation": "Post-detection price action confirms signal validity",
-          "cooldown_bars": 12,
-          "expected_behavior": {
-            "disabled_regimes": [
-              "SPREAD_BLOWOUT active: spread elevated, unreliable signal"
-            ],
-            "holding_horizon_bars": "1-12",
-            "invalidation_conditions": [
-              "Volume returns above median within 1-2 bars",
-              "Spread compresses back to baseline"
-            ]
-          },
-          "lookback_window": 288,
-          "maturity": "standard",
-          "merge_gap_bars": 0,
-          "min_occurrences": 0,
-          "min_volume_quantile": 0.2,
-          "synthetic_coverage": "covered",
-          "trigger": "Detector triggers on sweep stoprun pattern",
-          "z_threshold": 3.0
-        },
-        "phase": "shock",
-        "reports_dir": "liquidity_dislocation",
-        "research_only": false,
-        "sequence_eligible": true,
-        "signal_column": "sweep_stoprun_event",
-        "strategy_only": false,
-        "subtype": "sweep_stoprun",
-        "tags": [
-          "orderflow_imbalance",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -2941,7 +2820,89 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
+        "event_type": "SWEEP_STOPRUN",
+        "events_file": "liquidity_dislocation_events.parquet",
+        "evidence_mode": "hybrid",
+        "horizons": [
+          "15m"
+        ],
+        "instrument_classes": [],
+        "is_composite": false,
+        "is_context_tag": false,
+        "is_strategy_construct": false,
+        "layer": "canonical",
+        "legacy_family": "SWEEP_STOPRUN",
+        "max_candidates_per_run": 600,
+        "notes": "Stop-run style liquidity stress.",
+        "parameters": {
+          "anchor_rule": "max_intensity",
+          "canonical_family": "LIQUIDITY_DISLOCATION",
+          "cluster_id": "orderflow_imbalance",
+          "confirmation": "Post-detection price action confirms signal validity",
+          "cooldown_bars": 12,
+          "expected_behavior": {
+            "disabled_regimes": [
+              "SPREAD_BLOWOUT active: spread elevated, unreliable signal"
+            ],
+            "holding_horizon_bars": "1-12",
+            "invalidation_conditions": [
+              "Volume returns above median within 1-2 bars",
+              "Spread compresses back to baseline"
+            ]
+          },
+          "lookback_window": 288,
+          "maturity": "standard",
+          "merge_gap_bars": 0,
+          "min_occurrences": 0,
+          "min_volume_quantile": 0.2,
+          "synthetic_coverage": "covered",
+          "trigger": "Detector triggers on sweep stoprun pattern",
+          "z_threshold": 3.0
+        },
+        "phase": "shock",
+        "reports_dir": "liquidity_dislocation",
+        "research_only": false,
+        "sequence_eligible": true,
+        "signal_column": "sweep_stoprun_event",
+        "strategy_only": false,
+        "subtype": "sweep_stoprun",
+        "tags": [],
+        "templates": [
+          "mean_reversion",
+          "continuation",
+          "stop_run_repair",
+          "overshoot_repair",
+          "only_if_liquidity",
+          "slippage_aware_filter"
+        ],
+        "threshold_parameters": {
+          "cooldown_bars": 12,
+          "lookback_window": 288,
+          "merge_gap_bars": 0,
+          "min_occurrences": 0,
+          "min_volume_quantile": 0.2,
+          "z_threshold": 3.0
+        },
+        "venue_scope": "single_venue"
+      },
+      {
+        "asset_scope": "single_asset",
+        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_regime": "LIQUIDITY_STRESS",
+        "conditioning_cols": [
+          "vol_regime",
+          "carry_state",
+          "funding_bps",
+          "ms_trend_state",
+          "ms_spread_state",
+          "severity_bucket"
+        ],
+        "deconflict_priority": 80,
+        "default_executable": true,
+        "detector": "",
+        "disposition": "merge",
+        "enabled": true,
         "event_type": "WICK_REVERSAL_PROXY",
         "events_file": "liquidity_dislocation_events.parquet",
         "evidence_mode": "hybrid",
@@ -2953,7 +2914,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "LIQUIDITY_DISLOCATION",
+        "legacy_family": "WICK_REVERSAL_PROXY",
         "max_candidates_per_run": 500,
         "notes": "Hybrid liquidity-stress recovery evidence: wick and reclaim structure confirmed by realized-volume expansion.",
         "parameters": {
@@ -2983,7 +2944,7 @@
         "phase": "recovery",
         "reports_dir": "liquidity_dislocation",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "wick_reversal_proxy_event",
         "strategy_only": false,
         "subtype": "wick_reversal",
@@ -3021,7 +2982,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "OISpikeNegativeDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "OI_SPIKE_NEGATIVE",
@@ -3031,15 +2992,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "OI_SPIKE_NEGATIVE",
         "max_candidates_per_run": 250,
         "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
         "parameters": {
@@ -3073,9 +3031,7 @@
         "signal_column": "oi_spike_neg_event",
         "strategy_only": false,
         "subtype": "oi_spike_negative",
-        "tags": [
-          "oi_dynamic"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -3109,7 +3065,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "OISpikePositiveDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "OI_SPIKE_POSITIVE",
@@ -3118,15 +3074,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "OI_SPIKE_POSITIVE",
         "max_candidates_per_run": 250,
         "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
         "parameters": {
@@ -3160,9 +3113,7 @@
         "signal_column": "oi_spike_pos_event",
         "strategy_only": false,
         "subtype": "oi_spike_positive",
-        "tags": [
-          "oi_dynamic"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -3195,8 +3146,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 30,
-        "default_executable": false,
-        "detector": "EventSequenceDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
@@ -3206,15 +3157,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": true,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "composite",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
         "max_candidates_per_run": 250,
         "notes": "Composite positioning/volatility hypothesis.",
         "parameters": {
@@ -3242,14 +3190,11 @@
         "phase": "confirmation",
         "reports_dir": "event_sequences",
         "research_only": true,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "seq_oi_spikepos_then_vol_spike_event",
         "strategy_only": false,
         "subtype": "oi_spike_positive_then_vol_spike",
-        "tags": [
-          "oi_dynamic",
-          "sequence"
-        ],
+        "tags": [],
         "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 24,
@@ -3275,7 +3220,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "DeleveragingWaveDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "DELEVERAGING_WAVE",
@@ -3285,15 +3230,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "DELEVERAGING_WAVE",
         "max_candidates_per_run": 500,
         "notes": "Positioning unwind regime with explicit deleveraging dynamics.",
         "parameters": {
@@ -3326,10 +3268,7 @@
         "signal_column": "deleveraging_wave_event",
         "strategy_only": false,
         "subtype": "deleveraging_wave",
-        "tags": [
-          "forced_liquidation",
-          "oi_dynamic"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -3363,7 +3302,7 @@
         ],
         "deconflict_priority": 90,
         "default_executable": true,
-        "detector": "OIFlushDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "OI_FLUSH",
@@ -3373,15 +3312,12 @@
           "5m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "OI_FLUSH",
         "max_candidates_per_run": 500,
         "notes": "OI flush folded into unwind/deleveraging regime.",
         "parameters": {
@@ -3415,10 +3351,7 @@
         "signal_column": "oi_flush_event",
         "strategy_only": false,
         "subtype": "oi_flush",
-        "tags": [
-          "oi_dynamic",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "reversal_or_squeeze",
           "mean_reversion",
@@ -3454,7 +3387,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "POST_DELEVERAGING_REBOUND",
         "events_file": "forced_flow_and_exhaustion_events.parquet",
         "evidence_mode": "hybrid",
@@ -3466,7 +3399,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "POST_DELEVERAGING_REBOUND",
         "max_candidates_per_run": 400,
         "notes": "Recovery phase following deleveraging wave.",
         "parameters": {
@@ -3515,7 +3448,7 @@
         "phase": "recovery",
         "reports_dir": "forced_flow_and_exhaustion",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "post_deleveraging_rebound_event",
         "strategy_only": false,
         "subtype": "post_deleveraging_rebound",
@@ -3567,7 +3500,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "BetaSpikeDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "BETA_SPIKE_EVENT",
@@ -3576,15 +3509,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "REGIME_TRANSITION",
+        "legacy_family": "BETA_SPIKE_EVENT",
         "max_candidates_per_run": 350,
         "notes": "Cross-asset transition evidence via beta instability.",
         "parameters": {
@@ -3617,9 +3547,7 @@
         "signal_column": "beta_spike_event",
         "strategy_only": false,
         "subtype": "beta_spike",
-        "tags": [
-          "regime_shift"
-        ],
+        "tags": [],
         "templates": [
           "only_if_regime",
           "continuation",
@@ -3650,7 +3578,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "ChopToTrendDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "CHOP_TO_TREND_SHIFT",
@@ -3659,15 +3587,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "REGIME_TRANSITION",
+        "legacy_family": "CHOP_TO_TREND_SHIFT",
         "max_candidates_per_run": 350,
         "notes": "Transition from choppy to directional conditions.",
         "parameters": {
@@ -3700,10 +3625,7 @@
         "signal_column": "chop_to_trend_shift_event",
         "strategy_only": false,
         "subtype": "chop_to_trend",
-        "tags": [
-          "regime_shift",
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "only_if_regime",
           "continuation",
@@ -3734,7 +3656,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "CorrelationBreakdownDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "CORRELATION_BREAKDOWN_EVENT",
@@ -3743,15 +3665,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "REGIME_TRANSITION",
+        "legacy_family": "CORRELATION_BREAKDOWN_EVENT",
         "max_candidates_per_run": 350,
         "notes": "Cross-asset regime transition via correlation instability.",
         "parameters": {
@@ -3784,9 +3703,7 @@
         "signal_column": "correlation_breakdown_event",
         "strategy_only": false,
         "subtype": "correlation_breakdown",
-        "tags": [
-          "regime_shift"
-        ],
+        "tags": [],
         "templates": [
           "only_if_regime",
           "continuation",
@@ -3817,7 +3734,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "TrendToChopDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "TREND_TO_CHOP_SHIFT",
@@ -3826,15 +3743,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "REGIME_TRANSITION",
+        "legacy_family": "TREND_TO_CHOP_SHIFT",
         "max_candidates_per_run": 350,
         "notes": "Transition from directional to choppy conditions.",
         "parameters": {
@@ -3867,10 +3781,7 @@
         "signal_column": "trend_to_chop_shift_event",
         "strategy_only": false,
         "subtype": "trend_to_chop",
-        "tags": [
-          "regime_shift",
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "only_if_regime",
           "continuation",
@@ -3901,7 +3812,7 @@
         ],
         "deconflict_priority": 85,
         "default_executable": true,
-        "detector": "VolRegimeShiftDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "VOL_REGIME_SHIFT_EVENT",
@@ -3910,15 +3821,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "REGIME_TRANSITION",
+        "legacy_family": "VOL_REGIME_SHIFT_EVENT",
         "max_candidates_per_run": 350,
         "notes": "Regime transition expressed through volatility-state change.",
         "parameters": {
@@ -3951,10 +3859,7 @@
         "signal_column": "vol_regime_shift_event",
         "strategy_only": false,
         "subtype": "vol_regime_shift",
-        "tags": [
-          "regime_shift",
-          "vol_regime"
-        ],
+        "tags": [],
         "templates": [
           "only_if_regime",
           "continuation",
@@ -3986,8 +3891,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 20,
-        "default_executable": false,
-        "detector": "FundingTimestampDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "FUNDING_TIMESTAMP_EVENT",
@@ -3997,15 +3902,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": true,
         "is_strategy_construct": false,
         "layer": "context_tag",
-        "legacy_family": "TEMPORAL_STRUCTURE",
+        "legacy_family": "FUNDING_TIMESTAMP_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Mechanical funding window context; not a canonical regime.",
         "parameters": {
@@ -4037,10 +3939,7 @@
         "signal_column": "funding_timestamp_event",
         "strategy_only": false,
         "subtype": "funding_timestamp",
-        "tags": [
-          "temporal_anchor",
-          "funding_crowding"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation"
@@ -4067,8 +3966,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 20,
-        "default_executable": false,
-        "detector": "ScheduledNewsDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SCHEDULED_NEWS_WINDOW_EVENT",
@@ -4078,15 +3977,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": true,
         "is_strategy_construct": false,
         "layer": "context_tag",
-        "legacy_family": "TEMPORAL_STRUCTURE",
+        "legacy_family": "SCHEDULED_NEWS_WINDOW_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Context gate for scheduled news windows.",
         "parameters": {
@@ -4117,9 +4013,7 @@
         "signal_column": "scheduled_news_window_event",
         "strategy_only": false,
         "subtype": "scheduled_news_window",
-        "tags": [
-          "temporal_anchor"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation"
@@ -4145,8 +4039,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 20,
-        "default_executable": false,
-        "detector": "SessionCloseDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SESSION_CLOSE_EVENT",
@@ -4156,15 +4050,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": true,
         "is_strategy_construct": false,
         "layer": "context_tag",
-        "legacy_family": "TEMPORAL_STRUCTURE",
+        "legacy_family": "SESSION_CLOSE_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Session close context tag.",
         "parameters": {
@@ -4204,9 +4095,7 @@
         "signal_column": "session_close_event",
         "strategy_only": false,
         "subtype": "session_close",
-        "tags": [
-          "temporal_anchor"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation"
@@ -4234,8 +4123,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 20,
-        "default_executable": false,
-        "detector": "SessionOpenDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SESSION_OPEN_EVENT",
@@ -4245,15 +4134,12 @@
           "5m",
           "15m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": true,
         "is_strategy_construct": false,
         "layer": "context_tag",
-        "legacy_family": "TEMPORAL_STRUCTURE",
+        "legacy_family": "SESSION_OPEN_EVENT",
         "max_candidates_per_run": 300,
         "notes": "Session open context tag.",
         "parameters": {
@@ -4293,9 +4179,7 @@
         "signal_column": "session_open_event",
         "strategy_only": false,
         "subtype": "session_open",
-        "tags": [
-          "temporal_anchor"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation"
@@ -4326,7 +4210,7 @@
         ],
         "deconflict_priority": 60,
         "default_executable": true,
-        "detector": "BandBreakDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "BAND_BREAK",
@@ -4336,15 +4220,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "BAND_BREAK",
         "max_candidates_per_run": 350,
         "notes": "Statistical band escape; retained as subtype under stretch/overshoot.",
         "parameters": {
@@ -4377,9 +4258,7 @@
         "signal_column": "band_break_event",
         "strategy_only": false,
         "subtype": "band_break",
-        "tags": [
-          "statistical_stretch"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -4407,8 +4286,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 10,
-        "default_executable": false,
-        "detector": "CopulaPairsTradingDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "COPULA_PAIRS_TRADING",
@@ -4418,15 +4297,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": true,
         "layer": "strategy_construct",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "COPULA_PAIRS_TRADING",
         "max_candidates_per_run": 350,
         "notes": "Relative-value strategy/search construct, not a canonical market event.",
         "parameters": {
@@ -4460,9 +4336,7 @@
         "signal_column": "copula_pairs_trading_event",
         "strategy_only": true,
         "subtype": "copula_pairs_trading",
-        "tags": [
-          "basis_dislocation"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -4490,7 +4364,7 @@
         ],
         "deconflict_priority": 60,
         "default_executable": true,
-        "detector": "GapOvershootDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "GAP_OVERSHOOT",
@@ -4500,15 +4374,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "GAP_OVERSHOOT",
         "max_candidates_per_run": 350,
         "notes": "Gap-extension overshoot state.",
         "parameters": {
@@ -4542,9 +4413,7 @@
         "signal_column": "gap_overshoot_event",
         "strategy_only": false,
         "subtype": "gap_overshoot",
-        "tags": [
-          "statistical_stretch"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -4574,7 +4443,7 @@
         ],
         "deconflict_priority": 60,
         "default_executable": true,
-        "detector": "OvershootDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "OVERSHOOT_AFTER_SHOCK",
@@ -4584,15 +4453,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "OVERSHOOT_AFTER_SHOCK",
         "max_candidates_per_run": 350,
         "notes": "Statistical overshoot conditional on preceding shock.",
         "parameters": {
@@ -4627,9 +4493,7 @@
         "signal_column": "overshoot_after_shock_event",
         "strategy_only": false,
         "subtype": "overshoot_after_shock",
-        "tags": [
-          "statistical_stretch"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -4660,7 +4524,7 @@
         ],
         "deconflict_priority": 60,
         "default_executable": true,
-        "detector": "ZScoreStretchDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "ZSCORE_STRETCH",
@@ -4670,15 +4534,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "STATISTICAL_DISLOCATION",
+        "legacy_family": "ZSCORE_STRETCH",
         "max_candidates_per_run": 350,
         "notes": "Canonical stretch/overshoot event.",
         "parameters": {
@@ -4712,9 +4573,7 @@
         "signal_column": "zscore_stretch_event",
         "strategy_only": false,
         "subtype": "zscore_stretch",
-        "tags": [
-          "statistical_stretch"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "overshoot_repair",
@@ -4746,7 +4605,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "PullbackPivotDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "PULLBACK_PIVOT",
@@ -4756,15 +4615,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "PULLBACK_PIVOT",
         "max_candidates_per_run": 450,
         "notes": "Pullback continuation setup.",
         "parameters": {
@@ -4797,9 +4653,7 @@
         "signal_column": "pullback_pivot_event",
         "strategy_only": false,
         "subtype": "pullback_pivot",
-        "tags": [
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -4831,7 +4685,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "RangeBreakoutDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "RANGE_BREAKOUT",
@@ -4841,15 +4695,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "RANGE_BREAKOUT",
         "max_candidates_per_run": 450,
         "notes": "Directional breakout retained under trend continuation.",
         "parameters": {
@@ -4882,9 +4733,7 @@
         "signal_column": "range_breakout_event",
         "strategy_only": false,
         "subtype": "range_breakout",
-        "tags": [
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -4916,7 +4765,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "SREventDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "SUPPORT_RESISTANCE_BREAK",
@@ -4926,15 +4775,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "SUPPORT_RESISTANCE_BREAK",
         "max_candidates_per_run": 450,
         "notes": "Structural breakout subtype within trend continuation.",
         "parameters": {
@@ -4967,9 +4813,7 @@
         "signal_column": "support_resistance_break_event",
         "strategy_only": false,
         "subtype": "support_resistance_break",
-        "tags": [
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -5001,7 +4845,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "TrendAccelerationDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "TREND_ACCELERATION",
@@ -5011,15 +4855,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "TREND_ACCELERATION",
         "max_candidates_per_run": 450,
         "notes": "Continuation regime with accelerating trend.",
         "parameters": {
@@ -5053,9 +4894,7 @@
         "signal_column": "trend_acceleration_event",
         "strategy_only": false,
         "subtype": "trend_acceleration",
-        "tags": [
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -5090,7 +4929,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "ClimaxVolumeDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "CLIMAX_VOLUME_BAR",
@@ -5099,15 +4938,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "CLIMAX_VOLUME_BAR",
         "max_candidates_per_run": 500,
         "notes": "Exhaustion marker rather than standalone family.",
         "parameters": {
@@ -5143,10 +4979,7 @@
         "signal_column": "climax_volume_bar_event",
         "strategy_only": false,
         "subtype": "climax_volume",
-        "tags": [
-          "exhaustion",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -5181,7 +5014,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "FailedContinuationDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "FAILED_CONTINUATION",
@@ -5190,15 +5023,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "FAILED_CONTINUATION",
         "max_candidates_per_run": 500,
         "notes": "Trend-follow signal failure belongs in exhaustion/failure regime.",
         "parameters": {
@@ -5232,9 +5062,7 @@
         "signal_column": "failed_continuation_event",
         "strategy_only": false,
         "subtype": "failed_continuation",
-        "tags": [
-          "exhaustion"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -5267,7 +5095,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "FalseBreakoutDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "FALSE_BREAKOUT",
@@ -5277,15 +5105,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "FALSE_BREAKOUT",
         "max_candidates_per_run": 450,
         "notes": "Breakout failure surface under trend failure/exhaustion.",
         "parameters": {
@@ -5319,10 +5144,7 @@
         "signal_column": "false_breakout_event",
         "strategy_only": false,
         "subtype": "false_breakout",
-        "tags": [
-          "trend_momentum",
-          "exhaustion"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -5357,7 +5179,7 @@
         "default_executable": true,
         "detector": "",
         "disposition": "merge",
-        "enabled": null,
+        "enabled": true,
         "event_type": "FLOW_EXHAUSTION_PROXY",
         "events_file": "forced_flow_and_exhaustion_events.parquet",
         "evidence_mode": "hybrid",
@@ -5369,7 +5191,7 @@
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "FLOW_EXHAUSTION_PROXY",
         "max_candidates_per_run": 500,
         "notes": "Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined with price and volatility exhaustion.",
         "parameters": {
@@ -5414,7 +5236,7 @@
         "phase": "exhaustion",
         "reports_dir": "forced_flow_and_exhaustion",
         "research_only": false,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "flow_exhaustion_proxy_event",
         "strategy_only": false,
         "subtype": "flow_exhaustion",
@@ -5465,7 +5287,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "ForcedFlowExhaustionDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "FORCED_FLOW_EXHAUSTION",
@@ -5474,15 +5296,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "FORCED_FLOW_EXHAUSTION",
         "max_candidates_per_run": 500,
         "notes": "Exhaustion regime with forced-flow mechanics.",
         "parameters": {
@@ -5532,10 +5351,7 @@
         "signal_column": "forced_flow_exhaustion_event",
         "strategy_only": false,
         "subtype": "forced_flow_exhaustion",
-        "tags": [
-          "exhaustion",
-          "forced_liquidation"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -5582,7 +5398,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "PostDeleveragingReboundDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "LIQUIDATION_EXHAUSTION_REVERSAL",
@@ -5591,15 +5407,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
+        "legacy_family": "LIQUIDATION_EXHAUSTION_REVERSAL",
         "max_candidates_per_run": 400,
         "notes": "Reversal after forced liquidation exhaustion.",
         "parameters": {
@@ -5656,9 +5469,7 @@
         "signal_column": "liquidation_exhaustion_reversal_event",
         "strategy_only": false,
         "subtype": "liquidation_exhaustion_reversal",
-        "tags": [
-          "forced_liquidation"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -5711,7 +5522,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "MomentumDivergenceDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "MOMENTUM_DIVERGENCE_TRIGGER",
@@ -5720,15 +5531,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "MOMENTUM_DIVERGENCE_TRIGGER",
         "max_candidates_per_run": 500,
         "notes": "Divergence-based exhaustion signal.",
         "parameters": {
@@ -5763,9 +5571,7 @@
         "signal_column": "momentum_divergence_trigger_event",
         "strategy_only": false,
         "subtype": "momentum_divergence",
-        "tags": [
-          "exhaustion"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -5799,7 +5605,7 @@
         ],
         "deconflict_priority": 70,
         "default_executable": true,
-        "detector": "TrendDecelerationDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "TREND_DECELERATION",
@@ -5809,15 +5615,12 @@
           "15m",
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "TREND_STRUCTURE",
+        "legacy_family": "TREND_DECELERATION",
         "max_candidates_per_run": 450,
         "notes": "Deceleration belongs with trend failure/exhaustion.",
         "parameters": {
@@ -5850,9 +5653,7 @@
         "signal_column": "trend_deceleration_event",
         "strategy_only": false,
         "subtype": "trend_deceleration",
-        "tags": [
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "breakout_followthrough",
           "false_breakout_reversal",
@@ -5884,7 +5685,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "TrendExhaustionDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "TREND_EXHAUSTION_TRIGGER",
@@ -5893,15 +5694,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+        "legacy_family": "TREND_EXHAUSTION_TRIGGER",
         "max_candidates_per_run": 500,
         "notes": "Canonical exhaustion onset.",
         "parameters": {
@@ -5952,10 +5750,7 @@
         "signal_column": "trend_exhaustion_trigger_event",
         "strategy_only": false,
         "subtype": "trend_exhaustion",
-        "tags": [
-          "exhaustion",
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "exhaustion_reversal",
@@ -6007,7 +5802,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "VolClusterShiftDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "VOL_CLUSTER_SHIFT",
@@ -6016,15 +5811,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "VOL_CLUSTER_SHIFT",
         "max_candidates_per_run": 500,
         "notes": "Volatility cluster migration under expansion regime.",
         "parameters": {
@@ -6058,9 +5850,7 @@
         "signal_column": "vol_cluster_shift_event",
         "strategy_only": false,
         "subtype": "vol_cluster_shift",
-        "tags": [
-          "vol_regime"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6093,7 +5883,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "VolSpikeDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "VOL_SPIKE",
@@ -6102,15 +5892,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "VOL_SPIKE",
         "max_candidates_per_run": 500,
         "notes": "Canonical realized-volatility expansion onset.",
         "parameters": {
@@ -6141,10 +5928,7 @@
         "signal_column": "vol_spike_event",
         "strategy_only": false,
         "subtype": "vol_spike",
-        "tags": [
-          "vol_regime",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6176,7 +5960,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "BreakoutTriggerDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "BREAKOUT_TRIGGER",
@@ -6185,15 +5969,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "BREAKOUT_TRIGGER",
         "max_candidates_per_run": 500,
         "notes": "Compression-release bridge event; not a standalone canonical regime.",
         "parameters": {
@@ -6229,10 +6010,7 @@
         "signal_column": "breakout_trigger_event",
         "strategy_only": false,
         "subtype": "breakout_trigger",
-        "tags": [
-          "vol_regime",
-          "trend_momentum"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6267,7 +6045,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "RangeCompressionDetector",
+        "detector": "",
         "disposition": "merge",
         "enabled": true,
         "event_type": "RANGE_COMPRESSION_END",
@@ -6276,15 +6054,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "RANGE_COMPRESSION_END",
         "max_candidates_per_run": 500,
         "notes": "Compression-release subtype rather than standalone family.",
         "parameters": {
@@ -6318,9 +6093,7 @@
         "signal_column": "range_compression_end_event",
         "strategy_only": false,
         "subtype": "range_compression_end",
-        "tags": [
-          "vol_regime"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6352,8 +6125,8 @@
           "severity_bucket"
         ],
         "deconflict_priority": 30,
-        "default_executable": false,
-        "detector": "EventSequenceDetector",
+        "default_executable": true,
+        "detector": "",
         "disposition": "demote",
         "enabled": true,
         "event_type": "SEQ_VOL_COMP_THEN_BREAKOUT",
@@ -6362,15 +6135,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": true,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "composite",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "SEQ_VOL_COMP_THEN_BREAKOUT",
         "max_candidates_per_run": 350,
         "notes": "Composite compression-release hypothesis.",
         "parameters": {
@@ -6398,14 +6168,11 @@
         "phase": "confirmation",
         "reports_dir": "event_sequences",
         "research_only": true,
-        "sequence_eligible": false,
+        "sequence_eligible": true,
         "signal_column": "seq_vol_comp_then_breakout_event",
         "strategy_only": false,
         "subtype": "vol_compression_then_breakout",
-        "tags": [
-          "vol_regime",
-          "sequence"
-        ],
+        "tags": [],
         "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 24,
@@ -6429,7 +6196,7 @@
         ],
         "deconflict_priority": 75,
         "default_executable": true,
-        "detector": "VolRelaxationDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "VOL_RELAXATION_START",
@@ -6438,15 +6205,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "VOL_RELAXATION_START",
         "max_candidates_per_run": 500,
         "notes": "Start of volatility normalization after expansion.",
         "parameters": {
@@ -6480,9 +6244,7 @@
         "signal_column": "vol_relaxation_start_event",
         "strategy_only": false,
         "subtype": "vol_relaxation_start",
-        "tags": [
-          "vol_regime"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6517,7 +6279,7 @@
         ],
         "deconflict_priority": 80,
         "default_executable": true,
-        "detector": "VolShockRelaxationDetector",
+        "detector": "",
         "disposition": "keep",
         "enabled": true,
         "event_type": "VOL_SHOCK",
@@ -6526,15 +6288,12 @@
         "horizons": [
           "60m"
         ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
+        "instrument_classes": [],
         "is_composite": false,
         "is_context_tag": false,
         "is_strategy_construct": false,
         "layer": "canonical",
-        "legacy_family": "VOLATILITY_TRANSITION",
+        "legacy_family": "VOL_SHOCK",
         "max_candidates_per_run": 500,
         "notes": "Canonical volatility shock; current detector implementation also models relaxation boundary.",
         "parameters": {
@@ -6626,10 +6385,7 @@
         "signal_column": "vol_shock_relaxation_event",
         "strategy_only": false,
         "subtype": "vol_shock",
-        "tags": [
-          "vol_regime",
-          "high_urgency"
-        ],
+        "tags": [],
         "templates": [
           "mean_reversion",
           "continuation",
@@ -6663,7 +6419,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "ABSORPTION_PROXY",
       "events_file": "liquidity_dislocation_events.parquet",
       "evidence_mode": "hybrid",
@@ -6675,7 +6431,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "ABSORPTION_PROXY",
       "max_candidates_per_run": 600,
       "notes": "Hybrid liquidity-stress evidence: direct imbalance-stall confirmation combined with spread and RV stress.",
       "parameters": {
@@ -6708,7 +6464,7 @@
       "phase": "persistence",
       "reports_dir": "liquidity_dislocation",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "absorption_proxy_event",
       "strategy_only": false,
       "subtype": "absorption",
@@ -6746,7 +6502,7 @@
       ],
       "deconflict_priority": 60,
       "default_executable": true,
-      "detector": "BandBreakDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "BAND_BREAK",
@@ -6756,15 +6512,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "BAND_BREAK",
       "max_candidates_per_run": 350,
       "notes": "Statistical band escape; retained as subtype under stretch/overshoot.",
       "parameters": {
@@ -6797,9 +6550,7 @@
       "signal_column": "band_break_event",
       "strategy_only": false,
       "subtype": "band_break",
-      "tags": [
-        "statistical_stretch"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -6828,7 +6579,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "BasisDislocationDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "BASIS_DISLOC",
@@ -6838,15 +6589,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "BASIS_DISLOC",
       "max_candidates_per_run": 350,
       "notes": "Canonical basis dislocation surface.",
       "parameters": {
@@ -6880,9 +6628,7 @@
       "signal_column": "basis_dislocation_event",
       "strategy_only": false,
       "subtype": "basis_dislocation",
-      "tags": [
-        "basis_dislocation"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -6912,7 +6658,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "BetaSpikeDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "BETA_SPIKE_EVENT",
@@ -6921,15 +6667,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "REGIME_TRANSITION",
+      "legacy_family": "BETA_SPIKE_EVENT",
       "max_candidates_per_run": 350,
       "notes": "Cross-asset transition evidence via beta instability.",
       "parameters": {
@@ -6962,9 +6705,7 @@
       "signal_column": "beta_spike_event",
       "strategy_only": false,
       "subtype": "beta_spike",
-      "tags": [
-        "regime_shift"
-      ],
+      "tags": [],
       "templates": [
         "only_if_regime",
         "continuation",
@@ -6995,7 +6736,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "BreakoutTriggerDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "BREAKOUT_TRIGGER",
@@ -7004,15 +6745,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "BREAKOUT_TRIGGER",
       "max_candidates_per_run": 500,
       "notes": "Compression-release bridge event; not a standalone canonical regime.",
       "parameters": {
@@ -7048,10 +6786,7 @@
       "signal_column": "breakout_trigger_event",
       "strategy_only": false,
       "subtype": "breakout_trigger",
-      "tags": [
-        "vol_regime",
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -7086,7 +6821,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "ChopToTrendDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "CHOP_TO_TREND_SHIFT",
@@ -7095,15 +6830,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "REGIME_TRANSITION",
+      "legacy_family": "CHOP_TO_TREND_SHIFT",
       "max_candidates_per_run": 350,
       "notes": "Transition from choppy to directional conditions.",
       "parameters": {
@@ -7136,10 +6868,7 @@
       "signal_column": "chop_to_trend_shift_event",
       "strategy_only": false,
       "subtype": "chop_to_trend",
-      "tags": [
-        "regime_shift",
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "only_if_regime",
         "continuation",
@@ -7170,7 +6899,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "ClimaxVolumeDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "CLIMAX_VOLUME_BAR",
@@ -7179,15 +6908,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "CLIMAX_VOLUME_BAR",
       "max_candidates_per_run": 500,
       "notes": "Exhaustion marker rather than standalone family.",
       "parameters": {
@@ -7223,10 +6949,7 @@
       "signal_column": "climax_volume_bar_event",
       "strategy_only": false,
       "subtype": "climax_volume",
-      "tags": [
-        "exhaustion",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -7260,8 +6983,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 10,
-      "default_executable": false,
-      "detector": "CopulaPairsTradingDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "COPULA_PAIRS_TRADING",
@@ -7271,15 +6994,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": true,
       "layer": "strategy_construct",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "COPULA_PAIRS_TRADING",
       "max_candidates_per_run": 350,
       "notes": "Relative-value strategy/search construct, not a canonical market event.",
       "parameters": {
@@ -7313,9 +7033,7 @@
       "signal_column": "copula_pairs_trading_event",
       "strategy_only": true,
       "subtype": "copula_pairs_trading",
-      "tags": [
-        "basis_dislocation"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -7343,7 +7061,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "CorrelationBreakdownDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "CORRELATION_BREAKDOWN_EVENT",
@@ -7352,15 +7070,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "REGIME_TRANSITION",
+      "legacy_family": "CORRELATION_BREAKDOWN_EVENT",
       "max_candidates_per_run": 350,
       "notes": "Cross-asset regime transition via correlation instability.",
       "parameters": {
@@ -7393,9 +7108,7 @@
       "signal_column": "correlation_breakdown_event",
       "strategy_only": false,
       "subtype": "correlation_breakdown",
-      "tags": [
-        "regime_shift"
-      ],
+      "tags": [],
       "templates": [
         "only_if_regime",
         "continuation",
@@ -7426,7 +7139,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "CrossAssetDesyncDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "CROSS_ASSET_DESYNC_EVENT",
@@ -7437,15 +7150,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "INFORMATION_DESYNC",
+      "legacy_family": "CROSS_ASSET_DESYNC_EVENT",
       "max_candidates_per_run": 600,
       "notes": "First-class cross-asset desynchronization regime.",
       "parameters": {
@@ -7532,16 +7242,8 @@
       "signal_column": "cross_asset_desync_event",
       "strategy_only": false,
       "subtype": "cross_asset_desync",
-      "tags": [
-        "desync"
-      ],
-      "templates": [
-        "desync_repair",
-        "convergence",
-        "basis_repair",
-        "lead_lag_follow",
-        "divergence_continuation"
-      ],
+      "tags": [],
+      "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 24,
         "lookback_window": 2880,
@@ -7566,7 +7268,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "CrossVenueDesyncDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "CROSS_VENUE_DESYNC",
@@ -7577,15 +7279,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "INFORMATION_DESYNC",
+      "legacy_family": "CROSS_VENUE_DESYNC",
       "max_candidates_per_run": 600,
       "notes": "Cross-venue basis persistence folded into basis/funding dislocation.",
       "parameters": {
@@ -7672,11 +7371,68 @@
             "New shock within window_end bars of prior event"
           ]
         },
+        "governance": {
+          "context_tag": false,
+          "default_executable": true,
+          "deployment_disposition": "secondary_or_confirm",
+          "event_kind": "market_event",
+          "maturity": "standard",
+          "operational_role": "trigger",
+          "research_only": false,
+          "runtime_category": "active_runtime_event",
+          "strategy_only": false,
+          "tier": "B"
+        },
+        "identity": {
+          "canonical_regime": "BASIS_FUNDING_DISLOCATION",
+          "evidence_mode": "inferred_cross_asset",
+          "legacy_family": "INFORMATION_DESYNC",
+          "phase": "persistence",
+          "subtype": "cross_venue_desync"
+        },
+        "interaction": {
+          "suppressed_by": [
+            {
+              "block": true,
+              "event_type": "FUNDING_TIMESTAMP_EVENT",
+              "penalty_factor": 0.0
+            },
+            {
+              "block": false,
+              "event_type": "SPREAD_BLOWOUT",
+              "penalty_factor": 0.3
+            }
+          ]
+        },
         "merge_gap_bars": 1,
         "min_basis_bps": 35.0,
         "min_occurrences": 0,
         "persistence_bars": 2,
         "revert_z": 0.5,
+        "routing": {
+          "routing_profile_ref": "BASIS_FUNDING_DISLOCATION"
+        },
+        "runtime": {
+          "detector": "CrossVenueDesyncDetector",
+          "enabled": true,
+          "events_file": "cross_venue_desync_events.parquet",
+          "instrument_classes": [
+            "crypto",
+            "futures"
+          ],
+          "reports_dir": "cross_venue_desync",
+          "requires_features": [],
+          "runtime_tags": [
+            "desync"
+          ],
+          "sequence_eligible": true,
+          "signal_column": "cross_venue_desync_event"
+        },
+        "semantics": {
+          "cluster_id": "desync",
+          "overlap_group": "basis_desync",
+          "summary": "Cross-venue basis persistence folded into basis/funding dislocation."
+        },
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on cross venue desync pattern",
         "window_end": 32
@@ -7688,9 +7444,7 @@
       "signal_column": "cross_venue_desync_event",
       "strategy_only": false,
       "subtype": "cross_venue_desync",
-      "tags": [
-        "desync"
-      ],
+      "tags": [],
       "templates": [
         "desync_repair",
         "convergence",
@@ -7725,7 +7479,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "DeleveragingWaveDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "DELEVERAGING_WAVE",
@@ -7735,15 +7489,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "DELEVERAGING_WAVE",
       "max_candidates_per_run": 500,
       "notes": "Positioning unwind regime with explicit deleveraging dynamics.",
       "parameters": {
@@ -7776,10 +7527,7 @@
       "signal_column": "deleveraging_wave_event",
       "strategy_only": false,
       "subtype": "deleveraging_wave",
-      "tags": [
-        "forced_liquidation",
-        "oi_dynamic"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -7813,7 +7561,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "DepthCollapseDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "DEPTH_COLLAPSE",
@@ -7822,15 +7570,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "DEPTH_COLLAPSE",
       "max_candidates_per_run": 600,
       "notes": "Direct depth failure evidence for liquidity stress.",
       "parameters": {
@@ -7873,9 +7618,7 @@
       "signal_column": "depth_collapse_event",
       "strategy_only": false,
       "subtype": "depth_collapse",
-      "tags": [
-        "liquidity_stress"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -7915,7 +7658,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "DEPTH_STRESS_PROXY",
       "events_file": "liquidity_dislocation_events.parquet",
       "evidence_mode": "hybrid",
@@ -7927,7 +7670,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "DEPTH_STRESS_PROXY",
       "max_candidates_per_run": 600,
       "notes": "Hybrid liquidity-stress evidence: direct micro-depth depletion combined with spread and RV stress.",
       "parameters": {
@@ -7963,7 +7706,7 @@
       "phase": "collapse",
       "reports_dir": "liquidity_dislocation",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "depth_stress_proxy_event",
       "strategy_only": false,
       "subtype": "depth_collapse",
@@ -8002,7 +7745,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "FailedContinuationDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "FAILED_CONTINUATION",
@@ -8011,15 +7754,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "FAILED_CONTINUATION",
       "max_candidates_per_run": 500,
       "notes": "Trend-follow signal failure belongs in exhaustion/failure regime.",
       "parameters": {
@@ -8053,9 +7793,7 @@
       "signal_column": "failed_continuation_event",
       "strategy_only": false,
       "subtype": "failed_continuation",
-      "tags": [
-        "exhaustion"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -8088,7 +7826,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "FalseBreakoutDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FALSE_BREAKOUT",
@@ -8098,15 +7836,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "FALSE_BREAKOUT",
       "max_candidates_per_run": 450,
       "notes": "Breakout failure surface under trend failure/exhaustion.",
       "parameters": {
@@ -8140,10 +7875,7 @@
       "signal_column": "false_breakout_event",
       "strategy_only": false,
       "subtype": "false_breakout",
-      "tags": [
-        "trend_momentum",
-        "exhaustion"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -8176,7 +7908,7 @@
       ],
       "deconflict_priority": 65,
       "default_executable": true,
-      "detector": "FeeRegimeChangeDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "FEE_REGIME_CHANGE_EVENT",
@@ -8186,15 +7918,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "EXECUTION_FRICTION",
+      "legacy_family": "FEE_REGIME_CHANGE_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Execution-cost regime shift.",
       "parameters": {
@@ -8227,9 +7956,7 @@
       "signal_column": "fee_regime_change_event",
       "strategy_only": false,
       "subtype": "fee_regime_change",
-      "tags": [
-        "execution_cost"
-      ],
+      "tags": [],
       "templates": [
         "slippage_aware_filter",
         "tail_risk_avoid"
@@ -8259,7 +7986,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "FLOW_EXHAUSTION_PROXY",
       "events_file": "forced_flow_and_exhaustion_events.parquet",
       "evidence_mode": "hybrid",
@@ -8271,7 +7998,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "FLOW_EXHAUSTION_PROXY",
       "max_candidates_per_run": 500,
       "notes": "Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined with price and volatility exhaustion.",
       "parameters": {
@@ -8316,7 +8043,7 @@
       "phase": "exhaustion",
       "reports_dir": "forced_flow_and_exhaustion",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "flow_exhaustion_proxy_event",
       "strategy_only": false,
       "subtype": "flow_exhaustion",
@@ -8367,7 +8094,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "FndDislocDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FND_DISLOC",
@@ -8377,15 +8104,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "FND_DISLOC",
       "max_candidates_per_run": 350,
       "notes": "Funding dislocation folded into basis/funding regime.",
       "parameters": {
@@ -8423,9 +8147,7 @@
       "signal_column": "funding_dislocation_event",
       "strategy_only": false,
       "subtype": "funding_dislocation",
-      "tags": [
-        "basis_dislocation"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -8456,7 +8178,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "ForcedFlowExhaustionDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "FORCED_FLOW_EXHAUSTION",
@@ -8465,15 +8187,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "FORCED_FLOW_EXHAUSTION",
       "max_candidates_per_run": 500,
       "notes": "Exhaustion regime with forced-flow mechanics.",
       "parameters": {
@@ -8523,10 +8242,7 @@
       "signal_column": "forced_flow_exhaustion_event",
       "strategy_only": false,
       "subtype": "forced_flow_exhaustion",
-      "tags": [
-        "exhaustion",
-        "forced_liquidation"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -8573,7 +8289,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "FundingExtremeOnsetDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FUNDING_EXTREME_ONSET",
@@ -8583,15 +8299,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "FUNDING_EXTREME_ONSET",
       "max_candidates_per_run": 500,
       "notes": "Funding extreme onset under basis/funding dislocation.",
       "parameters": {
@@ -8686,8 +8399,27 @@
         },
         "extreme_pct": 95.0,
         "funding_pct_window": 2880,
+        "governance": {
+          "context_tag": false,
+          "default_executable": true,
+          "deployment_disposition": "secondary_or_confirm",
+          "event_kind": "market_event",
+          "maturity": "standard",
+          "operational_role": "trigger",
+          "research_only": false,
+          "runtime_category": "active_runtime_event",
+          "strategy_only": false,
+          "tier": "B"
+        },
         "htf_lookback": 96,
         "htf_window": 384,
+        "identity": {
+          "canonical_regime": "BASIS_FUNDING_DISLOCATION",
+          "evidence_mode": "direct",
+          "legacy_family": "POSITIONING_EXTREMES",
+          "phase": "onset",
+          "subtype": "funding_extreme"
+        },
         "interaction_min_rows_per_year": 150,
         "liq_auc_horizon": 96,
         "liquidation_abs_return": 0.03,
@@ -8704,6 +8436,30 @@
         "phase_tolerance_bars": 16,
         "post_window": 96,
         "pre_window": 96,
+        "routing": {
+          "routing_profile_ref": "BASIS_FUNDING_DISLOCATION"
+        },
+        "runtime": {
+          "detector": "FundingExtremeOnsetDetector",
+          "enabled": true,
+          "events_file": "funding_episode_events.parquet",
+          "instrument_classes": [
+            "crypto",
+            "futures"
+          ],
+          "reports_dir": "funding_events",
+          "requires_features": [],
+          "runtime_tags": [
+            "funding_crowding"
+          ],
+          "sequence_eligible": true,
+          "signal_column": "funding_extreme_onset_event"
+        },
+        "semantics": {
+          "cluster_id": "funding_crowding",
+          "overlap_group": "basis_funding_extreme",
+          "summary": "Funding extreme onset under basis/funding dislocation."
+        },
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding extreme onset pattern",
         "vol_auc_horizon": 8,
@@ -8716,9 +8472,7 @@
       "signal_column": "funding_extreme_onset_event",
       "strategy_only": false,
       "subtype": "funding_extreme",
-      "tags": [
-        "funding_crowding"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -8767,7 +8521,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "FundingFlipDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FUNDING_FLIP",
@@ -8777,15 +8531,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "FUNDING_FLIP",
       "max_candidates_per_run": 500,
       "notes": "Funding sign inversion as subtype metadata.",
       "parameters": {
@@ -8821,10 +8572,7 @@
       "signal_column": "funding_flip_event",
       "strategy_only": false,
       "subtype": "funding_flip",
-      "tags": [
-        "funding_crowding",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -8861,7 +8609,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "FundingNormalizationDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FUNDING_NORMALIZATION_TRIGGER",
@@ -8870,15 +8618,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "FUNDING_NORMALIZATION_TRIGGER",
       "max_candidates_per_run": 500,
       "notes": "Normalization phase of funding dislocation.",
       "parameters": {
@@ -8940,9 +8685,7 @@
       "signal_column": "funding_normalization_event",
       "strategy_only": false,
       "subtype": "funding_normalization",
-      "tags": [
-        "funding_crowding"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -8991,7 +8734,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "FundingPersistenceDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "FUNDING_PERSISTENCE_TRIGGER",
@@ -9001,15 +8744,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "FUNDING_PERSISTENCE_TRIGGER",
       "max_candidates_per_run": 500,
       "notes": "Persistence phase of funding dislocation.",
       "parameters": {
@@ -9071,9 +8811,7 @@
       "signal_column": "funding_persistence_event",
       "strategy_only": false,
       "subtype": "funding_persistence",
-      "tags": [
-        "funding_crowding"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -9121,8 +8859,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 20,
-      "default_executable": false,
-      "detector": "FundingTimestampDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "FUNDING_TIMESTAMP_EVENT",
@@ -9132,15 +8870,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": true,
       "is_strategy_construct": false,
       "layer": "context_tag",
-      "legacy_family": "TEMPORAL_STRUCTURE",
+      "legacy_family": "FUNDING_TIMESTAMP_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Mechanical funding window context; not a canonical regime.",
       "parameters": {
@@ -9172,10 +8907,7 @@
       "signal_column": "funding_timestamp_event",
       "strategy_only": false,
       "subtype": "funding_timestamp",
-      "tags": [
-        "temporal_anchor",
-        "funding_crowding"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation"
@@ -9203,7 +8935,7 @@
       ],
       "deconflict_priority": 60,
       "default_executable": true,
-      "detector": "GapOvershootDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "GAP_OVERSHOOT",
@@ -9213,15 +8945,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "GAP_OVERSHOOT",
       "max_candidates_per_run": 350,
       "notes": "Gap-extension overshoot state.",
       "parameters": {
@@ -9255,9 +8984,7 @@
       "signal_column": "gap_overshoot_event",
       "strategy_only": false,
       "subtype": "gap_overshoot",
-      "tags": [
-        "statistical_stretch"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -9287,7 +9014,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "IndexComponentDivergenceDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "INDEX_COMPONENT_DIVERGENCE",
@@ -9298,15 +9025,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "INFORMATION_DESYNC",
+      "legacy_family": "INDEX_COMPONENT_DIVERGENCE",
       "max_candidates_per_run": 500,
       "notes": "Cross-asset divergence between index and components.",
       "parameters": {
@@ -9339,9 +9063,7 @@
       "signal_column": "index_component_divergence_event",
       "strategy_only": false,
       "subtype": "index_component_divergence",
-      "tags": [
-        "desync"
-      ],
+      "tags": [],
       "templates": [
         "desync_repair",
         "convergence",
@@ -9372,7 +9094,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "LeadLagBreakDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "LEAD_LAG_BREAK",
@@ -9383,15 +9105,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "INFORMATION_DESYNC",
+      "legacy_family": "LEAD_LAG_BREAK",
       "max_candidates_per_run": 500,
       "notes": "Lead/lag structure break.",
       "parameters": {
@@ -9424,9 +9143,7 @@
       "signal_column": "lead_lag_break_event",
       "strategy_only": false,
       "subtype": "lead_lag_break",
-      "tags": [
-        "desync"
-      ],
+      "tags": [],
       "templates": [
         "desync_repair",
         "convergence",
@@ -9457,7 +9174,7 @@
       ],
       "deconflict_priority": 100,
       "default_executable": true,
-      "detector": "LiquidationCascadeDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "LIQUIDATION_CASCADE",
@@ -9468,15 +9185,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "LIQUIDATION_CASCADE",
       "max_candidates_per_run": 300,
       "notes": "Structurally distinct canonical cascade regime.",
       "parameters": {
@@ -9511,10 +9225,7 @@
       "signal_column": "liquidation_cascade_event",
       "strategy_only": false,
       "subtype": "liquidation_cascade",
-      "tags": [
-        "forced_liquidation",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -9548,7 +9259,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "PostDeleveragingReboundDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "LIQUIDATION_EXHAUSTION_REVERSAL",
@@ -9557,15 +9268,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "LIQUIDATION_EXHAUSTION_REVERSAL",
       "max_candidates_per_run": 400,
       "notes": "Reversal after forced liquidation exhaustion.",
       "parameters": {
@@ -9622,9 +9330,7 @@
       "signal_column": "liquidation_exhaustion_reversal_event",
       "strategy_only": false,
       "subtype": "liquidation_exhaustion_reversal",
-      "tags": [
-        "forced_liquidation"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -9677,7 +9383,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "LiquidityGapDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "LIQUIDITY_GAP_PRINT",
@@ -9686,15 +9392,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "LIQUIDITY_GAP_PRINT",
       "max_candidates_per_run": 600,
       "notes": "Gap print inside liquidity-stress regime.",
       "parameters": {
@@ -9728,9 +9431,7 @@
       "signal_column": "liquidity_gap_print_event",
       "strategy_only": false,
       "subtype": "gap_print",
-      "tags": [
-        "liquidity_stress"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -9763,7 +9464,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "LiquidityStressDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "LIQUIDITY_SHOCK",
@@ -9772,15 +9473,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "LIQUIDITY_SHOCK",
       "max_candidates_per_run": 600,
       "notes": "High-level liquidity stress onset.",
       "parameters": {
@@ -9814,10 +9512,7 @@
       "signal_column": "liquidity_shock_event",
       "strategy_only": false,
       "subtype": "liquidity_shock",
-      "tags": [
-        "liquidity_stress",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -9850,7 +9545,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "LIQUIDITY_STRESS_DIRECT",
       "events_file": "liquidity_shock_events.parquet",
       "evidence_mode": "direct",
@@ -9862,7 +9557,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "LIQUIDITY_STRESS_DIRECT",
       "max_candidates_per_run": 600,
       "notes": "Direct evidence mode for liquidity stress.",
       "parameters": {
@@ -9892,7 +9587,7 @@
       "phase": "shock",
       "reports_dir": "liquidity_shock",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "liquidity_stress_direct_event",
       "strategy_only": false,
       "subtype": "liquidity_stress",
@@ -9929,7 +9624,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "LIQUIDITY_STRESS_PROXY",
       "events_file": "liquidity_shock_events.parquet",
       "evidence_mode": "hybrid",
@@ -9941,7 +9636,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "LIQUIDITY_STRESS_PROXY",
       "max_candidates_per_run": 600,
       "notes": "Hybrid liquidity-stress evidence: direct book stress when available plus bar-range expansion and optional trade-flow collapse confirmation.",
       "parameters": {
@@ -9971,7 +9666,7 @@
       "phase": "shock",
       "reports_dir": "liquidity_shock",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "liquidity_stress_proxy_event",
       "strategy_only": false,
       "subtype": "liquidity_stress",
@@ -9999,7 +9694,7 @@
       "conditioning_cols": [],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "LiquidityVacuumDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "LIQUIDITY_VACUUM",
@@ -10008,15 +9703,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "LIQUIDITY_VACUUM",
       "max_candidates_per_run": 1000,
       "notes": "Thin-book vacuum regime.",
       "parameters": {
@@ -10127,10 +9819,7 @@
       "signal_column": "liquidity_vacuum_event",
       "strategy_only": false,
       "subtype": "liquidity_vacuum",
-      "tags": [
-        "liquidity_stress",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "stop_run_repair",
@@ -10173,7 +9862,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "MomentumDivergenceDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "MOMENTUM_DIVERGENCE_TRIGGER",
@@ -10182,15 +9871,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "MOMENTUM_DIVERGENCE_TRIGGER",
       "max_candidates_per_run": 500,
       "notes": "Divergence-based exhaustion signal.",
       "parameters": {
@@ -10225,9 +9911,7 @@
       "signal_column": "momentum_divergence_trigger_event",
       "strategy_only": false,
       "subtype": "momentum_divergence",
-      "tags": [
-        "exhaustion"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -10261,7 +9945,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "OIFlushDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "OI_FLUSH",
@@ -10271,15 +9955,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "OI_FLUSH",
       "max_candidates_per_run": 500,
       "notes": "OI flush folded into unwind/deleveraging regime.",
       "parameters": {
@@ -10313,10 +9994,7 @@
       "signal_column": "oi_flush_event",
       "strategy_only": false,
       "subtype": "oi_flush",
-      "tags": [
-        "oi_dynamic",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -10350,7 +10028,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "OISpikeNegativeDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "OI_SPIKE_NEGATIVE",
@@ -10360,15 +10038,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "OI_SPIKE_NEGATIVE",
       "max_candidates_per_run": 250,
       "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
       "parameters": {
@@ -10402,9 +10077,7 @@
       "signal_column": "oi_spike_neg_event",
       "strategy_only": false,
       "subtype": "oi_spike_negative",
-      "tags": [
-        "oi_dynamic"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -10438,7 +10111,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "OISpikePositiveDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "OI_SPIKE_POSITIVE",
@@ -10447,15 +10120,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "OI_SPIKE_POSITIVE",
       "max_candidates_per_run": 250,
       "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
       "parameters": {
@@ -10489,9 +10159,7 @@
       "signal_column": "oi_spike_pos_event",
       "strategy_only": false,
       "subtype": "oi_spike_positive",
-      "tags": [
-        "oi_dynamic"
-      ],
+      "tags": [],
       "templates": [
         "reversal_or_squeeze",
         "mean_reversion",
@@ -10525,7 +10193,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "OrderflowImbalanceDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "ORDERFLOW_IMBALANCE_SHOCK",
@@ -10534,15 +10202,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "ORDERFLOW_IMBALANCE_SHOCK",
       "max_candidates_per_run": 600,
       "notes": "Orderflow imbalance is treated as a liquidity-stress subtype.",
       "parameters": {
@@ -10584,9 +10249,7 @@
       "signal_column": "orderflow_imbalance_shock_event",
       "strategy_only": false,
       "subtype": "orderflow_imbalance",
-      "tags": [
-        "orderflow_imbalance"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -10626,7 +10289,7 @@
       ],
       "deconflict_priority": 60,
       "default_executable": true,
-      "detector": "OvershootDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "OVERSHOOT_AFTER_SHOCK",
@@ -10636,15 +10299,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "OVERSHOOT_AFTER_SHOCK",
       "max_candidates_per_run": 350,
       "notes": "Statistical overshoot conditional on preceding shock.",
       "parameters": {
@@ -10679,9 +10339,7 @@
       "signal_column": "overshoot_after_shock_event",
       "strategy_only": false,
       "subtype": "overshoot_after_shock",
-      "tags": [
-        "statistical_stretch"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",
@@ -10714,7 +10372,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "POST_DELEVERAGING_REBOUND",
       "events_file": "forced_flow_and_exhaustion_events.parquet",
       "evidence_mode": "hybrid",
@@ -10726,7 +10384,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "POST_DELEVERAGING_REBOUND",
       "max_candidates_per_run": 400,
       "notes": "Recovery phase following deleveraging wave.",
       "parameters": {
@@ -10775,7 +10433,7 @@
       "phase": "recovery",
       "reports_dir": "forced_flow_and_exhaustion",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "post_deleveraging_rebound_event",
       "strategy_only": false,
       "subtype": "post_deleveraging_rebound",
@@ -10827,7 +10485,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "PRICE_VOL_IMBALANCE_PROXY",
       "events_file": "liquidity_dislocation_events.parquet",
       "evidence_mode": "hybrid",
@@ -10839,7 +10497,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "PRICE_VOL_IMBALANCE_PROXY",
       "max_candidates_per_run": 600,
       "notes": "Hybrid liquidity-stress evidence via synchronized return, realized-volatility, volume, and flow-pressure imbalance.",
       "parameters": {
@@ -10875,7 +10533,7 @@
       "phase": "shock",
       "reports_dir": "liquidity_dislocation",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "price_vol_imbalance_proxy_event",
       "strategy_only": false,
       "subtype": "price_vol_imbalance",
@@ -10917,7 +10575,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "PullbackPivotDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "PULLBACK_PIVOT",
@@ -10927,15 +10585,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "PULLBACK_PIVOT",
       "max_candidates_per_run": 450,
       "notes": "Pullback continuation setup.",
       "parameters": {
@@ -10968,9 +10623,7 @@
       "signal_column": "pullback_pivot_event",
       "strategy_only": false,
       "subtype": "pullback_pivot",
-      "tags": [
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -11002,7 +10655,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "RangeBreakoutDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "RANGE_BREAKOUT",
@@ -11012,15 +10665,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "RANGE_BREAKOUT",
       "max_candidates_per_run": 450,
       "notes": "Directional breakout retained under trend continuation.",
       "parameters": {
@@ -11053,9 +10703,7 @@
       "signal_column": "range_breakout_event",
       "strategy_only": false,
       "subtype": "range_breakout",
-      "tags": [
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -11087,7 +10735,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "RangeCompressionDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "RANGE_COMPRESSION_END",
@@ -11096,15 +10744,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "RANGE_COMPRESSION_END",
       "max_candidates_per_run": 500,
       "notes": "Compression-release subtype rather than standalone family.",
       "parameters": {
@@ -11138,9 +10783,7 @@
       "signal_column": "range_compression_end_event",
       "strategy_only": false,
       "subtype": "range_compression_end",
-      "tags": [
-        "vol_regime"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -11172,8 +10815,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 20,
-      "default_executable": false,
-      "detector": "ScheduledNewsDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SCHEDULED_NEWS_WINDOW_EVENT",
@@ -11183,15 +10826,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": true,
       "is_strategy_construct": false,
       "layer": "context_tag",
-      "legacy_family": "TEMPORAL_STRUCTURE",
+      "legacy_family": "SCHEDULED_NEWS_WINDOW_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Context gate for scheduled news windows.",
       "parameters": {
@@ -11222,9 +10862,7 @@
       "signal_column": "scheduled_news_window_event",
       "strategy_only": false,
       "subtype": "scheduled_news_window",
-      "tags": [
-        "temporal_anchor"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation"
@@ -11250,8 +10888,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 30,
-      "default_executable": false,
-      "detector": "EventSequenceDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SEQ_FND_EXTREME_THEN_BREAKOUT",
@@ -11261,15 +10899,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": true,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "composite",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "SEQ_FND_EXTREME_THEN_BREAKOUT",
       "max_candidates_per_run": 250,
       "notes": "Composite research hypothesis, not a canonical event.",
       "parameters": {
@@ -11297,14 +10932,11 @@
       "phase": "confirmation",
       "reports_dir": "event_sequences",
       "research_only": true,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "seq_fnd_extreme_then_breakout_event",
       "strategy_only": false,
       "subtype": "funding_extreme_then_breakout",
-      "tags": [
-        "funding_crowding",
-        "sequence"
-      ],
+      "tags": [],
       "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 24,
@@ -11327,8 +10959,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 30,
-      "default_executable": false,
-      "detector": "EventSequenceDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
@@ -11337,15 +10969,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": true,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "composite",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
       "max_candidates_per_run": 400,
       "notes": "Composite liquidity repair motif.",
       "parameters": {
@@ -11373,15 +11002,11 @@
       "phase": "confirmation",
       "reports_dir": "event_sequences",
       "research_only": true,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "seq_liq_vacuum_then_depth_recovery_event",
       "strategy_only": false,
       "subtype": "liquidity_vacuum_then_depth_recovery",
-      "tags": [
-        "liquidity_stress",
-        "absorption_recovery",
-        "sequence"
-      ],
+      "tags": [],
       "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 24,
@@ -11404,8 +11029,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 30,
-      "default_executable": false,
-      "detector": "EventSequenceDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
@@ -11415,15 +11040,12 @@
         "5m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": true,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "composite",
-      "legacy_family": "POSITIONING_EXTREMES",
+      "legacy_family": "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
       "max_candidates_per_run": 250,
       "notes": "Composite positioning/volatility hypothesis.",
       "parameters": {
@@ -11451,14 +11073,11 @@
       "phase": "confirmation",
       "reports_dir": "event_sequences",
       "research_only": true,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "seq_oi_spikepos_then_vol_spike_event",
       "strategy_only": false,
       "subtype": "oi_spike_positive_then_vol_spike",
-      "tags": [
-        "oi_dynamic",
-        "sequence"
-      ],
+      "tags": [],
       "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 24,
@@ -11481,8 +11100,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 30,
-      "default_executable": false,
-      "detector": "EventSequenceDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SEQ_VOL_COMP_THEN_BREAKOUT",
@@ -11491,15 +11110,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": true,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "composite",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "SEQ_VOL_COMP_THEN_BREAKOUT",
       "max_candidates_per_run": 350,
       "notes": "Composite compression-release hypothesis.",
       "parameters": {
@@ -11527,14 +11143,11 @@
       "phase": "confirmation",
       "reports_dir": "event_sequences",
       "research_only": true,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "seq_vol_comp_then_breakout_event",
       "strategy_only": false,
       "subtype": "vol_compression_then_breakout",
-      "tags": [
-        "vol_regime",
-        "sequence"
-      ],
+      "tags": [],
       "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 24,
@@ -11557,8 +11170,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 20,
-      "default_executable": false,
-      "detector": "SessionCloseDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SESSION_CLOSE_EVENT",
@@ -11568,15 +11181,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": true,
       "is_strategy_construct": false,
       "layer": "context_tag",
-      "legacy_family": "TEMPORAL_STRUCTURE",
+      "legacy_family": "SESSION_CLOSE_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Session close context tag.",
       "parameters": {
@@ -11616,9 +11226,7 @@
       "signal_column": "session_close_event",
       "strategy_only": false,
       "subtype": "session_close",
-      "tags": [
-        "temporal_anchor"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation"
@@ -11646,8 +11254,8 @@
         "severity_bucket"
       ],
       "deconflict_priority": 20,
-      "default_executable": false,
-      "detector": "SessionOpenDetector",
+      "default_executable": true,
+      "detector": "",
       "disposition": "demote",
       "enabled": true,
       "event_type": "SESSION_OPEN_EVENT",
@@ -11657,15 +11265,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": true,
       "is_strategy_construct": false,
       "layer": "context_tag",
-      "legacy_family": "TEMPORAL_STRUCTURE",
+      "legacy_family": "SESSION_OPEN_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Session open context tag.",
       "parameters": {
@@ -11705,9 +11310,7 @@
       "signal_column": "session_open_event",
       "strategy_only": false,
       "subtype": "session_open",
-      "tags": [
-        "temporal_anchor"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation"
@@ -11736,7 +11339,7 @@
       ],
       "deconflict_priority": 65,
       "default_executable": true,
-      "detector": "SlippageSpikeDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "SLIPPAGE_SPIKE_EVENT",
@@ -11746,15 +11349,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "EXECUTION_FRICTION",
+      "legacy_family": "SLIPPAGE_SPIKE_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Execution friction shock.",
       "parameters": {
@@ -11787,10 +11387,7 @@
       "signal_column": "slippage_spike_event",
       "strategy_only": false,
       "subtype": "slippage_spike",
-      "tags": [
-        "execution_cost",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "slippage_aware_filter",
         "tail_risk_avoid"
@@ -11818,7 +11415,7 @@
       ],
       "deconflict_priority": 90,
       "default_executable": true,
-      "detector": "SpotPerpBasisShockDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "SPOT_PERP_BASIS_SHOCK",
@@ -11829,15 +11426,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "INFORMATION_DESYNC",
+      "legacy_family": "SPOT_PERP_BASIS_SHOCK",
       "max_candidates_per_run": 500,
       "notes": "Spot/perp basis shock is a basis/funding subtype.",
       "parameters": {
@@ -11872,11 +11466,7 @@
       "signal_column": "spot_perp_basis_shock_event",
       "strategy_only": false,
       "subtype": "spot_perp_basis_shock",
-      "tags": [
-        "desync",
-        "basis_dislocation",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "desync_repair",
         "convergence",
@@ -11909,7 +11499,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "SpreadBlowoutDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "SPREAD_BLOWOUT",
@@ -11918,15 +11508,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "SPREAD_BLOWOUT",
       "max_candidates_per_run": 600,
       "notes": "Spread blowout retained as liquidity-stress subtype.",
       "parameters": {
@@ -11960,10 +11547,7 @@
       "signal_column": "spread_blowout_event",
       "strategy_only": false,
       "subtype": "spread_widening",
-      "tags": [
-        "liquidity_stress",
-        "execution_cost"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -11996,7 +11580,7 @@
       ],
       "deconflict_priority": 65,
       "default_executable": true,
-      "detector": "SpreadRegimeWideningDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "SPREAD_REGIME_WIDENING_EVENT",
@@ -12006,15 +11590,12 @@
         "5m",
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "EXECUTION_FRICTION",
+      "legacy_family": "SPREAD_REGIME_WIDENING_EVENT",
       "max_candidates_per_run": 300,
       "notes": "Persistent execution-friction regime widening.",
       "parameters": {
@@ -12050,10 +11631,7 @@
       "signal_column": "spread_regime_widening_event",
       "strategy_only": false,
       "subtype": "spread_regime_widening",
-      "tags": [
-        "execution_cost",
-        "liquidity_stress"
-      ],
+      "tags": [],
       "templates": [
         "slippage_aware_filter",
         "tail_risk_avoid"
@@ -12084,7 +11662,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "SREventDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "SUPPORT_RESISTANCE_BREAK",
@@ -12094,15 +11672,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "SUPPORT_RESISTANCE_BREAK",
       "max_candidates_per_run": 450,
       "notes": "Structural breakout subtype within trend continuation.",
       "parameters": {
@@ -12135,9 +11710,7 @@
       "signal_column": "support_resistance_break_event",
       "strategy_only": false,
       "subtype": "support_resistance_break",
-      "tags": [
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -12169,7 +11742,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "StopRunDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "SWEEP_STOPRUN",
@@ -12178,15 +11751,12 @@
       "horizons": [
         "15m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "SWEEP_STOPRUN",
       "max_candidates_per_run": 600,
       "notes": "Stop-run style liquidity stress.",
       "parameters": {
@@ -12221,10 +11791,7 @@
       "signal_column": "sweep_stoprun_event",
       "strategy_only": false,
       "subtype": "sweep_stoprun",
-      "tags": [
-        "orderflow_imbalance",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -12257,7 +11824,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "TrendAccelerationDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "TREND_ACCELERATION",
@@ -12267,15 +11834,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "TREND_ACCELERATION",
       "max_candidates_per_run": 450,
       "notes": "Continuation regime with accelerating trend.",
       "parameters": {
@@ -12309,9 +11873,7 @@
       "signal_column": "trend_acceleration_event",
       "strategy_only": false,
       "subtype": "trend_acceleration",
-      "tags": [
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -12344,7 +11906,7 @@
       ],
       "deconflict_priority": 70,
       "default_executable": true,
-      "detector": "TrendDecelerationDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "TREND_DECELERATION",
@@ -12354,15 +11916,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "TREND_STRUCTURE",
+      "legacy_family": "TREND_DECELERATION",
       "max_candidates_per_run": 450,
       "notes": "Deceleration belongs with trend failure/exhaustion.",
       "parameters": {
@@ -12395,9 +11954,7 @@
       "signal_column": "trend_deceleration_event",
       "strategy_only": false,
       "subtype": "trend_deceleration",
-      "tags": [
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "breakout_followthrough",
         "false_breakout_reversal",
@@ -12429,7 +11986,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "TrendExhaustionDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "TREND_EXHAUSTION_TRIGGER",
@@ -12438,15 +11995,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "FORCED_FLOW_AND_EXHAUSTION",
+      "legacy_family": "TREND_EXHAUSTION_TRIGGER",
       "max_candidates_per_run": 500,
       "notes": "Canonical exhaustion onset.",
       "parameters": {
@@ -12497,10 +12051,7 @@
       "signal_column": "trend_exhaustion_trigger_event",
       "strategy_only": false,
       "subtype": "trend_exhaustion",
-      "tags": [
-        "exhaustion",
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "exhaustion_reversal",
@@ -12550,7 +12101,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "TrendToChopDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "TREND_TO_CHOP_SHIFT",
@@ -12559,15 +12110,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "REGIME_TRANSITION",
+      "legacy_family": "TREND_TO_CHOP_SHIFT",
       "max_candidates_per_run": 350,
       "notes": "Transition from directional to choppy conditions.",
       "parameters": {
@@ -12600,10 +12148,7 @@
       "signal_column": "trend_to_chop_shift_event",
       "strategy_only": false,
       "subtype": "trend_to_chop",
-      "tags": [
-        "regime_shift",
-        "trend_momentum"
-      ],
+      "tags": [],
       "templates": [
         "only_if_regime",
         "continuation",
@@ -12634,7 +12179,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "VolClusterShiftDetector",
+      "detector": "",
       "disposition": "merge",
       "enabled": true,
       "event_type": "VOL_CLUSTER_SHIFT",
@@ -12643,15 +12188,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "VOL_CLUSTER_SHIFT",
       "max_candidates_per_run": 500,
       "notes": "Volatility cluster migration under expansion regime.",
       "parameters": {
@@ -12685,9 +12227,7 @@
       "signal_column": "vol_cluster_shift_event",
       "strategy_only": false,
       "subtype": "vol_cluster_shift",
-      "tags": [
-        "vol_regime"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -12720,7 +12260,7 @@
       ],
       "deconflict_priority": 85,
       "default_executable": true,
-      "detector": "VolRegimeShiftDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "VOL_REGIME_SHIFT_EVENT",
@@ -12729,15 +12269,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "REGIME_TRANSITION",
+      "legacy_family": "VOL_REGIME_SHIFT_EVENT",
       "max_candidates_per_run": 350,
       "notes": "Regime transition expressed through volatility-state change.",
       "parameters": {
@@ -12770,10 +12307,7 @@
       "signal_column": "vol_regime_shift_event",
       "strategy_only": false,
       "subtype": "vol_regime_shift",
-      "tags": [
-        "regime_shift",
-        "vol_regime"
-      ],
+      "tags": [],
       "templates": [
         "only_if_regime",
         "continuation",
@@ -12804,7 +12338,7 @@
       ],
       "deconflict_priority": 75,
       "default_executable": true,
-      "detector": "VolRelaxationDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "VOL_RELAXATION_START",
@@ -12813,15 +12347,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "VOL_RELAXATION_START",
       "max_candidates_per_run": 500,
       "notes": "Start of volatility normalization after expansion.",
       "parameters": {
@@ -12855,9 +12386,7 @@
       "signal_column": "vol_relaxation_start_event",
       "strategy_only": false,
       "subtype": "vol_relaxation_start",
-      "tags": [
-        "vol_regime"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -12890,7 +12419,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "VolShockRelaxationDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "VOL_SHOCK",
@@ -12899,15 +12428,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "VOL_SHOCK",
       "max_candidates_per_run": 500,
       "notes": "Canonical volatility shock; current detector implementation also models relaxation boundary.",
       "parameters": {
@@ -12999,10 +12525,7 @@
       "signal_column": "vol_shock_relaxation_event",
       "strategy_only": false,
       "subtype": "vol_shock",
-      "tags": [
-        "vol_regime",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -13031,7 +12554,7 @@
       ],
       "deconflict_priority": 80,
       "default_executable": true,
-      "detector": "VolSpikeDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "VOL_SPIKE",
@@ -13040,15 +12563,12 @@
       "horizons": [
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "VOLATILITY_TRANSITION",
+      "legacy_family": "VOL_SPIKE",
       "max_candidates_per_run": 500,
       "notes": "Canonical realized-volatility expansion onset.",
       "parameters": {
@@ -13079,10 +12599,7 @@
       "signal_column": "vol_spike_event",
       "strategy_only": false,
       "subtype": "vol_spike",
-      "tags": [
-        "vol_regime",
-        "high_urgency"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "continuation",
@@ -13114,7 +12631,7 @@
       "default_executable": true,
       "detector": "",
       "disposition": "merge",
-      "enabled": null,
+      "enabled": true,
       "event_type": "WICK_REVERSAL_PROXY",
       "events_file": "liquidity_dislocation_events.parquet",
       "evidence_mode": "hybrid",
@@ -13126,7 +12643,7 @@
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "LIQUIDITY_DISLOCATION",
+      "legacy_family": "WICK_REVERSAL_PROXY",
       "max_candidates_per_run": 500,
       "notes": "Hybrid liquidity-stress recovery evidence: wick and reclaim structure confirmed by realized-volume expansion.",
       "parameters": {
@@ -13156,7 +12673,7 @@
       "phase": "recovery",
       "reports_dir": "liquidity_dislocation",
       "research_only": false,
-      "sequence_eligible": false,
+      "sequence_eligible": true,
       "signal_column": "wick_reversal_proxy_event",
       "strategy_only": false,
       "subtype": "wick_reversal",
@@ -13192,7 +12709,7 @@
       ],
       "deconflict_priority": 60,
       "default_executable": true,
-      "detector": "ZScoreStretchDetector",
+      "detector": "",
       "disposition": "keep",
       "enabled": true,
       "event_type": "ZSCORE_STRETCH",
@@ -13202,15 +12719,12 @@
         "15m",
         "60m"
       ],
-      "instrument_classes": [
-        "crypto",
-        "futures"
-      ],
+      "instrument_classes": [],
       "is_composite": false,
       "is_context_tag": false,
       "is_strategy_construct": false,
       "layer": "canonical",
-      "legacy_family": "STATISTICAL_DISLOCATION",
+      "legacy_family": "ZSCORE_STRETCH",
       "max_candidates_per_run": 350,
       "notes": "Canonical stretch/overshoot event.",
       "parameters": {
@@ -13244,9 +12758,7 @@
       "signal_column": "zscore_stretch_event",
       "strategy_only": false,
       "subtype": "zscore_stretch",
-      "tags": [
-        "statistical_stretch"
-      ],
+      "tags": [],
       "templates": [
         "mean_reversion",
         "overshoot_repair",

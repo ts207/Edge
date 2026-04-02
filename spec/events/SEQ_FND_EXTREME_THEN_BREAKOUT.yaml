@@ -20,3 +20,47 @@ expected_behavior:
   disabled_regimes:
   - 'Low liquidity regime: OI/vol signals unreliable'
 cluster_id: funding_crowding
+identity:
+  canonical_regime: BASIS_FUNDING_DISLOCATION
+  legacy_family: POSITIONING_EXTREMES
+  subtype: funding_extreme_then_breakout
+  phase: confirmation
+  evidence_mode: sequence_confirmed
+  layer: composite
+  disposition: demote
+  asset_scope: single_asset
+  venue_scope: cross_venue
+governance:
+  event_kind: composite_event
+  default_executable: false
+  research_only: true
+  strategy_only: false
+  context_tag: false
+  is_composite: true
+  maturity: ''
+  tier: D
+  operational_role: sequence_component
+  deployment_disposition: research_only
+  runtime_category: research_only
+runtime:
+  detector: EventSequenceDetector
+  enabled: true
+  signal_column: seq_fnd_extreme_then_breakout_event
+  events_file: event_sequences.parquet
+  reports_dir: event_sequences
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: false
+  runtime_tags:
+  - funding_crowding
+  - sequence
+semantics:
+  cluster_id: funding_crowding
+  notes: Composite research hypothesis, not a canonical event.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

@@ -3,7 +3,7 @@
     {
       "asset_scope": "cross_asset",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
-      "deconflict_priority": 10,
+      "deconflict_priority": 0,
       "disposition": "demote",
       "event_type": "COPULA_PAIRS_TRADING",
       "evidence_mode": "statistical",
@@ -11,7 +11,7 @@
       "is_context_tag": false,
       "is_strategy_construct": true,
       "layer": "strategy_construct",
-      "legacy_family": "COPULA_PAIRS_TRADING",
+      "legacy_family": "STATISTICAL_DISLOCATION",
       "notes": "Relative-value strategy/search construct, not a canonical market event.",
       "phase": "strategy",
       "research_only": false,

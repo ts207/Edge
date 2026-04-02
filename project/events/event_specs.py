@@ -206,14 +206,9 @@ AGGREGATE_EVENT_TYPE_UNIONS: Dict[str, Sequence[str]] = {}
 
 
 def expected_event_types_for_spec(event_type: str) -> Sequence[str]:
-    from project.events.event_aliases import resolve_event_alias
-
     normalized = str(event_type).strip().upper()
     if not normalized:
         return ()
-    canonical = resolve_event_alias(normalized)
-    if canonical != normalized:
-        return (normalized, canonical)
     return AGGREGATE_EVENT_TYPE_UNIONS.get(normalized, (normalized,))
 
 

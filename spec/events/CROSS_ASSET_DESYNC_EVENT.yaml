@@ -73,3 +73,47 @@ expected_behavior:
   - CROSS_VENUE_DESYNC: can co-occur when one asset also splits across venues
   - VOL_SHOCK: moderate overlap when pair divergence emerges during volatility regime
       shifts
+identity:
+  canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+  legacy_family: INFORMATION_DESYNC
+  subtype: cross_asset_desync
+  phase: divergence
+  evidence_mode: inferred_cross_asset
+  layer: canonical
+  disposition: keep
+  asset_scope: cross_asset
+  venue_scope: multi_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: C
+  operational_role: filter
+  deployment_disposition: repair_before_promotion
+  runtime_category: active_runtime_event
+runtime:
+  detector: CrossAssetDesyncDetector
+  enabled: true
+  signal_column: cross_asset_desync_event
+  events_file: cross_asset_desync_event_events.parquet
+  reports_dir: cross_asset_desync_event
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - desync
+semantics:
+  summary: Cross-asset desynchronization between a primary asset and an explicitly
+    paired reference asset.
+  notes: First-class cross-asset desynchronization regime.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

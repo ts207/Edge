@@ -165,19 +165,12 @@ def _family_by_event() -> Dict[str, str]:
 
 @lru_cache(maxsize=1)
 def _legacy_family_by_event() -> Dict[str, str]:
-    payload = _load_yaml(REPO_ROOT / "project" / "configs" / "registries" / "events.yaml")
-    events = payload.get("events", {}) if isinstance(payload, dict) else {}
-    if not isinstance(events, dict):
-        return {}
-    out: Dict[str, str] = {}
-    for event_type, row in events.items():
-        if not isinstance(row, dict):
-            continue
-        family = str(row.get("family", "")).strip().upper()
-        normalized = str(event_type).strip().upper()
-        if normalized and family:
-            out[normalized] = family
-    return out
+    registry = get_domain_registry()
+    return {
+        event_type: spec.legacy_family
+        for event_type, spec in registry.event_definitions.items()
+        if spec.legacy_family
+    }
 
 
 @lru_cache(maxsize=1)
@@ -244,12 +237,6 @@ def compose_config(
                 merged_parameters.update(row["parameters"])
             merged_parameters.update(source_parameters)
             row["parameters"] = merged_parameters
-        for key, value in source_spec.items():
-            if key == "parameters":
-                continue
-            current = row.get(key)
-            if current in (None, "", [], {}):
-                row[key] = value
 
     defaults = unified.get("defaults", {})
     family_name = (

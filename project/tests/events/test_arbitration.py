@@ -49,6 +49,20 @@ def test_suppression_penalty_applied():
     assert lv_rows["event_tradeability_score"].iloc[0] < 0.7
 
 
+def test_event_local_suppression_penalty_applied():
+    """SPREAD_BLOWOUT active -> DEPTH_COLLAPSE penalty comes from the event-local spec."""
+    df = _make_events(
+        [
+            ("SPREAD_BLOWOUT", "2024-01-01 10:00"),
+            ("DEPTH_COLLAPSE", "2024-01-01 10:00"),
+        ]
+    )
+    result = arbitrate_events(df)
+    depth_rows = result.events[result.events["event_type"] == "DEPTH_COLLAPSE"]
+    assert not depth_rows.empty
+    assert depth_rows["event_tradeability_score"].iloc[0] < 0.7
+
+
 def test_hard_block_moves_event_to_suppressed():
     """SCHEDULED_NEWS_WINDOW_EVENT active -> VOL_SHOCK should be blocked."""
     df = _make_events(
@@ -86,6 +100,26 @@ def test_load_specs_succeed():
     prec = load_precedence_spec()
     assert "suppression_rules" in compat
     assert "family_precedence" in prec
+
+
+def test_load_compatibility_spec_merges_event_local_suppression_rules():
+    compat = load_compatibility_spec()
+    suppressed = {
+        event_type
+        for rule in compat["suppression_rules"]
+        if rule["when_active"] == "SPREAD_BLOWOUT"
+        for event_type in rule["suppress"]
+    }
+    assert "DEPTH_COLLAPSE" in suppressed
+    assert "CROSS_VENUE_DESYNC" in suppressed
+
+
+def test_load_precedence_spec_merges_event_local_overrides():
+    prec = load_precedence_spec()
+    depth_override = next(
+        rule for rule in prec["event_overrides"] if rule["event_type"] == "DEPTH_COLLAPSE"
+    )
+    assert depth_override["override_priority"] == 3
 
 
 def test_unrelated_events_pass_through_unchanged():

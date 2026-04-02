@@ -1,5 +1,8 @@
 version: 1
 kind: event_contract_overrides
+metadata:
+  status: generated
+  notes: Generated from per-event governance fields via compiled event contracts.
 events:
   ABSORPTION_PROXY:
     tier: B

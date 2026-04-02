@@ -6,11 +6,9 @@ metadata:
     event_defaults: spec/events/_defaults.yaml
     event_family_defaults: spec/events/_families.yaml
     event_specs_dir: spec/events
-    canonical_event_registry: spec/events/canonical_event_registry.yaml
     template_registry: spec/templates/event_template_registry.yaml
-    event_ontology_mapping: spec/events/event_ontology_mapping.yaml
-  notes: Single event-centric schema for phase1+phase2 composition. Legacy specs retained
-    for compatibility and drift checks. canonical_family is a staged compatibility
+  notes: Single event-centric schema for phase1+phase2 composition. Generated compatibility
+    sidecars are downstream outputs only. canonical_family is a staged compatibility
     alias of canonical_regime; legacy_family preserves current family-default wiring.
 defaults:
   parameters:
@@ -38,31 +36,7 @@ defaults:
 families:
   ABSORPTION_PROXY:
     parameters: {}
-  BAND_BREAK:
-    parameters: {}
-  BASIS_DISLOC:
-    parameters: {}
-  BETA_SPIKE_EVENT:
-    parameters: {}
-  BREAKOUT_TRIGGER:
-    parameters: {}
-  CHOP_TO_TREND_SHIFT:
-    parameters: {}
-  CLIMAX_VOLUME_BAR:
-    parameters: {}
-  COPULA_PAIRS_TRADING:
-    parameters: {}
-  CORRELATION_BREAKDOWN_EVENT:
-    parameters: {}
-  CROSS_ASSET_DESYNC_EVENT:
-    parameters: {}
   CROSS_ASSET_INTERACTION:
-    parameters: {}
-  CROSS_VENUE_DESYNC:
-    parameters: {}
-  DELEVERAGING_WAVE:
-    parameters: {}
-  DEPTH_COLLAPSE:
     parameters: {}
   DEPTH_STRESS_PROXY:
     parameters: {}
@@ -71,15 +45,7 @@ families:
     templates:
     - slippage_aware_filter
     - tail_risk_avoid
-  FAILED_CONTINUATION:
-    parameters: {}
-  FALSE_BREAKOUT:
-    parameters: {}
-  FEE_REGIME_CHANGE_EVENT:
-    parameters: {}
   FLOW_EXHAUSTION_PROXY:
-    parameters: {}
-  FND_DISLOC:
     parameters: {}
   FORCED_FLOW_AND_EXHAUSTION:
     parameters: {}
@@ -90,22 +56,6 @@ families:
     - range_reversion
     - only_if_trend
     - drawdown_filter
-  FORCED_FLOW_EXHAUSTION:
-    parameters: {}
-  FUNDING_EXTREME_ONSET:
-    parameters: {}
-  FUNDING_FLIP:
-    parameters: {}
-  FUNDING_NORMALIZATION_TRIGGER:
-    parameters: {}
-  FUNDING_PERSISTENCE_TRIGGER:
-    parameters: {}
-  FUNDING_TIMESTAMP_EVENT:
-    parameters: {}
-  GAP_OVERSHOOT:
-    parameters: {}
-  INDEX_COMPONENT_DIVERGENCE:
-    parameters: {}
   INFORMATION_DESYNC:
     parameters: {}
     templates:
@@ -114,12 +64,6 @@ families:
     - basis_repair
     - lead_lag_follow
     - divergence_continuation
-  LEAD_LAG_BREAK:
-    parameters: {}
-  LIQUIDATION_CASCADE:
-    parameters: {}
-  LIQUIDATION_EXHAUSTION_REVERSAL:
-    parameters: {}
   LIQUIDITY_DISLOCATION:
     parameters: {}
     templates:
@@ -129,29 +73,11 @@ families:
     - overshoot_repair
     - only_if_liquidity
     - slippage_aware_filter
-  LIQUIDITY_GAP_PRINT:
-    parameters: {}
-  LIQUIDITY_SHOCK:
-    parameters: {}
   LIQUIDITY_STRESS_DIRECT:
     parameters: {}
   LIQUIDITY_STRESS_PROXY:
     parameters: {}
-  LIQUIDITY_VACUUM:
-    parameters: {}
-  MOMENTUM_DIVERGENCE_TRIGGER:
-    parameters: {}
-  OI_FLUSH:
-    parameters: {}
-  OI_SPIKE_NEGATIVE:
-    parameters: {}
-  OI_SPIKE_POSITIVE:
-    parameters: {}
   ORDERFLOW:
-    parameters: {}
-  ORDERFLOW_IMBALANCE_SHOCK:
-    parameters: {}
-  OVERSHOOT_AFTER_SHOCK:
     parameters: {}
   POSITIONING_EXTREMES:
     parameters: {}
@@ -170,12 +96,6 @@ families:
     parameters: {}
   PRICE_VOL_IMBALANCE_PROXY:
     parameters: {}
-  PULLBACK_PIVOT:
-    parameters: {}
-  RANGE_BREAKOUT:
-    parameters: {}
-  RANGE_COMPRESSION_END:
-    parameters: {}
   REGIME_TRANSITION:
     parameters: {}
     templates:
@@ -184,38 +104,12 @@ families:
     - mean_reversion
     - drawdown_filter
     - tail_risk_avoid
-  SCHEDULED_NEWS_WINDOW_EVENT:
-    parameters: {}
-  SEQ_FND_EXTREME_THEN_BREAKOUT:
-    parameters: {}
-  SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
-    parameters: {}
-  SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
-    parameters: {}
-  SEQ_VOL_COMP_THEN_BREAKOUT:
-    parameters: {}
-  SESSION_CLOSE_EVENT:
-    parameters: {}
-  SESSION_OPEN_EVENT:
-    parameters: {}
-  SLIPPAGE_SPIKE_EVENT:
-    parameters: {}
-  SPOT_PERP_BASIS_SHOCK:
-    parameters: {}
-  SPREAD_BLOWOUT:
-    parameters: {}
-  SPREAD_REGIME_WIDENING_EVENT:
-    parameters: {}
   STATISTICAL_DISLOCATION:
     parameters: {}
     templates:
     - mean_reversion
     - overshoot_repair
     - tail_risk_avoid
-  SUPPORT_RESISTANCE_BREAK:
-    parameters: {}
-  SWEEP_STOPRUN:
-    parameters: {}
   TEMPORAL_STRUCTURE:
     parameters: {}
     templates:
@@ -223,12 +117,6 @@ families:
     - continuation
     - tail_risk_avoid
     - only_if_no_news_window
-  TREND_ACCELERATION:
-    parameters: {}
-  TREND_DECELERATION:
-    parameters: {}
-  TREND_EXHAUSTION_TRIGGER:
-    parameters: {}
   TREND_STRUCTURE:
     parameters: {}
     templates:
@@ -238,8 +126,6 @@ families:
     - trend_continuation
     - continuation
     - only_if_trend
-  TREND_TO_CHOP_SHIFT:
-    parameters: {}
   VOLATILITY_TRANSITION:
     parameters: {}
     templates:
@@ -249,19 +135,7 @@ families:
     - volatility_expansion_follow
     - pullback_entry
     - only_if_regime
-  VOL_CLUSTER_SHIFT:
-    parameters: {}
-  VOL_REGIME_SHIFT_EVENT:
-    parameters: {}
-  VOL_RELAXATION_START:
-    parameters: {}
-  VOL_SHOCK:
-    parameters: {}
-  VOL_SPIKE:
-    parameters: {}
   WICK_REVERSAL_PROXY:
-    parameters: {}
-  ZSCORE_STRETCH:
     parameters: {}
 canonical_regimes:
   BASIS_FUNDING_DISLOCATION:
@@ -445,6 +319,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: ABSORPTION_PROXY
+    event_kind: market_event
     subtype: absorption
     phase: persistence
     evidence_mode: hybrid
@@ -457,12 +332,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: 'Hybrid liquidity-stress evidence: direct imbalance-stall confirmation
       combined with spread and RV stress.'
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: absorption_proxy_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -498,7 +392,8 @@ events:
   BAND_BREAK:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
-    legacy_family: BAND_BREAK
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: band_break
     phase: breakout
     evidence_mode: statistical
@@ -511,11 +406,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 60
+    default_executable: true
+    deconflict_priority: 0
     notes: Statistical band escape; retained as subtype under stretch/overshoot.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: BandBreakDetector
+    runtime_tags:
+    - statistical_stretch
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: band_break_event
+    routing_profile_ref: ''
+    cluster_id: statistical_stretch
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION
@@ -544,7 +461,8 @@ events:
   BASIS_DISLOC:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: BASIS_DISLOC
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: basis_dislocation
     phase: shock
     evidence_mode: statistical
@@ -557,11 +475,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Canonical basis dislocation surface.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: BasisDislocationDetector
+    runtime_tags:
+    - basis_dislocation
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: basis_dislocation
     events_file: basis_dislocation_events.parquet
     signal_column: basis_dislocation_event
+    routing_profile_ref: ''
+    cluster_id: basis_dislocation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION
@@ -590,7 +530,8 @@ events:
   BETA_SPIKE_EVENT:
     canonical_family: REGIME_TRANSITION
     canonical_regime: REGIME_TRANSITION
-    legacy_family: BETA_SPIKE_EVENT
+    legacy_family: REGIME_TRANSITION
+    event_kind: market_event
     subtype: beta_spike
     phase: transition
     evidence_mode: inferred_cross_asset
@@ -603,11 +544,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Cross-asset transition evidence via beta instability.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: BetaSpikeDetector
+    runtime_tags:
+    - regime_shift
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: beta_spike_event
+    routing_profile_ref: ''
+    cluster_id: regime_shift
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: REGIME_TRANSITION
@@ -637,7 +600,8 @@ events:
   BREAKOUT_TRIGGER:
     canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
     canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
-    legacy_family: BREAKOUT_TRIGGER
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: breakout_trigger
     phase: breakout
     evidence_mode: hybrid
@@ -650,11 +614,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Compression-release bridge event; not a standalone canonical regime.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: BreakoutTriggerDetector
+    runtime_tags:
+    - vol_regime
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: breakout_trigger_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -688,7 +675,8 @@ events:
   CHOP_TO_TREND_SHIFT:
     canonical_family: REGIME_TRANSITION
     canonical_regime: REGIME_TRANSITION
-    legacy_family: CHOP_TO_TREND_SHIFT
+    legacy_family: REGIME_TRANSITION
+    event_kind: market_event
     subtype: chop_to_trend
     phase: transition
     evidence_mode: hybrid
@@ -701,11 +689,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Transition from choppy to directional conditions.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ChopToTrendDetector
+    runtime_tags:
+    - regime_shift
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: chop_to_trend_shift_event
+    routing_profile_ref: ''
+    cluster_id: regime_shift
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: REGIME_TRANSITION
@@ -735,7 +746,8 @@ events:
   CLIMAX_VOLUME_BAR:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: CLIMAX_VOLUME_BAR
+    legacy_family: FORCED_FLOW_AND_EXHAUSTION
+    event_kind: market_event
     subtype: climax_volume
     phase: exhaustion
     evidence_mode: hybrid
@@ -748,11 +760,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Exhaustion marker rather than standalone family.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ClimaxVolumeDetector
+    runtime_tags:
+    - exhaustion
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: climax_volume_bar_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: FORCED_FLOW_AND_EXHAUSTION
@@ -786,7 +821,8 @@ events:
   COPULA_PAIRS_TRADING:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
-    legacy_family: COPULA_PAIRS_TRADING
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: strategy_construct
     subtype: copula_pairs_trading
     phase: strategy
     evidence_mode: statistical
@@ -799,11 +835,33 @@ events:
     is_strategy_construct: true
     research_only: false
     strategy_only: true
-    deconflict_priority: 10
+    default_executable: false
+    deconflict_priority: 0
     notes: Relative-value strategy/search construct, not a canonical market event.
+    maturity: ''
+    tier: D
+    operational_role: research_only
+    deployment_disposition: research_only
+    runtime_category: research_only
+    enabled: true
+    detector_name: CopulaPairsTradingDetector
+    runtime_tags:
+    - basis_dislocation
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: copula_pairs
     events_file: copula_pairs_events.parquet
     signal_column: copula_pairs_trading_event
+    routing_profile_ref: ''
+    cluster_id: basis_dislocation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION
@@ -832,7 +890,8 @@ events:
   CORRELATION_BREAKDOWN_EVENT:
     canonical_family: REGIME_TRANSITION
     canonical_regime: REGIME_TRANSITION
-    legacy_family: CORRELATION_BREAKDOWN_EVENT
+    legacy_family: REGIME_TRANSITION
+    event_kind: market_event
     subtype: correlation_breakdown
     phase: transition
     evidence_mode: inferred_cross_asset
@@ -845,11 +904,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Cross-asset regime transition via correlation instability.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: CorrelationBreakdownDetector
+    runtime_tags:
+    - regime_shift
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: correlation_breakdown_event
+    routing_profile_ref: ''
+    cluster_id: regime_shift
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: REGIME_TRANSITION
@@ -879,7 +960,8 @@ events:
   CROSS_ASSET_DESYNC_EVENT:
     canonical_family: CROSS_ASSET_DESYNCHRONIZATION
     canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
-    legacy_family: CROSS_ASSET_DESYNC_EVENT
+    legacy_family: INFORMATION_DESYNC
+    event_kind: market_event
     subtype: cross_asset_desync
     phase: divergence
     evidence_mode: inferred_cross_asset
@@ -892,11 +974,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: First-class cross-asset desynchronization regime.
+    maturity: ''
+    tier: C
+    operational_role: filter
+    deployment_disposition: repair_before_promotion
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: CrossAssetDesyncDetector
+    runtime_tags:
+    - desync
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: cross_asset_desync_event
     events_file: cross_asset_desync_event_events.parquet
     signal_column: cross_asset_desync_event
+    routing_profile_ref: ''
+    cluster_id: ''
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: CROSS_ASSET_DESYNCHRONIZATION
@@ -979,7 +1083,8 @@ events:
   CROSS_VENUE_DESYNC:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: CROSS_VENUE_DESYNC
+    legacy_family: INFORMATION_DESYNC
+    event_kind: market_event
     subtype: cross_venue_desync
     phase: persistence
     evidence_mode: inferred_cross_asset
@@ -992,11 +1097,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Cross-venue basis persistence folded into basis/funding dislocation.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: CrossVenueDesyncDetector
+    runtime_tags:
+    - desync
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: cross_venue_desync
     events_file: cross_venue_desync_events.parquet
     signal_column: cross_venue_desync_event
+    routing_profile_ref: BASIS_FUNDING_DISLOCATION
+    cluster_id: desync
+    collapse_target: ''
+    overlap_group: basis_desync
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: INFORMATION_DESYNC
@@ -1096,7 +1223,8 @@ events:
   DELEVERAGING_WAVE:
     canonical_family: POSITIONING_UNWIND_DELEVERAGING
     canonical_regime: POSITIONING_UNWIND_DELEVERAGING
-    legacy_family: DELEVERAGING_WAVE
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: deleveraging_wave
     phase: unwind
     evidence_mode: hybrid
@@ -1109,11 +1237,49 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Positioning unwind regime with explicit deleveraging dynamics.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: DeleveragingWaveDetector
+    runtime_tags:
+    - forced_liquidation
+    - oi_dynamic
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: positioning_extremes
     events_file: positioning_extremes_events.parquet
     signal_column: deleveraging_wave_event
+    routing_profile_ref: ''
+    cluster_id: forced_liquidation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses:
+    - event_type: TREND_ACCELERATION
+      penalty_factor: 0.2
+      block: false
+      reason: Deleveraging price moves are forced liquidation artifacts, not genuine
+        trend breakouts. Penalize continuation templates heavily.
+    - event_type: BREAKOUT_TRIGGER
+      penalty_factor: 0.2
+      block: false
+      reason: Deleveraging price moves are forced liquidation artifacts, not genuine
+        trend breakouts. Penalize continuation templates heavily.
+    - event_type: CHOP_TO_TREND_SHIFT
+      penalty_factor: 0.2
+      block: false
+      reason: Deleveraging price moves are forced liquidation artifacts, not genuine
+        trend breakouts. Penalize continuation templates heavily.
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -1147,7 +1313,8 @@ events:
   DEPTH_COLLAPSE:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: DEPTH_COLLAPSE
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: market_event
     subtype: depth_collapse
     phase: collapse
     evidence_mode: direct
@@ -1160,11 +1327,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Direct depth failure evidence for liquidity stress.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: DepthCollapseDetector
+    runtime_tags:
+    - liquidity_stress
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: depth_collapse_event
+    routing_profile_ref: LIQUIDITY_STRESS
+    cluster_id: liquidity_stress
+    collapse_target: LIQUIDITY_STRESS
+    overlap_group: liquidity_stress_depth
+    precedence_rank: 3
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -1201,6 +1390,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: DEPTH_STRESS_PROXY
+    event_kind: market_event
     subtype: depth_collapse
     phase: collapse
     evidence_mode: hybrid
@@ -1213,12 +1403,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: 'Hybrid liquidity-stress evidence: direct micro-depth depletion combined
       with spread and RV stress.'
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: depth_stress_proxy_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -1258,7 +1467,8 @@ events:
   FAILED_CONTINUATION:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: FAILED_CONTINUATION
+    legacy_family: FORCED_FLOW_AND_EXHAUSTION
+    event_kind: market_event
     subtype: failed_continuation
     phase: failure
     evidence_mode: hybrid
@@ -1271,11 +1481,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Trend-follow signal failure belongs in exhaustion/failure regime.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FailedContinuationDetector
+    runtime_tags:
+    - exhaustion
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: failed_continuation_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: FORCED_FLOW_AND_EXHAUSTION
@@ -1307,7 +1539,8 @@ events:
   FALSE_BREAKOUT:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: FALSE_BREAKOUT
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: false_breakout
     phase: failure
     evidence_mode: hybrid
@@ -1320,11 +1553,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Breakout failure surface under trend failure/exhaustion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FalseBreakoutDetector
+    runtime_tags:
+    - trend_momentum
+    - exhaustion
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: false_breakout_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -1357,7 +1613,8 @@ events:
   FEE_REGIME_CHANGE_EVENT:
     canonical_family: EXECUTION_FRICTION
     canonical_regime: EXECUTION_FRICTION
-    legacy_family: FEE_REGIME_CHANGE_EVENT
+    legacy_family: EXECUTION_FRICTION
+    event_kind: market_event
     subtype: fee_regime_change
     phase: transition
     evidence_mode: direct
@@ -1370,11 +1627,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 65
+    default_executable: true
+    deconflict_priority: 0
     notes: Execution-cost regime shift.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FeeRegimeChangeDetector
+    runtime_tags:
+    - execution_cost
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: fee_regime_change_event
+    routing_profile_ref: ''
+    cluster_id: execution_cost
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: EXECUTION_FRICTION
@@ -1403,6 +1682,7 @@ events:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
     legacy_family: FLOW_EXHAUSTION_PROXY
+    event_kind: market_event
     subtype: flow_exhaustion
     phase: exhaustion
     evidence_mode: hybrid
@@ -1415,12 +1695,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: 'Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined
       with price and volatility exhaustion.'
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: flow_exhaustion_proxy_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -1469,7 +1768,8 @@ events:
   FND_DISLOC:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: FND_DISLOC
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: funding_dislocation
     phase: shock
     evidence_mode: direct
@@ -1482,11 +1782,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Funding dislocation folded into basis/funding regime.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FndDislocDetector
+    runtime_tags:
+    - basis_dislocation
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: funding_dislocation
     events_file: funding_dislocation_events.parquet
     signal_column: funding_dislocation_event
+    routing_profile_ref: ''
+    cluster_id: basis_dislocation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       notes:
@@ -1519,7 +1841,8 @@ events:
   FORCED_FLOW_EXHAUSTION:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: FORCED_FLOW_EXHAUSTION
+    legacy_family: ORDERFLOW
+    event_kind: market_event
     subtype: forced_flow_exhaustion
     phase: exhaustion
     evidence_mode: hybrid
@@ -1532,11 +1855,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Exhaustion regime with forced-flow mechanics.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ForcedFlowExhaustionDetector
+    runtime_tags:
+    - exhaustion
+    - forced_liquidation
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: directional_exhaustion_after_forced_flow
     events_file: directional_exhaustion_after_forced_flow_events.parquet
     signal_column: forced_flow_exhaustion_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -1582,7 +1928,8 @@ events:
   FUNDING_EXTREME_ONSET:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: FUNDING_EXTREME_ONSET
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: funding_extreme
     phase: onset
     evidence_mode: direct
@@ -1595,11 +1942,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Funding extreme onset under basis/funding dislocation.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FundingExtremeOnsetDetector
+    runtime_tags:
+    - funding_crowding
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_extreme_onset_event
+    routing_profile_ref: BASIS_FUNDING_DISLOCATION
+    cluster_id: funding_crowding
+    collapse_target: ''
+    overlap_group: basis_funding_extreme
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -1726,7 +2095,8 @@ events:
   FUNDING_FLIP:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: FUNDING_FLIP
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: funding_flip
     phase: flip
     evidence_mode: direct
@@ -1739,11 +2109,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Funding sign inversion as subtype metadata.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FundingFlipDetector
+    runtime_tags:
+    - funding_crowding
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: positioning_extremes
     events_file: positioning_extremes_events.parquet
     signal_column: funding_flip_event
+    routing_profile_ref: ''
+    cluster_id: funding_crowding
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -1780,7 +2173,8 @@ events:
   FUNDING_NORMALIZATION_TRIGGER:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: FUNDING_NORMALIZATION_TRIGGER
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: funding_normalization
     phase: normalization
     evidence_mode: direct
@@ -1793,11 +2187,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Normalization phase of funding dislocation.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FundingNormalizationDetector
+    runtime_tags:
+    - funding_crowding
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_normalization_event
+    routing_profile_ref: ''
+    cluster_id: funding_crowding
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -1857,7 +2273,8 @@ events:
   FUNDING_PERSISTENCE_TRIGGER:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: FUNDING_PERSISTENCE_TRIGGER
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: funding_persistence
     phase: persistence
     evidence_mode: direct
@@ -1870,11 +2287,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Persistence phase of funding dislocation.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FundingPersistenceDetector
+    runtime_tags:
+    - funding_crowding
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: funding_events
     events_file: funding_episode_events.parquet
     signal_column: funding_persistence_event
+    routing_profile_ref: ''
+    cluster_id: funding_crowding
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -1934,7 +2373,8 @@ events:
   FUNDING_TIMESTAMP_EVENT:
     canonical_family: SCHEDULED_TEMPORAL_WINDOW
     canonical_regime: SCHEDULED_TEMPORAL_WINDOW
-    legacy_family: FUNDING_TIMESTAMP_EVENT
+    legacy_family: TEMPORAL_STRUCTURE
+    event_kind: context_tag
     subtype: funding_timestamp
     phase: window
     evidence_mode: contextual
@@ -1947,11 +2387,49 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 20
+    default_executable: false
+    deconflict_priority: 0
     notes: Mechanical funding window context; not a canonical regime.
+    maturity: ''
+    tier: C
+    operational_role: context
+    deployment_disposition: context_only
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: FundingTimestampDetector
+    runtime_tags:
+    - temporal_anchor
+    - funding_crowding
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: funding_timestamp_event
+    routing_profile_ref: ''
+    cluster_id: temporal_anchor
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses:
+    - event_type: BASIS_DISLOC
+      penalty_factor: 0.0
+      block: true
+      reason: Funding payment creates mechanical basis jump; desync detectors fire
+        falsely. Block for the payment bar and its cooldown window.
+    - event_type: SPOT_PERP_BASIS_SHOCK
+      penalty_factor: 0.0
+      block: true
+      reason: Funding payment creates mechanical basis jump; desync detectors fire
+        falsely. Block for the payment bar and its cooldown window.
+    - event_type: CROSS_VENUE_DESYNC
+      penalty_factor: 0.0
+      block: true
+      reason: Funding payment creates mechanical basis jump; desync detectors fire
+        falsely. Block for the payment bar and its cooldown window.
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TEMPORAL_STRUCTURE
@@ -1978,7 +2456,8 @@ events:
   GAP_OVERSHOOT:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
-    legacy_family: GAP_OVERSHOOT
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: gap_overshoot
     phase: overshoot
     evidence_mode: statistical
@@ -1991,11 +2470,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 60
+    default_executable: true
+    deconflict_priority: 0
     notes: Gap-extension overshoot state.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: GapOvershootDetector
+    runtime_tags:
+    - statistical_stretch
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: gap_overshoot_event
+    routing_profile_ref: ''
+    cluster_id: statistical_stretch
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION
@@ -2025,7 +2526,8 @@ events:
   INDEX_COMPONENT_DIVERGENCE:
     canonical_family: CROSS_ASSET_DESYNCHRONIZATION
     canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
-    legacy_family: INDEX_COMPONENT_DIVERGENCE
+    legacy_family: INFORMATION_DESYNC
+    event_kind: market_event
     subtype: index_component_divergence
     phase: divergence
     evidence_mode: inferred_cross_asset
@@ -2038,11 +2540,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Cross-asset divergence between index and components.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: IndexComponentDivergenceDetector
+    runtime_tags:
+    - desync
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: index_component_divergence_event
+    routing_profile_ref: ''
+    cluster_id: desync
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: INFORMATION_DESYNC
@@ -2074,7 +2598,8 @@ events:
   LEAD_LAG_BREAK:
     canonical_family: CROSS_ASSET_DESYNCHRONIZATION
     canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
-    legacy_family: LEAD_LAG_BREAK
+    legacy_family: INFORMATION_DESYNC
+    event_kind: market_event
     subtype: lead_lag_break
     phase: divergence
     evidence_mode: inferred_cross_asset
@@ -2087,11 +2612,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Lead/lag structure break.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: LeadLagBreakDetector
+    runtime_tags:
+    - desync
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: lead_lag_break_event
+    routing_profile_ref: ''
+    cluster_id: desync
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: INFORMATION_DESYNC
@@ -2123,7 +2670,8 @@ events:
   LIQUIDATION_CASCADE:
     canonical_family: LIQUIDATION_CASCADE
     canonical_regime: LIQUIDATION_CASCADE
-    legacy_family: LIQUIDATION_CASCADE
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: liquidation_cascade
     phase: cascade
     evidence_mode: direct
@@ -2136,11 +2684,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 100
+    default_executable: true
+    deconflict_priority: 0
     notes: Structurally distinct canonical cascade regime.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: LiquidationCascadeDetector
+    runtime_tags:
+    - forced_liquidation
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidation_cascade
     events_file: liquidation_cascade_events.parquet
     signal_column: liquidation_cascade_event
+    routing_profile_ref: ''
+    cluster_id: forced_liquidation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 2
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -2175,7 +2746,8 @@ events:
   LIQUIDATION_EXHAUSTION_REVERSAL:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: LIQUIDATION_EXHAUSTION_REVERSAL
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: liquidation_exhaustion_reversal
     phase: recovery
     evidence_mode: hybrid
@@ -2188,11 +2760,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Reversal after forced liquidation exhaustion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: PostDeleveragingReboundDetector
+    runtime_tags:
+    - forced_liquidation
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: liquidation_exhaustion_reversal_event
+    routing_profile_ref: ''
+    cluster_id: forced_liquidation
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       notes:
@@ -2247,7 +2841,8 @@ events:
   LIQUIDITY_GAP_PRINT:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: LIQUIDITY_GAP_PRINT
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: market_event
     subtype: gap_print
     phase: shock
     evidence_mode: direct
@@ -2260,11 +2855,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Gap print inside liquidity-stress regime.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: LiquidityGapDetector
+    runtime_tags:
+    - liquidity_stress
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: liquidity_gap_print_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -2296,7 +2913,8 @@ events:
   LIQUIDITY_SHOCK:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: LIQUIDITY_SHOCK
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: market_event
     subtype: liquidity_shock
     phase: shock
     evidence_mode: hybrid
@@ -2309,11 +2927,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: High-level liquidity stress onset.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: LiquidityStressDetector
+    runtime_tags:
+    - liquidity_stress
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_shock_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -2344,6 +2985,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: LIQUIDITY_STRESS_DIRECT
+    event_kind: market_event
     subtype: liquidity_stress
     phase: shock
     evidence_mode: direct
@@ -2356,11 +2998,30 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Direct evidence mode for liquidity stress.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_stress_direct_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -2391,6 +3052,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: LIQUIDITY_STRESS_PROXY
+    event_kind: market_event
     subtype: liquidity_stress
     phase: shock
     evidence_mode: hybrid
@@ -2403,12 +3065,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: 'Hybrid liquidity-stress evidence: direct book stress when available plus
       bar-range expansion and optional trade-flow collapse confirmation.'
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_shock
     events_file: liquidity_shock_events.parquet
     signal_column: liquidity_stress_proxy_event
+    routing_profile_ref: ''
+    cluster_id: ''
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -2440,7 +3121,8 @@ events:
   LIQUIDITY_VACUUM:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: LIQUIDITY_VACUUM
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: market_event
     subtype: liquidity_vacuum
     phase: collapse
     evidence_mode: direct
@@ -2453,11 +3135,39 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Thin-book vacuum regime.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: LiquidityVacuumDetector
+    runtime_tags:
+    - liquidity_stress
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_vacuum
     events_file: liquidity_vacuum_events.parquet
     signal_column: liquidity_vacuum_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses:
+    - event_type: VOL_SHOCK
+      penalty_factor: 0.5
+      block: false
+      reason: Vol signal unreliable during thin-book conditions; vol expansion may
+        be noise-driven. Partial penalty.
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -2573,7 +3283,8 @@ events:
   MOMENTUM_DIVERGENCE_TRIGGER:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: MOMENTUM_DIVERGENCE_TRIGGER
+    legacy_family: FORCED_FLOW_AND_EXHAUSTION
+    event_kind: market_event
     subtype: momentum_divergence
     phase: exhaustion
     evidence_mode: hybrid
@@ -2586,11 +3297,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Divergence-based exhaustion signal.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: MomentumDivergenceDetector
+    runtime_tags:
+    - exhaustion
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: momentum_divergence_trigger_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: FORCED_FLOW_AND_EXHAUSTION
@@ -2623,7 +3356,8 @@ events:
   OI_FLUSH:
     canonical_family: POSITIONING_UNWIND_DELEVERAGING
     canonical_regime: POSITIONING_UNWIND_DELEVERAGING
-    legacy_family: OI_FLUSH
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: oi_flush
     phase: unwind
     evidence_mode: direct
@@ -2636,11 +3370,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: OI flush folded into unwind/deleveraging regime.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: OIFlushDetector
+    runtime_tags:
+    - oi_dynamic
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_flush_event
+    routing_profile_ref: ''
+    cluster_id: oi_dynamic
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -2673,7 +3430,8 @@ events:
   OI_SPIKE_NEGATIVE:
     canonical_family: POSITIONING_EXPANSION
     canonical_regime: POSITIONING_EXPANSION
-    legacy_family: OI_SPIKE_NEGATIVE
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: oi_spike_negative
     phase: expansion
     evidence_mode: direct
@@ -2686,11 +3444,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Direction stays in subtype; canonical regime is positioning expansion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: OISpikeNegativeDetector
+    runtime_tags:
+    - oi_dynamic
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_spike_neg_event
+    routing_profile_ref: ''
+    cluster_id: oi_dynamic
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -2723,7 +3503,8 @@ events:
   OI_SPIKE_POSITIVE:
     canonical_family: POSITIONING_EXPANSION
     canonical_regime: POSITIONING_EXPANSION
-    legacy_family: OI_SPIKE_POSITIVE
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: market_event
     subtype: oi_spike_positive
     phase: expansion
     evidence_mode: direct
@@ -2736,11 +3517,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Direction stays in subtype; canonical regime is positioning expansion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: OISpikePositiveDetector
+    runtime_tags:
+    - oi_dynamic
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: oi_shocks
     events_file: oi_shock_events.parquet
     signal_column: oi_spike_pos_event
+    routing_profile_ref: ''
+    cluster_id: oi_dynamic
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -2772,7 +3575,8 @@ events:
   ORDERFLOW_IMBALANCE_SHOCK:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: ORDERFLOW_IMBALANCE_SHOCK
+    legacy_family: ORDERFLOW
+    event_kind: market_event
     subtype: orderflow_imbalance
     phase: shock
     evidence_mode: direct
@@ -2785,11 +3589,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Orderflow imbalance is treated as a liquidity-stress subtype.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: OrderflowImbalanceDetector
+    runtime_tags:
+    - orderflow_imbalance
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: orderflow_imbalance_shock_event
+    routing_profile_ref: ''
+    cluster_id: orderflow_imbalance
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -2829,7 +3655,8 @@ events:
   OVERSHOOT_AFTER_SHOCK:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
-    legacy_family: OVERSHOOT_AFTER_SHOCK
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: overshoot_after_shock
     phase: overshoot
     evidence_mode: statistical
@@ -2842,11 +3669,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 60
+    default_executable: true
+    deconflict_priority: 0
     notes: Statistical overshoot conditional on preceding shock.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: OvershootDetector
+    runtime_tags:
+    - statistical_stretch
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: overshoot_after_shock_event
+    routing_profile_ref: ''
+    cluster_id: statistical_stretch
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION
@@ -2878,6 +3727,7 @@ events:
     canonical_family: POSITIONING_UNWIND_DELEVERAGING
     canonical_regime: POSITIONING_UNWIND_DELEVERAGING
     legacy_family: POST_DELEVERAGING_REBOUND
+    event_kind: market_event
     subtype: post_deleveraging_rebound
     phase: recovery
     evidence_mode: hybrid
@@ -2890,11 +3740,30 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Recovery phase following deleveraging wave.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: post_deleveraging_rebound_event
+    routing_profile_ref: ''
+    cluster_id: ''
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: FORCED_FLOW_AND_EXHAUSTION
@@ -2946,6 +3815,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: PRICE_VOL_IMBALANCE_PROXY
+    event_kind: market_event
     subtype: price_vol_imbalance
     phase: shock
     evidence_mode: hybrid
@@ -2958,12 +3828,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Hybrid liquidity-stress evidence via synchronized return, realized-volatility,
       volume, and flow-pressure imbalance.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: price_vol_imbalance_proxy_event
+    routing_profile_ref: ''
+    cluster_id: orderflow_imbalance
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -3003,7 +3892,8 @@ events:
   PULLBACK_PIVOT:
     canonical_family: TREND_CONTINUATION
     canonical_regime: TREND_CONTINUATION
-    legacy_family: PULLBACK_PIVOT
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: pullback_pivot
     phase: recovery
     evidence_mode: hybrid
@@ -3016,11 +3906,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Pullback continuation setup.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: PullbackPivotDetector
+    runtime_tags:
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: pullback_pivot_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -3052,7 +3964,8 @@ events:
   RANGE_BREAKOUT:
     canonical_family: TREND_CONTINUATION
     canonical_regime: TREND_CONTINUATION
-    legacy_family: RANGE_BREAKOUT
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: range_breakout
     phase: breakout
     evidence_mode: hybrid
@@ -3065,11 +3978,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Directional breakout retained under trend continuation.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: RangeBreakoutDetector
+    runtime_tags:
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: range_breakout_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -3101,7 +4036,8 @@ events:
   RANGE_COMPRESSION_END:
     canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
     canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
-    legacy_family: RANGE_COMPRESSION_END
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: range_compression_end
     phase: breakout
     evidence_mode: hybrid
@@ -3114,11 +4050,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Compression-release subtype rather than standalone family.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: RangeCompressionDetector
+    runtime_tags:
+    - vol_regime
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: range_compression_end_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -3150,7 +4108,8 @@ events:
   SCHEDULED_NEWS_WINDOW_EVENT:
     canonical_family: SCHEDULED_TEMPORAL_WINDOW
     canonical_regime: SCHEDULED_TEMPORAL_WINDOW
-    legacy_family: SCHEDULED_NEWS_WINDOW_EVENT
+    legacy_family: TEMPORAL_STRUCTURE
+    event_kind: context_tag
     subtype: scheduled_news_window
     phase: window
     evidence_mode: contextual
@@ -3163,11 +4122,53 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 20
+    default_executable: false
+    deconflict_priority: 0
     notes: Context gate for scheduled news windows.
+    maturity: ''
+    tier: C
+    operational_role: context
+    deployment_disposition: context_only
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ScheduledNewsDetector
+    runtime_tags:
+    - temporal_anchor
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: scheduled_news_window_event
+    routing_profile_ref: ''
+    cluster_id: temporal_anchor
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses:
+    - event_type: LIQUIDITY_VACUUM
+      penalty_factor: 0.0
+      block: true
+      reason: 'News window: directional information dominates; structural detectors
+        fire spuriously. Block entirely during active news window.'
+    - event_type: VOL_SHOCK
+      penalty_factor: 0.0
+      block: true
+      reason: 'News window: directional information dominates; structural detectors
+        fire spuriously. Block entirely during active news window.'
+    - event_type: CROSS_VENUE_DESYNC
+      penalty_factor: 0.0
+      block: true
+      reason: 'News window: directional information dominates; structural detectors
+        fire spuriously. Block entirely during active news window.'
+    - event_type: BREAKOUT_TRIGGER
+      penalty_factor: 0.0
+      block: true
+      reason: 'News window: directional information dominates; structural detectors
+        fire spuriously. Block entirely during active news window.'
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TEMPORAL_STRUCTURE
@@ -3193,7 +4194,8 @@ events:
   SEQ_FND_EXTREME_THEN_BREAKOUT:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: SEQ_FND_EXTREME_THEN_BREAKOUT
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: composite_event
     subtype: funding_extreme_then_breakout
     phase: confirmation
     evidence_mode: sequence_confirmed
@@ -3206,11 +4208,34 @@ events:
     is_strategy_construct: false
     research_only: true
     strategy_only: false
-    deconflict_priority: 30
+    default_executable: false
+    deconflict_priority: 0
     notes: Composite research hypothesis, not a canonical event.
+    maturity: ''
+    tier: D
+    operational_role: sequence_component
+    deployment_disposition: research_only
+    runtime_category: research_only
+    enabled: true
+    detector_name: EventSequenceDetector
+    runtime_tags:
+    - funding_crowding
+    - sequence
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: false
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_fnd_extreme_then_breakout_event
+    routing_profile_ref: ''
+    cluster_id: funding_crowding
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -3242,7 +4267,8 @@ events:
   SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: composite_event
     subtype: liquidity_vacuum_then_depth_recovery
     phase: confirmation
     evidence_mode: sequence_confirmed
@@ -3255,11 +4281,35 @@ events:
     is_strategy_construct: false
     research_only: true
     strategy_only: false
-    deconflict_priority: 30
+    default_executable: false
+    deconflict_priority: 0
     notes: Composite liquidity repair motif.
+    maturity: ''
+    tier: D
+    operational_role: sequence_component
+    deployment_disposition: research_only
+    runtime_category: research_only
+    enabled: true
+    detector_name: EventSequenceDetector
+    runtime_tags:
+    - liquidity_stress
+    - absorption_recovery
+    - sequence
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: false
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_liq_vacuum_then_depth_recovery_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -3288,7 +4338,8 @@ events:
   SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE:
     canonical_family: POSITIONING_EXPANSION
     canonical_regime: POSITIONING_EXPANSION
-    legacy_family: SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE
+    legacy_family: POSITIONING_EXTREMES
+    event_kind: composite_event
     subtype: oi_spike_positive_then_vol_spike
     phase: confirmation
     evidence_mode: sequence_confirmed
@@ -3301,11 +4352,34 @@ events:
     is_strategy_construct: false
     research_only: true
     strategy_only: false
-    deconflict_priority: 30
+    default_executable: false
+    deconflict_priority: 0
     notes: Composite positioning/volatility hypothesis.
+    maturity: ''
+    tier: D
+    operational_role: sequence_component
+    deployment_disposition: research_only
+    runtime_category: research_only
+    enabled: true
+    detector_name: EventSequenceDetector
+    runtime_tags:
+    - oi_dynamic
+    - sequence
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: false
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_oi_spikepos_then_vol_spike_event
+    routing_profile_ref: ''
+    cluster_id: oi_dynamic
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: POSITIONING_EXTREMES
@@ -3337,7 +4411,8 @@ events:
   SEQ_VOL_COMP_THEN_BREAKOUT:
     canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
     canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
-    legacy_family: SEQ_VOL_COMP_THEN_BREAKOUT
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: composite_event
     subtype: vol_compression_then_breakout
     phase: confirmation
     evidence_mode: sequence_confirmed
@@ -3350,11 +4425,34 @@ events:
     is_strategy_construct: false
     research_only: true
     strategy_only: false
-    deconflict_priority: 30
+    default_executable: false
+    deconflict_priority: 0
     notes: Composite compression-release hypothesis.
+    maturity: ''
+    tier: D
+    operational_role: sequence_component
+    deployment_disposition: research_only
+    runtime_category: research_only
+    enabled: true
+    detector_name: EventSequenceDetector
+    runtime_tags:
+    - vol_regime
+    - sequence
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: false
     reports_dir: event_sequences
     events_file: event_sequences.parquet
     signal_column: seq_vol_comp_then_breakout_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -3383,7 +4481,8 @@ events:
   SESSION_CLOSE_EVENT:
     canonical_family: SCHEDULED_TEMPORAL_WINDOW
     canonical_regime: SCHEDULED_TEMPORAL_WINDOW
-    legacy_family: SESSION_CLOSE_EVENT
+    legacy_family: TEMPORAL_STRUCTURE
+    event_kind: context_tag
     subtype: session_close
     phase: window
     evidence_mode: contextual
@@ -3396,11 +4495,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 20
+    default_executable: false
+    deconflict_priority: 0
     notes: Session close context tag.
+    maturity: ''
+    tier: C
+    operational_role: context
+    deployment_disposition: context_only
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SessionCloseDetector
+    runtime_tags:
+    - temporal_anchor
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: session_close_event
+    routing_profile_ref: ''
+    cluster_id: temporal_anchor
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TEMPORAL_STRUCTURE
@@ -3434,7 +4555,8 @@ events:
   SESSION_OPEN_EVENT:
     canonical_family: SCHEDULED_TEMPORAL_WINDOW
     canonical_regime: SCHEDULED_TEMPORAL_WINDOW
-    legacy_family: SESSION_OPEN_EVENT
+    legacy_family: TEMPORAL_STRUCTURE
+    event_kind: context_tag
     subtype: session_open
     phase: window
     evidence_mode: contextual
@@ -3447,11 +4569,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 20
+    default_executable: false
+    deconflict_priority: 0
     notes: Session open context tag.
+    maturity: ''
+    tier: C
+    operational_role: context
+    deployment_disposition: context_only
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SessionOpenDetector
+    runtime_tags:
+    - temporal_anchor
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: temporal_structure
     events_file: temporal_structure_events.parquet
     signal_column: session_open_event
+    routing_profile_ref: ''
+    cluster_id: temporal_anchor
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TEMPORAL_STRUCTURE
@@ -3485,7 +4629,8 @@ events:
   SLIPPAGE_SPIKE_EVENT:
     canonical_family: EXECUTION_FRICTION
     canonical_regime: EXECUTION_FRICTION
-    legacy_family: SLIPPAGE_SPIKE_EVENT
+    legacy_family: EXECUTION_FRICTION
+    event_kind: market_event
     subtype: slippage_spike
     phase: shock
     evidence_mode: direct
@@ -3498,11 +4643,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 65
+    default_executable: true
+    deconflict_priority: 0
     notes: Execution friction shock.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SlippageSpikeDetector
+    runtime_tags:
+    - execution_cost
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: slippage_spike_event
+    routing_profile_ref: ''
+    cluster_id: execution_cost
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: EXECUTION_FRICTION
@@ -3530,7 +4698,8 @@ events:
   SPOT_PERP_BASIS_SHOCK:
     canonical_family: BASIS_FUNDING_DISLOCATION
     canonical_regime: BASIS_FUNDING_DISLOCATION
-    legacy_family: SPOT_PERP_BASIS_SHOCK
+    legacy_family: INFORMATION_DESYNC
+    event_kind: market_event
     subtype: spot_perp_basis_shock
     phase: shock
     evidence_mode: inferred_cross_asset
@@ -3543,11 +4712,35 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 90
+    default_executable: true
+    deconflict_priority: 0
     notes: Spot/perp basis shock is a basis/funding subtype.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SpotPerpBasisShockDetector
+    runtime_tags:
+    - desync
+    - basis_dislocation
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: information_desync
     events_file: information_desync_events.parquet
     signal_column: spot_perp_basis_shock_event
+    routing_profile_ref: ''
+    cluster_id: desync
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: INFORMATION_DESYNC
@@ -3581,7 +4774,8 @@ events:
   SPREAD_BLOWOUT:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: SPREAD_BLOWOUT
+    legacy_family: LIQUIDITY_DISLOCATION
+    event_kind: market_event
     subtype: spread_widening
     phase: shock
     evidence_mode: direct
@@ -3594,11 +4788,59 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Spread blowout retained as liquidity-stress subtype.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SpreadBlowoutDetector
+    runtime_tags:
+    - liquidity_stress
+    - execution_cost
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: spread_blowout_event
+    routing_profile_ref: ''
+    cluster_id: liquidity_stress
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 1
+    suppresses:
+    - event_type: LIQUIDITY_VACUUM
+      penalty_factor: 0.3
+      block: false
+      reason: Spread elevation makes execution-heavy mean-reversion templates uneconomic.
+        Penalize heavily but do not block entirely.
+    - event_type: BREAKOUT_TRIGGER
+      penalty_factor: 0.3
+      block: false
+      reason: Spread elevation makes execution-heavy mean-reversion templates uneconomic.
+        Penalize heavily but do not block entirely.
+    - event_type: RANGE_BREAKOUT
+      penalty_factor: 0.3
+      block: false
+      reason: Spread elevation makes execution-heavy mean-reversion templates uneconomic.
+        Penalize heavily but do not block entirely.
+    - event_type: CROSS_VENUE_DESYNC
+      penalty_factor: 0.3
+      block: false
+      reason: Spread elevation makes execution-heavy mean-reversion templates uneconomic.
+        Penalize heavily but do not block entirely.
+    - event_type: DEPTH_COLLAPSE
+      penalty_factor: 0.3
+      block: false
+      reason: Spread elevation makes execution-heavy mean-reversion templates uneconomic.
+        Penalize heavily but do not block entirely.
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: LIQUIDITY_DISLOCATION
@@ -3630,7 +4872,8 @@ events:
   SPREAD_REGIME_WIDENING_EVENT:
     canonical_family: EXECUTION_FRICTION
     canonical_regime: EXECUTION_FRICTION
-    legacy_family: SPREAD_REGIME_WIDENING_EVENT
+    legacy_family: EXECUTION_FRICTION
+    event_kind: market_event
     subtype: spread_regime_widening
     phase: persistence
     evidence_mode: direct
@@ -3643,11 +4886,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 65
+    default_executable: true
+    deconflict_priority: 0
     notes: Persistent execution-friction regime widening.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SpreadRegimeWideningDetector
+    runtime_tags:
+    - execution_cost
+    - liquidity_stress
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: execution_friction
     events_file: execution_friction_events.parquet
     signal_column: spread_regime_widening_event
+    routing_profile_ref: ''
+    cluster_id: execution_cost
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: EXECUTION_FRICTION
@@ -3678,7 +4944,8 @@ events:
   SUPPORT_RESISTANCE_BREAK:
     canonical_family: TREND_CONTINUATION
     canonical_regime: TREND_CONTINUATION
-    legacy_family: SUPPORT_RESISTANCE_BREAK
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: support_resistance_break
     phase: breakout
     evidence_mode: hybrid
@@ -3691,11 +4958,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Structural breakout subtype within trend continuation.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: SREventDetector
+    runtime_tags:
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: support_resistance_break_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -3727,7 +5016,8 @@ events:
   SWEEP_STOPRUN:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
-    legacy_family: SWEEP_STOPRUN
+    legacy_family: PRICE_ACTION
+    event_kind: market_event
     subtype: sweep_stoprun
     phase: shock
     evidence_mode: hybrid
@@ -3740,11 +5030,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Stop-run style liquidity stress.
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: StopRunDetector
+    runtime_tags:
+    - orderflow_imbalance
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: sweep_stoprun_event
+    routing_profile_ref: ''
+    cluster_id: orderflow_imbalance
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -3777,7 +5090,8 @@ events:
   TREND_ACCELERATION:
     canonical_family: TREND_CONTINUATION
     canonical_regime: TREND_CONTINUATION
-    legacy_family: TREND_ACCELERATION
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: trend_acceleration
     phase: persistence
     evidence_mode: hybrid
@@ -3790,11 +5104,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Continuation regime with accelerating trend.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: TrendAccelerationDetector
+    runtime_tags:
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: trend_acceleration_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -3826,7 +5162,8 @@ events:
   TREND_DECELERATION:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: TREND_DECELERATION
+    legacy_family: TREND_STRUCTURE
+    event_kind: market_event
     subtype: trend_deceleration
     phase: exhaustion
     evidence_mode: hybrid
@@ -3839,11 +5176,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 70
+    default_executable: true
+    deconflict_priority: 0
     notes: Deceleration belongs with trend failure/exhaustion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: TrendDecelerationDetector
+    runtime_tags:
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: trend_structure
     events_file: trend_structure_events.parquet
     signal_column: trend_deceleration_event
+    routing_profile_ref: ''
+    cluster_id: trend_momentum
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: TREND_STRUCTURE
@@ -3875,7 +5234,8 @@ events:
   TREND_EXHAUSTION_TRIGGER:
     canonical_family: TREND_FAILURE_EXHAUSTION
     canonical_regime: TREND_FAILURE_EXHAUSTION
-    legacy_family: TREND_EXHAUSTION_TRIGGER
+    legacy_family: FORCED_FLOW_AND_EXHAUSTION
+    event_kind: market_event
     subtype: trend_exhaustion
     phase: onset
     evidence_mode: hybrid
@@ -3888,11 +5248,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Canonical exhaustion onset.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: TrendExhaustionDetector
+    runtime_tags:
+    - exhaustion
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: forced_flow_and_exhaustion
     events_file: forced_flow_and_exhaustion_events.parquet
     signal_column: trend_exhaustion_trigger_event
+    routing_profile_ref: ''
+    cluster_id: exhaustion
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: FORCED_FLOW_AND_EXHAUSTION
@@ -3941,7 +5324,8 @@ events:
   TREND_TO_CHOP_SHIFT:
     canonical_family: REGIME_TRANSITION
     canonical_regime: REGIME_TRANSITION
-    legacy_family: TREND_TO_CHOP_SHIFT
+    legacy_family: REGIME_TRANSITION
+    event_kind: market_event
     subtype: trend_to_chop
     phase: transition
     evidence_mode: hybrid
@@ -3954,11 +5338,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Transition from directional to choppy conditions.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: TrendToChopDetector
+    runtime_tags:
+    - regime_shift
+    - trend_momentum
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: trend_to_chop_shift_event
+    routing_profile_ref: ''
+    cluster_id: regime_shift
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: REGIME_TRANSITION
@@ -3988,7 +5395,8 @@ events:
   VOL_CLUSTER_SHIFT:
     canonical_family: VOLATILITY_EXPANSION
     canonical_regime: VOLATILITY_EXPANSION
-    legacy_family: VOL_CLUSTER_SHIFT
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: vol_cluster_shift
     phase: persistence
     evidence_mode: statistical
@@ -4001,11 +5409,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Volatility cluster migration under expansion regime.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: VolClusterShiftDetector
+    runtime_tags:
+    - vol_regime
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_cluster_shift_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -4037,7 +5467,8 @@ events:
   VOL_REGIME_SHIFT_EVENT:
     canonical_family: REGIME_TRANSITION
     canonical_regime: REGIME_TRANSITION
-    legacy_family: VOL_REGIME_SHIFT_EVENT
+    legacy_family: REGIME_TRANSITION
+    event_kind: market_event
     subtype: vol_regime_shift
     phase: transition
     evidence_mode: statistical
@@ -4050,11 +5481,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 85
+    default_executable: true
+    deconflict_priority: 0
     notes: Regime transition expressed through volatility-state change.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: VolRegimeShiftDetector
+    runtime_tags:
+    - regime_shift
+    - vol_regime
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: regime_transition
     events_file: regime_transition_events.parquet
     signal_column: vol_regime_shift_event
+    routing_profile_ref: ''
+    cluster_id: regime_shift
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: REGIME_TRANSITION
@@ -4084,7 +5538,8 @@ events:
   VOL_RELAXATION_START:
     canonical_family: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
     canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
-    legacy_family: VOL_RELAXATION_START
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: vol_relaxation_start
     phase: normalization
     evidence_mode: direct
@@ -4097,11 +5552,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 75
+    default_executable: true
+    deconflict_priority: 0
     notes: Start of volatility normalization after expansion.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: VolRelaxationDetector
+    runtime_tags:
+    - vol_regime
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_relaxation_start_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -4133,7 +5610,8 @@ events:
   VOL_SHOCK:
     canonical_family: VOLATILITY_TRANSITION
     canonical_regime: VOLATILITY_TRANSITION
-    legacy_family: VOL_SHOCK
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: vol_shock
     phase: shock
     evidence_mode: statistical
@@ -4146,12 +5624,35 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Canonical volatility shock; current detector implementation also models
       relaxation boundary.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: VolShockRelaxationDetector
+    runtime_tags:
+    - vol_regime
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: vol_shock_relaxation
     events_file: vol_shock_relaxation_events.parquet
     signal_column: vol_shock_relaxation_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -4253,7 +5754,8 @@ events:
   VOL_SPIKE:
     canonical_family: VOLATILITY_EXPANSION
     canonical_regime: VOLATILITY_EXPANSION
-    legacy_family: VOL_SPIKE
+    legacy_family: VOLATILITY_TRANSITION
+    event_kind: market_event
     subtype: vol_spike
     phase: shock
     evidence_mode: direct
@@ -4266,11 +5768,34 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: Canonical realized-volatility expansion onset.
+    maturity: ''
+    tier: A
+    operational_role: trigger
+    deployment_disposition: primary_trigger_candidate
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: VolSpikeDetector
+    runtime_tags:
+    - vol_regime
+    - high_urgency
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: volatility_transition
     events_file: volatility_transition_events.parquet
     signal_column: vol_spike_event
+    routing_profile_ref: ''
+    cluster_id: vol_regime
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: VOLATILITY_TRANSITION
@@ -4302,6 +5827,7 @@ events:
     canonical_family: LIQUIDITY_STRESS
     canonical_regime: LIQUIDITY_STRESS
     legacy_family: WICK_REVERSAL_PROXY
+    event_kind: market_event
     subtype: wick_reversal
     phase: recovery
     evidence_mode: hybrid
@@ -4314,12 +5840,31 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 80
+    default_executable: true
+    deconflict_priority: 0
     notes: 'Hybrid liquidity-stress recovery evidence: wick and reclaim structure
       confirmed by realized-volume expansion.'
+    maturity: standard
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ''
+    runtime_tags: []
+    instrument_classes: []
+    requires_features: []
+    sequence_eligible: true
     reports_dir: liquidity_dislocation
     events_file: liquidity_dislocation_events.parquet
     signal_column: wick_reversal_proxy_event
+    routing_profile_ref: ''
+    cluster_id: ''
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       maturity: standard
       synthetic_coverage: covered
@@ -4352,7 +5897,8 @@ events:
   ZSCORE_STRETCH:
     canonical_family: STATISTICAL_STRETCH_OVERSHOOT
     canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
-    legacy_family: ZSCORE_STRETCH
+    legacy_family: STATISTICAL_DISLOCATION
+    event_kind: market_event
     subtype: zscore_stretch
     phase: stretch
     evidence_mode: statistical
@@ -4365,11 +5911,33 @@ events:
     is_strategy_construct: false
     research_only: false
     strategy_only: false
-    deconflict_priority: 60
+    default_executable: true
+    deconflict_priority: 0
     notes: Canonical stretch/overshoot event.
+    maturity: ''
+    tier: B
+    operational_role: trigger
+    deployment_disposition: secondary_or_confirm
+    runtime_category: active_runtime_event
+    enabled: true
+    detector_name: ZScoreStretchDetector
+    runtime_tags:
+    - statistical_stretch
+    instrument_classes:
+    - crypto
+    - futures
+    requires_features: []
+    sequence_eligible: true
     reports_dir: statistical_dislocation
     events_file: statistical_dislocation_events.parquet
     signal_column: zscore_stretch_event
+    routing_profile_ref: ''
+    cluster_id: statistical_stretch
+    collapse_target: ''
+    overlap_group: ''
+    precedence_rank: 0
+    suppresses: []
+    suppressed_by: []
     parameters:
       synthetic_coverage: covered
       canonical_family: STATISTICAL_DISLOCATION

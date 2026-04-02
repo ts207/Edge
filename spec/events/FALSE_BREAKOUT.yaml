@@ -20,3 +20,47 @@ expected_behavior:
   disabled_regimes:
   - 'Chop regime: no clear trend direction'
 cluster_id: trend_momentum
+identity:
+  canonical_regime: TREND_FAILURE_EXHAUSTION
+  legacy_family: TREND_STRUCTURE
+  subtype: false_breakout
+  phase: failure
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: FalseBreakoutDetector
+  enabled: true
+  signal_column: false_breakout_event
+  events_file: trend_structure_events.parquet
+  reports_dir: trend_structure
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - trend_momentum
+  - exhaustion
+semantics:
+  cluster_id: trend_momentum
+  notes: Breakout failure surface under trend failure/exhaustion.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

@@ -10,7 +10,6 @@ import yaml
 import project.events.event_flags as _event_flags_mod
 from project import PROJECT_ROOT
 from project.core.config import get_data_root
-from project.events.event_aliases import resolve_event_alias
 from project.events.event_diagnostics import (
     build_event_feature_frame,
     calibrate_event_thresholds,
@@ -83,7 +82,6 @@ __all__ = [
     "normalize_phase1_events",
     "normalize_registry_events_frame",
     "registry_contract_check",
-    "resolve_event_alias",
     "verify_index_alignment",
     "write_event_registry_artifacts",
     "write_registry_file",
@@ -147,11 +145,9 @@ def load_milestone_event_registry() -> dict[str, dict]:
 
 
 def get_event_definition(event_type: str) -> dict | None:
-    normalized = resolve_event_alias(str(event_type).strip().upper())
+    normalized = str(event_type).strip().upper()
     registry = load_milestone_event_registry()
     row = registry.get(normalized)
-    if row is None and normalized != str(event_type).strip().upper():
-        row = registry.get(str(event_type).strip().upper())
     return dict(row) if isinstance(row, dict) else None
 
 
@@ -162,7 +158,6 @@ def list_events_by_family(family: str) -> list[dict]:
         family_tokens = {
             str(row.get("family", "")).strip().upper(),
             str(row.get("canonical_regime", row.get("canonical_family", ""))).strip().upper(),
-            str(row.get("legacy_family", "")).strip().upper(),
         }
         if normalized in family_tokens:
             rows.append(dict(row))

@@ -13,7 +13,6 @@ from project.domain.models import (
 from project.spec_registry import (
     load_gates_spec,
     load_state_registry,
-    load_event_contract_overrides,
     load_unified_event_registry,
     load_yaml_relative,
     load_yaml_path,
@@ -37,8 +36,6 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
     defaults = unified.get("defaults", {})
     families = unified.get("families", {})
     unified_events = unified.get("events", {})
-    contract_overrides_payload = load_event_contract_overrides()
-    contract_overrides = contract_overrides_payload.get("events", {}) if isinstance(contract_overrides_payload, dict) else {}
     out: Dict[str, EventDefinition] = {}
 
     event_types = set()
@@ -65,12 +62,6 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
         
         if isinstance(unified_row, dict):
             row.update(unified_row)
-        override_row = contract_overrides.get(event_type, {}) if isinstance(contract_overrides, dict) else {}
-        if isinstance(override_row, dict):
-            for key, value in override_row.items():
-                if key != "parameters" and value not in (None, "", [], {}):
-                    row[key] = value
-
         parameters = {}
         default_params = defaults.get("parameters", {}) if isinstance(defaults, dict) else {}
         family_params = {}
@@ -87,8 +78,6 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
             parameters.update(family_params)
         if isinstance(row.get("parameters"), dict):
             parameters.update(row["parameters"])
-        if isinstance(override_row, dict) and isinstance(override_row.get("parameters"), dict):
-            parameters.update(override_row["parameters"])
 
         row["parameters"] = parameters
         spec_path = str((_event_spec_dir() / f"{event_type}.yaml").resolve())
@@ -98,6 +87,7 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
             canonical_family=canonical_regime or str(row.get("canonical_family", "")).strip().upper(),
             canonical_regime=canonical_regime or str(row.get("canonical_family", "")).strip().upper(),
             legacy_family=legacy_family,
+            event_kind=str(row.get("event_kind", "market_event")).strip() or "market_event",
             reports_dir=str(row.get("reports_dir", event_type.lower())),
             events_file=str(row.get("events_file", f"{event_type.lower()}_events.parquet")),
             signal_column=str(row.get("signal_column", f"{event_type.lower()}_event")),
@@ -119,6 +109,21 @@ def _merge_event_rows(unified: Dict[str, Any]) -> Dict[str, EventDefinition]:
             operational_role=str(row.get("operational_role", "")).strip(),
             deployment_disposition=str(row.get("deployment_disposition", "")).strip(),
             runtime_category=str(row.get("runtime_category", "active_runtime_event")).strip() or "active_runtime_event",
+            maturity=str(row.get("maturity", "")).strip(),
+            default_executable=bool(row.get("default_executable", True)),
+            enabled=bool(row.get("enabled", True)),
+            detector_name=str(row.get("detector_name", "")).strip(),
+            instrument_classes=tuple(str(item).strip() for item in row.get("instrument_classes", []) if str(item).strip()),
+            requires_features=tuple(str(item).strip() for item in row.get("requires_features", []) if str(item).strip()),
+            runtime_tags=tuple(str(item).strip() for item in row.get("runtime_tags", []) if str(item).strip()),
+            sequence_eligible=bool(row.get("sequence_eligible", True)),
+            cluster_id=str(row.get("cluster_id", "")).strip(),
+            collapse_target=str(row.get("collapse_target", "")).strip(),
+            overlap_group=str(row.get("overlap_group", "")).strip(),
+            precedence_rank=int(row.get("precedence_rank", 0) or 0),
+            routing_profile_ref=str(row.get("routing_profile_ref", "")).strip(),
+            suppresses=tuple(row.get("suppresses", []) if isinstance(row.get("suppresses"), (list, tuple)) else ()),
+            suppressed_by=tuple(row.get("suppressed_by", []) if isinstance(row.get("suppressed_by"), (list, tuple)) else ()),
             maturity_scores=dict(row.get("maturity_scores", {})) if isinstance(row.get("maturity_scores"), dict) else {},
             parameters=dict(parameters),
             raw=dict(row),

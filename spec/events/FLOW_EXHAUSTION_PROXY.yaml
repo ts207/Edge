@@ -42,3 +42,46 @@ expected_behavior:
   disabled_regimes:
   - 'Low volume: flow signals unreliable'
 cluster_id: exhaustion
+identity:
+  canonical_regime: TREND_FAILURE_EXHAUSTION
+  legacy_family: FLOW_EXHAUSTION_PROXY
+  subtype: flow_exhaustion
+  phase: exhaustion
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: standard
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: ''
+  enabled: true
+  signal_column: flow_exhaustion_proxy_event
+  events_file: forced_flow_and_exhaustion_events.parquet
+  reports_dir: forced_flow_and_exhaustion
+  instrument_classes: []
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags: []
+semantics:
+  summary: 'Hybrid exhaustion detector: open-interest unwind and liquidation pressure
+    confirmed by reversal-style price response.'
+  cluster_id: exhaustion
+  notes: 'Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined
+    with price and volatility exhaustion.'
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

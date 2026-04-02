@@ -104,3 +104,51 @@ expected_behavior:
 trigger: Detector triggers on liquidity vacuum pattern
 confirmation: Post-detection price action confirms signal validity
 cluster_id: liquidity_stress
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: LIQUIDITY_DISLOCATION
+  subtype: liquidity_vacuum
+  phase: collapse
+  evidence_mode: direct
+  layer: canonical
+  disposition: keep
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: LiquidityVacuumDetector
+  enabled: true
+  signal_column: liquidity_vacuum_event
+  events_file: liquidity_vacuum_events.parquet
+  reports_dir: liquidity_vacuum
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - liquidity_stress
+  - high_urgency
+semantics:
+  cluster_id: liquidity_stress
+  notes: Thin-book vacuum regime.
+  precedence_rank: 0
+interaction:
+  suppresses:
+  - event_type: VOL_SHOCK
+    penalty_factor: 0.5
+    block: false
+    reason: 'Vol signal unreliable during thin-book conditions; vol expansion may be noise-driven. Partial penalty.'
+  suppressed_by: []
+routing: {}

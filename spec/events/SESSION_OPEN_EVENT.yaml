@@ -25,3 +25,46 @@ expected_behavior:
   disabled_regimes:
   - 'Weekend/holiday: session timing unreliable'
 cluster_id: temporal_anchor
+identity:
+  canonical_regime: SCHEDULED_TEMPORAL_WINDOW
+  legacy_family: TEMPORAL_STRUCTURE
+  subtype: session_open
+  phase: window
+  evidence_mode: contextual
+  layer: context_tag
+  disposition: demote
+  asset_scope: multi_asset
+  venue_scope: market_wide
+governance:
+  event_kind: context_tag
+  default_executable: false
+  research_only: false
+  strategy_only: false
+  context_tag: true
+  is_composite: false
+  maturity: ''
+  tier: C
+  operational_role: context
+  deployment_disposition: context_only
+  runtime_category: active_runtime_event
+runtime:
+  detector: SessionOpenDetector
+  enabled: true
+  signal_column: session_open_event
+  events_file: temporal_structure_events.parquet
+  reports_dir: temporal_structure
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - temporal_anchor
+semantics:
+  cluster_id: temporal_anchor
+  notes: Session open context tag.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

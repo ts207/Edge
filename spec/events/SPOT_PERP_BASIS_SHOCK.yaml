@@ -21,3 +21,48 @@ expected_behavior:
   disabled_regimes:
   - 'Low correlation assets: desync undefined'
 cluster_id: desync
+identity:
+  canonical_regime: BASIS_FUNDING_DISLOCATION
+  legacy_family: INFORMATION_DESYNC
+  subtype: spot_perp_basis_shock
+  phase: shock
+  evidence_mode: inferred_cross_asset
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: cross_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: SpotPerpBasisShockDetector
+  enabled: true
+  signal_column: spot_perp_basis_shock_event
+  events_file: information_desync_events.parquet
+  reports_dir: information_desync
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - desync
+  - basis_dislocation
+  - high_urgency
+semantics:
+  cluster_id: desync
+  notes: Spot/perp basis shock is a basis/funding subtype.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

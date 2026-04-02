@@ -5,10 +5,10 @@ from typing import Any, Dict
 from project import PROJECT_ROOT
 
 import yaml
-from project.events.ontology_mapping import (
-    canonical_regime_fanout,
-    normalized_ontology_rows,
-    validate_mapping_rows,
+from project.events.canonical_registry_sidecars import (
+    ALLOWED_DISPOSITION_VALUES,
+    ALLOWED_EVIDENCE_MODE_VALUES,
+    ALLOWED_LAYER_VALUES,
 )
 
 CORE_KEYS = {"event_type", "reports_dir", "events_file", "signal_column", "parameters"}
@@ -21,6 +21,18 @@ META_KEYS = {
     "kind",
     "version",
 }
+SECTION_KEYS = {
+    "identity",
+    "governance",
+    "runtime",
+    "semantics",
+    "interaction",
+    "routing",
+}
+_MISSING = object()
+_ALLOWED_LAYERS = set(ALLOWED_LAYER_VALUES)
+_ALLOWED_DISPOSITIONS = set(ALLOWED_DISPOSITION_VALUES)
+_ALLOWED_EVIDENCE_MODES = set(ALLOWED_EVIDENCE_MODE_VALUES)
 
 
 def _load_yaml(path: Path) -> Dict[str, Any]:
@@ -30,26 +42,220 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _mapping(value: Any) -> Dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _present(mapping: Dict[str, Any], key: str) -> Any:
+    return mapping[key] if key in mapping else _MISSING
+
+
+def _first_value(*values: Any, default: Any = None) -> Any:
+    for value in values:
+        if value is not _MISSING:
+            return value
+    return default
+
+
+def _first_text(*values: Any, default: str = "") -> str:
+    for value in values:
+        if value is _MISSING:
+            continue
+        text = str(value or "").strip()
+        if text:
+            return text
+    return default
+
+
+def _bool_value(*values: Any, default: bool = False) -> bool:
+    value = _first_value(*values, default=default)
+    return bool(value)
+
+
+def _list_value(*values: Any) -> list[Any]:
+    value = _first_value(*values, default=[])
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, tuple):
+        return list(value)
+    return []
+
+
+def _int_value(*values: Any, default: int = 0) -> int:
+    value = _first_value(*values, default=default)
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return default
+
+
+def _event_kind_from_row(identity: Dict[str, Any], governance: Dict[str, Any], ontology: Dict[str, Any]) -> str:
+    explicit = _first_text(
+        _present(governance, "event_kind"),
+        _present(identity, "event_kind"),
+        default="",
+    )
+    if explicit:
+        return explicit
+
+    layer = str(ontology.get("layer", "")).strip()
+    if layer == "composite":
+        return "composite_event"
+    if layer == "context_tag":
+        return "context_tag"
+    if layer == "strategy_construct":
+        return "strategy_construct"
+    return "market_event"
+
+
+def _infer_layer(identity: Dict[str, Any], governance: Dict[str, Any], payload: Dict[str, Any]) -> str:
+    explicit = _first_text(
+        _present(identity, "layer"),
+        _present(governance, "layer"),
+        payload.get("layer", _MISSING),
+        default="",
+    )
+    if explicit:
+        return explicit
+    if _bool_value(
+        _present(governance, "strategy_only"),
+        _present(governance, "is_strategy_construct"),
+        payload.get("strategy_only", _MISSING),
+        payload.get("is_strategy_construct", _MISSING),
+        default=False,
+    ):
+        return "strategy_construct"
+    if _bool_value(
+        _present(governance, "context_tag"),
+        _present(governance, "is_context_tag"),
+        payload.get("is_context_tag", _MISSING),
+        default=False,
+    ):
+        return "context_tag"
+    if _bool_value(
+        _present(governance, "is_composite"),
+        payload.get("is_composite", _MISSING),
+        default=False,
+    ):
+        return "composite"
+    return "canonical"
+
+
+def _default_disposition(layer: str) -> str:
+    if layer in {"context_tag", "strategy_construct"}:
+        return "demote"
+    return "keep"
+
+
+def _normalized_ontology_row(
+    event_type: str,
+    payload: Dict[str, Any],
+    *,
+    identity: Dict[str, Any],
+    governance: Dict[str, Any],
+    semantics: Dict[str, Any],
+) -> Dict[str, Any]:
+    layer = _infer_layer(identity, governance, payload)
+    is_composite = _bool_value(
+        _present(governance, "is_composite"),
+        payload.get("is_composite", _MISSING),
+        default=layer == "composite",
+    )
+    is_context_tag = _bool_value(
+        _present(governance, "context_tag"),
+        _present(governance, "is_context_tag"),
+        payload.get("is_context_tag", _MISSING),
+        default=layer == "context_tag",
+    )
+    is_strategy_construct = _bool_value(
+        _present(governance, "strategy_only"),
+        _present(governance, "is_strategy_construct"),
+        payload.get("strategy_only", _MISSING),
+        payload.get("is_strategy_construct", _MISSING),
+        default=layer == "strategy_construct",
+    )
+    return {
+        "event_type": event_type,
+        "canonical_regime": _first_text(_present(identity, "canonical_regime")).upper(),
+        "subtype": _first_text(_present(identity, "subtype")),
+        "phase": _first_text(_present(identity, "phase")),
+        "evidence_mode": _first_text(_present(identity, "evidence_mode")),
+        "layer": layer,
+        "disposition": _first_text(
+            _present(identity, "disposition"),
+            _present(governance, "disposition"),
+            default=_default_disposition(layer),
+        ),
+        "asset_scope": _first_text(
+            _present(identity, "asset_scope"),
+            default="single_asset",
+        ),
+        "venue_scope": _first_text(
+            _present(identity, "venue_scope"),
+            default="single_venue",
+        ),
+        "deconflict_priority": _int_value(
+            _present(semantics, "deconflict_priority"),
+            default=0,
+        ),
+        "research_only": _bool_value(
+            _present(governance, "research_only"),
+            default=False,
+        ),
+        "strategy_only": _bool_value(
+            _present(governance, "strategy_only"),
+            default=False,
+        ),
+        "notes": _first_text(
+            _present(semantics, "notes"),
+            payload.get("description", _MISSING),
+        ),
+        "is_composite": is_composite,
+        "is_context_tag": is_context_tag,
+        "is_strategy_construct": is_strategy_construct,
+    }
+
+
+def _validate_mapping_rows(rows: Dict[str, Dict[str, Any]]) -> list[str]:
+    issues: list[str] = []
+    for event_type, row in rows.items():
+        if not row["canonical_regime"]:
+            issues.append(f"{event_type}: missing canonical_regime")
+        if not row["subtype"]:
+            issues.append(f"{event_type}: missing subtype")
+        if not row["phase"]:
+            issues.append(f"{event_type}: missing phase")
+        if row["layer"] not in _ALLOWED_LAYERS:
+            issues.append(f"{event_type}: invalid layer={row['layer']}")
+        if row["disposition"] not in _ALLOWED_DISPOSITIONS:
+            issues.append(f"{event_type}: invalid disposition={row['disposition']}")
+        if row["evidence_mode"] not in _ALLOWED_EVIDENCE_MODES:
+            issues.append(f"{event_type}: invalid evidence_mode={row['evidence_mode']}")
+        layer_flags = [
+            row["is_composite"],
+            row["is_context_tag"],
+            row["is_strategy_construct"],
+        ]
+        if sum(1 for flag in layer_flags if flag) > 1:
+            issues.append(f"{event_type}: multiple ontology layer flags enabled")
+        if row["strategy_only"] and not row["is_strategy_construct"]:
+            issues.append(f"{event_type}: strategy_only requires strategy_construct layer")
+    return issues
+
+
+def _canonical_regime_fanout(rows: Dict[str, Dict[str, Any]]) -> Dict[str, tuple[str, ...]]:
+    groups: Dict[str, list[str]] = {}
+    for event_type, row in rows.items():
+        regime = str(row.get("canonical_regime", "")).strip().upper()
+        if not regime:
+            continue
+        groups.setdefault(regime, []).append(event_type)
+    return {regime: tuple(sorted(event_types)) for regime, event_types in sorted(groups.items())}
+
+
 def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
     spec_root = repo_root / "spec"
     events_root = spec_root / "events"
-
-    canonical = _load_yaml(events_root / "canonical_event_registry.yaml")
-    legacy_family_by_event: Dict[str, str] = {}
-    for family, row in (canonical.get("families", {}) or {}).items():
-        if not isinstance(row, dict):
-            continue
-        for event_type in row.get("events", []) or []:
-            token = str(event_type).strip().upper()
-            if token:
-                legacy_family_by_event[token] = str(family).strip().upper()
-
-    ontology_rows = normalized_ontology_rows()
-    ontology_issues = validate_mapping_rows(ontology_rows)
-    if ontology_issues:
-        raise ValueError(
-            "Invalid event ontology mapping:\n" + "\n".join(f"- {issue}" for issue in ontology_issues)
-        )
 
     event_defaults = _load_yaml(events_root / "_defaults.yaml")
     event_family_defaults = _load_yaml(events_root / "_families.yaml")
@@ -57,8 +263,14 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
 
     # Build event rows from per-event specs first.
     event_rows: Dict[str, Dict[str, Any]] = {}
+    ontology_rows: Dict[str, Dict[str, Any]] = {}
     for spec_path in sorted(events_root.glob("*.yaml")):
-        if spec_path.name.startswith("_") or spec_path.name == "canonical_event_registry.yaml":
+        if spec_path.name.startswith("_") or spec_path.name in {
+            "canonical_event_registry.yaml",
+            "event_ontology_mapping.yaml",
+            "event_contract_overrides.yaml",
+            "event_registry_unified.yaml",
+        }:
             continue
         payload = _load_yaml(spec_path)
         if not payload:
@@ -77,42 +289,177 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
         if not event_type:
             continue
 
+        identity = _mapping(payload.get("identity"))
+        governance = _mapping(payload.get("governance"))
+        runtime = _mapping(payload.get("runtime"))
+        semantics = _mapping(payload.get("semantics"))
+        interaction = _mapping(payload.get("interaction"))
+        routing = _mapping(payload.get("routing"))
+
         params = payload.get("parameters", {})
         if not isinstance(params, dict):
             params = {}
-        ontology = dict(ontology_rows.get(event_type, {}))
-        if not ontology:
-            raise ValueError(f"Active event_type {event_type} missing from ontology mapping")
+        ontology = _normalized_ontology_row(
+            event_type,
+            payload,
+            identity=identity,
+            governance=governance,
+            semantics=semantics,
+        )
+        ontology_rows[event_type] = ontology
 
         legacy_top_level = {
-            str(k): v for k, v in payload.items() if k not in CORE_KEYS and k not in META_KEYS
+            str(k): v
+            for k, v in payload.items()
+            if k not in CORE_KEYS and k not in META_KEYS and k not in SECTION_KEYS
         }
         merged_event_params = dict(legacy_top_level)
         merged_event_params.update(params)
 
+        is_composite = _bool_value(
+            _present(governance, "is_composite"),
+            ontology.get("is_composite", _MISSING),
+            default=False,
+        )
+        is_context_tag = _bool_value(
+            _present(governance, "context_tag"),
+            _present(governance, "is_context_tag"),
+            ontology.get("is_context_tag", _MISSING),
+            default=False,
+        )
+        is_strategy_construct = _bool_value(
+            _present(governance, "strategy_only"),
+            _present(governance, "is_strategy_construct"),
+            ontology.get("is_strategy_construct", _MISSING),
+            default=False,
+        )
+        default_executable = _bool_value(
+            _present(governance, "default_executable"),
+            default=not (is_composite or is_context_tag or is_strategy_construct),
+        )
+
         event_rows[event_type] = {
-            "canonical_family": ontology["canonical_regime"],
-            "canonical_regime": ontology["canonical_regime"],
-            "legacy_family": legacy_family_by_event.get(event_type, event_type),
-            "subtype": ontology["subtype"],
-            "phase": ontology["phase"],
-            "evidence_mode": ontology["evidence_mode"],
+            "canonical_family": _first_text(
+                _present(identity, "canonical_regime"),
+                ontology["canonical_regime"],
+            ),
+            "canonical_regime": _first_text(
+                _present(identity, "canonical_regime"),
+                ontology["canonical_regime"],
+            ),
+            "legacy_family": _first_text(
+                _present(identity, "legacy_family"),
+                event_type,
+            ),
+            "event_kind": _event_kind_from_row(identity, governance, ontology),
+            "subtype": _first_text(_present(identity, "subtype"), ontology["subtype"]),
+            "phase": _first_text(_present(identity, "phase"), ontology["phase"]),
+            "evidence_mode": _first_text(_present(identity, "evidence_mode"), ontology["evidence_mode"]),
             "layer": ontology["layer"],
             "disposition": ontology["disposition"],
             "asset_scope": ontology["asset_scope"],
             "venue_scope": ontology["venue_scope"],
-            "is_composite": ontology["is_composite"],
-            "is_context_tag": ontology["is_context_tag"],
-            "is_strategy_construct": ontology["is_strategy_construct"],
-            "research_only": ontology["research_only"],
-            "strategy_only": ontology["strategy_only"],
-            "deconflict_priority": ontology["deconflict_priority"],
-            "notes": ontology["notes"],
-            "reports_dir": str(payload["reports_dir"]),
-            "events_file": str(payload["events_file"]),
-            "signal_column": str(payload["signal_column"]),
+            "is_composite": is_composite,
+            "is_context_tag": is_context_tag,
+            "is_strategy_construct": is_strategy_construct,
+            "research_only": _bool_value(
+                _present(governance, "research_only"),
+                ontology["research_only"],
+                default=False,
+            ),
+            "strategy_only": _bool_value(
+                _present(governance, "strategy_only"),
+                ontology["strategy_only"],
+                default=False,
+            ),
+            "default_executable": default_executable,
+            "deconflict_priority": _int_value(
+                _present(semantics, "deconflict_priority"),
+                ontology["deconflict_priority"],
+                default=0,
+            ),
+            "notes": _first_text(_present(semantics, "notes"), ontology["notes"]),
+            "maturity": _first_text(
+                _present(governance, "maturity"),
+                default="",
+            ),
+            "tier": _first_text(
+                _present(governance, "tier"),
+                default="",
+            ),
+            "operational_role": _first_text(
+                _present(governance, "operational_role"),
+                default="",
+            ),
+            "deployment_disposition": _first_text(
+                _present(governance, "deployment_disposition"),
+                default="",
+            ),
+            "runtime_category": _first_text(
+                _present(governance, "runtime_category"),
+                default="active_runtime_event",
+            ),
+            "enabled": _bool_value(
+                _present(runtime, "enabled"),
+                default=True,
+            ),
+            "detector_name": _first_text(
+                _present(runtime, "detector"),
+                _present(runtime, "detector_name"),
+                _present(runtime, "detector_class"),
+                default="",
+            ),
+            "runtime_tags": _list_value(
+                _present(runtime, "runtime_tags"),
+                _present(runtime, "tags"),
+            ),
+            "instrument_classes": _list_value(
+                _present(runtime, "instrument_classes"),
+            ),
+            "requires_features": _list_value(
+                _present(runtime, "requires_features"),
+            ),
+            "sequence_eligible": _bool_value(
+                _present(runtime, "sequence_eligible"),
+                default=True,
+            ),
+            "reports_dir": _first_text(_present(runtime, "reports_dir"), payload["reports_dir"]),
+            "events_file": _first_text(_present(runtime, "events_file"), payload["events_file"]),
+            "signal_column": _first_text(_present(runtime, "signal_column"), payload["signal_column"]),
+            "routing_profile_ref": _first_text(
+                _present(routing, "routing_profile_ref"),
+                default="",
+            ),
+            "cluster_id": _first_text(
+                _present(semantics, "cluster_id"),
+                default="",
+            ),
+            "collapse_target": _first_text(
+                _present(semantics, "collapse_target"),
+                default="",
+            ),
+            "overlap_group": _first_text(
+                _present(semantics, "overlap_group"),
+                default="",
+            ),
+            "precedence_rank": _int_value(
+                _present(semantics, "precedence_rank"),
+                default=0,
+            ),
+            "suppresses": _list_value(
+                _present(interaction, "suppresses"),
+            ),
+            "suppressed_by": _list_value(
+                _present(interaction, "suppressed_by"),
+            ),
             "parameters": merged_event_params,
         }
+
+    ontology_issues = _validate_mapping_rows(ontology_rows)
+    if ontology_issues:
+        raise ValueError(
+            "Invalid event ontology mapping:\n" + "\n".join(f"- {issue}" for issue in ontology_issues)
+        )
 
     template_defaults = template_registry.get("defaults", {})
     if not isinstance(template_defaults, dict):
@@ -137,7 +484,7 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
             {
                 "canonical_family": "",
                 "canonical_regime": "",
-                "legacy_family": legacy_family_by_event.get(token, token),
+                "legacy_family": token,
                 "subtype": "",
                 "phase": "",
                 "evidence_mode": "",
@@ -150,8 +497,27 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
                 "is_strategy_construct": False,
                 "research_only": False,
                 "strategy_only": False,
+                "default_executable": True,
                 "deconflict_priority": 0,
                 "notes": "",
+                "maturity": "",
+                "tier": "",
+                "operational_role": "",
+                "deployment_disposition": "",
+                "runtime_category": "active_runtime_event",
+                "enabled": True,
+                "detector_name": "",
+                "runtime_tags": [],
+                "instrument_classes": [],
+                "requires_features": [],
+                "sequence_eligible": True,
+                "routing_profile_ref": "",
+                "cluster_id": "",
+                "collapse_target": "",
+                "overlap_group": "",
+                "precedence_rank": 0,
+                "suppresses": [],
+                "suppressed_by": [],
                 "reports_dir": "",
                 "events_file": "",
                 "signal_column": "",
@@ -165,7 +531,6 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
             continue
         base["canonical_family"] = ontology["canonical_regime"]
         base["canonical_regime"] = ontology["canonical_regime"]
-        base["legacy_family"] = legacy_family_by_event.get(token, base.get("legacy_family", token))
         for key in (
             "subtype",
             "phase",
@@ -250,13 +615,11 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
                 "event_defaults": "spec/events/_defaults.yaml",
                 "event_family_defaults": "spec/events/_families.yaml",
                 "event_specs_dir": "spec/events",
-                "canonical_event_registry": "spec/events/canonical_event_registry.yaml",
                 "template_registry": "spec/templates/event_template_registry.yaml",
-                "event_ontology_mapping": "spec/events/event_ontology_mapping.yaml",
             },
             "notes": (
                 "Single event-centric schema for phase1+phase2 composition. "
-                "Legacy specs retained for compatibility and drift checks. "
+                "Generated compatibility sidecars are downstream outputs only. "
                 "canonical_family is a staged compatibility alias of canonical_regime; "
                 "legacy_family preserves current family-default wiring."
             ),
@@ -274,7 +637,7 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
                     and not event_rows.get(event_type, {}).get("is_strategy_construct", False)
                 ],
             }
-            for regime, event_types in canonical_regime_fanout(event_rows).items()
+            for regime, event_types in _canonical_regime_fanout(event_rows).items()
         },
         "events": {k: event_rows[k] for k in sorted(event_rows)},
     }

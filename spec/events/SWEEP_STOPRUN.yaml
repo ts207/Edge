@@ -21,3 +21,47 @@ expected_behavior:
   disabled_regimes:
   - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
 cluster_id: orderflow_imbalance
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: PRICE_ACTION
+  subtype: sweep_stoprun
+  phase: shock
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: standard
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: StopRunDetector
+  enabled: true
+  signal_column: sweep_stoprun_event
+  events_file: liquidity_dislocation_events.parquet
+  reports_dir: liquidity_dislocation
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - orderflow_imbalance
+  - high_urgency
+semantics:
+  cluster_id: orderflow_imbalance
+  notes: Stop-run style liquidity stress.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

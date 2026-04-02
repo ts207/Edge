@@ -323,16 +323,10 @@ def _validate_proposal(proposal: AgentProposal) -> None:
 
 
 def _load_proxy_event_types() -> set[str]:
-    """Return event types with evidence_tier=proxy from canonical_event_registry.yaml."""
-    from project.spec_registry import load_yaml_relative
+    """Return legacy proxy-tier compatibility events from compiled registry metadata."""
+    from project.events.canonical_registry_sidecars import proxy_event_types
 
-    registry = load_yaml_relative("spec/events/canonical_event_registry.yaml")
-    meta = registry.get("event_metadata", {})
-    return {
-        event_type
-        for event_type, attrs in meta.items()
-        if isinstance(attrs, dict) and attrs.get("evidence_tier") == "proxy"
-    }
+    return proxy_event_types()
 
 
 def validate_proposal_with_warnings(

@@ -19,3 +19,47 @@ expected_behavior:
   disabled_regimes:
   - 'Low liquidity regime: OI/vol signals unreliable'
 cluster_id: forced_liquidation
+identity:
+  canonical_regime: LIQUIDATION_CASCADE
+  legacy_family: POSITIONING_EXTREMES
+  subtype: liquidation_cascade
+  phase: cascade
+  evidence_mode: direct
+  layer: canonical
+  disposition: keep
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: LiquidationCascadeDetector
+  enabled: true
+  signal_column: liquidation_cascade_event
+  events_file: liquidation_cascade_events.parquet
+  reports_dir: liquidation_cascade
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - forced_liquidation
+  - high_urgency
+semantics:
+  cluster_id: forced_liquidation
+  notes: Structurally distinct canonical cascade regime.
+  precedence_rank: 2
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

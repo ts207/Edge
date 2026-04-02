@@ -471,12 +471,10 @@ def _resolve_requested_event_ids(
             return
         canonical_regime = str(getattr(spec, "canonical_regime", "") or "").strip().upper()
         canonical_family = str(getattr(spec, "canonical_family", "") or "").strip().upper()
-        legacy_family = str(getattr(spec, "legacy_family", "") or "").strip().upper()
-        runtime_family = str(allowed_events.get(event_id, {}).get("family", "") or "").strip().upper()
         subtype = str(getattr(spec, "subtype", "") or "").strip().lower()
         phase = str(getattr(spec, "phase", "") or "").strip().lower()
         evidence_mode = str(getattr(spec, "evidence_mode", "") or "").strip().lower()
-        if requested_regimes and not ({canonical_regime, canonical_family, legacy_family, runtime_family} & set(requested_regimes)):
+        if requested_regimes and not ({canonical_regime, canonical_family} & set(requested_regimes)):
             raise ValueError(
                 "Explicit event "
                 f"'{event_id}' does not belong to requested canonical_regimes {requested_regimes}; "

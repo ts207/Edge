@@ -59,6 +59,55 @@ def test_event_spec_io_contract(yaml_filename, data):
         assert field in data, f"Missing '{field}' in {yaml_filename}"
         assert data[field], f"Empty '{field}' in {yaml_filename}"
 
+    required_sections = ["identity", "governance", "runtime", "semantics", "interaction", "routing"]
+    for section in required_sections:
+        assert isinstance(data.get(section), dict), f"Missing '{section}' section in {yaml_filename}"
+
+    identity_required = [
+        "canonical_regime",
+        "legacy_family",
+        "subtype",
+        "phase",
+        "evidence_mode",
+        "layer",
+        "disposition",
+        "asset_scope",
+        "venue_scope",
+    ]
+    for field in identity_required:
+        assert data["identity"].get(field) not in (None, "", [], {}), (
+            f"Missing identity.{field} in {yaml_filename}"
+        )
+
+    governance_required = [
+        "event_kind",
+        "default_executable",
+        "research_only",
+        "strategy_only",
+        "context_tag",
+        "maturity",
+        "tier",
+        "operational_role",
+        "deployment_disposition",
+        "runtime_category",
+    ]
+    for field in governance_required:
+        assert field in data["governance"], f"Missing governance.{field} in {yaml_filename}"
+
+    runtime_required = [
+        "detector",
+        "enabled",
+        "signal_column",
+        "events_file",
+        "reports_dir",
+        "instrument_classes",
+        "requires_features",
+        "sequence_eligible",
+        "runtime_tags",
+    ]
+    for field in runtime_required:
+        assert field in data["runtime"], f"Missing runtime.{field} in {yaml_filename}"
+
     # 2. Check events_file suffix
     events_file = data["events_file"]
     allowed_suffixes = [".parquet", ".csv"]

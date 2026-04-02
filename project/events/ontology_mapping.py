@@ -1,56 +1,36 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Dict, Iterable, Mapping
+from typing import Any, Dict, Mapping
 
-from project.spec_registry import load_yaml_relative
+from project.events.canonical_registry_sidecars import (
+    ALLOWED_DISPOSITION_VALUES,
+    ALLOWED_EVIDENCE_MODE_VALUES,
+    ALLOWED_LAYER_VALUES,
+    event_ontology_mapping_payload,
+    ontology_rows_by_event as _ontology_rows_by_event,
+)
 
-ONTOLOGY_MAPPING_PATH = "spec/events/event_ontology_mapping.yaml"
 
-
-def _as_mapping(value: object) -> Dict[str, Any]:
-    return dict(value) if isinstance(value, Mapping) else {}
-
-
-@functools.lru_cache(maxsize=1)
 def load_event_ontology_mapping() -> Dict[str, Any]:
-    payload = load_yaml_relative(ONTOLOGY_MAPPING_PATH)
-    return payload if isinstance(payload, dict) else {}
+    return event_ontology_mapping_payload()
 
 
 def allowed_ontology_layers() -> tuple[str, ...]:
-    payload = load_event_ontology_mapping()
-    rows = payload.get("allowed_values", {}) if isinstance(payload, dict) else {}
-    values = rows.get("layer", []) if isinstance(rows, Mapping) else []
-    return tuple(str(value).strip() for value in values if str(value).strip())
+    return ALLOWED_LAYER_VALUES
 
 
 def allowed_dispositions() -> tuple[str, ...]:
-    payload = load_event_ontology_mapping()
-    rows = payload.get("allowed_values", {}) if isinstance(payload, dict) else {}
-    values = rows.get("disposition", []) if isinstance(rows, Mapping) else []
-    return tuple(str(value).strip() for value in values if str(value).strip())
+    return ALLOWED_DISPOSITION_VALUES
 
 
 def allowed_evidence_modes() -> tuple[str, ...]:
-    payload = load_event_ontology_mapping()
-    rows = payload.get("allowed_values", {}) if isinstance(payload, dict) else {}
-    values = rows.get("evidence_mode", []) if isinstance(rows, Mapping) else []
-    return tuple(str(value).strip() for value in values if str(value).strip())
+    return ALLOWED_EVIDENCE_MODE_VALUES
 
 
 @functools.lru_cache(maxsize=1)
 def ontology_rows_by_event() -> Dict[str, Dict[str, Any]]:
-    payload = load_event_ontology_mapping()
-    events = payload.get("events", {}) if isinstance(payload, dict) else {}
-    out: Dict[str, Dict[str, Any]] = {}
-    if not isinstance(events, Mapping):
-        return out
-    for event_type, row in events.items():
-        token = str(event_type).strip().upper()
-        if token and isinstance(row, Mapping):
-            out[token] = dict(row)
-    return out
+    return _ontology_rows_by_event()
 
 
 def ontology_row(event_type: str) -> Dict[str, Any]:
@@ -164,6 +144,4 @@ def validate_mapping_rows(rows: Mapping[str, Mapping[str, Any]] | None = None) -
 
 
 def clear_caches() -> None:
-    load_event_ontology_mapping.cache_clear()
     ontology_rows_by_event.cache_clear()
-

@@ -4,6 +4,41 @@ synthetic_coverage: covered
 reports_dir: liquidity_dislocation
 events_file: liquidity_dislocation_events.parquet
 signal_column: depth_collapse_event
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: LIQUIDITY_DISLOCATION
+  subtype: depth_collapse
+  phase: collapse
+  evidence_mode: direct
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  maturity: standard
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+  is_composite: false
+runtime:
+  detector: DepthCollapseDetector
+  enabled: true
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  runtime_tags:
+  - liquidity_stress
+  sequence_eligible: true
+  reports_dir: liquidity_dislocation
+  events_file: liquidity_dislocation_events.parquet
+  signal_column: depth_collapse_event
 parameters:
   lookback_window: 288
   z_threshold: 3.0
@@ -14,6 +49,18 @@ parameters:
   merge_gap_bars: 0
   min_volume_quantile: 0.2
 canonical_family: LIQUIDITY_DISLOCATION
+semantics:
+  summary: Direct depth failure evidence for liquidity stress.
+  cluster_id: liquidity_stress
+  collapse_target: LIQUIDITY_STRESS
+  overlap_group: liquidity_stress_depth
+  precedence_rank: 3
+  notes: Direct depth failure evidence for liquidity stress.
+interaction:
+  suppressed_by: []
+  suppresses: []
+routing:
+  routing_profile_ref: LIQUIDITY_STRESS
 trigger: Detector triggers on depth collapse pattern
 confirmation: Post-detection price action confirms signal validity
 expected_behavior:

@@ -9,15 +9,8 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, Mapping
 
-import yaml
-
 from project.domain.compiled_registry import get_domain_registry
 from project.events.config import compose_event_config
-
-
-def _load_yaml(path: str) -> Dict[str, Any]:
-    payload = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    return payload if isinstance(payload, dict) else {}
 
 
 def _json_text(payload: object) -> str:
@@ -199,37 +192,26 @@ def _threshold_parameters(parameters: Mapping[str, Any]) -> Dict[str, Any]:
         if isinstance(value, list) and all(_is_simple_value(item) for item in value):
             out[key] = list(value)
     return out
-
-
-def _runtime_registry_row(event_type: str, runtime_rows: Mapping[str, Any]) -> Dict[str, Any]:
-    row = runtime_rows.get(event_type, {})
-    return dict(row) if isinstance(row, Mapping) else {}
-
-
 def _rows() -> list[Dict[str, Any]]:
     registry = get_domain_registry()
-    runtime_payload = _load_yaml("project/configs/registries/events.yaml")
-    runtime_rows = runtime_payload.get("events", {})
-    runtime_rows = runtime_rows if isinstance(runtime_rows, Mapping) else {}
     default_executable = set(registry.default_executable_event_ids())
 
     rows: list[Dict[str, Any]] = []
     for event_type in registry.event_ids:
         event = registry.event_definitions[event_type]
         cfg = compose_event_config(event_type)
-        runtime = _runtime_registry_row(event_type, runtime_rows)
         rows.append(
             {
                 "event_type": event_type,
                 "canonical_regime": event.canonical_regime,
                 "canonical_family": event.canonical_family,
                 "legacy_family": cfg.legacy_family or event.legacy_family,
-                "default_executable": event_type in default_executable,
-                "detector": str(runtime.get("detector", "")),
-                "enabled": runtime.get("enabled"),
-                "tags": list(runtime.get("tags", []) or []),
-                "instrument_classes": list(runtime.get("instrument_classes", []) or []),
-                "sequence_eligible": bool(runtime.get("sequence_eligible", False)),
+                "default_executable": event.default_executable or event_type in default_executable,
+                "detector": event.detector_name,
+                "enabled": event.enabled,
+                "tags": list(event.runtime_tags),
+                "instrument_classes": list(event.instrument_classes),
+                "sequence_eligible": event.sequence_eligible,
                 "subtype": event.subtype,
                 "phase": event.phase,
                 "evidence_mode": event.evidence_mode,

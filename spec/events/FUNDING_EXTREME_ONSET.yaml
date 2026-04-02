@@ -3,6 +3,41 @@ synthetic_coverage: covered
 reports_dir: funding_events
 events_file: funding_episode_events.parquet
 signal_column: funding_extreme_onset_event
+identity:
+  canonical_regime: BASIS_FUNDING_DISLOCATION
+  legacy_family: POSITIONING_EXTREMES
+  subtype: funding_extreme
+  phase: onset
+  evidence_mode: direct
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: cross_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  maturity: standard
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+  is_composite: false
+runtime:
+  detector: FundingExtremeOnsetDetector
+  enabled: true
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  runtime_tags:
+  - funding_crowding
+  sequence_eligible: true
+  reports_dir: funding_events
+  events_file: funding_episode_events.parquet
+  signal_column: funding_extreme_onset_event
 canonical_family: POSITIONING_EXTREMES
 detector_contract: true
 parameters:
@@ -36,6 +71,14 @@ parameters:
   persistence_norm_horizon: 96
   interaction_min_rows_per_year: 150
   min_hazard_events: 50
+semantics:
+  summary: Funding extreme onset under basis/funding dislocation.
+  cluster_id: funding_crowding
+  overlap_group: basis_funding_extreme
+  notes: Funding extreme onset under basis/funding dislocation.
+  precedence_rank: 0
+routing:
+  routing_profile_ref: BASIS_FUNDING_DISLOCATION
 detector:
   signal_definition: 'Detects the onset of a funding rate extreme: funding crosses
     the extreme_pct percentile of its rolling history AND shows acceleration (accel_pct
@@ -109,3 +152,6 @@ expected_behavior:
 trigger: Detector triggers on funding extreme onset pattern
 confirmation: Post-detection price action confirms signal validity
 cluster_id: funding_crowding
+interaction:
+  suppresses: []
+  suppressed_by: []

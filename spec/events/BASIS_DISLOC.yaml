@@ -19,3 +19,46 @@ expected_behavior:
   disabled_regimes:
   - 'Low basis volatility: z-score undefined'
 cluster_id: basis_dislocation
+identity:
+  canonical_regime: BASIS_FUNDING_DISLOCATION
+  legacy_family: STATISTICAL_DISLOCATION
+  subtype: basis_dislocation
+  phase: shock
+  evidence_mode: statistical
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: cross_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: A
+  operational_role: trigger
+  deployment_disposition: primary_trigger_candidate
+  runtime_category: active_runtime_event
+runtime:
+  detector: BasisDislocationDetector
+  enabled: true
+  signal_column: basis_dislocation_event
+  events_file: basis_dislocation_events.parquet
+  reports_dir: basis_dislocation
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - basis_dislocation
+semantics:
+  cluster_id: basis_dislocation
+  notes: Canonical basis dislocation surface.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

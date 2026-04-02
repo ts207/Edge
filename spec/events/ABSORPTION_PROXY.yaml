@@ -31,3 +31,46 @@ expected_behavior:
   disabled_regimes:
   - 'SPREAD_BLOWOUT active: spread elevated, unreliable signal'
 cluster_id: liquidity_stress
+identity:
+  canonical_regime: LIQUIDITY_STRESS
+  legacy_family: ABSORPTION_PROXY
+  subtype: absorption
+  phase: persistence
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: standard
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: ''
+  enabled: true
+  signal_column: absorption_proxy_event
+  events_file: liquidity_dislocation_events.parquet
+  reports_dir: liquidity_dislocation
+  instrument_classes: []
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags: []
+semantics:
+  summary: 'Hybrid absorption detector: microstructure imbalance stall confirmed by
+    spread and realized-volatility stress.'
+  cluster_id: liquidity_stress
+  notes: 'Hybrid liquidity-stress evidence: direct imbalance-stall confirmation combined
+    with spread and RV stress.'
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

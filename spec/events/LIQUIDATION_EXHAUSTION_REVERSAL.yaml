@@ -11,14 +11,14 @@ events_file: forced_flow_and_exhaustion_events.parquet
 signal_column: liquidation_exhaustion_reversal_event
 parameters:
   threshold_window: 2880
-  oi_drop_quantile: 0.80
+  oi_drop_quantile: 0.8
   liquidation_quantile: 0.85
-  spread_quantile: 0.70
+  spread_quantile: 0.7
   return_quantile: 0.75
-  wick_quantile: 0.70
+  wick_quantile: 0.7
   rebound_window_bars: 12
   rebound_window: 6
-  rebound_quantile: 0.70
+  rebound_quantile: 0.7
   reversal_window: 3
   reversal_quantile: 0.65
   oi_drop_abs_min: 5.0
@@ -49,3 +49,48 @@ expected_behavior:
   disabled_regimes:
   - 'Low volume: flow signals unreliable'
 cluster_id: forced_liquidation
+identity:
+  canonical_regime: TREND_FAILURE_EXHAUSTION
+  legacy_family: POSITIONING_EXTREMES
+  subtype: liquidation_exhaustion_reversal
+  phase: recovery
+  evidence_mode: hybrid
+  layer: canonical
+  disposition: merge
+  asset_scope: single_asset
+  venue_scope: single_venue
+governance:
+  event_kind: market_event
+  default_executable: true
+  research_only: false
+  strategy_only: false
+  context_tag: false
+  is_composite: false
+  maturity: ''
+  tier: B
+  operational_role: trigger
+  deployment_disposition: secondary_or_confirm
+  runtime_category: active_runtime_event
+runtime:
+  detector: PostDeleveragingReboundDetector
+  enabled: true
+  signal_column: liquidation_exhaustion_reversal_event
+  events_file: forced_flow_and_exhaustion_events.parquet
+  reports_dir: forced_flow_and_exhaustion
+  instrument_classes:
+  - crypto
+  - futures
+  requires_features: []
+  sequence_eligible: true
+  runtime_tags:
+  - forced_liquidation
+semantics:
+  summary: Canonical rebound phase after a forced deleveraging cluster cools, liquidation
+    pressure fades, and price reverses against the prior cluster direction.
+  cluster_id: forced_liquidation
+  notes: Reversal after forced liquidation exhaustion.
+  precedence_rank: 0
+interaction:
+  suppresses: []
+  suppressed_by: []
+routing: {}

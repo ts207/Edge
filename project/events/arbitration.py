@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
+from project.domain.compiled_registry import get_domain_registry
 from project.events.shared import format_event_id
 from project.spec_registry import load_yaml_relative
 
@@ -24,11 +25,22 @@ _SPEC_DIR = Path(__file__).resolve().parents[2] / "spec" / "events"
 
 
 def load_compatibility_spec() -> Dict[str, Any]:
-    return load_yaml_relative("spec/events/compatibility.yaml")
+    base = load_yaml_relative("spec/events/compatibility.yaml")
+    suppression_rules = _merged_suppression_rules(base)
+    return {
+        **dict(base),
+        "suppression_rules": suppression_rules,
+        "composite_events": list(base.get("composite_events", []) or []),
+    }
 
 
 def load_precedence_spec() -> Dict[str, Any]:
-    return load_yaml_relative("spec/events/precedence.yaml")
+    base = load_yaml_relative("spec/events/precedence.yaml")
+    return {
+        **dict(base),
+        "family_precedence": list(base.get("family_precedence", []) or []),
+        "event_overrides": _merged_precedence_overrides(base),
+    }
 
 
 @dataclass
@@ -36,6 +48,126 @@ class ArbitrationResult:
     events: pd.DataFrame
     suppressed: pd.DataFrame = field(default_factory=pd.DataFrame)
     composite_events: pd.DataFrame = field(default_factory=pd.DataFrame)
+
+
+def _event_local_reason(active_type: str, target_type: str) -> str:
+    return (
+        f"Event-local arbitration policy: {active_type} suppresses {target_type}."
+    )
+
+
+def _normalize_local_relation_entry(entry: Any) -> Dict[str, Any]:
+    if isinstance(entry, str):
+        token = str(entry).strip().upper()
+        return {"event_type": token} if token else {}
+    if isinstance(entry, dict):
+        return dict(entry)
+    return {}
+
+
+def _local_suppression_pairs() -> Dict[tuple[str, str], Dict[str, Any]]:
+    registry = get_domain_registry()
+    pairs: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for event in registry.event_definitions.values():
+        target_event = event.event_type
+        for entry in event.suppressed_by:
+            row = _normalize_local_relation_entry(entry)
+            active_type = str(row.get("event_type", row.get("when_active", ""))).strip().upper()
+            if not active_type:
+                continue
+            pairs[(active_type, target_event)] = {
+                "when_active": active_type,
+                "suppress": [target_event],
+                "penalty_factor": float(row.get("penalty_factor", 0.5)),
+                "block": bool(row.get("block", False)),
+                "reason": str(row.get("reason", "")).strip() or _event_local_reason(active_type, target_event),
+            }
+        for entry in event.suppresses:
+            row = _normalize_local_relation_entry(entry)
+            suppress_type = str(row.get("event_type", "")).strip().upper()
+            if not suppress_type:
+                continue
+            pairs[(target_event, suppress_type)] = {
+                "when_active": target_event,
+                "suppress": [suppress_type],
+                "penalty_factor": float(row.get("penalty_factor", 0.5)),
+                "block": bool(row.get("block", False)),
+                "reason": str(row.get("reason", "")).strip() or _event_local_reason(target_event, suppress_type),
+            }
+    return pairs
+
+
+def _merged_suppression_rules(base: Dict[str, Any]) -> list[Dict[str, Any]]:
+    pair_map: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for rule in list(base.get("suppression_rules", []) or []):
+        if not isinstance(rule, dict):
+            continue
+        active_type = str(rule.get("when_active", "")).strip().upper()
+        if not active_type:
+            continue
+        penalty = float(rule.get("penalty_factor", 0.5))
+        block = bool(rule.get("block", False))
+        reason = str(rule.get("reason", "")).strip()
+        for suppress_type in rule.get("suppress", []) or []:
+            target = str(suppress_type).strip().upper()
+            if not target:
+                continue
+            pair_map[(active_type, target)] = {
+                "when_active": active_type,
+                "suppress": [target],
+                "penalty_factor": penalty,
+                "block": block,
+                "reason": reason,
+            }
+    pair_map.update(_local_suppression_pairs())
+
+    grouped: Dict[tuple[str, float, bool, str], set[str]] = {}
+    for payload in pair_map.values():
+        key = (
+            str(payload["when_active"]).strip().upper(),
+            float(payload["penalty_factor"]),
+            bool(payload["block"]),
+            str(payload["reason"]).strip(),
+        )
+        grouped.setdefault(key, set()).update(
+            str(item).strip().upper() for item in payload.get("suppress", []) if str(item).strip()
+        )
+    rules: list[Dict[str, Any]] = []
+    for when_active, penalty, block, reason in sorted(grouped.keys()):
+        rules.append(
+            {
+                "when_active": when_active,
+                "suppress": sorted(grouped[(when_active, penalty, block, reason)]),
+                "penalty_factor": penalty,
+                "block": block,
+                "reason": reason,
+            }
+        )
+    return rules
+
+
+def _merged_precedence_overrides(base: Dict[str, Any]) -> list[Dict[str, Any]]:
+    override_map: Dict[str, Dict[str, Any]] = {}
+    for row in list(base.get("event_overrides", []) or []):
+        if not isinstance(row, dict):
+            continue
+        event_type = str(row.get("event_type", "")).strip().upper()
+        if event_type:
+            override_map[event_type] = dict(row)
+
+    registry = get_domain_registry()
+    for event in registry.event_definitions.values():
+        if event.precedence_rank <= 0:
+            continue
+        reason = str(event.raw.get("precedence_reason", "")).strip() or (
+            "Event-local precedence declared in the event spec."
+        )
+        override_map[event.event_type] = {
+            "event_type": event.event_type,
+            "override_priority": int(event.precedence_rank),
+            "rationale": reason,
+        }
+    return [override_map[event_type] for event_type in sorted(override_map)]
 
 
 def _events_overlap(df: pd.DataFrame, active_type: str, target_type: str, symbol: str) -> bool:
@@ -127,8 +259,11 @@ def arbitrate_events(
 
     def _priority(row) -> int:
         et = str(row.get("event_type", ""))
-        fam = str(row.get("canonical_family", ""))
-        return evt_prio.get(et, fam_prio.get(fam, 999))
+        for family_key in ("canonical_family", "canonical_regime", "family"):
+            family = str(row.get(family_key, "")).strip().upper()
+            if family in fam_prio:
+                return evt_prio.get(et, fam_prio[family])
+        return evt_prio.get(et, 999)
 
     if not out.empty:
         out["_arb_prio"] = out.apply(_priority, axis=1)

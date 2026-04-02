@@ -19,6 +19,7 @@ def test_domain_registry_compiles_core_event_state_and_template_views():
     assert event.canonical_regime == "VOLATILITY_TRANSITION"
     assert event.signal_column
     assert event.spec_path.endswith("VOL_SHOCK.yaml")
+    assert registry.get_event("BASIS_DISLOCATION") is None
 
 
 def test_vol_shock_is_feasible_for_continuation_template_family():
@@ -43,6 +44,19 @@ def test_domain_registry_includes_runtime_promoted_event_specs():
     assert promoted is not None
     assert promoted.signal_column == "liquidity_stress_direct_event"
     assert promoted.spec_path.endswith("LIQUIDITY_STRESS_DIRECT.yaml")
+
+
+def test_domain_registry_exposes_runtime_metadata_from_event_specs():
+    registry = get_domain_registry()
+
+    depth_collapse = registry.event_definitions["DEPTH_COLLAPSE"]
+    assert depth_collapse.detector_name == "DepthCollapseDetector"
+    assert depth_collapse.enabled is True
+    assert depth_collapse.instrument_classes == ("crypto", "futures")
+    assert depth_collapse.runtime_tags == ("liquidity_stress",)
+    assert depth_collapse.sequence_eligible is True
+    assert depth_collapse.event_kind == "market_event"
+    assert depth_collapse.default_executable is True
 
 
 def test_domain_registry_exposes_context_and_searchable_family_views():

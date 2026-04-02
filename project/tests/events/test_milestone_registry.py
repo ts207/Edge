@@ -16,6 +16,7 @@ def test_event_aliases_resolve_before_registry_lookup():
     assert resolve_event_alias("basis_dislocation") == "BASIS_DISLOC"
     assert resolve_event_alias("vol_regime_shift") == "VOL_REGIME_SHIFT_EVENT"
     assert get_event_definition("BASIS_DISLOC")["event_type"] == "BASIS_DISLOC"
+    assert get_event_definition("BASIS_DISLOCATION") is None
 
 
 def test_promoted_proxy_and_direct_events_are_active_specs():
