@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from project.research.agent_io.proposal_schema import load_operator_proposal
+from project.research.agent_io.proposal_schema import (
+    _load_single_hypothesis_proposal,
+    compile_single_hypothesis_to_agent_proposal,
+    load_operator_proposal,
+)
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
 from project.tests.research.agent_io.test_issue_proposal import _write_proposal, _write_registry
 
@@ -60,6 +64,18 @@ def test_load_operator_proposal_accepts_legacy_and_single_hypothesis_formats() -
     assert single.entry_lags == [1]
 
 
+def test_compile_single_hypothesis_to_agent_proposal_preserves_atomic_shape() -> None:
+    compiled = compile_single_hypothesis_to_agent_proposal(
+        _load_single_hypothesis_proposal(_single_hypothesis_payload())
+    )
+
+    assert compiled.symbols == ["BTCUSDT"]
+    assert compiled.templates == ["continuation"]
+    assert compiled.directions == ["long"]
+    assert compiled.horizons_bars == [12]
+    assert compiled.entry_lags == [1]
+
+
 @pytest.mark.parametrize(
     ("field_path", "value", "match"),
     [
@@ -90,6 +106,17 @@ def test_single_hypothesis_loader_requires_event_id_for_event_trigger() -> None:
     payload["hypothesis"]["trigger"] = {"type": "event"}
 
     with pytest.raises(ValueError, match="event triggers require"):
+        load_operator_proposal(payload)
+
+
+def test_single_hypothesis_loader_rejects_mixed_legacy_fields() -> None:
+    payload = _single_hypothesis_payload()
+    payload["trigger_space"] = {
+        "allowed_trigger_types": ["EVENT"],
+        "events": {"include": ["BASIS_DISLOC"]},
+    }
+
+    with pytest.raises(ValueError, match="must not include legacy AgentProposal fields"):
         load_operator_proposal(payload)
 
 
@@ -152,3 +179,47 @@ def test_translate_and_validate_proposal_keeps_legacy_compatibility(tmp_path: Pa
     )
 
     assert result["proposal"]["trigger_space"]["events"]["include"] == ["BASIS_DISLOC"]
+
+
+def test_canonical_event_h24_example_loads_as_single_hypothesis_front_door() -> None:
+    proposal = load_operator_proposal(Path("spec/proposals/canonical_event_hypothesis_h24.yaml"))
+
+    assert proposal.program_id == "volshock_btc_long_12b"
+    assert proposal.symbols == ["BTCUSDT"]
+    assert proposal.templates == ["continuation"]
+    assert proposal.directions == ["long"]
+    assert proposal.horizons_bars == [24]
+    assert proposal.entry_lags == [1]
+    assert proposal.trigger_space["allowed_trigger_types"] == ["EVENT"]
+    assert proposal.trigger_space["events"]["include"] == ["VOL_SHOCK"]
+
+
+def test_canonical_event_h24_example_translates_through_existing_experiment_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "project.research.agent_io.proposal_to_experiment._build_experiment_plan",
+        lambda *args, **kwargs: type(
+            "Plan",
+            (),
+            {
+                "program_id": "volshock_btc_long_12b",
+                "estimated_hypothesis_count": 1,
+                "required_detectors": ["vol_shock"],
+                "required_features": ["ret_1"],
+                "required_states": [],
+            },
+        )(),
+    )
+
+    result = translate_and_validate_proposal(
+        Path("spec/proposals/canonical_event_hypothesis_h24.yaml"),
+        registry_root=Path("project/configs/registries"),
+        out_dir=tmp_path / "bundle",
+    )
+
+    assert result["proposal"]["templates"] == ["continuation"]
+    assert result["proposal"]["horizons_bars"] == [24]
+    assert result["proposal"]["trigger_space"]["events"]["include"] == ["VOL_SHOCK"]
+    assert int(result["validated_plan"]["estimated_hypothesis_count"]) == 1

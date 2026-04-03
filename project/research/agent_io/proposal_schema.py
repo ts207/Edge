@@ -10,6 +10,14 @@ import yaml
 from project.research.context_labels import canonicalize_contexts
 from project.research.knowledge.knobs import build_agent_knob_rows
 
+LEGACY_AGENT_PROPOSAL_FIELDS = (
+    "trigger_space",
+    "templates",
+    "horizons_bars",
+    "directions",
+    "entry_lags",
+)
+
 
 def _as_str_list(values: Any, *, field_name: str) -> List[str]:
     if values is None:
@@ -471,6 +479,16 @@ def _load_single_hypothesis_proposal(
     path_or_payload: str | Path | Dict[str, Any],
 ) -> SingleHypothesisProposal:
     raw = _load_proposal_payload(path_or_payload)
+    if "hypothesis" not in raw:
+        raise ValueError("single-hypothesis proposals require a top-level hypothesis object")
+    if not isinstance(raw.get("hypothesis"), dict):
+        raise ValueError("hypothesis must be an object")
+    mixed_legacy_fields = [field for field in LEGACY_AGENT_PROPOSAL_FIELDS if field in raw]
+    if mixed_legacy_fields:
+        raise ValueError(
+            "single-hypothesis proposals must not include legacy AgentProposal fields: "
+            + ", ".join(mixed_legacy_fields)
+        )
     hypothesis = _as_mapping(raw.get("hypothesis"), field_name="hypothesis")
     objective_name = str(
         raw.get("objective_name", raw.get("objective", "retail_profitability"))
@@ -749,7 +767,7 @@ def compile_single_hypothesis_to_agent_proposal(
 
 def load_operator_proposal(path_or_payload: str | Path | Dict[str, Any]) -> AgentProposal:
     raw = _load_proposal_payload(path_or_payload)
-    if isinstance(raw.get("hypothesis"), dict):
+    if "hypothesis" in raw:
         return compile_single_hypothesis_to_agent_proposal(
             _load_single_hypothesis_proposal(raw)
         )

@@ -24,7 +24,7 @@ A proposal should be narrow enough that you can answer all of these before runni
 
 A minimal example now exists at:
 
-- `spec/proposals/canonical_event_hypothesis.yaml`
+- `spec/proposals/canonical_event_hypothesis_h24.yaml`
 
 Operator-facing proposals now use a single-hypothesis shape:
 
@@ -42,7 +42,7 @@ hypothesis:
     event_id: VOL_SHOCK
   template: continuation
   direction: long
-  horizon_bars: 12
+  horizon_bars: 24
   entry_lag_bars: 1
 ```
 

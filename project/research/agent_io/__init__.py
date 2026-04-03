@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from project.research.agent_io.issue_proposal import generate_run_id, issue_proposal
     from project.research.agent_io.proposal_schema import (
         AgentProposal,
+        compile_single_hypothesis_to_agent_proposal,
         load_agent_proposal,
         load_operator_proposal,
     )
@@ -66,6 +67,10 @@ _EXPORTS = {
     "execute_proposal": ("project.research.agent_io.execute_proposal", "execute_proposal"),
     "generate_run_id": ("project.research.agent_io.issue_proposal", "generate_run_id"),
     "issue_proposal": ("project.research.agent_io.issue_proposal", "issue_proposal"),
+    "compile_single_hypothesis_to_agent_proposal": (
+        "project.research.agent_io.proposal_schema",
+        "compile_single_hypothesis_to_agent_proposal",
+    ),
     "load_agent_proposal": ("project.research.agent_io.proposal_schema", "load_agent_proposal"),
     "load_operator_proposal": ("project.research.agent_io.proposal_schema", "load_operator_proposal"),
     "proposal_to_experiment_config": (
@@ -100,6 +105,7 @@ __all__ = [
     "execute_proposal",
     "generate_run_id",
     "issue_proposal",
+    "compile_single_hypothesis_to_agent_proposal",
     "load_agent_proposal",
     "load_operator_proposal",
     "proposal_to_experiment_config",
