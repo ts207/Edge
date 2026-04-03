@@ -3,6 +3,61 @@ kind: state_registry
 defaults:
   state_scope: source_only
   min_events: 200
+  runtime:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+context_dimensions:
+  vol_regime:
+    allowed_values:
+    - low
+    - high
+    mapping:
+      high: HIGH_VOL_REGIME
+      low: LOW_VOL_REGIME
+  carry_state:
+    allowed_values:
+    - funding_pos
+    - funding_neg
+    mapping:
+      funding_pos: FUNDING_POSITIVE
+      funding_neg: FUNDING_NEGATIVE
+  ms_trend_state:
+    allowed_values:
+    - trend
+    - chop
+    mapping:
+      trend: TREND_ACTIVE
+      chop: CHOP_ACTIVE
+  ms_spread_state:
+    allowed_values:
+    - tight
+    - wide
+    mapping:
+      tight: SPREAD_TIGHT
+      wide: SPREAD_WIDE
+  liquidity_regime:
+    allowed_values:
+    - low
+    - refill
+    mapping:
+      low: LOW_LIQUIDITY_STATE
+      refill: REFILL_LAG_STATE
+  funding_regime:
+    allowed_values:
+    - crowded
+    - normalizing
+    mapping:
+      crowded: CROWDING_STATE
+      normalizing: FUNDING_NORMALIZATION_STATE
+  trend_structure:
+    allowed_values:
+    - trend
+    - chop
+    mapping:
+      trend: TRENDING_STATE
+      chop: CHOP_STATE
 states:
 - state_id: REFILL_LAG_STATE
   family: LIQUIDITY_DISLOCATION
@@ -158,6 +213,7 @@ states:
   source_event_type: VOL_CLUSTER_SHIFT
   state_scope: family_safe
   min_events: 300
+  description: Market is in a high volatility state.
   activation_rule: rv_percentile >= 0.66
   decay_rule: exit when rv_percentile < 0.66
   features_required:
@@ -169,11 +225,20 @@ states:
   - pullback_entry
   - mean_reversion
   - only_if_regime
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - volatility
+    state_engine: VolatilityRegimeEngine
 - state_id: LOW_VOL_REGIME
   family: VOLATILITY_TRANSITION
   source_event_type: VOL_CLUSTER_SHIFT
   state_scope: family_safe
   min_events: 300
+  description: Market is in a low volatility state.
   activation_rule: rv_percentile <= 0.33
   decay_rule: exit when rv_percentile > 0.33
   features_required:
@@ -185,9 +250,18 @@ states:
   - pullback_entry
   - mean_reversion
   - only_if_regime
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - volatility
+    state_engine: VolatilityRegimeEngine
 - state_id: CROWDING_STATE
   family: POSITIONING_EXTREMES
   source_event_type: FUNDING_EXTREME_ONSET
+  description: High OI and extreme funding.
   activation_rule: funding_pct >= p95 AND oi_pct >= p90
   decay_rule: exit when funding_pct < p80 OR oi_pct < p70
   features_required:
@@ -200,6 +274,10 @@ states:
   - continuation
   - only_if_funding
   - only_if_oi
+  runtime:
+    tags:
+    - positioning
+    state_engine: MarketStateEngine
 - state_id: FUNDING_PERSISTENCE_STATE
   family: POSITIONING_EXTREMES
   source_event_type: FUNDING_PERSISTENCE_TRIGGER
@@ -409,6 +487,7 @@ states:
 - state_id: OVERBOUGHT_STATE
   family: TREND_STRUCTURE
   source_event_type: TREND_EXHAUSTION_TRIGGER
+  description: Momentum signals overbought conditions.
   activation_rule: momentum oscillator in upper extreme while trend extension is stretched
   decay_rule: exit when momentum normalizes or reversal confirms
   features_required:
@@ -420,9 +499,18 @@ states:
   - exhaustion_reversal
   - mean_reversion
   - drawdown_filter
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - momentum
+    state_engine: MomentumRegimeEngine
 - state_id: OVERSOLD_STATE
   family: TREND_STRUCTURE
   source_event_type: TREND_DECELERATION
+  description: Momentum signals oversold conditions.
   activation_rule: momentum oscillator in lower extreme after downside extension
   decay_rule: exit when momentum normalizes or continuation resumes
   features_required:
@@ -434,6 +522,14 @@ states:
   - exhaustion_reversal
   - mean_reversion
   - drawdown_filter
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - momentum
+    state_engine: MomentumRegimeEngine
 - state_id: PULLBACK_STATE
   family: TREND_STRUCTURE
   source_event_type: PULLBACK_PIVOT
@@ -725,6 +821,7 @@ states:
   source_event_type: LIQUIDATION_CASCADE
   state_scope: family_safe
   min_events: 300
+  description: Elevated liquidation pressure.
   activation_rule: liquidation_pressure percentile >= 0.80
   decay_rule: exit when liquidation_pressure percentile < 0.80
   features_required:
@@ -735,33 +832,64 @@ states:
   - mean_reversion
   - continuation
   - tail_risk_avoid
+  runtime:
+    tags:
+    - liquidity
+    state_engine: MarketStateEngine
 - state_id: BEAR_TREND_REGIME
   family: REGIME_CONTEXT
   source_event_type: TREND_EXHAUSTION_TRIGGER
   state_scope: global
   min_events: 1
+  description: Market is trending downwards.
   activation_rule: "regime detector signals bearish trend"
   decay_rule: "regime transitions to neutral or bull"
   allowed_templates:
   - continuation
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - trend
+    state_engine: TrendRegimeEngine
 - state_id: BULL_TREND_REGIME
   family: REGIME_CONTEXT
   source_event_type: TREND_EXHAUSTION_TRIGGER
   state_scope: global
   min_events: 1
+  description: Market is trending upwards.
   activation_rule: "regime detector signals bullish trend"
   decay_rule: "regime transitions to neutral or bear"
   allowed_templates:
   - continuation
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - trend
+    state_engine: TrendRegimeEngine
 - state_id: CHOP_REGIME
   family: REGIME_CONTEXT
   source_event_type: TREND_EXHAUSTION_TRIGGER
   state_scope: global
   min_events: 1
+  description: Market is range-bound or choppy.
   activation_rule: "regime detector signals choppy/ranging market"
   decay_rule: "regime transitions to directional trend"
   allowed_templates:
   - continuation
+  runtime:
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - sideways
+    state_engine: TrendRegimeEngine
 - state_id: MS_CONTEXT_STATE_CODE
   family: MICROSTRUCTURE_CONTEXT
   source_event_type: LIQUIDITY_STRESS_DIRECT

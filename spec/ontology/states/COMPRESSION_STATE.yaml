@@ -3,9 +3,6 @@ family: VOLATILITY_TRANSITION
 source_event_type: VOL_CLUSTER_SHIFT
 activation_rule: compression_ratio <= compression_threshold
 decay_rule: exit when compression_ratio > compression_threshold
-features_required:
-- range_96
-- range_med_2880
 allowed_templates:
 - continuation
 - trend_continuation
@@ -13,3 +10,8 @@ allowed_templates:
 - pullback_entry
 - mean_reversion
 - only_if_regime
+state_scope: source_only
+min_events: 200
+features_required:
+- range_96
+- range_med_2880

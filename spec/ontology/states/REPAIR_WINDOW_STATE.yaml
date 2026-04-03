@@ -1,0 +1,14 @@
+state_id: REPAIR_WINDOW_STATE
+family: STATISTICAL_DISLOCATION
+source_event_type: GAP_OVERSHOOT
+activation_rule: overshoot has begun reverting
+decay_rule: exit when repair completes
+allowed_templates:
+- mean_reversion
+- overshoot_repair
+- tail_risk_avoid
+state_scope: source_only
+min_events: 200
+features_required:
+- close
+- zscore

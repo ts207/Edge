@@ -1,0 +1,13 @@
+state_id: MS_BASIS_STATE
+family: STATISTICAL_DISLOCATION
+source_event_type: BASIS_DISLOC
+activation_rule: basis_z_abs >= 1.0
+decay_rule: exit when basis_z_abs < 1.0
+allowed_templates:
+- mean_reversion
+- overshoot_repair
+- tail_risk_avoid
+state_scope: family_safe
+min_events: 300
+features_required:
+- basis_zscore

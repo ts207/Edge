@@ -756,6 +756,9 @@ def _write_promotion_lineage_audit(
         f"- run_id: `{run_id}`",
         f"- evidence_bundle_count: `{len(evidence_bundles)}`",
         f"- live_exported_count: `{sum(1 for row in rows if row['live_exported'])}`",
+        f"- live_thesis_store: `{str((live_export_diagnostics or {}).get('output_path', ''))}`",
+        f"- live_contract_json: `{str((live_export_diagnostics or {}).get('contract_json_path', ''))}`",
+        f"- live_contract_md: `{str((live_export_diagnostics or {}).get('contract_md_path', ''))}`",
         "",
         "| candidate_id | event_type | promotion_status | promotion_track | program_id | campaign_id | live_exported |",
         "| --- | --- | --- | --- | --- | --- | --- |",
@@ -1051,6 +1054,8 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
             "thesis_count": int(thesis_export.thesis_count),
             "active_count": int(thesis_export.active_count),
             "pending_count": int(thesis_export.pending_count),
+            "contract_json_path": str(thesis_export.contract_json_path) if thesis_export.contract_json_path else "",
+            "contract_md_path": str(thesis_export.contract_md_path) if thesis_export.contract_md_path else "",
         }
         diagnostics["promotion_lineage_audit"] = _write_promotion_lineage_audit(
             out_dir=out_dir,

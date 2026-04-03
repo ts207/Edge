@@ -136,6 +136,12 @@ def test_run_promotion_service_smoke(monkeypatch, tmp_path):
     assert "failed_gate_count" in result.audit_df.columns
     assert "decision_summary" in result.diagnostics
     assert result.diagnostics["live_thesis_export"]["thesis_count"] == 1
+    assert result.diagnostics["live_thesis_export"]["contract_json_path"].endswith(
+        "promoted_thesis_contracts.json"
+    )
+    assert result.diagnostics["live_thesis_export"]["contract_md_path"].endswith(
+        "promoted_thesis_contracts.md"
+    )
 
 
 def test_run_promotion_service_fails_closed_when_promoted_row_lacks_evidence_bundle(

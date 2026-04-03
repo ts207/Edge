@@ -1,12 +1,9 @@
-"""Phase 1.1 — Registry consistency test.
+"""Template-family registry consistency test.
 
 Asserts that spec/grammar/family_registry.yaml and
-spec/ontology/templates/template_registry.yaml agree on allowed_templates
-for every shared family. This test must pass in CI before any run is
-dispatched so that template-pairing bugs cannot silently enter production.
-
-If this test fails, update spec/grammar/family_registry.yaml to match
-spec/ontology/templates/template_registry.yaml (the authoritative source).
+spec/templates/event_template_registry.yaml agree on family template lists.
+This prevents drift between the canonical authored template surface and the
+legacy compatibility family registry.
 """
 from __future__ import annotations
 
@@ -18,7 +15,7 @@ import yaml
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _REPO_ROOT = Path(__file__).parent.parent.parent.parent  # project/ -> EDGEE-main/
 _FAMILY_REGISTRY = _REPO_ROOT / "spec" / "grammar" / "family_registry.yaml"
-_TEMPLATE_REGISTRY = _REPO_ROOT / "spec" / "ontology" / "templates" / "template_registry.yaml"
+_TEMPLATE_REGISTRY = _REPO_ROOT / "spec" / "templates" / "event_template_registry.yaml"
 
 
 def _load(path: Path) -> dict:
@@ -27,7 +24,10 @@ def _load(path: Path) -> dict:
 
 
 def _allowed(registry_dict: dict, family: str) -> set[str]:
-    return set(registry_dict.get(family, {}).get("allowed_templates", []))
+    row = registry_dict.get(family, {})
+    if not isinstance(row, dict):
+        return set()
+    return set(row.get("allowed_templates", row.get("templates", [])))
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
@@ -82,13 +82,13 @@ class TestRegistryConsistency:
             "Registry mismatch — family_registry.yaml and template_registry.yaml disagree:\n"
             + "\n".join(mismatches)
             + "\n\nFix: update spec/grammar/family_registry.yaml to match "
-            "spec/ontology/templates/template_registry.yaml (authoritative source)."
+            "spec/templates/event_template_registry.yaml (authoritative source)."
         )
 
     def test_no_empty_template_lists(self):
         """Every family in template_registry must have at least one allowed template."""
         empties = [f for f, v in self.template_families.items()
-                   if not v.get("allowed_templates")]
+                   if not v.get("allowed_templates", v.get("templates", []))]
         assert not empties, (
             f"Families with empty allowed_templates in template_registry: {empties}"
         )
@@ -101,7 +101,7 @@ class TestRegistryConsistency:
             ("family_registry", self.family_families),
         ]:
             for family, meta in families.items():
-                templates = meta.get("allowed_templates", [])
+                templates = meta.get("allowed_templates", meta.get("templates", []))
                 seen = set()
                 for t in templates:
                     if t in seen:

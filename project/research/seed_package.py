@@ -17,6 +17,7 @@ from project.live.contracts import (
     ThesisRequirements,
     ThesisSource,
 )
+from project.live.thesis_specs import get_thesis_definition
 from project.portfolio.thesis_overlap import overlap_group_id_for_thesis, write_thesis_overlap_artifacts
 from project.research.seed_bootstrap import DOCS_GENERATED
 from project.research.seed_empirical import _load_empirical_bundles
@@ -206,9 +207,15 @@ def _build_thesis(
     package_run_id: str,
 ) -> PromotedThesis:
     candidate_id = str(empirical_row.get("candidate_id", "")).strip()
+    thesis_def = get_thesis_definition(candidate_id)
     decision = str(empirical_row.get("empirical_decision", "")).strip().lower()
     event_contract_ids = _split_tokens(inventory_row.get("event_contract_ids", ""))
     episode_contract_ids = _split_tokens(inventory_row.get("episode_contract_ids", ""))
+    if thesis_def is not None:
+        if not event_contract_ids:
+            event_contract_ids = list(thesis_def.source_event_contract_ids)
+        if not episode_contract_ids:
+            episode_contract_ids = list(thesis_def.source_episode_contract_ids)
     source_type = str(inventory_row.get("source_type", empirical_row.get("source_type", ""))).strip().lower()
     primary_event = event_contract_ids[0] if event_contract_ids else str(empirical_row.get("source_contract_ids", "")).split("|")[0].strip()
     governance_meta = get_event_governance_metadata(primary_event) if primary_event else {}
@@ -228,11 +235,13 @@ def _build_thesis(
     trigger_events = event_contract_ids if source_type not in {"episode", "event_plus_confirm"} else []
     if source_type == "event_plus_confirm":
         trigger_events = event_contract_ids[:1]
+    if thesis_def is not None:
+        trigger_events = list(thesis_def.trigger_events)
     requirements = ThesisRequirements(
         trigger_events=trigger_events,
-        confirmation_events=event_contract_ids[1:] if source_type == "event_plus_confirm" else [],
-        required_episodes=episode_contract_ids,
-        disallowed_regimes=[],
+        confirmation_events=list(thesis_def.confirmation_events) if thesis_def is not None else (event_contract_ids[1:] if source_type == "event_plus_confirm" else []),
+        required_episodes=list(thesis_def.required_episodes) if thesis_def is not None else episode_contract_ids,
+        disallowed_regimes=list(thesis_def.disallowed_regimes) if thesis_def is not None else [],
         deployment_gate=str(governance_meta.get("promotion_block_reason", "")).strip(),
         sequence_mode=("episode" if source_type == "episode" else ("event_plus_confirm" if source_type == "event_plus_confirm" else "standalone_event")),
         minimum_episode_confidence=0.0,
@@ -247,25 +256,36 @@ def _build_thesis(
         status="active",
         **_maintenance_fields(promotion_class=promotion_class, source_type=source_type, bundles=bundles),
         symbol_scope={
-            "mode": "symbol_set" if len(symbols) > 1 else "single_symbol",
+            "mode": (
+                str(thesis_def.symbol_scope.get("mode", "")).strip()
+                if thesis_def is not None and thesis_def.symbol_scope
+                else ("symbol_set" if len(symbols) > 1 else "single_symbol")
+            ),
             "symbols": symbols,
             "candidate_symbol": symbols[0] if len(symbols) == 1 else "",
         },
-        timeframe=_timeframe_for_candidate(bundles),
-        event_family=(primary_event or candidate_id).strip().upper(),
-        event_side=_event_side(inventory_row),
+        timeframe=str(thesis_def.timeframe).strip() if thesis_def is not None and str(thesis_def.timeframe).strip() else _timeframe_for_candidate(bundles),
+        event_family=(str(thesis_def.event_family).strip().upper() if thesis_def is not None and str(thesis_def.event_family).strip() else (primary_event or candidate_id).strip().upper()),
+        event_side=(str(thesis_def.event_side).strip().lower() if thesis_def is not None and str(thesis_def.event_side).strip() else _event_side(inventory_row)),
         required_context={
+            **(dict(thesis_def.required_context) if thesis_def is not None else {}),
             "evaluation_symbols": symbols,
             "horizon_guess": str(inventory_row.get("horizon_guess", "")).strip(),
             "source_type": source_type,
         },
         supportive_context={
-            "canonical_regime": "",
+            **(dict(thesis_def.supportive_context) if thesis_def is not None else {}),
+            "canonical_regime": (
+                str((thesis_def.supportive_context or {}).get("canonical_regime", "")).strip()
+                if thesis_def is not None
+                else ""
+            ),
             "bridge_certified": False,
             "has_realized_oos_path": realized_oos,
             "regime_assumptions": str(inventory_row.get("regime_assumptions", "")).strip(),
         },
         expected_response={
+            **(dict(thesis_def.expected_response) if thesis_def is not None else {}),
             "summary": str(inventory_row.get("expected_direction_or_path", "")).strip(),
             "hypothesis_statement": str(inventory_row.get("hypothesis_statement", "")).strip(),
             "horizon_guess": str(inventory_row.get("horizon_guess", "")).strip(),
@@ -274,6 +294,7 @@ def _build_thesis(
             "sample_size_total": sample_total,
         },
         invalidation={
+            **(dict(thesis_def.invalidation) if thesis_def is not None else {}),
             "rule_text": str(inventory_row.get("invalidation_rule", "")).strip(),
         },
         risk_notes=[
@@ -306,12 +327,32 @@ def _build_thesis(
         ),
         governance=ThesisGovernance(
             tier=str(empirical_row.get("governance_tier", governance_meta.get("tier", ""))).strip(),
-            operational_role=str(empirical_row.get("operational_role", governance_meta.get("operational_role", ""))).strip(),
+            operational_role=(
+                str(empirical_row.get("operational_role", "")).strip()
+                or (
+                    str((thesis_def.governance or {}).get("operational_role", "")).strip()
+                    if thesis_def is not None
+                    else ""
+                )
+                or str(governance_meta.get("operational_role", "")).strip()
+            ),
             deployment_disposition=str(empirical_row.get("deployment_disposition", governance_meta.get("deployment_disposition", ""))).strip(),
-            evidence_mode=str(governance_meta.get("evidence_mode", "")).strip(),
+            evidence_mode=(
+                str((thesis_def.governance or {}).get("evidence_mode", "")).strip()
+                if thesis_def is not None and str((thesis_def.governance or {}).get("evidence_mode", "")).strip()
+                else str(governance_meta.get("evidence_mode", "")).strip()
+            ),
             overlap_group_id="",
-            trade_trigger_eligible=bool(governance_meta.get("trade_trigger_eligible", False)),
-            requires_stronger_evidence=bool(governance_meta.get("requires_stronger_evidence", False)),
+            trade_trigger_eligible=(
+                bool((thesis_def.governance or {}).get("trade_trigger_eligible", False))
+                if thesis_def is not None
+                else bool(governance_meta.get("trade_trigger_eligible", False))
+            ),
+            requires_stronger_evidence=(
+                bool((thesis_def.governance or {}).get("requires_stronger_evidence", False))
+                if thesis_def is not None
+                else bool(governance_meta.get("requires_stronger_evidence", False))
+            ),
         ),
         requirements=requirements,
         source=ThesisSource(
@@ -319,8 +360,8 @@ def _build_thesis(
             source_campaign_id=str(inventory_row.get("source_campaign_id", "")).strip(),
             source_run_mode="bootstrap_seed_packaging",
             objective_name="founding_thesis_package",
-            event_contract_ids=event_contract_ids,
-            episode_contract_ids=episode_contract_ids,
+            event_contract_ids=list(thesis_def.source_event_contract_ids) if thesis_def is not None else event_contract_ids,
+            episode_contract_ids=list(thesis_def.source_episode_contract_ids) if thesis_def is not None else episode_contract_ids,
         ),
     )
     overlap_group = overlap_group_id_for_thesis(thesis)

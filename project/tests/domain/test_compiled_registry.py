@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from project.domain.compiled_registry import get_domain_registry
+from project.domain.compiled_registry import get_domain_registry, refresh_domain_registry
+from project.domain.registry_loader import domain_graph_path
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.research.search.feasibility import check_hypothesis_feasibility
 
@@ -11,6 +12,7 @@ def test_domain_registry_compiles_core_event_state_and_template_views():
     assert registry.has_event("VOL_SHOCK")
     assert registry.has_state("LOW_LIQUIDITY_STATE")
     assert registry.get_operator("mean_reversion") is not None
+    assert registry.has_thesis("THESIS_VOL_SHOCK")
 
     event = registry.get_event("VOL_SHOCK")
     assert event is not None
@@ -20,6 +22,7 @@ def test_domain_registry_compiles_core_event_state_and_template_views():
     assert event.signal_column
     assert event.spec_path.endswith("VOL_SHOCK.yaml")
     assert registry.get_event("BASIS_DISLOCATION") is None
+    assert domain_graph_path().exists()
 
 
 def test_vol_shock_is_feasible_for_continuation_template_family():
@@ -58,6 +61,28 @@ def test_domain_registry_exposes_runtime_metadata_from_event_specs():
     assert depth_collapse.event_kind == "market_event"
     assert depth_collapse.default_executable is True
 
+    high_vol = registry.state_definitions["HIGH_VOL_REGIME"]
+    assert high_vol.state_engine == "VolatilityRegimeEngine"
+    assert high_vol.instrument_classes == ("crypto", "equities", "futures")
+    assert high_vol.runtime_tags == ("volatility",)
+    assert high_vol.description == "Market is in a high volatility state."
+
+    continuation = registry.get_operator("continuation")
+    assert continuation is not None
+    assert "LIQUIDITY_DISLOCATION" in continuation.compatible_families
+    assert continuation.raw["supports_trigger_types"] == [
+        "EVENT",
+        "STATE",
+        "SEQUENCE",
+        "INTERACTION",
+    ]
+    thesis = registry.get_thesis("THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM")
+    assert thesis is not None
+    assert thesis.event_family == "VOL_SHOCK"
+    assert thesis.trigger_events == ("VOL_SHOCK",)
+    assert thesis.confirmation_events == ("LIQUIDITY_VACUUM",)
+    assert thesis.governance["operational_role"] == "confirm"
+
 
 def test_domain_registry_exposes_context_and_searchable_family_views():
     registry = get_domain_registry()
@@ -93,3 +118,9 @@ def test_domain_registry_exposes_sequence_and_interaction_runtime_config():
     assert registry.interaction_definitions[0]["name"]
     assert registry.interaction_definitions[0]["left"]
     assert registry.interaction_definitions[0]["right"]
+
+
+def test_domain_registry_loads_from_generated_domain_graph():
+    registry = refresh_domain_registry()
+    assert registry.unified_registry_path.endswith("event_registry_unified.yaml")
+    assert registry.event_definitions["DEPTH_COLLAPSE"].canonical_regime == "LIQUIDITY_STRESS"

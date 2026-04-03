@@ -20,8 +20,16 @@ def test_write_promotion_lineage_audit(tmp_path: Path) -> None:
             }
         ],
         promoted_df=pd.DataFrame([{"candidate_id": "cand_1"}]),
-        live_export_diagnostics={"thesis_count": 1},
+        live_export_diagnostics={
+            "thesis_count": 1,
+            "output_path": "/tmp/live/promoted_theses.json",
+            "contract_json_path": "/tmp/live/promoted_thesis_contracts.json",
+            "contract_md_path": "/tmp/live/promoted_thesis_contracts.md",
+        },
     )
     assert Path(out["json_path"]).exists()
     assert Path(out["md_path"]).exists()
-    assert 'camp_1' in Path(out["md_path"]).read_text(encoding='utf-8')
+    markdown = Path(out["md_path"]).read_text(encoding="utf-8")
+    assert "camp_1" in markdown
+    assert "promoted_thesis_contracts.json" in markdown
+    assert "promoted_thesis_contracts.md" in markdown

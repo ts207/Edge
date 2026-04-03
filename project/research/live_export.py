@@ -23,6 +23,7 @@ from project.live.contracts import (
     ThesisRequirements,
     ThesisSource,
 )
+from project.live.thesis_specs import resolve_thesis_definition_ids
 from project.episodes import load_episode_registry
 from project.portfolio.thesis_overlap import overlap_group_id_for_thesis
 
@@ -35,6 +36,8 @@ class PromotedThesisExportResult:
     thesis_count: int
     active_count: int
     pending_count: int
+    contract_json_path: Path | None = None
+    contract_md_path: Path | None = None
 
 
 def _utc_now() -> str:
@@ -153,6 +156,23 @@ def _timeframe_from_minutes(value: Any) -> str:
 def _finite_or_none(value: Any) -> float | None:
     out = safe_float(value, np.nan)
     return None if not np.isfinite(out) else float(out)
+
+
+def _normalize_tokens(values: Any) -> list[str]:
+    if values in (None, ""):
+        return []
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, (list, tuple, set)):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in values:
+        token = str(item or "").strip().upper()
+        if token and token not in seen:
+            out.append(token)
+            seen.add(token)
+    return out
 
 
 def _coerce_symbol_scope(symbol: str, blueprint: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -298,20 +318,13 @@ def _episode_ids_from_metadata(bundle: Mapping[str, Any], promoted_row: Mapping[
 
 
 def _build_requirements(bundle: Mapping[str, Any], promoted_row: Mapping[str, Any]) -> ThesisRequirements:
-    event_id = str(bundle.get("event_type", "") or promoted_row.get("event_type", "")).strip()
-    meta = get_event_governance_metadata(event_id) if event_id else {}
-    metadata = bundle.get("metadata", {}) if isinstance(bundle.get("metadata", {}), Mapping) else {}
-    disallowed = bundle.get("disabled_regimes") or promoted_row.get("disabled_regimes") or []
-    if isinstance(disallowed, str):
-        disallowed = [disallowed]
-    return ThesisRequirements(
-        trigger_events=[event_id] if event_id else [],
-        confirmation_events=[],
-        required_episodes=_episode_ids_from_metadata(bundle, promoted_row, metadata),
-        disallowed_regimes=[str(value).strip() for value in disallowed if str(value).strip()],
-        deployment_gate=str(meta.get("promotion_block_reason", "")).strip(),
-        sequence_mode=str(metadata.get("sequence_mode", "")).strip(),
-        minimum_episode_confidence=float(metadata.get("minimum_episode_confidence", 0.0) or 0.0),
+    return _build_requirements_from_contract(
+        bundle=bundle,
+        promoted_row=promoted_row,
+        metadata=bundle.get("metadata", {}) if isinstance(bundle.get("metadata", {}), Mapping) else {},
+        authored_def=None,
+        event_contract_ids=None,
+        episode_contract_ids=None,
     )
 
 
@@ -328,6 +341,140 @@ def _build_source(bundle: Mapping[str, Any], promoted_row: Mapping[str, Any], me
         objective_name=objective_name,
         event_contract_ids=[event_id] if event_id else [],
         episode_contract_ids=_episode_ids_from_metadata(bundle, promoted_row, metadata),
+    )
+
+
+def _resolve_authored_thesis_definition(
+    candidate_id: str,
+    metadata: Mapping[str, Any],
+    promoted_row: Mapping[str, Any],
+):
+    return resolve_thesis_definition_ids(
+        candidate_id,
+        str(metadata.get("thesis_id", "")).strip(),
+        str(metadata.get("hypothesis_id", "")).strip(),
+        str(promoted_row.get("hypothesis_id", "")).strip(),
+    )
+
+
+def _contract_ids(
+    *,
+    metadata: Mapping[str, Any],
+    promoted_row: Mapping[str, Any],
+    bundle: Mapping[str, Any],
+    event_id: str,
+    authored_def: Any,
+) -> tuple[list[str], list[str]]:
+    if authored_def is not None:
+        return (
+            [str(token).strip().upper() for token in authored_def.source_event_contract_ids if str(token).strip()],
+            [str(token).strip().upper() for token in authored_def.source_episode_contract_ids if str(token).strip()],
+        )
+    event_contract_ids = (
+        _normalize_tokens(metadata.get("event_contract_ids"))
+        or _normalize_tokens(promoted_row.get("event_contract_ids"))
+        or _normalize_tokens(bundle.get("event_contract_ids"))
+    )
+    if not event_contract_ids and event_id:
+        event_contract_ids = [event_id.strip().upper()]
+    episode_contract_ids = _episode_ids_from_metadata(bundle, promoted_row, metadata)
+    return event_contract_ids, episode_contract_ids
+
+
+def _infer_sequence_mode(
+    *,
+    metadata: Mapping[str, Any],
+    promoted_row: Mapping[str, Any],
+    authored_def: Any,
+    event_contract_ids: Sequence[str],
+    episode_contract_ids: Sequence[str],
+) -> str:
+    if authored_def is not None and str(getattr(authored_def, "thesis_kind", "")).strip():
+        return str(authored_def.thesis_kind).strip()
+    explicit = (
+        str(metadata.get("sequence_mode", "")).strip()
+        or str(metadata.get("source_type", "")).strip()
+        or str(promoted_row.get("source_type", "")).strip()
+    )
+    if explicit:
+        return explicit
+    if event_contract_ids and len(event_contract_ids) > 1:
+        return "event_plus_confirm"
+    if episode_contract_ids and not event_contract_ids:
+        return "episode"
+    return "standalone_event"
+
+
+def _build_requirements_from_contract(
+    *,
+    bundle: Mapping[str, Any],
+    promoted_row: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    authored_def: Any,
+    event_contract_ids: Sequence[str] | None,
+    episode_contract_ids: Sequence[str] | None,
+) -> ThesisRequirements:
+    event_id = str(bundle.get("event_type", "") or promoted_row.get("event_type", "")).strip()
+    primary_event_id = str((event_contract_ids or [event_id])[:1][0] if (event_contract_ids or [event_id]) else "").strip()
+    meta = get_event_governance_metadata(primary_event_id) if primary_event_id else {}
+    disallowed = bundle.get("disabled_regimes") or promoted_row.get("disabled_regimes") or []
+    if isinstance(disallowed, str):
+        disallowed = [disallowed]
+    resolved_event_contract_ids = list(event_contract_ids or [])
+    resolved_episode_contract_ids = list(episode_contract_ids or [])
+    sequence_mode = _infer_sequence_mode(
+        metadata=metadata,
+        promoted_row=promoted_row,
+        authored_def=authored_def,
+        event_contract_ids=resolved_event_contract_ids,
+        episode_contract_ids=resolved_episode_contract_ids,
+    )
+    if authored_def is not None:
+        trigger_events = [str(token).strip().upper() for token in authored_def.trigger_events if str(token).strip()]
+        confirmation_events = [str(token).strip().upper() for token in authored_def.confirmation_events if str(token).strip()]
+        required_episodes = [str(token).strip().upper() for token in authored_def.required_episodes if str(token).strip()]
+        disallowed_regimes = [str(token).strip().upper() for token in authored_def.disallowed_regimes if str(token).strip()]
+    else:
+        if sequence_mode == "event_plus_confirm":
+            trigger_events = resolved_event_contract_ids[:1]
+            confirmation_events = resolved_event_contract_ids[1:]
+        elif sequence_mode == "episode":
+            trigger_events = []
+            confirmation_events = []
+        else:
+            trigger_events = resolved_event_contract_ids
+            confirmation_events = []
+        required_episodes = resolved_episode_contract_ids
+        disallowed_regimes = [str(value).strip().upper() for value in disallowed if str(value).strip()]
+    return ThesisRequirements(
+        trigger_events=trigger_events,
+        confirmation_events=confirmation_events,
+        required_episodes=required_episodes,
+        disallowed_regimes=disallowed_regimes,
+        deployment_gate=str(meta.get("promotion_block_reason", "")).strip(),
+        sequence_mode=sequence_mode,
+        minimum_episode_confidence=float(metadata.get("minimum_episode_confidence", 0.0) or 0.0),
+    )
+
+
+def _build_source_from_contract(
+    *,
+    promoted_row: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    event_contract_ids: Sequence[str],
+    episode_contract_ids: Sequence[str],
+) -> ThesisSource:
+    campaign_id = str(metadata.get("campaign_id", "") or promoted_row.get("campaign_id", "")).strip()
+    program_id = str(metadata.get("program_id", "") or promoted_row.get("program_id", "")).strip()
+    source_run_mode = str(metadata.get("source_run_mode", "") or promoted_row.get("source_run_mode", "")).strip()
+    objective_name = str(metadata.get("objective_name", "") or promoted_row.get("objective_name", "")).strip()
+    return ThesisSource(
+        source_program_id=program_id,
+        source_campaign_id=campaign_id,
+        source_run_mode=source_run_mode,
+        objective_name=objective_name,
+        event_contract_ids=[str(token).strip().upper() for token in event_contract_ids if str(token).strip()],
+        episode_contract_ids=[str(token).strip().upper() for token in episode_contract_ids if str(token).strip()],
     )
 
 
@@ -353,6 +500,103 @@ def _build_risk_notes(
         if direction:
             notes.append(f"direction:{direction}")
     return notes
+
+
+def _contract_row(thesis: PromotedThesis) -> dict[str, Any]:
+    authored_def = resolve_thesis_definition_ids(
+        thesis.thesis_id,
+        thesis.lineage.candidate_id,
+        thesis.lineage.hypothesis_id,
+    )
+    authored_contract_id = str(authored_def.thesis_id).strip() if authored_def is not None else ""
+    return {
+        "thesis_id": thesis.thesis_id,
+        "candidate_id": str(thesis.lineage.candidate_id or "").strip(),
+        "authored_contract_id": authored_contract_id,
+        "authored_contract_linked": bool(authored_contract_id),
+        "status": thesis.status,
+        "promotion_class": thesis.promotion_class,
+        "deployment_state": thesis.deployment_state,
+        "event_family": str(thesis.event_family or "").strip().upper(),
+        "timeframe": str(thesis.timeframe or "").strip(),
+        "trigger_events": list(thesis.requirements.trigger_events),
+        "confirmation_events": list(thesis.requirements.confirmation_events),
+        "required_episodes": list(thesis.requirements.required_episodes),
+        "disallowed_regimes": list(thesis.requirements.disallowed_regimes),
+        "sequence_mode": str(thesis.requirements.sequence_mode or "").strip(),
+        "source_event_contract_ids": list(thesis.source.event_contract_ids),
+        "source_episode_contract_ids": list(thesis.source.episode_contract_ids),
+        "governance_tier": str(thesis.governance.tier or "").strip(),
+        "operational_role": str(thesis.governance.operational_role or "").strip(),
+        "deployment_disposition": str(thesis.governance.deployment_disposition or "").strip(),
+        "evidence_mode": str(thesis.governance.evidence_mode or "").strip(),
+        "trade_trigger_eligible": bool(thesis.governance.trade_trigger_eligible),
+        "requires_stronger_evidence": bool(thesis.governance.requires_stronger_evidence),
+        "overlap_group_id": str(thesis.governance.overlap_group_id or "").strip(),
+        "source_program_id": str(thesis.source.source_program_id or "").strip(),
+        "source_campaign_id": str(thesis.source.source_campaign_id or "").strip(),
+        "source_run_mode": str(thesis.source.source_run_mode or "").strip(),
+        "objective_name": str(thesis.source.objective_name or "").strip(),
+    }
+
+
+def _render_contract_markdown(*, run_id: str, rows: Sequence[Mapping[str, Any]]) -> str:
+    lines = [
+        "# Promoted Thesis Contracts",
+        "",
+        f"- run_id: `{run_id}`",
+        f"- thesis_count: `{len(rows)}`",
+        "",
+    ]
+    if not rows:
+        lines.append("_No promoted theses exported._")
+        return "\n".join(lines).rstrip() + "\n"
+    lines.extend(
+        [
+            "| thesis_id | authored_contract | event_family | triggers | confirmations | episodes | overlap_group |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for row in rows:
+        lines.append(
+            "| {thesis_id} | {authored} | {event_family} | {triggers} | {confirmations} | {episodes} | {overlap} |".format(
+                thesis_id=f"`{row.get('thesis_id', '')}`",
+                authored=(
+                    f"`{row.get('authored_contract_id', '')}`"
+                    if row.get("authored_contract_id")
+                    else "`unlinked`"
+                ),
+                event_family=f"`{row.get('event_family', '')}`",
+                triggers=f"`{', '.join(row.get('trigger_events', []))}`",
+                confirmations=f"`{', '.join(row.get('confirmation_events', []))}`",
+                episodes=f"`{', '.join(row.get('required_episodes', []))}`",
+                overlap=f"`{row.get('overlap_group_id', '')}`",
+            )
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _write_contract_artifacts(
+    *,
+    run_id: str,
+    theses: Sequence[PromotedThesis],
+    data_root: Path,
+) -> tuple[Path, Path]:
+    out_dir = _promotion_dir(run_id, data_root)
+    ensure_dir(out_dir)
+    rows = [_contract_row(thesis) for thesis in theses]
+    json_path = out_dir / "promoted_thesis_contracts.json"
+    md_path = out_dir / "promoted_thesis_contracts.md"
+    payload = {
+        "schema_version": "promoted_thesis_contracts_v1",
+        "run_id": run_id,
+        "generated_at_utc": _utc_now(),
+        "thesis_count": len(rows),
+        "contracts": rows,
+    }
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    md_path.write_text(_render_contract_markdown(run_id=run_id, rows=rows), encoding="utf-8")
+    return json_path, md_path
 
 
 def _status_for_blueprint(blueprint: Mapping[str, Any] | None) -> str:
@@ -383,6 +627,11 @@ def _build_thesis(
     cost = bundle.get("cost_robustness", {})
 
     candidate_id = str(bundle.get("candidate_id", "")).strip()
+    authored_def = _resolve_authored_thesis_definition(
+        candidate_id,
+        metadata if isinstance(metadata, Mapping) else {},
+        promoted_row,
+    )
     symbol = str(sample.get("symbol", "") or promoted_row.get("symbol", "")).strip().upper()
     timeframe = _timeframe_from_minutes(split.get("bar_duration_minutes", 0))
     event_family = str(bundle.get("event_family", "") or bundle.get("event_type", "")).strip()
@@ -395,6 +644,14 @@ def _build_thesis(
 
     status = _status_for_blueprint(blueprint)
     event_side = _resolve_event_side(bundle, blueprint)
+    event_id = str(bundle.get("event_type", "") or promoted_row.get("event_type", "")).strip()
+    event_contract_ids, episode_contract_ids = _contract_ids(
+        metadata=metadata if isinstance(metadata, Mapping) else {},
+        promoted_row=promoted_row,
+        bundle=bundle,
+        event_id=event_id,
+        authored_def=authored_def,
+    )
     invalidation = {}
     proposal_id = ""
     blueprint_id = ""
@@ -415,8 +672,8 @@ def _build_thesis(
         evidence_gaps=[],
         status=status,
         symbol_scope=_coerce_symbol_scope(symbol, blueprint),
-        timeframe=timeframe,
-        event_family=event_family,
+        timeframe=str(getattr(authored_def, "timeframe", "")).strip() or timeframe,
+        event_family=str(getattr(authored_def, "event_family", "")).strip() or event_family,
         event_side=event_side,
         required_context=_build_required_context(symbol=symbol, timeframe=timeframe, bundle=bundle),
         supportive_context=_build_supportive_context(bundle=bundle, promoted_row=promoted_row),
@@ -451,8 +708,20 @@ def _build_thesis(
             proposal_id=proposal_id,
         ),
         governance=ThesisGovernance(),
-        requirements=_build_requirements(bundle, promoted_row),
-        source=_build_source(bundle, promoted_row, metadata if isinstance(metadata, Mapping) else {}),
+        requirements=_build_requirements_from_contract(
+            bundle=bundle,
+            promoted_row=promoted_row,
+            metadata=metadata if isinstance(metadata, Mapping) else {},
+            authored_def=authored_def,
+            event_contract_ids=event_contract_ids,
+            episode_contract_ids=episode_contract_ids,
+        ),
+        source=_build_source_from_contract(
+            promoted_row=promoted_row,
+            metadata=metadata if isinstance(metadata, Mapping) else {},
+            event_contract_ids=event_contract_ids,
+            episode_contract_ids=episode_contract_ids,
+        ),
     )
     overlap_group_id = overlap_group_id_for_thesis(thesis)
     thesis = thesis.model_copy(
@@ -566,6 +835,11 @@ def export_promoted_theses_for_run(
         promoted_df=effective_promoted,
         blueprints=effective_blueprints,
     )
+    contract_json_path, contract_md_path = _write_contract_artifacts(
+        run_id=run_id,
+        theses=theses,
+        data_root=resolved_root,
+    )
     output_path = promoted_theses_path(run_id, resolved_root)
     index_path = live_thesis_index_path(resolved_root)
     _write_thesis_payload(run_id=run_id, theses=theses, output_path=output_path)
@@ -582,4 +856,6 @@ def export_promoted_theses_for_run(
         thesis_count=len(theses),
         active_count=sum(1 for thesis in theses if thesis.status == "active"),
         pending_count=sum(1 for thesis in theses if thesis.status == "pending_blueprint"),
+        contract_json_path=contract_json_path,
+        contract_md_path=contract_md_path,
     )

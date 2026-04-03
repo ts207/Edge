@@ -1,0 +1,10 @@
+state_id: CHOP_REGIME
+family: REGIME_CONTEXT
+source_event_type: TREND_EXHAUSTION_TRIGGER
+activation_rule: regime detector signals choppy/ranging market
+decay_rule: regime transitions to directional trend
+allowed_templates:
+- continuation
+state_scope: global
+min_events: 1
+description: Market is range-bound or choppy.

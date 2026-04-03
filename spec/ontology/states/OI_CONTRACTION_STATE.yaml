@@ -1,0 +1,13 @@
+state_id: OI_CONTRACTION_STATE
+family: POSITIONING_EXTREMES
+source_event_type: OI_SPIKE_NEGATIVE
+activation_rule: oi contraction detected
+decay_rule: oi normalizes
+allowed_templates:
+- momentum_fade
+- mean_reversion
+state_scope: source_only
+min_events: 200
+features_required:
+- oi_notional
+- rv_96

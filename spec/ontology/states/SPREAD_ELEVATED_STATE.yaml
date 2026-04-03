@@ -1,0 +1,13 @@
+state_id: SPREAD_ELEVATED_STATE
+family: LIQUIDITY_DISLOCATION
+source_event_type: SPREAD_BLOWOUT
+activation_rule: spread_pct >= p90
+decay_rule: exit when spread_pct <= p70
+allowed_templates:
+- slippage_aware_filter
+- tail_risk_avoid
+- only_if_liquidity
+state_scope: source_only
+min_events: 200
+features_required:
+- spread_bps

@@ -73,11 +73,18 @@ def test_export_promoted_theses_pending_then_active_with_blueprint(tmp_path: Pat
         bundles=[_bundle()],
         promoted_df=promoted_df,
     )
+    assert first.contract_json_path is not None
+    assert first.contract_md_path is not None
+    assert first.contract_json_path.exists()
+    assert first.contract_md_path.exists()
     payload = json.loads(first.output_path.read_text(encoding="utf-8"))
+    contract_payload = json.loads(first.contract_json_path.read_text(encoding="utf-8"))
     assert first.thesis_count == 1
     assert first.pending_count == 1
     assert payload["theses"][0]["status"] == "pending_blueprint"
     assert payload["theses"][0]["invalidation"] == {}
+    assert contract_payload["contracts"][0]["thesis_id"] == "thesis::run_1::cand_1"
+    assert contract_payload["contracts"][0]["authored_contract_linked"] is False
 
     second = export_promoted_theses_for_run(
         "run_1",
@@ -140,3 +147,79 @@ def test_export_promoted_theses_fails_on_corrupted_existing_index(tmp_path: Path
             bundles=[_bundle()],
             promoted_df=promoted_df,
         )
+
+
+def test_export_promoted_theses_uses_authored_thesis_definition_from_lineage(tmp_path: Path) -> None:
+    promoted_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK_LIQUIDITY_CONFIRM",
+                "status": "PROMOTED",
+                "canonical_regime": "VOLATILITY_TRANSITION",
+            }
+        ]
+    )
+    bundle = _bundle()
+    bundle["event_type"] = "VOL_SHOCK_LIQUIDITY_CONFIRM"
+    bundle["event_family"] = "VOL_SHOCK"
+    bundle["metadata"] = {
+        **bundle["metadata"],
+        "hypothesis_id": "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM",
+    }
+
+    result = export_promoted_theses_for_run(
+        "run_1",
+        data_root=tmp_path,
+        bundles=[bundle],
+        promoted_df=promoted_df,
+    )
+
+    thesis = json.loads(result.output_path.read_text(encoding="utf-8"))["theses"][0]
+    contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert thesis["event_family"] == "VOL_SHOCK"
+    assert thesis["requirements"]["trigger_events"] == ["VOL_SHOCK"]
+    assert thesis["requirements"]["confirmation_events"] == ["LIQUIDITY_VACUUM"]
+    assert thesis["requirements"]["sequence_mode"] == "event_plus_confirm"
+    assert thesis["source"]["event_contract_ids"] == ["VOL_SHOCK", "LIQUIDITY_VACUUM"]
+    assert contract_payload["contracts"][0]["authored_contract_id"] == "THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM"
+    assert contract_payload["contracts"][0]["authored_contract_linked"] is True
+
+
+def test_export_promoted_theses_derives_multi_clause_requirements_from_metadata(tmp_path: Path) -> None:
+    promoted_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_structural",
+                "event_type": "STRUCTURAL_CONFIRM_PROXY",
+                "status": "PROMOTED",
+            }
+        ]
+    )
+    bundle = _bundle()
+    bundle["candidate_id"] = "cand_structural"
+    bundle["event_type"] = "STRUCTURAL_CONFIRM_PROXY"
+    bundle["event_family"] = "VOL_SHOCK"
+    bundle["metadata"] = {
+        **bundle["metadata"],
+        "source_type": "event_plus_confirm",
+        "event_contract_ids": ["VOL_SHOCK", "LIQUIDITY_VACUUM"],
+        "episode_ids": ["EP_LIQUIDITY_SHOCK"],
+    }
+
+    result = export_promoted_theses_for_run(
+        "run_1",
+        data_root=tmp_path,
+        bundles=[bundle],
+        promoted_df=promoted_df,
+    )
+
+    thesis = json.loads(result.output_path.read_text(encoding="utf-8"))["theses"][0]
+    contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert thesis["requirements"]["trigger_events"] == ["VOL_SHOCK"]
+    assert thesis["requirements"]["confirmation_events"] == ["LIQUIDITY_VACUUM"]
+    assert thesis["requirements"]["required_episodes"] == ["EP_LIQUIDITY_SHOCK"]
+    assert thesis["requirements"]["sequence_mode"] == "event_plus_confirm"
+    assert thesis["source"]["event_contract_ids"] == ["VOL_SHOCK", "LIQUIDITY_VACUUM"]
+    assert contract_payload["contracts"][0]["authored_contract_linked"] is False
+    assert contract_payload["contracts"][0]["required_episodes"] == ["EP_LIQUIDITY_SHOCK"]

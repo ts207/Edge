@@ -1,0 +1,15 @@
+state_id: BREAKOUT_HOLD_STATE
+family: TREND_STRUCTURE
+source_event_type: RANGE_BREAKOUT
+activation_rule: breakout confirmed with hold above breakout level
+decay_rule: exit on failed hold
+allowed_templates:
+- breakout_followthrough
+- trend_continuation
+- continuation
+- only_if_trend
+state_scope: source_only
+min_events: 200
+features_required:
+- close
+- breakout_level

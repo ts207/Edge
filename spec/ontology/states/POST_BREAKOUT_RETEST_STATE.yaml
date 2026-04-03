@@ -1,0 +1,15 @@
+state_id: POST_BREAKOUT_RETEST_STATE
+family: TREND_STRUCTURE
+source_event_type: RANGE_BREAKOUT
+activation_rule: first retest after breakout
+decay_rule: exit on retest completion
+allowed_templates:
+- pullback_entry
+- trend_continuation
+- continuation
+- only_if_trend
+state_scope: source_only
+min_events: 200
+features_required:
+- close
+- breakout_level

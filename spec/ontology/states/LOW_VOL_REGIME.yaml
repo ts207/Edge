@@ -1,12 +1,8 @@
 state_id: LOW_VOL_REGIME
 family: VOLATILITY_TRANSITION
 source_event_type: VOL_CLUSTER_SHIFT
-state_scope: family_safe
-min_events: 300
 activation_rule: rv_percentile <= 0.33
 decay_rule: exit when rv_percentile > 0.33
-features_required:
-- rv_percentile_24h
 allowed_templates:
 - continuation
 - trend_continuation
@@ -14,3 +10,8 @@ allowed_templates:
 - pullback_entry
 - mean_reversion
 - only_if_regime
+state_scope: family_safe
+min_events: 300
+features_required:
+- rv_percentile_24h
+description: Market is in a low volatility state.

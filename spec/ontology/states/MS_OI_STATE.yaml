@@ -1,0 +1,9 @@
+state_id: MS_OI_STATE
+family: MICROSTRUCTURE_CONTEXT
+source_event_type: OI_SPIKE_POSITIVE
+activation_rule: open interest in elevated or compressed regime
+decay_rule: open interest normalizes
+allowed_templates:
+- continuation
+state_scope: source_only
+min_events: 1

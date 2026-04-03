@@ -1,0 +1,9 @@
+state_id: MS_FUNDING_STATE
+family: MICROSTRUCTURE_CONTEXT
+source_event_type: FUNDING_EXTREME_ONSET
+activation_rule: funding rate in stressed or extreme regime
+decay_rule: funding rate normalizes to baseline range
+allowed_templates:
+- continuation
+state_scope: source_only
+min_events: 1

@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Dict
+
+import yaml
+
+from project import PROJECT_ROOT
+from project.spec_registry import load_yaml_relative, resolve_relative_spec_path
+
+
+def _canonical_template_registry() -> Dict[str, Any]:
+    payload = load_yaml_relative("spec/templates/event_template_registry.yaml")
+    return payload if isinstance(payload, dict) else {}
+
+
+def build_runtime_template_registry_payload() -> Dict[str, Any]:
+    canonical = _canonical_template_registry()
+    operators = canonical.get("operators", {})
+    if not isinstance(operators, dict):
+        operators = {}
+    templates: Dict[str, Dict[str, Any]] = {}
+    for template_id, row in sorted(operators.items()):
+        if not isinstance(row, dict):
+            continue
+        templates[str(template_id)] = {
+            "enabled": bool(row.get("enabled", True)),
+            "supports_contexts": bool(row.get("supports_contexts", True)),
+            "supports_directions": [
+                str(item).strip()
+                for item in row.get("supports_directions", [])
+                if str(item).strip()
+            ],
+            "supports_trigger_types": [
+                str(item).strip().upper()
+                for item in row.get("supports_trigger_types", [])
+                if str(item).strip()
+            ],
+        }
+    return {"templates": templates}
+
+
+def build_ontology_template_registry_payload() -> Dict[str, Any]:
+    canonical = _canonical_template_registry()
+    defaults = canonical.get("defaults", {})
+    if not isinstance(defaults, dict):
+        defaults = {}
+    families = canonical.get("families", {})
+    if not isinstance(families, dict):
+        families = {}
+    filter_templates = canonical.get("filter_templates", {})
+    if not isinstance(filter_templates, dict):
+        filter_templates = {}
+
+    out_families: Dict[str, Dict[str, Any]] = {}
+    for family, row in sorted(families.items()):
+        if not isinstance(row, dict):
+            continue
+        out_row: Dict[str, Any] = {
+            "allowed_templates": [
+                str(item).strip()
+                for item in row.get("templates", row.get("allowed_templates", []))
+                if str(item).strip()
+            ]
+        }
+        if "default_horizon" in row:
+            out_row["default_horizon"] = row.get("default_horizon")
+        out_families[str(family).strip().upper()] = out_row
+
+    return {
+        "version": 1,
+        "kind": "template_registry",
+        "defaults": {
+            "templates": [
+                str(item).strip()
+                for item in defaults.get("templates", [])
+                if str(item).strip()
+            ],
+            "horizons": [
+                str(item).strip()
+                for item in defaults.get("horizons", [])
+                if str(item).strip()
+            ],
+            "conditioning_cols": [
+                str(item).strip()
+                for item in defaults.get("conditioning_cols", [])
+                if str(item).strip()
+            ],
+            "param_grids": dict(defaults.get("template_param_grid_defaults", {}))
+            if isinstance(defaults.get("template_param_grid_defaults"), dict)
+            else {},
+        },
+        "families": out_families,
+        "filter_templates": dict(filter_templates),
+    }
+
+
+def _write_yaml(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def main() -> int:
+    runtime_path = PROJECT_ROOT / "configs" / "registries" / "templates.yaml"
+    ontology_path = resolve_relative_spec_path(
+        "spec/ontology/templates/template_registry.yaml",
+        repo_root=PROJECT_ROOT.parent,
+    )
+    _write_yaml(runtime_path, build_runtime_template_registry_payload())
+    _write_yaml(ontology_path, build_ontology_template_registry_payload())
+    print(f"Wrote {runtime_path}")
+    print(f"Wrote {ontology_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

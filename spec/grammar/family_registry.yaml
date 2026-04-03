@@ -89,6 +89,8 @@ event_families:
     allowed_templates:
       - mean_reversion
       - continuation
+      - tail_risk_avoid
+      - only_if_no_news_window
   EXECUTION_FRICTION:
     description: "Slippage and execution friction events."
     searchable: true

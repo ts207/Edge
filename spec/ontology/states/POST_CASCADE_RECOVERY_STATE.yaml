@@ -1,0 +1,13 @@
+state_id: POST_CASCADE_RECOVERY_STATE
+family: POSITIONING_EXTREMES
+source_event_type: LIQUIDATION_EXHAUSTION_REVERSAL
+activation_rule: post cascade recovery detected
+decay_rule: recovery normalizes
+allowed_templates:
+- mean_reversion
+- continuation
+state_scope: source_only
+min_events: 200
+features_required:
+- liquidation_notional
+- spread_bps

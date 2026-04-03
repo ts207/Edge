@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -56,3 +57,10 @@ def test_export_promoted_theses_includes_governance_and_source(tmp_path: Path) -
     assert '"source"' in payload
     assert '"requirements"' in payload
     assert '"source_campaign_id": "camp_1"' in payload
+    assert result.contract_json_path is not None
+    assert result.contract_md_path is not None
+    assert result.contract_json_path.exists()
+    assert result.contract_md_path.exists()
+    contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert contract_payload["contracts"][0]["source_campaign_id"] == "camp_1"
+    assert contract_payload["contracts"][0]["trade_trigger_eligible"] is True

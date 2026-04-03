@@ -2,6 +2,9 @@ import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from project.spec_registry import load_state_registry
+from project.specs.ontology import normalize_state_registry_records
+
 REPO_ROOT = Path(__file__).parents[2]
 # print(f"DEBUG: REPO_ROOT is {REPO_ROOT.absolute()}")
 # print(f"DEBUG: SPEC_DIR is {SPEC_DIR.absolute()}")
@@ -36,6 +39,11 @@ def load_ontology_events() -> Dict[str, Dict[str, Any]]:
 
 def load_ontology_states() -> Dict[str, Dict[str, Any]]:
     states = {}
+    canonical_registry = load_state_registry()
+    for row in normalize_state_registry_records(canonical_registry):
+        state_id = str(row.get("state_id", "")).strip()
+        if state_id:
+            states[state_id] = dict(row)
     state_dirs = [SPEC_DIR / "states", ONTOLOGY_DIR / "states"]
     for state_dir in state_dirs:
         if not state_dir.exists():

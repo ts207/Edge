@@ -19,7 +19,9 @@ ONTOLOGY_SPEC_RELATIVE_PATHS: Dict[str, str] = {
     "taxonomy": "spec/multiplicity/taxonomy.yaml",
     "canonical_event_registry": "spec/events/canonical_event_registry.yaml",
     "state_registry": "spec/states/state_registry.yaml",
+    "thesis_registry": "spec/theses/thesis_registry.yaml",
     "template_verb_lexicon": "spec/hypotheses/template_verb_lexicon.yaml",
+    "domain_graph": "spec/domain/domain_graph.yaml",
 }
 
 RUNTIME_SPEC_RELATIVE_PATHS: Dict[str, str] = {
@@ -118,6 +120,11 @@ def load_template_registry() -> Dict[str, Any]:
 @functools.lru_cache(maxsize=1)
 def load_state_registry() -> Dict[str, Any]:
     return load_yaml_relative("spec/states/state_registry.yaml")
+
+
+@functools.lru_cache(maxsize=1)
+def load_thesis_registry() -> Dict[str, Any]:
+    return load_yaml_relative("spec/theses/thesis_registry.yaml")
 
 
 @functools.lru_cache(maxsize=1)
@@ -348,6 +355,7 @@ def clear_caches() -> None:
     load_event_ontology_mapping.cache_clear()
     load_template_registry.cache_clear()
     load_state_registry.cache_clear()
+    load_thesis_registry.cache_clear()
     load_event_contract_overrides.cache_clear()
     load_runtime_spec.cache_clear()
     load_blueprint_policy_spec.cache_clear()

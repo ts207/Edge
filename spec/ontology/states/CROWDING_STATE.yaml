@@ -3,13 +3,16 @@ family: POSITIONING_EXTREMES
 source_event_type: FUNDING_EXTREME_ONSET
 activation_rule: funding_pct >= p95 AND oi_pct >= p90
 decay_rule: exit when funding_pct < p80 OR oi_pct < p70
-features_required:
-- funding_rate_scaled
-- oi_notional
-- trend_regime
 allowed_templates:
 - reversal_or_squeeze
 - mean_reversion
 - continuation
 - only_if_funding
 - only_if_oi
+state_scope: source_only
+min_events: 200
+features_required:
+- funding_rate_scaled
+- oi_notional
+- trend_regime
+description: High OI and extreme funding.

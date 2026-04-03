@@ -1,0 +1,9 @@
+state_id: MS_VOL_STATE
+family: MICROSTRUCTURE_CONTEXT
+source_event_type: VOL_SHOCK
+activation_rule: volatility context is elevated or suppressed
+decay_rule: volatility normalizes
+allowed_templates:
+- continuation
+state_scope: source_only
+min_events: 1

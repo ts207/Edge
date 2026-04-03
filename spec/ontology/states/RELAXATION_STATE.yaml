@@ -3,10 +3,12 @@ family: VOLATILITY_TRANSITION
 source_event_type: VOL_RELAXATION_START
 activation_rule: shock_ratio decreasing for n bars
 decay_rule: exit when shock_ratio returns below baseline band
-features_required:
-- rv_96
-- rv_base
 allowed_templates:
 - mean_reversion
 - pullback_entry
 - only_if_regime
+state_scope: source_only
+min_events: 200
+features_required:
+- rv_96
+- rv_base

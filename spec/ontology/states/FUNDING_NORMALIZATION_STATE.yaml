@@ -3,9 +3,6 @@ family: POSITIONING_EXTREMES
 source_event_type: FUNDING_NORMALIZATION_TRIGGER
 activation_rule: funding_abs_pct crosses below normalization band
 decay_rule: exit after normalization hold bars
-features_required:
-- funding_rate_scaled
-- funding_abs_pct
 allowed_templates:
 - reversal_or_squeeze
 - mean_reversion
@@ -15,3 +12,8 @@ allowed_templates:
 - only_if_funding
 - only_if_oi
 - tail_risk_avoid
+state_scope: source_only
+min_events: 200
+features_required:
+- funding_rate_scaled
+- funding_abs_pct

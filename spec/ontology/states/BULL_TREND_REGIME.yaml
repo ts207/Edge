@@ -1,0 +1,10 @@
+state_id: BULL_TREND_REGIME
+family: REGIME_CONTEXT
+source_event_type: TREND_EXHAUSTION_TRIGGER
+activation_rule: regime detector signals bullish trend
+decay_rule: regime transitions to neutral or bear
+allowed_templates:
+- continuation
+state_scope: global
+min_events: 1
+description: Market is trending upwards.

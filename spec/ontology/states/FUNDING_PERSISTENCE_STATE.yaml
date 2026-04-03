@@ -3,9 +3,6 @@ family: POSITIONING_EXTREMES
 source_event_type: FUNDING_PERSISTENCE_TRIGGER
 activation_rule: funding_abs_pct >= persistence_pct for persistence_bars
 decay_rule: exit when funding_abs_pct < normalization_pct
-features_required:
-- funding_rate_scaled
-- funding_abs_pct
 allowed_templates:
 - reversal_or_squeeze
 - mean_reversion
@@ -15,3 +12,8 @@ allowed_templates:
 - only_if_funding
 - only_if_oi
 - tail_risk_avoid
+state_scope: source_only
+min_events: 200
+features_required:
+- funding_rate_scaled
+- funding_abs_pct

@@ -3,9 +3,6 @@ family: VOLATILITY_TRANSITION
 source_event_type: VOL_SHOCK
 activation_rule: elapsed_bars <= aftershock_horizon
 decay_rule: exit when shock_ratio < shock_threshold
-features_required:
-- rv_96
-- rv_base
 allowed_templates:
 - continuation
 - trend_continuation
@@ -13,3 +10,8 @@ allowed_templates:
 - pullback_entry
 - mean_reversion
 - only_if_regime
+state_scope: source_only
+min_events: 200
+features_required:
+- rv_96
+- rv_base

@@ -1,0 +1,13 @@
+state_id: POST_CLIMAX_STATE
+family: FORCED_FLOW_AND_EXHAUSTION
+source_event_type: CLIMAX_VOLUME_BAR
+activation_rule: elapsed_bars <= post_climax_horizon
+decay_rule: exit after post_climax_horizon
+allowed_templates:
+- momentum_fade
+- exhaustion_reversal
+state_scope: source_only
+min_events: 200
+features_required:
+- volume
+- rv_96

@@ -1,0 +1,9 @@
+state_id: MS_LIQ_STATE
+family: MICROSTRUCTURE_CONTEXT
+source_event_type: LIQUIDITY_STRESS_DIRECT
+activation_rule: liquidity context is degraded
+decay_rule: liquidity context normalizes
+allowed_templates:
+- continuation
+state_scope: source_only
+min_events: 1

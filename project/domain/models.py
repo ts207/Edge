@@ -61,6 +61,22 @@ class StateDefinition:
     family: str
     source_event_type: str
     raw: Dict[str, Any] = field(default_factory=dict)
+    state_scope: str = "source_only"
+    min_events: int = 200
+    activation_rule: str = ""
+    decay_rule: str = ""
+    max_duration: Any = None
+    features_required: tuple[str, ...] = ()
+    allowed_templates: tuple[str, ...] = ()
+    enabled: bool = True
+    state_engine: str = ""
+    instrument_classes: tuple[str, ...] = ()
+    runtime_tags: tuple[str, ...] = ()
+    description: str = ""
+    context_family: str = ""
+    context_label: str = ""
+    spec_path: str = ""
+    source_kind: str = "state_registry"
 
 
 @dataclass(frozen=True)
@@ -68,6 +84,34 @@ class TemplateOperatorDefinition:
     template_id: str
     compatible_families: tuple[str, ...]
     raw: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ThesisDefinition:
+    thesis_id: str
+    thesis_kind: str
+    event_family: str
+    timeframe: str
+    event_side: str = "unknown"
+    promotion_class: str = ""
+    deployment_state: str = ""
+    trigger_events: tuple[str, ...] = ()
+    confirmation_events: tuple[str, ...] = ()
+    required_episodes: tuple[str, ...] = ()
+    disallowed_regimes: tuple[str, ...] = ()
+    source_event_contract_ids: tuple[str, ...] = ()
+    source_episode_contract_ids: tuple[str, ...] = ()
+    required_context: Dict[str, Any] = field(default_factory=dict)
+    supportive_context: Dict[str, Any] = field(default_factory=dict)
+    expected_response: Dict[str, Any] = field(default_factory=dict)
+    invalidation: Dict[str, Any] = field(default_factory=dict)
+    governance: Dict[str, Any] = field(default_factory=dict)
+    symbol_scope: Dict[str, Any] = field(default_factory=dict)
+    detection: Dict[str, Any] = field(default_factory=dict)
+    notes: str = ""
+    raw: Dict[str, Any] = field(default_factory=dict)
+    spec_path: str = ""
+    source_kind: str = "thesis_registry"
 
 
 @dataclass(frozen=True)
@@ -80,6 +124,7 @@ class DomainRegistry:
     unified_registry_path: str
     template_registry_payload: Dict[str, Any] = field(default_factory=dict)
     family_registry_payload: Dict[str, Any] = field(default_factory=dict)
+    thesis_definitions: Dict[str, ThesisDefinition] = field(default_factory=dict)
     context_state_map: Dict[tuple[str, str], str] = field(default_factory=dict)
     searchable_event_families: tuple[str, ...] = ()
     searchable_state_families: tuple[str, ...] = ()
@@ -106,8 +151,17 @@ class DomainRegistry:
     def get_operator(self, template_id: str) -> TemplateOperatorDefinition | None:
         return self.template_operator_definitions.get(str(template_id).strip())
 
+    def has_thesis(self, thesis_id: str) -> bool:
+        return str(thesis_id).strip().upper() in self.thesis_definitions
+
+    def get_thesis(self, thesis_id: str) -> ThesisDefinition | None:
+        return self.thesis_definitions.get(str(thesis_id).strip().upper())
+
     def operator_rows(self) -> Dict[str, Dict[str, Any]]:
         return {name: dict(spec.raw) for name, spec in self.template_operator_definitions.items()}
+
+    def thesis_rows(self) -> Dict[str, Dict[str, Any]]:
+        return {name: dict(spec.raw) for name, spec in self.thesis_definitions.items()}
 
     def family_templates(self, family_name: str) -> tuple[str, ...]:
         template_families = self.template_registry_payload.get("families", {})
@@ -268,6 +322,10 @@ class DomainRegistry:
     @property
     def event_ids(self) -> tuple[str, ...]:
         return tuple(sorted(self.event_definitions.keys()))
+
+    @property
+    def thesis_ids(self) -> tuple[str, ...]:
+        return tuple(sorted(self.thesis_definitions.keys()))
 
     @property
     def valid_state_ids(self) -> tuple[str, ...]:

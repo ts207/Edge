@@ -9,6 +9,15 @@ echo "Regenerating repository artifacts..."
 echo "[registry] Rebuilding unified event registry..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_unified_event_registry.py"
 
+echo "[templates] Regenerating template registry sidecars..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_template_registry_sidecars.py"
+
+echo "[states] Regenerating state registry sidecars..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_state_registry_sidecars.py"
+
+echo "[domain] Rebuilding compiled domain graph..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_domain_graph.py"
+
 echo "[runtime] Regenerating runtime event registry..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_runtime_event_registry.py"
 

@@ -1,65 +1,547 @@
 version: 1
-
 states:
+  REFILL_LAG_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: LIQUIDITY_VACUUM
+  LIQUIDITY_ABSENCE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: LIQUIDITY_VACUUM
+  POST_SWEEP_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: SWEEP_STOPRUN
+  POST_ABSORPTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: ABSORPTION_PROXY
+  SPREAD_ELEVATED_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: SPREAD_BLOWOUT
+  DEPTH_RECOVERY_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: DEPTH_COLLAPSE
+  AFTERSHOCK_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_SHOCK
+  POST_EXPANSION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_SPIKE
+  RELAXATION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_RELAXATION_START
+  COMPRESSION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_CLUSTER_SHIFT
+  PRE_BREAKOUT_TENSION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: VOLATILITY_TRANSITION
+    source_event_type: RANGE_COMPRESSION_END
   HIGH_VOL_REGIME:
-    state_engine: VolatilityRegimeEngine
     enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [volatility]
-    description: "Market is in a high volatility state."
-
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - volatility
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_CLUSTER_SHIFT
+    state_engine: VolatilityRegimeEngine
+    description: Market is in a high volatility state.
   LOW_VOL_REGIME:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - volatility
+    family: VOLATILITY_TRANSITION
+    source_event_type: VOL_CLUSTER_SHIFT
     state_engine: VolatilityRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [volatility]
-    description: "Market is in a low volatility state."
-
-  BULL_TREND_REGIME:
-    state_engine: TrendRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [trend]
-    description: "Market is trending upwards."
-
-  BEAR_TREND_REGIME:
-    state_engine: TrendRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [trend]
-    description: "Market is trending downwards."
-
-  CHOP_REGIME:
-    state_engine: TrendRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [sideways]
-    description: "Market is range-bound or choppy."
-
-  OVERBOUGHT_STATE:
-    state_engine: MomentumRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [momentum]
-    description: "Momentum signals overbought conditions."
-
-  OVERSOLD_STATE:
-    state_engine: MomentumRegimeEngine
-    enabled: true
-    instrument_classes: [crypto, equities, futures]
-    tags: [momentum]
-    description: "Momentum signals oversold conditions."
-
+    description: Market is in a low volatility state.
   CROWDING_STATE:
-    state_engine: MarketStateEngine
     enabled: true
-    instrument_classes: [crypto]
-    tags: [positioning]
-    description: "High OI and extreme funding."
-
+    instrument_classes:
+    - crypto
+    tags:
+    - positioning
+    family: POSITIONING_EXTREMES
+    source_event_type: FUNDING_EXTREME_ONSET
+    state_engine: MarketStateEngine
+    description: High OI and extreme funding.
+  FUNDING_PERSISTENCE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: FUNDING_PERSISTENCE_TRIGGER
+  FUNDING_NORMALIZATION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: FUNDING_NORMALIZATION_TRIGGER
+  POST_EXTREME_CARRY_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: FUNDING_EXTREME_ONSET
+  DELEVERAGING_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: DELEVERAGING_WAVE
+  POST_LIQUIDATION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: LIQUIDATION_CASCADE
+  SQUEEZE_RISK_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: OI_SPIKE_POSITIVE
+  POST_FORCED_FLOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: FORCED_FLOW_AND_EXHAUSTION
+    source_event_type: FORCED_FLOW_EXHAUSTION
+  EXHAUSTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: FORCED_FLOW_AND_EXHAUSTION
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+  DISTRIBUTION_ACCUMULATION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: FORCED_FLOW_AND_EXHAUSTION
+    source_event_type: CLIMAX_VOLUME_BAR
+  POST_CLIMAX_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: FORCED_FLOW_AND_EXHAUSTION
+    source_event_type: CLIMAX_VOLUME_BAR
+  MEAN_REVERSION_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: FORCED_FLOW_AND_EXHAUSTION
+    source_event_type: FORCED_FLOW_EXHAUSTION
+  BREAKOUT_HOLD_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: RANGE_BREAKOUT
+  POST_BREAKOUT_RETEST_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: RANGE_BREAKOUT
+  TRENDING_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: TREND_ACCELERATION
+  CHOP_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: TREND_DECELERATION
+  OVERBOUGHT_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - momentum
+    family: TREND_STRUCTURE
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+    state_engine: MomentumRegimeEngine
+    description: Momentum signals overbought conditions.
+  OVERSOLD_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - momentum
+    family: TREND_STRUCTURE
+    source_event_type: TREND_DECELERATION
+    state_engine: MomentumRegimeEngine
+    description: Momentum signals oversold conditions.
+  PULLBACK_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: PULLBACK_PIVOT
+  FAILURE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TREND_STRUCTURE
+    source_event_type: FALSE_BREAKOUT
+  STRETCHED_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: STATISTICAL_DISLOCATION
+    source_event_type: ZSCORE_STRETCH
+  OVERSHOOT_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: STATISTICAL_DISLOCATION
+    source_event_type: OVERSHOOT_AFTER_SHOCK
+  REPAIR_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: STATISTICAL_DISLOCATION
+    source_event_type: GAP_OVERSHOOT
+  REVERSION_IN_PROGRESS_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: STATISTICAL_DISLOCATION
+    source_event_type: BAND_BREAK
+  RISK_ON_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: CHOP_TO_TREND_SHIFT
+  RISK_OFF_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: TREND_TO_CHOP_SHIFT
+  CORRELATION_BROKEN_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: CORRELATION_BREAKDOWN_EVENT
+  NEW_REGIME_STABILIZATION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: VOL_REGIME_SHIFT_EVENT
+  TRANSITION_TURBULENCE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: VOL_REGIME_SHIFT_EVENT
+  DESYNC_PERSISTENCE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: INFORMATION_DESYNC
+    source_event_type: CROSS_VENUE_DESYNC
+  BASIS_ELEVATED_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: INFORMATION_DESYNC
+    source_event_type: SPOT_PERP_BASIS_SHOCK
+  CONVERGENCE_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: INFORMATION_DESYNC
+    source_event_type: LEAD_LAG_BREAK
+  ARBITRAGE_CROWDING_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: INFORMATION_DESYNC
+    source_event_type: INDEX_COMPONENT_DIVERGENCE
+  OPEN_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TEMPORAL_STRUCTURE
+    source_event_type: SESSION_OPEN_EVENT
+  CLOSE_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TEMPORAL_STRUCTURE
+    source_event_type: SESSION_CLOSE_EVENT
+  POST_FUNDING_WINDOW_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TEMPORAL_STRUCTURE
+    source_event_type: FUNDING_TIMESTAMP_EVENT
+  PRE_NEWS_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TEMPORAL_STRUCTURE
+    source_event_type: SCHEDULED_NEWS_WINDOW_EVENT
+  POST_NEWS_AFTERSHOCK_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: TEMPORAL_STRUCTURE
+    source_event_type: SCHEDULED_NEWS_WINDOW_EVENT
+  HIGH_FRICTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: EXECUTION_FRICTION
+    source_event_type: SPREAD_REGIME_WIDENING_EVENT
+  LOW_FRICTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: EXECUTION_FRICTION
+    source_event_type: SPREAD_REGIME_WIDENING_EVENT
+  ILLIQUID_EXECUTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: EXECUTION_FRICTION
+    source_event_type: SLIPPAGE_SPIKE_EVENT
   MS_LIQUIDATION_STATE:
-    state_engine: MarketStateEngine
     enabled: true
-    instrument_classes: [crypto]
-    tags: [liquidity]
-    description: "Elevated liquidation pressure."
+    instrument_classes:
+    - crypto
+    tags:
+    - liquidity
+    family: POSITIONING_EXTREMES
+    source_event_type: LIQUIDATION_CASCADE
+    state_engine: MarketStateEngine
+    description: Elevated liquidation pressure.
+  BEAR_TREND_REGIME:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - trend
+    family: REGIME_CONTEXT
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+    state_engine: TrendRegimeEngine
+    description: Market is trending downwards.
+  BULL_TREND_REGIME:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - trend
+    family: REGIME_CONTEXT
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+    state_engine: TrendRegimeEngine
+    description: Market is trending upwards.
+  CHOP_REGIME:
+    enabled: true
+    instrument_classes:
+    - crypto
+    - equities
+    - futures
+    tags:
+    - sideways
+    family: REGIME_CONTEXT
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+    state_engine: TrendRegimeEngine
+    description: Market is range-bound or choppy.
+  MS_CONTEXT_STATE_CODE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: LIQUIDITY_STRESS_DIRECT
+  MS_FUNDING_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: FUNDING_EXTREME_ONSET
+  MS_LIQ_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: LIQUIDITY_STRESS_DIRECT
+  MS_OI_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: OI_SPIKE_POSITIVE
+  MS_SPREAD_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: LIQUIDITY_STRESS_DIRECT
+  MS_TREND_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: TREND_EXHAUSTION_TRIGGER
+  MS_VOL_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: MICROSTRUCTURE_CONTEXT
+    source_event_type: VOL_SHOCK
+  LOW_LIQUIDITY_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: LIQUIDITY_DISLOCATION
+    source_event_type: LIQUIDITY_VACUUM
+  MS_BASIS_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: STATISTICAL_DISLOCATION
+    source_event_type: BASIS_DISLOC
+  FEE_REGIME_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: EXECUTION_FRICTION
+    source_event_type: FEE_REGIME_CHANGE_EVENT
+  OI_CONTRACTION_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: OI_SPIKE_NEGATIVE
+  POST_CASCADE_RECOVERY_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: LIQUIDATION_EXHAUSTION_REVERSAL
+  FUNDING_FLIP_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: POSITIONING_EXTREMES
+    source_event_type: FUNDING_FLIP
+  BETA_SPIKE_STATE:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+    family: REGIME_TRANSITION
+    source_event_type: BETA_SPIKE_EVENT

@@ -1,0 +1,18 @@
+state_id: PRE_BREAKOUT_TENSION_STATE
+family: VOLATILITY_TRANSITION
+source_event_type: RANGE_COMPRESSION_END
+activation_rule: compression release detected and pre-breakout tension active
+decay_rule: exit after breakout confirmation window
+allowed_templates:
+- continuation
+- trend_continuation
+- volatility_expansion_follow
+- pullback_entry
+- mean_reversion
+- only_if_regime
+state_scope: source_only
+min_events: 200
+features_required:
+- compression_ratio
+- rv_96
+- spread_bps

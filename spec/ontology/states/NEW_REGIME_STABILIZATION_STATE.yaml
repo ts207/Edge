@@ -1,0 +1,16 @@
+state_id: NEW_REGIME_STABILIZATION_STATE
+family: REGIME_TRANSITION
+source_event_type: VOL_REGIME_SHIFT_EVENT
+activation_rule: regime label changed and persistence >= min_bars
+decay_rule: exit when regime changes again
+allowed_templates:
+- only_if_regime
+- continuation
+- mean_reversion
+- drawdown_filter
+- tail_risk_avoid
+state_scope: source_only
+min_events: 200
+features_required:
+- vol_regime
+- regime_persistence

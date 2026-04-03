@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
+from project.domain.models import ThesisDefinition
 from project.live.contracts import PromotedThesis
 from project.live.contracts.live_trade_context import LiveTradeContext
+from project.live.thesis_specs import resolve_promoted_thesis_definition
 from project.live.thesis_store import ThesisStore
 from project.research.meta_ranking import thesis_meta_quality_score
 
@@ -100,6 +102,101 @@ def _score_supportive_context(thesis: PromotedThesis, context: LiveTradeContext)
     return score, reasons_for, reasons_against
 
 
+def _merge_mapping(primary: dict | None, fallback: dict | None) -> dict:
+    out: dict = {}
+    if isinstance(fallback, dict):
+        out.update(fallback)
+    if isinstance(primary, dict):
+        out.update(primary)
+    return out
+
+
+def _requirements_for_matching(
+    thesis: PromotedThesis,
+    definition: ThesisDefinition | None,
+) -> tuple[set[str], set[str], set[str], set[str], str]:
+    if definition is not None:
+        trigger_events = {str(item).strip().upper() for item in definition.trigger_events if str(item).strip()}
+        confirmation_events = {
+            str(item).strip().upper() for item in definition.confirmation_events if str(item).strip()
+        }
+        required_episodes = {
+            str(item).strip().upper() for item in definition.required_episodes if str(item).strip()
+        }
+        disallowed_regimes = {
+            str(item).strip().upper() for item in definition.disallowed_regimes if str(item).strip()
+        }
+        event_family = str(definition.event_family).strip().upper()
+        return (
+            trigger_events,
+            confirmation_events,
+            required_episodes,
+            disallowed_regimes,
+            event_family,
+        )
+
+    requirements = thesis.requirements
+    trigger_events = {str(item).strip().upper() for item in requirements.trigger_events if str(item).strip()}
+    confirmation_events = {
+        str(item).strip().upper() for item in requirements.confirmation_events if str(item).strip()
+    }
+    required_episodes = {
+        str(item).strip().upper() for item in requirements.required_episodes if str(item).strip()
+    }
+    disallowed_regimes = {
+        str(item).strip().upper() for item in requirements.disallowed_regimes if str(item).strip()
+    }
+    event_family = str(thesis.event_family).strip().upper()
+    return trigger_events, confirmation_events, required_episodes, disallowed_regimes, event_family
+
+
+def _invalidation_for_matching(
+    thesis: PromotedThesis,
+    definition: ThesisDefinition | None,
+) -> dict:
+    fallback = definition.invalidation if definition is not None else {}
+    return _merge_mapping(thesis.invalidation or {}, fallback)
+
+
+def _supportive_context_for_matching(
+    thesis: PromotedThesis,
+    definition: ThesisDefinition | None,
+) -> dict:
+    fallback = definition.supportive_context if definition is not None else {}
+    return _merge_mapping(thesis.supportive_context or {}, fallback)
+
+
+def _governance_declared(thesis: PromotedThesis, definition: ThesisDefinition | None) -> bool:
+    if any(
+        [
+            str(thesis.governance.tier).strip(),
+            str(thesis.governance.operational_role).strip(),
+            str(thesis.governance.deployment_disposition).strip(),
+            str(thesis.governance.evidence_mode).strip(),
+        ]
+    ):
+        return True
+    if definition is None:
+        return False
+    governance = definition.governance
+    return any(
+        [
+            str(governance.get("tier", "")).strip(),
+            str(governance.get("operational_role", "")).strip(),
+            str(governance.get("deployment_disposition", "")).strip(),
+            str(governance.get("evidence_mode", "")).strip(),
+        ]
+    )
+
+
+def _trade_trigger_eligible(thesis: PromotedThesis, definition: ThesisDefinition | None) -> bool:
+    if thesis.governance.trade_trigger_eligible:
+        return True
+    if definition is None:
+        return bool(thesis.governance.trade_trigger_eligible)
+    return bool(definition.governance.get("trade_trigger_eligible", False))
+
+
 def retrieve_ranked_theses(
     *,
     thesis_store: ThesisStore,
@@ -125,38 +222,31 @@ def retrieve_ranked_theses(
         support_score = 0.10
         contradiction_penalty = 0.0
         eligibility_passed = True
+        definition = resolve_promoted_thesis_definition(thesis)
 
-        governance_declared = any(
-            [
-                str(thesis.governance.tier).strip(),
-                str(thesis.governance.operational_role).strip(),
-                str(thesis.governance.deployment_disposition).strip(),
-                str(thesis.governance.evidence_mode).strip(),
-            ]
-        )
-        if governance_declared and not bool(thesis.governance.trade_trigger_eligible):
+        governance_declared = _governance_declared(thesis, definition)
+        if governance_declared and not _trade_trigger_eligible(thesis, definition):
             reasons_against.append("thesis_not_trade_trigger_eligible")
             eligibility_passed = False
 
-        requirements = thesis.requirements
-        trigger_events = {str(item).strip().upper() for item in requirements.trigger_events if str(item).strip()}
-        confirmation_events = {str(item).strip().upper() for item in requirements.confirmation_events if str(item).strip()}
-        required_episodes = {str(item).strip().upper() for item in requirements.required_episodes if str(item).strip()}
-        disallowed_regimes = {str(item).strip().upper() for item in requirements.disallowed_regimes if str(item).strip()}
+        (
+            trigger_events,
+            confirmation_events,
+            required_episodes,
+            disallowed_regimes,
+            thesis_event_family,
+        ) = _requirements_for_matching(thesis, definition)
 
-        thesis_event_family = str(thesis.event_family).strip().upper()
-        if thesis_event_family in context_events:
-            support_score += 0.25
-            reasons_for.append(f"event_family_match:{thesis_event_family}")
-        elif trigger_events.intersection(context_events):
+        clause_triggers = trigger_events or ({thesis_event_family} if thesis_event_family else set())
+        matched_triggers = clause_triggers.intersection(context_events)
+        if matched_triggers:
             support_score += 0.20
-            reasons_for.append(f"trigger_event_match:{','.join(sorted(trigger_events.intersection(context_events)))}")
+            reasons_for.append(f"trigger_clause_match:{','.join(sorted(matched_triggers))}")
         else:
             reasons_against.append("no_trigger_event_match")
             eligibility_passed = False
 
-        if trigger_events:
-            matched_triggers = trigger_events.intersection(context_events)
+        if clause_triggers:
             if not matched_triggers:
                 reasons_against.append("required_trigger_missing")
                 eligibility_passed = False
@@ -190,12 +280,20 @@ def retrieve_ranked_theses(
             contradiction_penalty += 0.25
             reasons_against.append(f"contradiction_event:{','.join(sorted(contradiction_overlap))}")
 
-        if _evaluate_invalidation(thesis, context):
+        if _evaluate_invalidation(
+            thesis.model_copy(update={"invalidation": _invalidation_for_matching(thesis, definition)}),
+            context,
+        ):
             contradiction_penalty += 0.60
             reasons_against.append("invalidation_triggered")
             eligibility_passed = False
 
-        extra_score, extra_for, extra_against = _score_supportive_context(thesis, context)
+        extra_score, extra_for, extra_against = _score_supportive_context(
+            thesis.model_copy(
+                update={"supportive_context": _supportive_context_for_matching(thesis, definition)}
+            ),
+            context,
+        )
         support_score += extra_score
         reasons_for.extend(extra_for)
         reasons_against.extend(extra_against)

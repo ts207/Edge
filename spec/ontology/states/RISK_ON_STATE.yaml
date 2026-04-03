@@ -1,0 +1,16 @@
+state_id: RISK_ON_STATE
+family: REGIME_TRANSITION
+source_event_type: CHOP_TO_TREND_SHIFT
+activation_rule: trend and beta/risk metrics indicate risk-on
+decay_rule: exit when risk-off condition triggers
+allowed_templates:
+- only_if_regime
+- continuation
+- mean_reversion
+- drawdown_filter
+- tail_risk_avoid
+state_scope: family_safe
+min_events: 300
+features_required:
+- beta
+- trend_regime

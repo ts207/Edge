@@ -1,0 +1,16 @@
+state_id: POST_LIQUIDATION_STATE
+family: POSITIONING_EXTREMES
+source_event_type: LIQUIDATION_CASCADE
+activation_rule: elapsed_bars <= post_cascade_horizon
+decay_rule: exit when vol and spread normalize
+allowed_templates:
+- convexity_capture
+- mean_reversion
+- continuation
+- tail_risk_avoid
+state_scope: source_only
+min_events: 200
+features_required:
+- liquidation_notional
+- spread_bps
+- rv_96
