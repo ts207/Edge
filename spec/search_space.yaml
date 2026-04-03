@@ -10,7 +10,7 @@ kind: search_space
 
 triggers:
 
-  # Discrete market occurrences — drawn from spec/templates/event_template_registry.yaml
+  # Discrete market occurrences — drawn from the canonical event registry and template policy.
   events:
     # Volatility family
     - VOL_SHOCK
@@ -63,7 +63,7 @@ triggers:
     - SESSION_OPEN_EVENT
     - FUNDING_TIMESTAMP_EVENT
 
-  # Persistent regime labels — drawn from spec/states/state_registry.yaml
+  # Persistent regime labels — drawn from canonical per-state specs and generated state registries.
   # These fire while the state is active, not at a discrete timestamp.
   states:
     # Volatility regimes

@@ -35,7 +35,7 @@ def extract_funding_event_indices(
     accel_raw = ((accel_rank >= accel_pct) & (accel_rank.shift(1) < accel_pct)).fillna(False)
 
     # 3. Persistence
-    high = (f_pct >= persistence_pct).fillna(False).astype(int)
+    high = f_pct.ge(persistence_pct).astype(int)
     run_len = high.groupby((high == 0).cumsum()).cumsum()
     persistence_raw = ((high == 1) & (run_len == persistence_bars)).fillna(False)
 

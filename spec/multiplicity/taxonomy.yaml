@@ -137,7 +137,7 @@ mechanism_clusters:
 # taxonomy_events  = all events listed in families (any lifecycle)
 #
 # IMPORTANT: Template allow-lists here are retained for ontology/backward compatibility only.
-# The authoritative runtime template configuration is spec/templates/event_template_registry.yaml.
+# The authoritative runtime template configuration is spec/templates/registry.yaml.
 # Canonical template verb lexicon lives in spec/hypotheses/template_verb_lexicon.yaml.
 # `templates` is the broad family allow-list. `runtime_templates` keeps an optional
 # conservative subset for current execution paths.

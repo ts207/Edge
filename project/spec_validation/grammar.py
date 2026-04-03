@@ -17,7 +17,7 @@ def validate_grammar() -> List[Tuple[str, str]]:
         if tfam not in event_fams and tfam not in state_fams:
             errors.append(
                 (
-                    "ontology/templates/template_registry.yaml",
+                    "templates/registry.yaml",
                     f"Undefined family in templates: {tfam}",
                 )
             )

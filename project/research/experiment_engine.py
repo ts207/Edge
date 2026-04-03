@@ -308,7 +308,7 @@ def validate_registry_consistency(registries: RegistryBundle) -> None:
             "template_registry.yaml disagree on allowed_templates for the following "
             f"families:\n{mismatch_report}\n\n"
             "Fix: update spec/grammar/family_registry.yaml to match "
-            "spec/ontology/templates/template_registry.yaml (the authoritative source). "
+            "spec/templates/registry.yaml (the authoritative source). "
             "Run validate_registry_consistency() to confirm the fix."
         )
     _LOG.debug("validate_registry_consistency: all families consistent.")

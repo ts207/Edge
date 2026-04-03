@@ -5,8 +5,8 @@
 The canonical event registry migration is complete for authored event data.
 
 - `spec/events/*.yaml` is now the authored source for event identity, governance, runtime metadata, local semantics, and event-local arbitration rules.
-- `spec/states/state_registry.yaml` is now the authored source for state semantics, runtime metadata, and context-dimension mappings.
-- `spec/templates/event_template_registry.yaml` is now the authored source for template semantics, operator metadata, and filter-template policy.
+- `spec/states/*.yaml` is now the authored source for state semantics, runtime metadata, and context-dimension mappings.
+- `spec/templates/registry.yaml` is now the authored source for template semantics, operator metadata, and filter-template policy.
 - `spec/theses/thesis_registry.yaml` is now the authored source for canonical thesis clauses in the founding/bootstrap lane.
 - `spec/events/event_registry_unified.yaml` is rebuilt from event specs plus regime-level defaults and template policy.
 - `spec/domain/domain_graph.yaml` is rebuilt from the compiled registry and is now the preferred read artifact for `project/domain/*` consumers.
@@ -49,9 +49,9 @@ The migration should be treated as regressed if any of the following becomes tru
 - A behavior-changing event edit requires changing `event_ontology_mapping.yaml`.
 - A behavior-changing event edit requires changing `event_contract_overrides.yaml`.
 - Runtime detector wiring is edited in `project/configs/registries/events.yaml` instead of the event spec.
-- State runtime wiring is edited in `project/configs/registries/states.yaml` instead of `spec/states/state_registry.yaml`.
-- Context mappings are edited in `spec/grammar/state_registry.yaml` instead of `spec/states/state_registry.yaml`.
-- Template semantics are edited in `project/configs/registries/templates.yaml` or `spec/ontology/templates/template_registry.yaml` instead of `spec/templates/event_template_registry.yaml`.
+- State runtime wiring is edited in `project/configs/registries/states.yaml` instead of `spec/states/*.yaml`.
+- Context mappings are edited in `spec/grammar/state_registry.yaml` instead of `spec/states/*.yaml`.
+- Template semantics are edited in `project/configs/registries/templates.yaml` or `spec/ontology/templates/template_registry.yaml` instead of `spec/templates/registry.yaml`.
 - Thesis clause semantics are edited only in packaged `promoted_theses.json` output instead of `spec/theses/thesis_registry.yaml`.
 - Event-specific precedence is added back to `spec/events/precedence.yaml`.
 - Event-specific suppression is added back to `spec/events/compatibility.yaml`.

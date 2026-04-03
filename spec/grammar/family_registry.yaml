@@ -1,8 +1,8 @@
 version: 1
 kind: family_registry
-# AUTHORITATIVE SOURCE: spec/ontology/templates/template_registry.yaml
-# This file is reconciled to match template_registry.yaml as of Phase 1.1 fix.
-# Do NOT edit allowed_templates here independently — update template_registry.yaml
+# AUTHORITATIVE SOURCE: spec/templates/registry.yaml
+# This file is reconciled to match the canonical template registry.
+# Do NOT edit allowed_templates here independently — update spec/templates/registry.yaml
 # and run validate_registry_consistency() to catch any future divergence.
 
 event_families:

@@ -18,7 +18,7 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
 
 def main() -> int:
     repo_root = PROJECT_ROOT.parent
-    canonical_path = repo_root / "spec" / "templates" / "event_template_registry.yaml"
+    canonical_path = repo_root / "spec" / "templates" / "registry.yaml"
     ontology_path = repo_root / "spec" / "ontology" / "templates" / "template_registry.yaml"
     runtime_path = PROJECT_ROOT / "configs" / "registries" / "templates.yaml"
     lexicon_path = repo_root / "spec" / "hypotheses" / "template_verb_lexicon.yaml"

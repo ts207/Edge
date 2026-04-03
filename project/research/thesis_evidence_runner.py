@@ -178,7 +178,7 @@ def _liquidity_vacuum_events(bars: pd.DataFrame, params: Mapping[str, Any]) -> p
     range_pct = (high - low) / close.replace(0.0, np.nan)
     range_med = range_pct.shift(1).rolling(volume_window, min_periods=volume_min_periods).median()
     vacuum_bar = (vol_ratio < vol_ratio_floor) & (range_pct > range_multiplier * range_med)
-    future_count = sum(vacuum_bar.shift(-offset).fillna(False).astype(int) for offset in range(1, lookahead_bars + 1))
+    future_count = sum(vacuum_bar.shift(-offset).eq(True).astype(np.int8) for offset in range(1, lookahead_bars + 1))
     return (shock_onset & (future_count >= min_vacuum_bars)).fillna(False).astype(bool)
 
 

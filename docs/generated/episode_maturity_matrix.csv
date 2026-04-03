@@ -1,4 +1,0 @@
-episode_id,title,tier,operational_role,deployment_disposition,required_events_count,runtime_min_required_events
-EP_VOLATILITY_BREAKOUT,Volatility breakout episode,B,trigger,secondary_trigger_candidate,2,1
-EP_LIQUIDITY_SHOCK,Liquidity shock episode,B,trigger,secondary_trigger_candidate,2,1
-EP_DISLOCATION_REPAIR,Dislocation repair episode,C,context,context_only,2,1

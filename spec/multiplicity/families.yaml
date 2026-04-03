@@ -1,5 +1,5 @@
 # DEPRECATED (read-only during cutover):
-# This file is retained only for drift checks against spec/templates/event_template_registry.yaml.
+# This file is retained only for drift checks against spec/templates/registry.yaml.
 # Do not add new template logic here.
 families:
   LIQUIDITY_VACUUM:

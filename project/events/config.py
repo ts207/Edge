@@ -12,7 +12,6 @@ from project import PROJECT_ROOT
 from project.domain.compiled_registry import get_domain_registry
 from project.spec_registry import (
     load_yaml_path,
-    load_yaml_relative,
 )
 
 _LOG = logging.getLogger(__name__)
@@ -21,10 +20,6 @@ REPO_ROOT = PROJECT_ROOT.parent
 SPEC_DIR = REPO_ROOT / "spec" / "ontology" / "events"
 RUNTIME_SPEC_DIR = REPO_ROOT / "spec" / "events"
 UNIFIED_REGISTRY_PATH = REPO_ROOT / "spec" / "events" / "event_registry_unified.yaml"
-REGISTRY_PATH = REPO_ROOT / "spec" / "ontology" / "templates" / "template_registry.yaml"
-LEGACY_FAMILIES_PATH = REPO_ROOT / "spec" / "multiplicity" / "families.yaml"
-LEGACY_TAXONOMY_PATH = REPO_ROOT / "spec" / "multiplicity" / "taxonomy.yaml"
-VERB_LEXICON_PATH = REPO_ROOT / "spec" / "hypotheses" / "template_verb_lexicon.yaml"
 
 _CORE_KEYS = {"event_type", "reports_dir", "events_file", "signal_column", "parameters"}
 _META_KEYS = {
@@ -109,12 +104,6 @@ class ComposedConfig:
 # Re-alias for backward compatibility if needed, though we should migrate
 ComposedEventConfig = ComposedConfig
 ComposedTemplateConfig = ComposedConfig
-
-
-def _load_yaml(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    return load_yaml_relative(str(path.resolve().relative_to(REPO_ROOT)))
 
 
 def _event_spec_candidates(normalized: str) -> tuple[Path, Path]:

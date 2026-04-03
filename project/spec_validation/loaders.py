@@ -71,7 +71,7 @@ def load_family_registry() -> Dict[str, Any]:
 
 
 def load_template_registry() -> Dict[str, Any]:
-    return load_yaml(ONTOLOGY_DIR / "templates" / "template_registry.yaml")
+    return load_yaml(SPEC_DIR / "templates" / "registry.yaml")
 
 
 def load_search_spec(name: str) -> Dict[str, Any]:

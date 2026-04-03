@@ -201,8 +201,9 @@ def trigger_mask(spec: HypothesisSpec, features: pd.DataFrame) -> pd.Series:
 
 def load_context_state_map() -> Dict[Tuple[str, str], str]:
     """
-    Load state_registry.yaml and return a flat mapping of (family, label) -> state_id.
-    Raises FileNotFoundError if registry is missing.
+    Load the compiled context state map and return a flat mapping of
+    (family, label) -> state_id. Raises FileNotFoundError if the compiled map
+    is missing.
     """
     registry = get_domain_registry()
     if not registry.context_state_map:

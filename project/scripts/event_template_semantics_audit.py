@@ -20,7 +20,7 @@ def _load_yaml(path: str) -> Dict[str, Any]:
 
 def run_audit() -> Dict[str, Any]:
     registry = get_domain_registry()
-    template_registry = _load_yaml("spec/templates/event_template_registry.yaml")
+    template_registry = _load_yaml("spec/templates/registry.yaml")
     ontology_template_registry = _load_yaml("spec/ontology/templates/template_registry.yaml")
     runtime_templates_payload = _load_yaml("project/configs/registries/templates.yaml")
     lexicon_payload = _load_yaml("spec/hypotheses/template_verb_lexicon.yaml")

@@ -615,7 +615,7 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
                 "event_defaults": "spec/events/_defaults.yaml",
                 "event_family_defaults": "spec/events/_families.yaml",
                 "event_specs_dir": "spec/events",
-                "template_registry": "spec/templates/event_template_registry.yaml",
+                "template_registry": "spec/templates/registry.yaml",
             },
             "notes": (
                 "Single event-centric schema for phase1+phase2 composition. "

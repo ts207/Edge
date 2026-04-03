@@ -27,7 +27,7 @@ def test_main_falls_back_to_template_registry_when_atlas_has_no_claims(
     monkeypatch.setattr(
         backlog,
         "TEMPLATE_REGISTRY_PATH",
-        Path("spec/templates/event_template_registry.yaml"),
+        Path("spec/templates/registry.yaml"),
     )
 
     assert backlog.main() is None
@@ -97,7 +97,7 @@ def test_main_skips_bootstrap_internal_claims_and_falls_back(
     monkeypatch.setattr(
         backlog,
         "TEMPLATE_REGISTRY_PATH",
-        Path("spec/templates/event_template_registry.yaml"),
+        Path("spec/templates/registry.yaml"),
     )
 
     assert backlog.main() is None

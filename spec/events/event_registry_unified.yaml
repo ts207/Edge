@@ -6,7 +6,7 @@ metadata:
     event_defaults: spec/events/_defaults.yaml
     event_family_defaults: spec/events/_families.yaml
     event_specs_dir: spec/events
-    template_registry: spec/templates/event_template_registry.yaml
+    template_registry: spec/templates/registry.yaml
   notes: Single event-centric schema for phase1+phase2 composition. Generated compatibility
     sidecars are downstream outputs only. canonical_family is a staged compatibility
     alias of canonical_regime; legacy_family preserves current family-default wiring.

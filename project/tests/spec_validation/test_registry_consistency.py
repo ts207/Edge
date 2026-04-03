@@ -1,7 +1,7 @@
 """Template-family registry consistency test.
 
 Asserts that spec/grammar/family_registry.yaml and
-spec/templates/event_template_registry.yaml agree on family template lists.
+spec/templates/registry.yaml agree on family template lists.
 This prevents drift between the canonical authored template surface and the
 legacy compatibility family registry.
 """
@@ -15,7 +15,7 @@ import yaml
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _REPO_ROOT = Path(__file__).parent.parent.parent.parent  # project/ -> EDGEE-main/
 _FAMILY_REGISTRY = _REPO_ROOT / "spec" / "grammar" / "family_registry.yaml"
-_TEMPLATE_REGISTRY = _REPO_ROOT / "spec" / "templates" / "event_template_registry.yaml"
+_TEMPLATE_REGISTRY = _REPO_ROOT / "spec" / "templates" / "registry.yaml"
 
 
 def _load(path: Path) -> dict:
@@ -79,10 +79,10 @@ class TestRegistryConsistency:
                 mismatches.append(f"  {family}: {'; '.join(parts)}")
 
         assert not mismatches, (
-            "Registry mismatch — family_registry.yaml and template_registry.yaml disagree:\n"
+            "Registry mismatch — family_registry.yaml and templates/registry.yaml disagree:\n"
             + "\n".join(mismatches)
             + "\n\nFix: update spec/grammar/family_registry.yaml to match "
-            "spec/templates/event_template_registry.yaml (authoritative source)."
+            "spec/templates/registry.yaml (authoritative source)."
         )
 
     def test_no_empty_template_lists(self):
