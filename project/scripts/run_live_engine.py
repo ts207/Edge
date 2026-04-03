@@ -39,7 +39,37 @@ def _normalize_strategy_runtime(config: Dict[str, Any], *, config_path: Path) ->
         return {}
     if not isinstance(strategy_runtime, dict):
         raise LiveRuntimeConfigError(f"strategy_runtime must be a mapping: {config_path}")
-    return dict(strategy_runtime)
+    normalized = dict(strategy_runtime)
+    implemented = bool(normalized.get("implemented", False))
+    thesis_path = str(normalized.get("thesis_path", "") or "").strip()
+    thesis_run_id = str(normalized.get("thesis_run_id", "") or "").strip()
+    load_latest_theses = bool(normalized.pop("load_latest_theses", False))
+
+    if load_latest_theses:
+        raise LiveRuntimeConfigError(
+            "strategy_runtime.load_latest_theses is no longer supported; "
+            "set exactly one of strategy_runtime.thesis_path or strategy_runtime.thesis_run_id "
+            f"instead: {config_path}"
+        )
+    if thesis_path and thesis_run_id:
+        raise LiveRuntimeConfigError(
+            "strategy_runtime must set only one of thesis_path or thesis_run_id: "
+            f"{config_path}"
+        )
+    if implemented and not (thesis_path or thesis_run_id):
+        raise LiveRuntimeConfigError(
+            "strategy_runtime.implemented=true requires explicit thesis input via "
+            f"strategy_runtime.thesis_path or strategy_runtime.thesis_run_id: {config_path}"
+        )
+    if thesis_path:
+        normalized["thesis_path"] = thesis_path
+    else:
+        normalized.pop("thesis_path", None)
+    if thesis_run_id:
+        normalized["thesis_run_id"] = thesis_run_id
+    else:
+        normalized.pop("thesis_run_id", None)
+    return normalized
 
 
 def load_live_engine_config(path: Path) -> Dict[str, Any]:

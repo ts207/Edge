@@ -63,10 +63,9 @@ Use these to answer what survived, what failed, and why.
 
 Primary packaged-thesis surfaces:
 
+- `data/live/theses/<run_id>/promoted_theses.json`
+- runtime config or runtime invocation that references that batch explicitly
 - `data/live/theses/index.json`
-- `data/live/theses/<run_or_batch>/promoted_theses.json`
-- `docs/generated/seed_thesis_catalog.md`
-- `docs/generated/seed_thesis_packaging_summary.md`
 - `docs/generated/thesis_overlap_graph.md`
 
 Use these when the question is no longer “did the run look good?” and instead becomes “what reusable thesis objects exist right now?”
@@ -134,17 +133,20 @@ Use this when you need a short diagnosis without re-reading raw tables.
 
 Inspect in this order.
 
-1. `data/live/theses/index.json`
-2. `data/live/theses/<batch>/promoted_theses.json`
-3. `docs/generated/seed_thesis_catalog.md`
-4. `docs/generated/thesis_overlap_graph.md`
-5. `docs/generated/founding_thesis_evidence_summary.md`
+1. `data/live/theses/<run_id>/promoted_theses.json`
+2. runtime config or runtime invocation that references that batch explicitly
+3. `docs/generated/thesis_overlap_graph.md`
+4. `docs/generated/founding_thesis_evidence_summary.md`
+5. `data/live/theses/index.json` only as a catalog of available batches
+6. advanced packaging inventories such as `docs/generated/seed_thesis_catalog.md` only if you are maintaining the bootstrap lane
 
 Questions to answer:
 
-- what the latest packaged batch is
+- what specific run produced the batch
 - how many active theses exist
-- which promotion classes and deployment states are present
+- which deployment states are present
+- what deployment-state restrictions apply
+- what promotion-class caveats still apply
 - how overlap groups are formed
 - where evidence gaps remain
 
@@ -160,10 +162,10 @@ Already present in `docs/generated/`:
 
 - `system_map.md`
 - `event_contract_reference.md`
-- `promotion_seed_inventory.md`
+- `promotion_seed_inventory.md` for advanced bootstrap maintenance
 - `thesis_empirical_summary.md`
-- `seed_thesis_catalog.md`
-- `seed_thesis_packaging_summary.md`
+- `seed_thesis_catalog.md` for advanced bootstrap maintenance
+- `seed_thesis_packaging_summary.md` for advanced bootstrap maintenance
 - `thesis_overlap_graph.md`
 - `founding_thesis_evidence_summary.md`
 - `structural_confirmation_summary.md`

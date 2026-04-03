@@ -1,6 +1,6 @@
 # Edge documentation
 
-This directory is organized around one question: **what is the shortest correct path from repo orientation to a trustworthy run or packaged thesis?**
+This directory is organized around one question: **what is the shortest correct path from repo orientation to a trustworthy run or explicit runtime thesis batch?**
 
 The documentation set is intentionally split into four classes.
 
@@ -17,7 +17,7 @@ Read these first.
 7. [06_QUALITY_GATES_AND_PROMOTION.md](06_QUALITY_GATES_AND_PROMOTION.md) — quality model, promotion ladder, deployment meaning
 8. [07_BEST_PRACTICES_AND_FAILURE_MODES.md](07_BEST_PRACTICES_AND_FAILURE_MODES.md) — bounded-work operating rules and common failure patterns
 9. [08_TESTING_AND_MAINTENANCE.md](08_TESTING_AND_MAINTENANCE.md) — test surfaces, regeneration, maintenance workflow
-10. [09_THESIS_BOOTSTRAP_AND_PROMOTION.md](09_THESIS_BOOTSTRAP_AND_PROMOTION.md) — thesis packaging lane
+10. [09_THESIS_BOOTSTRAP_AND_PROMOTION.md](09_THESIS_BOOTSTRAP_AND_PROMOTION.md) — advanced internal/bootstrap packaging lane
 11. [10_APPS_PLUGINS_AND_AGENTS.md](10_APPS_PLUGINS_AND_AGENTS.md) — app, plugin, and agent surfaces
 12. [11_LIVE_THESIS_STORE_AND_OVERLAP.md](11_LIVE_THESIS_STORE_AND_OVERLAP.md) — packaged thesis runtime model
 13. [14_PROPOSAL_TO_LIVE_TRADE_TRACE.md](14_PROPOSAL_TO_LIVE_TRADE_TRACE.md) — full proposal-to-runtime and live-trading trace
@@ -39,10 +39,10 @@ These files are generated. They are evidence and inventory, not narrative onboar
 
 - [generated/system_map.md](generated/system_map.md)
 - [generated/event_contract_reference.md](generated/event_contract_reference.md)
-- [generated/promotion_seed_inventory.md](generated/promotion_seed_inventory.md)
+- [generated/promotion_seed_inventory.md](generated/promotion_seed_inventory.md) — advanced bootstrap inventory
 - [generated/thesis_empirical_summary.md](generated/thesis_empirical_summary.md)
-- [generated/seed_thesis_catalog.md](generated/seed_thesis_catalog.md)
-- [generated/seed_thesis_packaging_summary.md](generated/seed_thesis_packaging_summary.md)
+- [generated/seed_thesis_catalog.md](generated/seed_thesis_catalog.md) — advanced bootstrap packaging summary
+- [generated/seed_thesis_packaging_summary.md](generated/seed_thesis_packaging_summary.md) — advanced bootstrap packaging summary
 - [generated/thesis_overlap_graph.md](generated/thesis_overlap_graph.md)
 - [generated/founding_thesis_evidence_summary.md](generated/founding_thesis_evidence_summary.md)
 - [generated/structural_confirmation_summary.md](generated/structural_confirmation_summary.md)
@@ -73,7 +73,7 @@ Read `00 -> 01 -> 02 -> 03 -> 04 -> 05`.
 
 Read `01 -> 02 -> 03 -> 04 -> 06 -> 08 -> VERIFICATION.md`.
 
-### Thesis packaging maintainer
+### Thesis/export maintainer
 
 Read `03 -> 05 -> 06 -> 09 -> 11`.
 

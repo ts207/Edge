@@ -198,10 +198,17 @@ def test_thesis_store_event_id_and_family_use_distinct_filter_paths(tmp_path: Pa
     assert by_event_family == []
 
 
-def test_thesis_store_loads_latest_index(tmp_path: Path) -> None:
+def test_thesis_store_latest_requires_explicit_compatibility_opt_in(tmp_path: Path) -> None:
     _write_store_fixture(tmp_path, "run_1")
 
-    store = ThesisStore.latest(data_root=tmp_path)
+    with pytest.raises(RuntimeError, match="Implicit latest thesis resolution is disabled"):
+        ThesisStore.latest(data_root=tmp_path)
+
+
+def test_thesis_store_loads_latest_index_in_compatibility_mode(tmp_path: Path) -> None:
+    _write_store_fixture(tmp_path, "run_1")
+
+    store = ThesisStore.latest(data_root=tmp_path, allow_implicit_latest=True)
 
     assert store.run_id == "run_1"
     assert len(store.filter(status="pending_blueprint")) == 1
@@ -221,4 +228,4 @@ def test_thesis_store_raises_on_corrupted_latest_index(tmp_path: Path) -> None:
     live_thesis_index_path(tmp_path).write_text("{not-json", encoding="utf-8")
 
     with pytest.raises(DataIntegrityError):
-        ThesisStore.latest(data_root=tmp_path)
+        ThesisStore.latest(data_root=tmp_path, allow_implicit_latest=True)

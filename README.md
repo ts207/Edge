@@ -4,18 +4,22 @@ Edge is a proposal-driven crypto research and packaging repository.
 
 The repo is built to move a bounded claim through a governed path:
 
-`proposal -> validated experiment plan -> artifacted run -> candidate filtering -> promotion decision -> packaged thesis -> live/runtime consumption`
+`proposal -> validated experiment plan -> artifacted run -> promotion decision -> exported thesis batch -> live/runtime consumption`
 
 This is not a loose notebook workspace. The default operating unit is a **bounded proposal** with explicit trigger scope, template scope, horizons, directions, contexts, and promotion intent.
 
 ## What the repository actually does
 
-The codebase has four operator-facing actions:
+The codebase has four primary operator-facing actions:
 
 1. `discover` — translate a proposal, validate it, and run a bounded research slice
-2. `package` — build or refresh the thesis bootstrap lane and packaged thesis store
-3. `validate` — run contract, governance, and minimum green gate checks
-4. `review` — diagnose a run, compare runs, or inspect regime stability
+2. `review` — diagnose a run, compare runs, or inspect regime stability
+3. `export` — turn one specific promoted run into a runtime thesis batch
+4. `validate` — run contract, governance, and minimum green gate checks
+
+It also keeps one advanced maintenance lane:
+
+- `package` — deprecated/internal bootstrap packaging for broader thesis governance work, not the canonical runtime-batch path
 
 Behind those actions are three connected layers:
 
@@ -37,9 +41,9 @@ Use this sequence when reading the repo:
    `project/pipelines/run_all.py` coordinates ingest, core, research, runtime-invariant, and evaluation stages.
 5. **Research services produce candidate and promotion artifacts.**
    `project/research/services/` is the canonical service layer.
-6. **Packaging creates promoted theses.**
-   `data/live/theses/` is the packaged thesis store consumed by live/runtime code.
-7. **The live layer consumes packaged theses, not raw notes.**
+6. **Promotion export creates runtime thesis batches from one run at a time.**
+   `python -m project.research.export_promoted_theses --run_id <run_id>` writes the canonical runtime batch under `data/live/theses/<run_id>/`.
+7. **The live layer consumes explicit thesis batches, not raw notes or implicit latest pointers.**
    `project/live/` and `project/portfolio/` work from packaged thesis objects and overlap metadata.
 
 ## Preferred front door
@@ -48,7 +52,7 @@ Use these surfaces first:
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run
-make package
+make export RUN_ID=<run_id>
 make validate
 make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report
 make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
@@ -120,10 +124,10 @@ Important generated docs already present in this snapshot include:
 
 - `docs/generated/system_map.md`
 - `docs/generated/event_contract_reference.md`
-- `docs/generated/promotion_seed_inventory.md`
+- `docs/generated/promotion_seed_inventory.md` for advanced bootstrap maintenance
 - `docs/generated/thesis_empirical_summary.md`
-- `docs/generated/seed_thesis_catalog.md`
-- `docs/generated/seed_thesis_packaging_summary.md`
+- `docs/generated/seed_thesis_catalog.md` for advanced bootstrap maintenance
+- `docs/generated/seed_thesis_packaging_summary.md` for advanced bootstrap maintenance
 - `docs/generated/thesis_overlap_graph.md`
 - `docs/generated/founding_thesis_evidence_summary.md`
 - `docs/generated/structural_confirmation_summary.md`
@@ -150,8 +154,9 @@ python -m project.scripts.run_demo_synthetic_proposal --plan_only 1
 ## Ground rules
 
 - Learn the operator path before low-level scripts.
-- Treat proposals and packaged theses as first-class contracts.
+- Treat proposals and exported thesis batches as first-class contracts.
 - Prefer canonical service and CLI surfaces over compatibility wrappers.
 - Do not treat exit status alone as proof that a run is good.
-- Do not treat `seed_promoted` as equivalent to production readiness.
+- Do not answer "can this trade?" from promotion class. Inspect `deployment_state` first.
+- Do not rely on an implicit latest thesis batch for runtime selection.
 - Do not treat generated markdown as a substitute for understanding the code path that produced it.

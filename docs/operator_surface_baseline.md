@@ -4,14 +4,19 @@ This document records the reduced operator-facing execution surface.
 
 ## Canonical
 
-Use one command family for normal research issuance and one packaging lane for thesis work:
+Use one command family for normal research issuance, one review family, and one explicit export bridge:
 
 - `edge operator preflight`
 - `edge operator plan`
 - `edge operator run`
-- thesis bootstrap builders for packaging and overlap refresh
+- `edge operator diagnose`
+- `edge operator regime-report`
+- `edge operator compare`
+- `python -m project.research.export_promoted_theses --run_id <run_id>`
 
 `edge` and `edge-backtest` point to the same CLI surface. `backtest` remains an alias.
+
+Treat thesis bootstrap builders as advanced maintenance surfaces, not the default front door.
 
 ## Transitional
 
@@ -38,7 +43,7 @@ These are still maintained for compatibility or specialized workflows, but shoul
 
 The repo keeps its existing engines and wrappers, but the preferred workflow is now:
 
-`discover -> package -> validate -> review`
+`discover -> review -> export -> validate`
 
 with bounded research issuance anchored on:
 

@@ -11,7 +11,7 @@ At a high level, it does five things:
 1. **defines domain contracts** for events, episodes, states, templates, regimes, and promotion rules
 2. **turns proposals into bounded experiment plans**
 3. **executes orchestrated pipeline stages** to produce candidate and promotion artifacts
-4. **packages surviving claims into promoted thesis objects**
+4. **exports promoted run results into runtime thesis batches**
 5. **serves packaged theses to live/runtime and portfolio logic**
 
 That makes the repo neither purely backtest-only nor purely live-only. It is a bridge from governed research to packaged runtime inputs.
@@ -28,11 +28,11 @@ It specifies at least:
 - date window
 - symbol scope
 - timeframe
-- trigger space
-- template scope
-- horizon scope
-- direction scope
-- entry lag scope
+- one trigger
+- one template
+- one horizon
+- one direction
+- one entry lag
 - objective and promotion profile
 
 The proposal contract lives in `project/research/agent_io/proposal_schema.py`.
@@ -117,11 +117,19 @@ A promoted thesis contains fields such as:
 
 Packaged theses live under `data/live/theses/` and the contract lives in `project/live/contracts/promoted_thesis.py`.
 
+### Thesis batch
+
+A thesis batch is the runtime JSON artifact exported for one explicit run.
+
+Canonical path:
+
+- `data/live/theses/<run_id>/promoted_theses.json`
+
 ## Lifecycle model
 
 ### Bounded discovery lifecycle
 
-`proposal -> preflight -> plan -> run -> run manifest -> phase2 candidates -> promotion outputs -> diagnose/compare/regime report`
+`proposal -> preflight -> plan -> run -> run manifest -> phase2 candidates -> promotion outputs -> diagnose/compare/regime report -> exported thesis batch`
 
 This lifecycle is for answering a bounded question.
 
@@ -129,7 +137,14 @@ This lifecycle is for answering a bounded question.
 
 `candidate -> tested -> seed_promoted -> paper_promoted -> production_promoted`
 
-This lifecycle is for making a claim reusable by live/runtime systems.
+This lifecycle is an internal governance ladder. Runtime should still consume an explicit exported batch and inspect deployment state directly.
+For operator questions, the real permission model is:
+
+- `monitor_only`
+- `paper_only`
+- `live_enabled`
+
+The question "can this trade?" should be answered from deployment state, not from the internal promotion ladder.
 
 ## Subsystem roles
 

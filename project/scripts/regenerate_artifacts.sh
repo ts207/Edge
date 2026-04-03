@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+THESIS_RUN_ID="${THESIS_RUN_ID:-seed_founding_batch_v1}"
 
 echo "Regenerating repository artifacts..."
 
@@ -52,7 +53,8 @@ echo "[6/13] Regenerating Seed Thesis Packaging Artifacts..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_seed_packaging_artifacts.py"
 
 echo "[7/13] Regenerating Thesis Overlap Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_thesis_overlap_artifacts.py"
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_thesis_overlap_artifacts.py" \
+  --run_id "$THESIS_RUN_ID"
 
 echo "[8/13] Regenerating paired-event studies for packaged confirmation theses..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_paired_event_study.py" \
@@ -75,11 +77,13 @@ echo "[12/13] Regenerating Ontology Audit..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/ontology_consistency_audit.py" \
     --output "$REPO_ROOT/docs/generated/ontology_audit.json"
 
-echo "[13/13] Verifying latest thesis store loads cleanly..."
-PYTHONPATH="$REPO_ROOT" python3 - <<'PY'
+echo "[13/13] Verifying thesis store loads cleanly for THESIS_RUN_ID=$THESIS_RUN_ID..."
+PYTHONPATH="$REPO_ROOT" THESIS_RUN_ID="$THESIS_RUN_ID" python3 - <<'PY'
+import os
 from project.live.thesis_store import ThesisStore
-store = ThesisStore.latest()
-print(f"Loaded {len(store.all())} theses from latest run_id={store.run_id}")
+run_id = os.environ["THESIS_RUN_ID"]
+store = ThesisStore.from_run_id(run_id)
+print(f"Loaded {len(store.all())} theses from explicit run_id={store.run_id or run_id}")
 PY
 
 echo "Artifact regeneration complete."

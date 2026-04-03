@@ -16,12 +16,13 @@ ENABLE_CROSS_VENUE_SPOT_PIPELINE ?= 0
 CHANGED_BASE ?= origin/main
 CHANGED_HEAD ?= HEAD
 
-.PHONY: help discover package validate review run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance
+.PHONY: help discover export package validate review run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance
 
 help:
 	@echo "Operator actions:"
 	@echo "  discover           - Canonical bounded research entry. Usage: make discover PROPOSAL=spec/proposals/demo_synthetic_fast.yaml DISCOVER_ACTION=preflight|plan|run"
-	@echo "  package            - Thesis bootstrap lane: seed inventory -> testing -> empirical -> evidence -> packaging -> overlap"
+	@echo "  export             - Canonical runtime-batch export. Usage: make export RUN_ID=<run_id>"
+	@echo "  package            - Advanced bootstrap maintenance lane, not the canonical runtime-batch path"
 	@echo "  validate           - Canonical validation surface: contracts + minimum green gate"
 	@echo "  review             - Post-run review. Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report or make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"
 	@echo ""
@@ -91,11 +92,17 @@ DISCOVER_ACTION ?= plan
 REVIEW_ACTION ?= diagnose
 PROPOSAL ?=
 RUN_IDS ?=
+THESIS_RUN_ID ?= seed_founding_batch_v1
+RUN_ID ?=
 
 discover:
 	@if [ -z "$(PROPOSAL)" ]; then echo "Usage: make discover PROPOSAL=path/to/proposal.yaml DISCOVER_ACTION=preflight|plan|run"; exit 2; fi
 	@if [ "$(DISCOVER_ACTION)" != "preflight" ] && [ "$(DISCOVER_ACTION)" != "plan" ] && [ "$(DISCOVER_ACTION)" != "run" ]; then echo "DISCOVER_ACTION must be one of: preflight, plan, run"; exit 2; fi
 	PYTHONPATH=. $(PYTHON) -m project.cli operator $(DISCOVER_ACTION) --proposal $(PROPOSAL)
+
+export:
+	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make export RUN_ID=<run_id>"; exit 2; fi
+	PYTHONPATH=. $(PYTHON) -m project.research.export_promoted_theses --run_id $(RUN_ID)
 
 package:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_bootstrap_artifacts
@@ -104,7 +111,7 @@ package:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_founding_thesis_evidence
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_packaging_artifacts
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_structural_confirmation_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts
+	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(THESIS_RUN_ID)
 	./project/scripts/regenerate_artifacts.sh
 
 validate:

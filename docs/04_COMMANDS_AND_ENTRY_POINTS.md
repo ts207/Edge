@@ -8,10 +8,11 @@ Prefer the highest-level surface that still does exactly what you need.
 
 Use this order of preference:
 
-1. `make discover|package|validate|review`
+1. `make discover|validate|review` plus explicit run export
 2. `edge operator ...`
 3. dedicated console scripts such as `edge-run-all`, `edge-phase2-discovery`, `edge-promote`, `edge-live-engine`
-4. direct `python -m project.scripts.*` maintenance scripts
+4. `make package` only for advanced bootstrap/governance maintenance
+5. direct `python -m project.scripts.*` maintenance scripts
 
 ## Canonical operator commands
 
@@ -35,13 +36,35 @@ These are the canonical operator surfaces exposed by `project.cli`.
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run
-make package
+make export RUN_ID=<run_id>
 make validate
 make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report
 make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
 ```
 
 These should be the first surfaces taught to a new operator.
+
+### Canonical run-export bridge
+
+```bash
+make export RUN_ID=<run_id>
+```
+
+Module equivalent:
+
+```bash
+python -m project.research.export_promoted_theses --run_id <run_id>
+```
+
+Use this when one specific promoted run should become a runtime thesis batch.
+Optional explicit bridge controls also exist on the module surface:
+
+```bash
+python -m project.research.export_promoted_theses \
+  --run_id <run_id> \
+  --register-runtime <name> \
+  --set-deployment-state <thesis_id_or_candidate_id>=live_enabled
+```
 
 ## Pipeline entry points
 
@@ -98,17 +121,20 @@ When to use them:
 ## Packaging and generated-doc scripts
 
 These scripts live under `project/scripts/` and should be treated as advanced or maintenance entry points.
+They are not the canonical way to produce a runtime thesis batch from a run.
 
-Primary bootstrap lane:
+Legacy/bootstrap packaging lane:
 
 ```bash
 python -m project.scripts.build_seed_bootstrap_artifacts
+# optional explicit thesis context:
+# python -m project.scripts.build_seed_bootstrap_artifacts --thesis_run_id <run_id>
 python -m project.scripts.build_seed_testing_artifacts
 python -m project.scripts.build_seed_empirical_artifacts
 python -m project.scripts.build_founding_thesis_evidence
 python -m project.scripts.build_seed_packaging_artifacts
 python -m project.scripts.build_structural_confirmation_artifacts
-python -m project.scripts.build_thesis_overlap_artifacts
+python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ./project/scripts/regenerate_artifacts.sh
 ```
 
@@ -159,13 +185,23 @@ edge operator regime-report --run_id <run_id>
 edge operator compare --run_ids <run_a,run_b>
 ```
 
-### You want to rebuild the packaged thesis store
+### You want a runtime thesis batch from one specific run
+
+Use:
+
+```bash
+make export RUN_ID=<run_id>
+```
+
+### You want to rebuild the legacy/bootstrap packaging lane
 
 Use:
 
 ```bash
 make package
 ```
+
+This is maintenance work. It is not the canonical source of a runtime thesis batch for one specific run.
 
 ### You changed contracts or architecture and want guardrails
 

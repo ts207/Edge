@@ -18,7 +18,9 @@ The most important repo-state conclusion first:
 - That thesis export is **not automatically live-trading eligible**.
 - In the code snapshot in this repo, the canonical proposal path exports theses as **`paper_promoted` + `paper_only`**, and because proposal-driven operator runs do **not** include blueprint compilation, those theses will usually start as **`pending_blueprint`**.
 - The live runtime in `runtime_mode='trading'` rejects any thesis whose `deployment_state != 'live_enabled'`.
-- I do **not** see an automated end-to-end path in this snapshot that takes a proposal-run output all the way to **`production_promoted` + `live_enabled`**. That final promotion appears to require a separate governance/export step or additional code not present in the canonical operator path.
+- There is now an explicit operator-managed bridge on the export surface:
+  `python -m project.research.export_promoted_theses --run_id <run_id> --register-runtime <name> --set-deployment-state <thesis_id_or_candidate_id>=live_enabled`
+  but it is still an explicit human decision, not an automatic promotion.
 
 So the correct narrative is:
 
@@ -569,14 +571,14 @@ It is much richer than a raw candidate row.
 
 This is the main place where people misread the repo.
 
-### 10.1 The proposal path exports theses as paper-only
+### 10.1 The proposal path exports theses as paper-only by default
 
 Inside `project/research/live_export.py`, the proposal-run thesis export currently constructs theses as:
 
 - `promotion_class="paper_promoted"`
 - `deployment_state="paper_only"`
 
-That means the proposal-driven export is runtime-readable, but not live-trading eligible.
+That means the proposal-driven export is runtime-readable, but not live-trading eligible unless an explicit deployment-state override is later applied.
 
 ### 10.2 Proposal runs do not compile strategy blueprints
 
@@ -632,12 +634,12 @@ The effect is important:
 - the thesis store can be re-exported with blueprint-linked theses
 - statuses may move from `pending_blueprint` to `active`
 
-But even here, in the current snapshot, the export still sets:
+But even here, by default, the export still sets:
 
 - `promotion_class="paper_promoted"`
 - `deployment_state="paper_only"`
 
-So blueprint activation improves runtime usability, but still does not make the thesis live-enabled.
+So blueprint activation improves runtime usability, but still does not make the thesis live-enabled unless an operator explicitly marks deployment state during or after export.
 
 ---
 
@@ -651,13 +653,13 @@ make package
 
 This runs scripts such as:
 
-- `build_seed_bootstrap_artifacts`
+- `build_seed_bootstrap_artifacts` optionally with `--thesis_run_id <run_id>`
 - `build_seed_testing_artifacts`
 - `build_seed_empirical_artifacts`
 - `build_founding_thesis_evidence`
 - `build_seed_packaging_artifacts`
 - `build_structural_confirmation_artifacts`
-- `build_thesis_overlap_artifacts`
+- `build_thesis_overlap_artifacts --run_id <run_id>`
 
 This path is handled primarily by:
 
@@ -665,6 +667,7 @@ This path is handled primarily by:
 - `project/research/seed_package.py`
 
 This lane builds packaged theses from bootstrap/founding-thesis artifacts, not directly from a single proposal-issued operator run.
+It is not the canonical answer to "which runtime thesis batch should this config load?".
 
 Its output uses explicit promotion/deployment classes such as:
 
@@ -677,7 +680,11 @@ The repo also defines the conceptual mapping:
 
 via `project/research/services/promotion_service.py`
 
-But in this repo snapshot, I do not see the canonical proposal path automatically emitting `production_promoted` live-enabled theses.
+But the canonical operator story should still be read as:
+
+- export from one run
+- point runtime at that explicit run batch
+- inspect `deployment_state` for permission
 
 ---
 
@@ -692,7 +699,7 @@ It loads a thesis store:
 The store is retrieved either:
 
 - from a specific run id
-- or from `data/live/theses/index.json` as the latest published thesis batch
+- or from an explicitly configured thesis batch path
 
 The runtime then evaluates incoming market state against those theses.
 
@@ -956,11 +963,12 @@ It becomes **eligible for real trading** only when the thesis has `deployment_st
 And in the current code snapshot:
 
 - the canonical proposal path reaches runtime-readable thesis export,
-- but I do **not** see it automatically reaching `live_enabled`.
+- and the explicit export surface can register a named runtime batch and mark selected theses `live_enabled`,
+- but that promotion-to-runtime step is still operator-driven rather than automatic.
 
 So the current proposal path is best described as:
 
-**proposal -> paper thesis export -> optional blueprint activation -> runtime inspection/paper path**,
+**proposal -> paper thesis export -> optional blueprint activation -> explicit deployment-state decision -> runtime inspection/paper/live path**,
 
 not an automatic:
 

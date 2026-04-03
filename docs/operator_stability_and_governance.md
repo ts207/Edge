@@ -1,6 +1,7 @@
 # Operator stability and governance
 
-The operator surface now spans both bounded experiments and thesis bootstrap governance.
+The default operator surface is bounded experiments plus explicit run export.
+Bootstrap governance remains an advanced maintainer lane.
 
 ## Bounded experiment review surfaces
 
@@ -25,9 +26,9 @@ Artifacts land under `data/reports/operator/`:
 - `regime_split_report/<run_id>/`
 - `negative_result_diagnostics/<run_id>/`
 
-## Thesis bootstrap governance surfaces
+## Advanced bootstrap governance surfaces
 
-After the bootstrap lane was added, the operator should also inspect:
+If you are maintaining bootstrap artifacts, inspect:
 
 - `docs/generated/promotion_seed_inventory.*`
 - `docs/generated/thesis_testing_scorecards.*`
@@ -54,7 +55,13 @@ Use the canonical sequence:
 5. `edge operator regime-report --run_id <run_id>`
 6. `edge operator compare --run_ids <baseline_run,followup_run>`
 
-Then, if the result is thesis-queue-worthy, switch to the bootstrap lane and regenerate the seed / empirical / packaging artifacts.
+Then, if the result should become a runtime batch, export it from that run directly:
+
+```bash
+make export RUN_ID=<run_id>
+```
+
+Only switch to the bootstrap lane when you are intentionally maintaining seed / empirical / packaging artifacts.
 
 ## Governance surfaces
 
@@ -72,7 +79,7 @@ Regenerate the operator inventory after command-surface changes with:
 python -m project.scripts.generate_operator_surface_inventory
 ```
 
-Regenerate the broader thesis/bootstrap artifact surfaces with:
+Regenerate the broader bootstrap artifact surfaces with:
 
 ```bash
 ./project/scripts/regenerate_artifacts.sh

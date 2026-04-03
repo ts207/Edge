@@ -7,15 +7,18 @@ Generated from `project/cli.py` and `Makefile`. Update this file with `python -m
 Use these surfaces first:
 
 - `make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run`
-- `make package`
+- `make export RUN_ID=<run_id>`
 - `make validate`
 - `make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report`
 - `make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>`
+
+Treat `make package` as an advanced bootstrap/governance surface, not the default way to produce a runtime thesis batch.
 
 Direct CLI equivalents:
 
 - `edge operator preflight|plan|run` for bounded research issuance
 - `edge operator diagnose|regime-report|compare` for post-run review
+- `python -m project.research.export_promoted_theses --run_id <run_id>` for explicit thesis-batch export
 
 ## Canonical operator commands
 
@@ -32,7 +35,7 @@ Direct CLI equivalents:
 ## Operator action targets
 
 - `discover`
-- `package`
+- `export`
 - `validate`
 - `review`
 
@@ -68,6 +71,7 @@ Direct CLI equivalents:
 - `lint`
 - `minimum-green-gate`
 - `monitor`
+- `package`
 - `pre-commit`
 - `run`
 - `style`
@@ -110,6 +114,7 @@ Direct CLI equivalents:
     "lint",
     "minimum-green-gate",
     "monitor",
+    "package",
     "pre-commit",
     "run",
     "style",
@@ -150,6 +155,7 @@ Direct CLI equivalents:
     "discover-edges-from-raw",
     "discover-hybrid",
     "discover-target",
+    "export",
     "format",
     "format-check",
     "golden-certification",
@@ -172,7 +178,7 @@ Direct CLI equivalents:
   ],
   "operator_action_targets": [
     "discover",
-    "package",
+    "export",
     "validate",
     "review"
   ]

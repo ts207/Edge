@@ -65,6 +65,8 @@ Common promotion concerns include:
 
 ## Promotion ladder
 
+These lifecycle labels remain useful internally, but they are not the primary operator-facing permission model.
+
 The lifecycle used by the repo is:
 
 1. `candidate`
@@ -73,7 +75,7 @@ The lifecycle used by the repo is:
 4. `paper_promoted`
 5. `production_promoted`
 
-This ladder is meaningful. Do not collapse it into a generic “good thesis” label.
+This ladder is meaningful. Do not collapse it into a generic “good thesis” label, but also do not mistake it for runtime permission.
 
 ### `candidate`
 
@@ -104,13 +106,30 @@ These are separate fields for a reason.
 - **promotion class** = how strong the evidence is
 - **deployment state** = where the thesis may be used now
 
+For operator decisions, deployment state is the primary permission model:
+
+- `monitor_only` means no trading
+- `paper_only` means paper/shadow use only
+- `live_enabled` is the only state that permits trading runtime
+
 Typical pairings:
 
 - `seed_promoted` + `monitor_only`
 - `paper_promoted` + `paper_only`
-- `production_promoted` + `live_enabled` or another explicitly live-eligible state
+- `production_promoted` + `live_enabled`
 
 Never infer one from the other.
+
+## Operator-facing readout
+
+When summarizing whether something can be used by runtime, prefer this order:
+
+1. was a thesis batch exported from a specific run
+2. what deployment state that batch carries
+3. what evidence caveat the promotion class still implies
+
+That order is clearer than leading with `seed_promoted` / `paper_promoted` / `production_promoted`.
+The question "can this trade?" should be answerable from deployment state alone.
 
 ## Bootstrap lane quality
 
@@ -166,4 +185,5 @@ Action: kill or reframe.
 - ignoring multiple-testing and stability issues
 - assuming a promoted row is a packaged thesis
 - assuming `seed_promoted` means live-ready
+- leading with promotion class when deployment state is the actual runtime permission
 - reading only one table and inferring the entire quality story

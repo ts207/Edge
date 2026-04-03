@@ -49,9 +49,11 @@ python -m project.scripts.build_system_map
 python -m project.scripts.generate_operator_surface_inventory
 python -m project.scripts.build_event_contract_artifacts
 python -m project.scripts.build_seed_bootstrap_artifacts
+# optional explicit thesis context:
+# python -m project.scripts.build_seed_bootstrap_artifacts --thesis_run_id <run_id>
 python -m project.scripts.build_seed_empirical_artifacts
 python -m project.scripts.build_seed_packaging_artifacts
-python -m project.scripts.build_thesis_overlap_artifacts
+python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ./project/scripts/regenerate_artifacts.sh
 ```
 
@@ -112,6 +114,7 @@ Then check:
 Run:
 
 ```bash
+python -m project.research.export_promoted_theses --run_id <run_id>
 make package
 python -m project.scripts.build_thesis_overlap_artifacts
 ```
@@ -119,6 +122,7 @@ python -m project.scripts.build_thesis_overlap_artifacts
 Then check:
 
 - `data/live/theses/index.json`
+- `data/live/theses/<run_id>/promoted_theses.json`
 - `docs/generated/seed_thesis_catalog.md`
 - `docs/generated/seed_thesis_packaging_summary.md`
 - `docs/generated/thesis_overlap_graph.md`

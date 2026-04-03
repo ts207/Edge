@@ -185,6 +185,7 @@ def test_validate_live_runtime_environment_rejects_missing_production_credential
                 "live_state_snapshot_path: state/live_state.json",
                 "strategy_runtime:",
                 "  implemented: true",
+                "  thesis_run_id: run_prod_001",
             ]
         )
         + "\n",
@@ -246,6 +247,57 @@ def test_validate_live_runtime_environment_rejects_trading_mode_without_strategy
         raise AssertionError("expected LiveRuntimeConfigError")
 
     assert "strategy_runtime.implemented=true" in message
+
+
+def test_load_live_engine_config_rejects_latest_thesis_fallback(tmp_path: Path) -> None:
+    config_path = tmp_path / "live_config.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "runtime_mode: monitor_only",
+                "strategy_runtime:",
+                "  implemented: true",
+                "  load_latest_theses: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        run_live_engine.load_live_engine_config(config_path)
+    except run_live_engine.LiveRuntimeConfigError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected LiveRuntimeConfigError")
+
+    assert "load_latest_theses is no longer supported" in message
+
+
+def test_load_live_engine_config_requires_explicit_thesis_source_when_enabled(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "live_config.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "runtime_mode: monitor_only",
+                "strategy_runtime:",
+                "  implemented: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        run_live_engine.load_live_engine_config(config_path)
+    except run_live_engine.LiveRuntimeConfigError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected LiveRuntimeConfigError")
+
+    assert "requires explicit thesis input" in message
 
 
 def test_run_live_engine_print_session_metadata_skips_runtime_env_validation(
@@ -313,6 +365,7 @@ def test_run_live_engine_start_validates_runtime_environment_before_start(
                 "live_state_snapshot_path: state/live_state.json",
                 "strategy_runtime:",
                 "  implemented: true",
+                "  thesis_run_id: run_paper_001",
             ]
         )
         + "\n",
@@ -574,6 +627,7 @@ def test_run_live_engine_start_blocks_when_venue_preflight_fails(
                 "live_state_snapshot_path: state/live_state.json",
                 "strategy_runtime:",
                 "  implemented: true",
+                "  thesis_run_id: run_prod_001",
             ]
         )
         + "\n",
@@ -634,6 +688,7 @@ def test_run_live_engine_start_hydrates_initial_account_snapshot_before_start(
                 "live_state_snapshot_path: state/live_state.json",
                 "strategy_runtime:",
                 "  implemented: true",
+                "  thesis_run_id: run_paper_001",
             ]
         )
         + "\n",

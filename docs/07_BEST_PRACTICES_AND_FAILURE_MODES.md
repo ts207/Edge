@@ -19,12 +19,13 @@ If all four are broad, the proposal is probably too loose.
 
 If the run is meant to confirm or challenge an earlier result, encode that relationship and use compare-oriented review afterward.
 
-### Separate discovery from packaging intent
+### Separate discovery from export and packaging intent
 
 Discovery asks whether a claim exists.
-Packaging asks whether the claim deserves to become a reusable thesis object.
+Export asks whether one specific run should become runtime input.
+Packaging asks whether the claim deserves broader bootstrap/governance treatment as a reusable thesis object.
 
-Do not move into packaging because a run “felt good.” Move when the evidence and operating need justify a packaged thesis.
+Do not move into packaging because a run “felt good.” Export first when the need is runtime input from one run; package only when the evidence and operating need justify broader thesis governance work.
 
 ### Read manifests before summaries
 
@@ -74,7 +75,8 @@ Symptoms:
 Fix:
 
 - inspect promotion outputs
-- inspect bootstrap artifacts
+- export a thesis batch for the specific run if runtime input is the goal
+- inspect bootstrap artifacts only when broader packaging work is intended
 - inspect packaged thesis store state
 
 ### Promotion class mistaken for deployment permission
@@ -86,8 +88,8 @@ Symptoms:
 
 Fix:
 
-- read both `promotion_class` and `deployment_state`
-- treat them as different axes
+- answer "can this trade?" from `deployment_state`
+- treat `promotion_class` as supporting evidence metadata, not runtime permission
 
 ### Compatibility wrapper treated as canonical implementation
 
@@ -140,4 +142,4 @@ After running:
 - Did the manifest reconcile?
 - Are phase2 artifacts present?
 - Did promotion fail mechanically or statistically?
-- Is the next action repair, confirm, kill, or package?
+- Is the next action repair, confirm, kill, export, or package?

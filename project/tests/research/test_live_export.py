@@ -87,6 +87,9 @@ def test_export_promoted_theses_pending_then_active_with_blueprint(tmp_path: Pat
     assert contract_payload["contracts"][0]["authored_contract_linked"] is False
     assert contract_payload["contracts"][0]["primary_event_id"] == "VOL_SHOCK"
     assert contract_payload["contracts"][0]["compat_event_family"] == "VOL_SHOCK"
+    index_payload = json.loads(first.index_path.read_text(encoding="utf-8"))
+    assert index_payload["latest_run_id"] == "run_1"
+    assert index_payload["default_resolution_disabled"] is True
 
     second = export_promoted_theses_for_run(
         "run_1",
@@ -227,3 +230,55 @@ def test_export_promoted_theses_derives_multi_clause_requirements_from_metadata(
     assert thesis["source"]["event_contract_ids"] == ["VOL_SHOCK", "LIQUIDITY_VACUUM"]
     assert contract_payload["contracts"][0]["authored_contract_linked"] is False
     assert contract_payload["contracts"][0]["required_episodes"] == ["EP_LIQUIDITY_SHOCK"]
+
+
+def test_export_promoted_theses_can_register_runtime_batch_and_override_deployment_state(
+    tmp_path: Path,
+) -> None:
+    promoted_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK",
+                "status": "PROMOTED",
+            }
+        ]
+    )
+
+    result = export_promoted_theses_for_run(
+        "run_1",
+        data_root=tmp_path,
+        bundles=[_bundle()],
+        promoted_df=promoted_df,
+        deployment_state_overrides={"cand_1": "live_enabled"},
+        register_runtime_name="paper_btc_runtime",
+    )
+
+    payload = json.loads(result.output_path.read_text(encoding="utf-8"))
+    index_payload = json.loads(result.index_path.read_text(encoding="utf-8"))
+    assert payload["theses"][0]["deployment_state"] == "live_enabled"
+    assert index_payload["runtime_registrations"]["paper_btc_runtime"]["run_id"] == "run_1"
+    assert index_payload["runtime_registrations"]["paper_btc_runtime"]["deployment_state_counts"] == {
+        "live_enabled": 1
+    }
+
+
+def test_export_promoted_theses_rejects_unknown_override_target(tmp_path: Path) -> None:
+    promoted_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK",
+                "status": "PROMOTED",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="did not match any exported thesis"):
+        export_promoted_theses_for_run(
+            "run_1",
+            data_root=tmp_path,
+            bundles=[_bundle()],
+            promoted_df=promoted_df,
+            deployment_state_overrides={"missing_selector": "live_enabled"},
+        )

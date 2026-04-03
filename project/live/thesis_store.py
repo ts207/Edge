@@ -101,7 +101,18 @@ class ThesisStore:
         return cls.from_path(promoted_theses_path(run_id, data_root))
 
     @classmethod
-    def latest(cls, *, data_root: Path | None = None) -> "ThesisStore":
+    def latest(
+        cls,
+        *,
+        data_root: Path | None = None,
+        allow_implicit_latest: bool = False,
+    ) -> "ThesisStore":
+        if not allow_implicit_latest:
+            raise RuntimeError(
+                "Implicit latest thesis resolution is disabled. "
+                "Use ThesisStore.from_run_id(...), ThesisStore.from_path(...), "
+                "or pass allow_implicit_latest=True for compatibility-only callers."
+            )
         index = _load_payload(live_thesis_index_path(data_root))
         latest_run_id = str(index.get("latest_run_id", "")).strip()
         if latest_run_id:

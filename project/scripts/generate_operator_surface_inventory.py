@@ -36,7 +36,7 @@ def extract_make_targets(makefile_text: str) -> list[str]:
     return sorted(dict.fromkeys(targets))
 
 
-ACTION_TARGETS = ["discover", "package", "validate", "review"]
+ACTION_TARGETS = ["discover", "export", "validate", "review"]
 
 
 def build_inventory() -> dict[str, list[str]]:
@@ -62,15 +62,18 @@ def render_markdown(inventory: dict[str, list[str]]) -> str:
         "Use these surfaces first:",
         "",
         "- `make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run`",
-        "- `make package`",
+        "- `make export RUN_ID=<run_id>`",
         "- `make validate`",
         "- `make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report`",
         "- `make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>`",
+        "",
+        "Treat `make package` as an advanced bootstrap/governance surface, not the default way to produce a runtime thesis batch.",
         "",
         "Direct CLI equivalents:",
         "",
         "- `edge operator preflight|plan|run` for bounded research issuance",
         "- `edge operator diagnose|regime-report|compare` for post-run review",
+        "- `python -m project.research.export_promoted_theses --run_id <run_id>` for explicit thesis-batch export",
         "",
         "## Canonical operator commands",
         "",

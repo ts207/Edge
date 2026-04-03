@@ -4,7 +4,10 @@ import csv
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from project.live.thesis_store import ThesisStore
+from project.research.live_export import export_promoted_theses_for_run
 from project.research.seed_package import package_seed_promoted_theses
 
 
@@ -217,16 +220,19 @@ def test_package_seed_promoted_theses_creates_store_cards_and_overlap(tmp_path: 
     assert confirm.governance.overlap_group_id
 
     index = json.loads(outputs["thesis_index"].read_text(encoding="utf-8"))
-    assert index["latest_run_id"] == "seed_pack_test"
+    assert index["default_resolution_disabled"] is True
+    assert not str(index.get("latest_run_id", "")).strip()
 
     summary = json.loads(outputs["summary_json"].read_text(encoding="utf-8"))
     assert summary["schema_version"] == "seed_thesis_packaging_summary_v1"
     assert summary["workspace_root"] == "."
-    assert summary["artifact_root"].startswith("docs/")
+    assert summary["artifact_root"].endswith("docs/generated")
     assert summary["source_run_id"] == "seed_pack_test"
     assert summary["all_referenced_files_exist"] is True
     assert summary["invalid_artifact_refs"] == []
-    assert summary["artifact_refs"]["thesis_store"]["path"].startswith("data/")
+    assert summary["artifact_refs"]["thesis_store"]["path"].endswith(
+        "data/live/theses/seed_pack_test/promoted_theses.json"
+    )
     summary_md = outputs["summary_md"].read_text(encoding="utf-8")
     assert "## Artifact metadata" in summary_md
     assert "/home/irene/" not in summary_md
@@ -238,3 +244,172 @@ def test_package_seed_promoted_theses_creates_store_cards_and_overlap(tmp_path: 
     assert "Compat event family" in catalog_text
     card_text = outputs["card_dir"].joinpath("THESIS_VOL_SHOCK.md").read_text(encoding="utf-8")
     assert "Primary event id" in card_text
+
+
+def test_seed_packaging_preserves_existing_explicit_run_latest_index(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs" / "generated"
+    data_root = tmp_path / "data"
+    _write_csv(
+        docs_dir / "promotion_seed_inventory.csv",
+        [
+            "candidate_id",
+            "source_type",
+            "event_contract_ids",
+            "episode_contract_ids",
+            "source_campaign_id",
+            "hypothesis_statement",
+            "expected_direction_or_path",
+            "horizon_guess",
+            "invalidation_rule",
+            "regime_assumptions",
+        ],
+        [
+            {
+                "candidate_id": "THESIS_VOL_SHOCK",
+                "source_type": "event",
+                "event_contract_ids": "VOL_SHOCK",
+                "episode_contract_ids": "",
+                "source_campaign_id": "",
+                "hypothesis_statement": "VOL_SHOCK should expand realized movement.",
+                "expected_direction_or_path": "Expect elevated absolute move after the shock.",
+                "horizon_guess": "8-24 bars",
+                "invalidation_rule": "follow-through fails within 24 bars",
+                "regime_assumptions": "Primary trigger in volatility transition regimes.",
+            },
+        ],
+    )
+    _write_csv(
+        docs_dir / "thesis_empirical_scorecards.csv",
+        [
+            "candidate_id",
+            "empirical_decision",
+            "governance_tier",
+            "operational_role",
+            "deployment_disposition",
+            "sample_size_total",
+            "validation_samples_total",
+            "test_samples_total",
+            "median_estimate_bps",
+            "median_net_expectancy_bps",
+            "best_q_value",
+            "best_stability_score",
+            "total_score",
+            "realized_oos_supported",
+            "evidence_gap_summary",
+        ],
+        [
+            {
+                "candidate_id": "THESIS_VOL_SHOCK",
+                "empirical_decision": "paper_candidate",
+                "governance_tier": "A",
+                "operational_role": "trigger",
+                "deployment_disposition": "primary_trigger_candidate",
+                "sample_size_total": "100",
+                "validation_samples_total": "60",
+                "test_samples_total": "40",
+                "median_estimate_bps": "100.5",
+                "median_net_expectancy_bps": "94.5",
+                "best_q_value": "0.001",
+                "best_stability_score": "0.92",
+                "total_score": "37",
+                "realized_oos_supported": "1",
+                "evidence_gap_summary": "",
+            },
+        ],
+    )
+    promotion_dir = data_root / "reports" / "promotions" / "THESIS_VOL_SHOCK"
+    promotion_dir.mkdir(parents=True, exist_ok=True)
+    promotion_dir.joinpath("evidence_bundles.jsonl").write_text(
+        json.dumps(
+            {
+                "candidate_id": "THESIS_VOL_SHOCK",
+                "event_type": "VOL_SHOCK",
+                "event_family": "VOL_SHOCK",
+                "sample_definition": {
+                    "n_events": 100,
+                    "validation_samples": 60,
+                    "test_samples": 40,
+                    "symbol": "BTCUSDT",
+                },
+                "effect_estimates": {"estimate_bps": 100.5},
+                "cost_robustness": {"net_expectancy_bps": 94.5},
+                "uncertainty_estimates": {"q_value": 0.001},
+                "stability_tests": {"stability_score": 0.92},
+                "falsification_results": {
+                    "negative_control_pass_rate": 0.0,
+                    "session_transition": {"passed": True},
+                    "realized_vol_regime": {"passed": True},
+                },
+                "metadata": {
+                    "has_realized_oos_path": True,
+                    "input_symbols": ["BTCUSDT"],
+                    "notes": "Absolute move thesis.",
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    promoted_df = pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "VOL_SHOCK",
+                "status": "PROMOTED",
+            }
+        ]
+    )
+    bundle = {
+        "candidate_id": "cand_1",
+        "event_family": "VOL_SHOCK",
+        "event_type": "VOL_SHOCK",
+        "run_id": "run_exported",
+        "sample_definition": {
+            "n_events": 120,
+            "validation_samples": 60,
+            "test_samples": 60,
+            "symbol": "BTCUSDT",
+        },
+        "split_definition": {
+            "split_scheme_id": "confirmatory",
+            "purge_bars": 1,
+            "embargo_bars": 1,
+            "bar_duration_minutes": 5,
+        },
+        "effect_estimates": {"estimate": 0.12, "estimate_bps": 12.0},
+        "uncertainty_estimates": {"q_value": 0.01},
+        "stability_tests": {"stability_score": 0.9},
+        "falsification_results": {"passes_control": True},
+        "cost_robustness": {
+            "cost_survival_ratio": 1.0,
+            "net_expectancy_bps": 9.0,
+            "tob_coverage": 0.95,
+            "retail_net_expectancy_pass": True,
+        },
+        "multiplicity_adjustment": {"q_value_program": 0.01},
+        "metadata": {"hypothesis_id": "hyp_1", "plan_row_id": "plan_1", "has_realized_oos_path": True},
+        "promotion_decision": {
+            "promotion_status": "promoted",
+            "promotion_track": "deploy",
+            "rank_score": 1.0,
+        },
+        "policy_version": "v1",
+        "bundle_version": "b1",
+    }
+    export_promoted_theses_for_run(
+        "run_exported",
+        data_root=data_root,
+        bundles=[bundle],
+        promoted_df=promoted_df,
+    )
+
+    package_seed_promoted_theses(
+        docs_dir=docs_dir,
+        data_root=data_root,
+        package_run_id="seed_pack_test",
+    )
+
+    index = json.loads((data_root / "live" / "theses" / "index.json").read_text(encoding="utf-8"))
+    assert index["latest_run_id"] == "run_exported"
+    assert index["default_resolution_disabled"] is True
+    assert "seed_pack_test" in index["runs"]

@@ -83,6 +83,20 @@ def test_live_runner_uses_canonical_default_incubation_ledger_path() -> None:
     assert "/project/project/" not in str(runner.incubation_ledger.path)
 
 
+def test_live_runner_fails_closed_for_missing_explicit_thesis_store(tmp_path) -> None:
+    missing_path = tmp_path / "missing_promoted_theses.json"
+
+    with pytest.raises(RuntimeError, match="Configured thesis store is unavailable"):
+        LiveEngineRunner(
+            ["btcusdt"],
+            data_manager=_DummyDataManager(),
+            strategy_runtime={
+                "implemented": True,
+                "thesis_path": str(missing_path),
+            },
+        )
+
+
 def test_live_runner_periodic_account_sync_updates_state() -> None:
     snapshots = iter(
         [

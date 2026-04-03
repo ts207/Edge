@@ -27,6 +27,8 @@ from project.live.thesis_specs import resolve_thesis_definition_ids
 from project.episodes import load_episode_registry
 from project.portfolio.thesis_overlap import overlap_group_id_for_thesis
 
+ALLOWED_DEPLOYMENT_STATES = {"monitor_only", "paper_only", "live_enabled"}
+
 
 @dataclass(frozen=True)
 class PromotedThesisExportResult:
@@ -38,8 +40,6 @@ class PromotedThesisExportResult:
     pending_count: int
     contract_json_path: Path | None = None
     contract_md_path: Path | None = None
-
-
 
 
 def _fallback_authored_definition_for_event(*event_tokens: str):
@@ -857,12 +857,58 @@ def _write_thesis_payload(
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def _deployment_state_counts(theses: Sequence[PromotedThesis]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for thesis in theses:
+        token = str(thesis.deployment_state or "").strip().lower()
+        if not token:
+            continue
+        counts[token] = counts.get(token, 0) + 1
+    return counts
+
+
+def _apply_deployment_state_overrides(
+    theses: Sequence[PromotedThesis],
+    overrides: Mapping[str, str] | None,
+) -> list[PromotedThesis]:
+    if not overrides:
+        return list(theses)
+    selector_to_thesis_id: dict[str, str] = {}
+    for thesis in theses:
+        thesis_id = str(thesis.thesis_id or "").strip()
+        candidate_id = str(thesis.lineage.candidate_id or "").strip()
+        if thesis_id:
+            selector_to_thesis_id[thesis_id] = thesis_id
+        if candidate_id:
+            selector_to_thesis_id.setdefault(candidate_id, thesis_id)
+
+    updated: dict[str, PromotedThesis] = {thesis.thesis_id: thesis for thesis in theses}
+    for selector, deployment_state in overrides.items():
+        clean_selector = str(selector or "").strip()
+        state_token = str(deployment_state or "").strip().lower()
+        if not clean_selector:
+            raise ValueError("Deployment-state override selector must not be empty.")
+        if state_token not in ALLOWED_DEPLOYMENT_STATES:
+            raise ValueError(
+                f"Unsupported deployment state override {deployment_state!r}. "
+                f"Allowed values: {sorted(ALLOWED_DEPLOYMENT_STATES)}"
+            )
+        thesis_id = selector_to_thesis_id.get(clean_selector)
+        if not thesis_id:
+            raise ValueError(
+                f"Deployment-state override selector {clean_selector!r} did not match any exported thesis."
+            )
+        updated[thesis_id] = updated[thesis_id].model_copy(update={"deployment_state": state_token})
+    return [updated[thesis.thesis_id] for thesis in theses]
+
+
 def _update_thesis_index(
     *,
     run_id: str,
     output_path: Path,
     index_path: Path,
     theses: Sequence[PromotedThesis],
+    register_runtime_name: str | None = None,
 ) -> None:
     ensure_dir(index_path.parent)
     index = _json_load(index_path)
@@ -878,11 +924,26 @@ def _update_thesis_index(
         ),
         "updated_at_utc": _utc_now(),
     }
+    runtime_registrations = index.get("runtime_registrations", {})
+    if not isinstance(runtime_registrations, dict):
+        runtime_registrations = {}
+    registration_name = str(register_runtime_name or "").strip()
+    if registration_name:
+        runtime_registrations[registration_name] = {
+            "run_id": run_id,
+            "output_path": str(output_path),
+            "registered_at_utc": _utc_now(),
+            "thesis_count": len(theses),
+            "deployment_state_counts": _deployment_state_counts(theses),
+        }
     payload = {
         "schema_version": "promoted_thesis_index_v1",
         "latest_run_id": run_id,
+        "default_resolution_disabled": True,
         "runs": runs,
     }
+    if runtime_registrations:
+        payload["runtime_registrations"] = runtime_registrations
     index_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
@@ -893,6 +954,8 @@ def export_promoted_theses_for_run(
     bundles: Sequence[Mapping[str, Any]] | None = None,
     promoted_df: pd.DataFrame | None = None,
     blueprints: Sequence[Mapping[str, Any]] | None = None,
+    deployment_state_overrides: Mapping[str, str] | None = None,
+    register_runtime_name: str | None = None,
 ) -> PromotedThesisExportResult:
     resolved_root = Path(data_root) if data_root is not None else get_data_root()
     effective_bundles = list(bundles) if bundles is not None else _load_evidence_bundles(run_id, resolved_root)
@@ -906,6 +969,7 @@ def export_promoted_theses_for_run(
         promoted_df=effective_promoted,
         blueprints=effective_blueprints,
     )
+    theses = _apply_deployment_state_overrides(theses, deployment_state_overrides)
     contract_json_path, contract_md_path = _write_contract_artifacts(
         run_id=run_id,
         theses=theses,
@@ -919,6 +983,7 @@ def export_promoted_theses_for_run(
         output_path=output_path,
         index_path=index_path,
         theses=theses,
+        register_runtime_name=register_runtime_name,
     )
     return PromotedThesisExportResult(
         run_id=run_id,

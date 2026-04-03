@@ -37,3 +37,24 @@ def test_live_environment_configs_use_distinct_order_sources_and_snapshot_paths(
     assert float(paper["execution_degradation_throttle_scale"]) > float(
         production["execution_degradation_throttle_scale"]
     )
+
+
+def test_runtime_facing_configs_use_explicit_thesis_lineage() -> None:
+    paper = load_live_engine_config(Path("project/configs/live_paper.yaml"))
+    production = load_live_engine_config(Path("project/configs/live_production.yaml"))
+    paper_trading = load_live_engine_config(Path("project/configs/live_paper_btc_thesis_v1.yaml"))
+
+    for config in (paper, production):
+        strategy_runtime = dict(config.get("strategy_runtime", {}))
+        assert "load_latest_theses" not in strategy_runtime
+        assert not str(strategy_runtime.get("thesis_run_id", "")).strip()
+        assert not str(strategy_runtime.get("thesis_path", "")).strip()
+
+    strategy_runtime = dict(paper_trading.get("strategy_runtime", {}))
+    thesis_run_id = str(strategy_runtime.get("thesis_run_id", "")).strip()
+    thesis_path = str(strategy_runtime.get("thesis_path", "")).strip()
+    assert bool(thesis_run_id) ^ bool(thesis_path)
+    assert "load_latest_theses" not in strategy_runtime
+    assert "seed" not in thesis_run_id.lower()
+    assert "bootstrap" not in thesis_run_id.lower()
+    assert "latest" not in thesis_run_id.lower()

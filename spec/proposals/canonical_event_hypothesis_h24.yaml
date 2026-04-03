@@ -1,0 +1,31 @@
+program_id: volshock_btc_long_12b
+description: Long continuation after VOL_SHOCK on BTCUSDT 5m
+
+start: "2024-01-01"
+end: "2024-01-31"
+symbols:
+  - BTCUSDT
+timeframe: 5m
+instrument_classes:
+  - crypto
+
+hypothesis:
+  trigger:
+    type: event
+    event_id: VOL_SHOCK
+  template: continuation
+  direction: long
+  horizon_bars: 24
+  entry_lag_bars: 1
+
+run_mode: research
+promotion_profile: research
+config_overlays:
+  - project/configs/golden_synthetic_discovery_fast.yaml
+
+bounded:
+  baseline_run_id: volshock_btc_long_12b_20260403T214050Z_38fb41d30e
+  experiment_type: horizon_test
+  allowed_change_field: horizons_bars
+  change_reason: Extend holding horizon from 12 bars to 24 bars
+  compare_to_baseline: true

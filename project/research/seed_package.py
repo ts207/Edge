@@ -421,9 +421,12 @@ def _update_index(run_id: str, output_path: Path, theses: list[PromotedThesis], 
     }
     index = {
         "schema_version": "promoted_thesis_index_v1",
-        "latest_run_id": run_id,
+        "default_resolution_disabled": True,
         "runs": runs,
     }
+    existing_latest_run_id = str(payload.get("latest_run_id", "")).strip()
+    if existing_latest_run_id:
+        index["latest_run_id"] = existing_latest_run_id
     index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return index_path
 
@@ -844,9 +847,12 @@ def _update_index(run_id: str, output_path: Path, theses: list[PromotedThesis], 
     }
     index = {
         "schema_version": "promoted_thesis_index_v1",
-        "latest_run_id": run_id,
+        "default_resolution_disabled": True,
         "runs": runs,
     }
+    existing_latest_run_id = str(payload.get("latest_run_id", "")).strip()
+    if existing_latest_run_id:
+        index["latest_run_id"] = existing_latest_run_id
     index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return index_path
 

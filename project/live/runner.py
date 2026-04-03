@@ -285,15 +285,18 @@ class LiveEngineRunner:
     def _load_thesis_store(self) -> ThesisStore | None:
         thesis_path = str(self.strategy_runtime.get("thesis_path", "")).strip()
         thesis_run_id = str(self.strategy_runtime.get("thesis_run_id", "")).strip()
-        load_latest = bool(self.strategy_runtime.get("load_latest_theses", False))
         try:
             if thesis_path:
                 return ThesisStore.from_path(thesis_path)
             if thesis_run_id:
                 return ThesisStore.from_run_id(thesis_run_id)
-            if load_latest:
-                return ThesisStore.latest()
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            if bool(self.strategy_runtime.get("implemented", False)):
+                raise RuntimeError(
+                    "Configured thesis store is unavailable for live runtime; "
+                    "export theses from a specific run and set "
+                    "strategy_runtime.thesis_path or strategy_runtime.thesis_run_id."
+                ) from exc
             _LOG.warning("Configured thesis store is unavailable for live runtime.")
             return None
         return None

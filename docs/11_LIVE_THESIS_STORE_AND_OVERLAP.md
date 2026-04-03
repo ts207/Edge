@@ -10,14 +10,18 @@ It should reason from packaged thesis objects with explicit clauses and governan
 
 That is why `data/live/theses/` exists.
 
+Runtime should be pointed at one explicit thesis batch via `strategy_runtime.thesis_path` or `strategy_runtime.thesis_run_id`.
+It should not rely on an implicit latest batch.
+
 ## Canonical thesis-store paths
 
 Primary paths:
 
-- `data/live/theses/index.json`
-- `data/live/theses/<batch>/promoted_theses.json`
+- `data/live/theses/<run_id>/promoted_theses.json`
+- `data/live/theses/index.json` as a catalog artifact
+- `data/live/theses/index.json -> runtime_registrations` for explicit named registrations when operators choose to record them
 
-In this snapshot, the store already contains a packaged batch and the index points to it.
+The batch file is the runtime contract. The index is metadata about available batches, not the preferred runtime selector.
 
 ## What a packaged thesis contains
 
@@ -75,28 +79,30 @@ Overlap can be driven by shared structure such as:
 
 The point is not just reporting. The overlap graph informs downstream allocation and throttling logic.
 
-## Promotion class and deployment state in runtime
+## Deployment state and promotion class in runtime
 
-Runtime should read both fields explicitly.
+Runtime should read both fields explicitly, but permission should be derived from deployment state first.
 
 Examples:
 
-- `seed_promoted` + `monitor_only` means the thesis is packaged but still restricted
-- `paper_promoted` + `paper_only` means stronger evidence, still not live execution permission by itself
-- `production_promoted` + a live-enabled state is the highest-confidence path
+- `monitor_only` means the thesis may be monitored but not traded
+- `paper_only` means the thesis may be used in paper/shadow contexts but not traded
+- `live_enabled` is the only deployment state that may reach trading runtime
+- promotion class still carries evidence context such as `seed_promoted`, `paper_promoted`, or `production_promoted`
 
 Any runtime shortcut that collapses these into one maturity flag is conceptually wrong.
+Any runtime shortcut that resolves "whatever batch is latest" is also conceptually wrong.
 
 ## What to inspect after packaging changes
 
 Use this order:
 
-1. `data/live/theses/index.json`
-2. `data/live/theses/<batch>/promoted_theses.json`
-3. `docs/generated/seed_thesis_catalog.md`
-4. `docs/generated/seed_thesis_packaging_summary.md`
-5. `docs/generated/thesis_overlap_graph.md`
-6. any shadow-live summaries under `docs/generated/` or `data/reports/shadow_live/`
+1. `data/live/theses/<run_id>/promoted_theses.json`
+2. runtime config that references that batch explicitly
+3. `docs/generated/thesis_overlap_graph.md`
+4. any shadow-live summaries under `docs/generated/` or `data/reports/shadow_live/`
+5. `docs/generated/seed_thesis_catalog.md` only for advanced bootstrap maintenance
+6. `docs/generated/seed_thesis_packaging_summary.md` only for advanced bootstrap maintenance
 
 ## Current snapshot implication
 

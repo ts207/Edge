@@ -1,578 +1,221 @@
-Use this as the coding-agent plan.
+After that, the repo becomes simpler at the **input boundary**, but not yet simpler end-to-end.
 
-# Objective
+The next phases should be:
 
-Replace the current operator-facing **search-space proposal** with a **single-hypothesis proposal**, while preserving the existing backend by compiling the new format into the current `AgentProposal`.
+## 1. Make run output the only thesis source
 
-At the same time, move the repo toward **one canonical path**:
+Right after the single-hypothesis front door works, remove the ambiguity at the back end.
 
-**proposal → bounded run → promotion → thesis batch export → runtime**
+Target path:
 
-Seed is not part of this path.
+**proposal → run → promotion → thesis export → runtime**
 
----
+So next:
 
-# Scope
+* make `export_promoted_theses --run_id <run_id>` the only canonical thesis-batch creation path
+* stop treating packaging/bootstrap outputs as equivalent thesis sources
+* document that every runtime thesis batch must come from a specific run
 
-## In scope
-
-* add a new operator-facing proposal schema
-* add loader + validator + compiler
-* switch operator entry points to the new loader
-* keep downstream engine unchanged where possible
-* add one canonical example proposal
-* add tests for compatibility and strictness
-* update docs/examples to show only the new path
-
-## Out of scope for this pass
-
-* redesigning experiment engine internals
-* rewriting phase-2 search logic
-* changing runtime thesis format
-* deleting all seed code immediately
-* broad refactors outside proposal/loading surfaces
+This is the next highest-value step because it removes the “seed vs promoted vs packaged” confusion.
 
 ---
 
-# Repo facts to anchor implementation
+## 2. Make runtime require explicit thesis input
 
-Current files that matter:
+Right now the repo appears to tolerate implicit/default thesis resolution.
 
-* `project/research/agent_io/proposal_schema.py`
-* `project/research/agent_io/proposal_to_experiment.py`
-* `project/operator/bounded.py`
+After the proposal cleanup, fix runtime loading:
 
-Current state:
+Priority order:
 
-* `AgentProposal` is the core internal object
-* `load_agent_proposal(...)` only accepts legacy search-space format
-* `proposal_to_experiment.py` already translates `AgentProposal` to experiment config
-* bounded comparison logic already works on normalized `AgentProposal` fields
+1. `strategy_runtime.thesis_path`
+2. `strategy_runtime.thesis_run_id`
+3. otherwise fail clearly
 
-That means the safest move is:
+Remove silent fallback behavior like:
 
-**change the front door only**
-and keep everything after `AgentProposal` mostly intact.
+* “latest thesis”
+* default seed batch
+* hidden bootstrap state
 
----
-
-# Deliverables
-
-## Code deliverables
-
-1. `SingleHypothesisProposal` schema
-2. `TriggerSpec` schema
-3. `load_operator_proposal(...)`
-4. `validate_single_hypothesis_proposal(...)`
-5. `compile_single_hypothesis_to_agent_proposal(...)`
-6. trigger compiler for supported trigger types
-7. operator entry points switched to new loader
-8. new canonical example proposal
-9. tests
-10. docs/examples updated
-
-## Behavioral deliverables
-
-* operator can submit one clean hypothesis YAML
-* repo compiles it into legacy `AgentProposal`
-* existing experiment translation still works
-* bounded mode still works
-* canonical docs/examples no longer expose `trigger_space` to normal users
+This forces one explicit lineage from run to runtime.
 
 ---
 
-# Implementation sequence
+## 3. Separate promotion from live permission
 
-## Phase 1 — add the new schema without changing behavior
+This is the biggest conceptual cleanup after proposal simplification.
 
-### Files
+Make the state model explicit:
 
-* edit `project/research/agent_io/proposal_schema.py`
+### Promotion status
 
-### Tasks
+Did research approve this result?
 
-Add:
+### Deployment state
 
-* `TriggerSpec`
-* `SingleHypothesisProposal`
+What is runtime allowed to do with it?
 
-Keep `AgentProposal` unchanged.
+Keep deployment states as the real permission layer:
 
-### Design rules
+* `monitor_only`
+* `paper_only`
+* `live_enabled`
 
-The new operator-facing format should represent exactly one hypothesis.
+Then document and enforce:
 
-Recommended field shape:
+* promotion does **not** imply live eligibility
+* export produces runtime-readable theses
+* deployment state controls paper/live behavior
 
-* `program_id`
-* `description`
-* `start`
-* `end`
-* `symbols`
-* `timeframe`
-* `instrument_classes`
-* `hypothesis.trigger`
-* `hypothesis.template`
-* `hypothesis.direction`
-* `hypothesis.horizon_bars`
-* `hypothesis.entry_lag_bars`
-* optional `contexts`
-* optional `config_overlays`
-* optional `bounded`
-
-### Constraint
-
-Do not delete or alter legacy `AgentProposal` fields yet.
-
-### Stop condition
-
-* new dataclasses/types exist
-* legacy proposal loading still works untouched
+That removes most of the remaining confusion.
 
 ---
 
-## Phase 2 — implement strict single-hypothesis validation
+## 4. Remove seed from the operational path
 
-### Files
+Only after steps 1–3.
 
-* edit `project/research/agent_io/proposal_schema.py`
+Then:
 
-### Tasks
+* stop pointing `data/live/theses/index.json` at seed
+* remove seed from configs
+* remove seed from runtime defaults
+* demote seed scripts to deprecated/internal
+* rename any necessary test fixtures so they are clearly fixtures, not canonical flow
 
-Add validation that enforces:
-
-* exactly 1 symbol
-* exactly 1 template
-* exactly 1 direction
-* exactly 1 horizon
-* exactly 1 entry lag
-* exactly 1 trigger object
-* trigger-type-specific required fields
-
-### Trigger validation rules
-
-#### event
-
-Require:
-
-* `event_id`
-
-#### state
-
-Require:
-
-* `state_id`
-
-#### transition
-
-Require:
-
-* `from_state`
-* `to_state`
-
-#### feature_predicate
-
-Require:
-
-* `feature`
-* `operator`
-* `threshold`
-
-#### sequence
-
-Require:
-
-* `events`
-  Optional:
-* `max_gap_bars`
-
-#### interaction
-
-Require:
-
-* `left`
-* `right`
-* `op`
-
-### Strong recommendation
-
-For first pass, make canonical support:
-
-* `event` only in docs/examples
-* but code can support all mapped types if easy
-
-### Stop condition
-
-* invalid single-hypothesis proposals fail early with clear errors
+Do not do this before explicit runtime thesis loading is in place.
 
 ---
 
-## Phase 3 — add compiler into current `AgentProposal`
+## 5. Collapse docs around one operator story
 
-### Files
+Once the code path is real, rewrite the docs to one story only:
 
-* edit `project/research/agent_io/proposal_schema.py`
+1. write one hypothesis
+2. run bounded evaluation
+3. inspect evidence
+4. promote candidates
+5. export thesis batch
+6. point runtime at that batch
+7. paper or live depending on deployment state
 
-### Tasks
+At that point, terms like:
 
-Add:
+* trigger space
+* seed thesis
+* latest thesis store
+* packaging lane
 
-* `_compile_trigger_spec_to_trigger_space(...)`
-* `compile_single_hypothesis_to_agent_proposal(...)`
-
-### Required mapping
-
-#### event
-
-maps to:
-
-* `allowed_trigger_types = ["EVENT"]`
-* `events.include = [event_id]`
-
-#### state
-
-maps to:
-
-* `allowed_trigger_types = ["STATE"]`
-* `states.include = [state_id]`
-
-#### transition
-
-maps to:
-
-* `allowed_trigger_types = ["TRANSITION"]`
-* `transitions.include = [from->to]` or current expected internal shape
-
-#### feature_predicate
-
-maps to:
-
-* `allowed_trigger_types = ["FEATURE_PREDICATE"]`
-* `feature_predicates.include = [...]`
-
-#### sequence
-
-maps to:
-
-* `allowed_trigger_types = ["SEQUENCE"]`
-* `sequences.include = [...]`
-
-#### interaction
-
-maps to:
-
-* `allowed_trigger_types = ["INTERACTION"]`
-* `interactions.include = [...]`
-
-### Key rule
-
-Compiler output must be a valid `AgentProposal` that downstream code already accepts.
-
-### Stop condition
-
-* a new-format proposal compiles into legacy `AgentProposal`
-* `proposal.to_dict()` remains compatible with downstream consumers
+should be either hidden or marked advanced/deprecated.
 
 ---
 
-## Phase 4 — add a dual-format loader
+## 6. Simplify the runtime/thesis vocabulary
 
-### Files
+After the code and flow are clean, rename things.
 
-* edit `project/research/agent_io/proposal_schema.py`
+Best likely rename set:
 
-### Tasks
+* **proposal** = test request
+* **candidate** = evaluated result
+* **thesis** = runtime strategy object
+* **thesis batch** = runtime JSON file
+* **deployment state** = actual permission
 
-Add:
+And remove operator-facing reliance on:
 
-* `load_operator_proposal(path_or_payload)`
+* `seed_promoted`
+* `paper_promoted`
+* `production_promoted`
 
-Behavior:
-
-* if payload contains `hypothesis` or single-trigger format, load new schema, validate, compile to `AgentProposal`
-* otherwise fall back to `load_agent_proposal(...)`
-
-### Important
-
-Do not break `load_agent_proposal(...)`
-Keep it for backwards compatibility.
-
-### Stop condition
-
-* both legacy and new proposal files can be loaded into `AgentProposal`
+Those can remain internal if needed, but users should mostly see deployment state.
 
 ---
 
-## Phase 5 — switch operator entry points to the new loader
+## 7. Add promotion-to-runtime automation
 
-### Files
+Only after the lineage is explicit.
 
-* edit `project/research/agent_io/proposal_to_experiment.py`
-* edit `project/operator/bounded.py`
-* inspect any operator or ChatGPT wrapper code that reads proposals directly
+Then build the clean bridge:
 
-### Tasks
+* completed run
+* promotion artifacts exist
+* export thesis batch
+* optionally register it as current runtime batch
+* optionally mark selected theses `paper_only` or `live_enabled`
 
-#### In `proposal_to_experiment.py`
-
-Replace direct calls to:
-
-* `load_agent_proposal(...)`
-
-with:
-
-* `load_operator_proposal(...)`
-
-#### In `bounded.py`
-
-Make sure both current proposal and baseline proposal are normalized through the same loader/compiler path before comparison.
-
-This preserves bounded diffing on:
-
-* `trigger_space`
-* `templates`
-* `directions`
-* `horizons_bars`
-* `entry_lags`
-
-### Stop condition
-
-* legacy proposals still run
-* new proposals also run
-* bounded comparison still works after normalization
+This turns the repo from “research system with runtime extras” into an actual operating pipeline.
 
 ---
 
-## Phase 6 — add canonical operator example
+## 8. Only then touch deeper engine simplification
 
-### Files
+After the boundaries are clean, you can decide whether phase-2 search and trigger-space abstractions still deserve to exist.
 
-* add `spec/proposals/canonical_event_hypothesis.yaml`
+Possible later simplifications:
 
-### Content
+* reduce template proliferation
+* reduce trigger type exposure
+* limit default mode to `event`
+* flatten proposal-to-experiment translation
+* remove unused packaging surfaces
 
-Create one minimal event-driven proposal:
-
-* 1 symbol
-* 1 event trigger
-* 1 template
-* 1 direction
-* 1 horizon
-* 1 entry lag
-
-Example shape:
-
-```yaml
-program_id: volshock_btc_long_12b
-description: Long continuation after VOL_SHOCK on BTCUSDT 5m
-
-start: "2024-01-01"
-end: "2024-01-31"
-symbols: [BTCUSDT]
-timeframe: 5m
-instrument_classes: [crypto]
-
-hypothesis:
-  trigger:
-    type: event
-    event_id: VOL_SHOCK
-  template: continuation
-  direction: long
-  horizon_bars: 12
-  entry_lag_bars: 1
-
-run_mode: research
-promotion_profile: research
-config_overlays:
-  - project/configs/golden_synthetic_discovery_fast.yaml
-```
-
-### Stop condition
-
-* repo has one canonical example that represents the new path clearly
+But this is later. Doing it earlier risks breaking behavior without reducing confusion much.
 
 ---
 
-## Phase 7 — add tests before broader docs cleanup
+# Recommended order
 
-### Files to add
+Use this exact order:
 
-* `project/tests/research/agent_io/test_single_hypothesis_loader.py`
-* `project/tests/operator/test_single_hypothesis_bounded.py`
+### Phase A
 
-### Required test cases
+Single-hypothesis proposal front door
 
-#### Compatibility
+### Phase B
 
-* legacy proposal loads successfully
-* new proposal loads successfully
-* both become valid `AgentProposal`
+Run-exported thesis batch as only canonical thesis source
 
-#### Strictness
+### Phase C
 
-* multiple symbols fails
-* multiple templates fails
-* multiple directions fails
-* multiple horizons fails
-* multiple entry lags fails
-* missing event_id fails for event trigger
+Explicit runtime thesis input, no silent seed/latest fallback
 
-#### Trigger compilation
+### Phase D
 
-* event compiles correctly
-* state compiles correctly if supported
-* feature predicate compiles correctly if supported
+Promotion vs deployment-state separation and enforcement
 
-#### Translation
+### Phase E
 
-* `proposal_to_experiment_config(...)` works on compiled new proposal
+Remove seed from defaults and docs
 
-#### Bounded mode
+### Phase F
 
-* baseline + current proposal compare correctly after normalization
+Docs/vocabulary cleanup
 
-### Stop condition
+### Phase G
 
-* tests cover loader, compiler, compatibility, and bounded behavior
+Automation from promotion to runtime registration
+
+That is the clean path.
 
 ---
 
-## Phase 8 — documentation cleanup for the front door
+# What changes for the user after Phase A only
 
-### Files to update
+After just the coding-agent task:
 
-* main proposal docs
-* operator workflow docs
-* any examples under `docs/` or `spec/proposals/`
-* ChatGPT/app docs if they show proposal format
+* writing proposals becomes simpler
+* running research becomes clearer
+* backend confusion still remains
+* runtime and thesis-source confusion still exists
 
-### Rules
-
-Show only:
-
-* new single-hypothesis proposal format
-
-Do not show in primary docs:
-
-* `trigger_space`
-* `allowed_trigger_types`
-* multi-template lists
-* multi-horizon lists
-* multi-direction search spaces
-
-Legacy format can be mentioned only as:
-
-* compatibility mode
-* internal/legacy surface
-
-### Stop condition
-
-* a new user sees only one proposal format
+So Phase A fixes the **front door**, not the full system.
 
 ---
 
-# Seed removal plan boundary for this coding pass
+# The next strongest move
 
-Do not fully remove seed in this same pass.
+After implementing the single-hypothesis proposal loader, the best next task is:
 
-## Do now
-
-* remove seed from operator-facing docs
-* stop presenting seed as canonical thesis source
-* plan runtime/config migration separately
-
-## Do later
-
-* remove `load_latest_theses` fallback behavior
-* require explicit `thesis_path` or `thesis_run_id`
-* stop pointing `data/live/theses/index.json` at seed by default
-* delete seed packaging as canonical path
-
-This keeps this coding change bounded.
-
----
-
-# Agent execution instructions
-
-
-
-## Step 1
-
-Read:
-
-* `project/research/agent_io/proposal_schema.py`
-* `project/research/agent_io/proposal_to_experiment.py`
-* `project/operator/bounded.py`
-
-Build a dependency map of where proposals are loaded.
-
-## Step 2
-
-Implement `SingleHypothesisProposal`, `TriggerSpec`, validation, compiler, and dual-format loader in `proposal_schema.py`.
-
-## Step 3
-
-Switch proposal-loading call sites from `load_agent_proposal` to `load_operator_proposal`.
-
-## Step 4
-
-Add the canonical example proposal.
-
-## Step 5
-
-Add compatibility + strictness + bounded tests.
-
-## Step 6
-
-Run targeted tests only for touched surfaces first.
-
-## Step 7
-
-Update docs/examples to expose only the new proposal format.
-
-## Step 8
-
-Produce a short migration summary:
-
-* files changed
-* behavior preserved
-* remaining legacy surfaces
-
----
-
-# Success criteria
-
-The pass is complete when all of these are true:
-
-1. a single-hypothesis YAML can be submitted
-2. it loads through one operator loader
-3. it compiles to valid `AgentProposal`
-4. `proposal_to_experiment.py` works without internal redesign
-5. bounded comparison still works
-6. canonical examples use only the new format
-7. legacy proposals still load for compatibility
-8. no primary doc tells users to author `trigger_space` directly
-
----
-
-# Failure conditions to avoid
-
-* do not rewrite the experiment engine
-* do not delete `AgentProposal`
-* do not break old proposal files
-* do not expose both new and old formats equally in docs
-* do not mix seed-removal runtime changes into this same code pass unless necessary
-
----
-
-# Best implementation choice
-
-Make the new schema a **strict front-door contract** and keep the rest of the repo on `AgentProposal` for now.
-
-That gives:
-
-* one clean user path
-* minimal breakage
-* bounded implementation surface
-* clear migration sequencing
-
+**make exported run-derived thesis batches the only canonical runtime input, and remove default seed/latest thesis resolution.**

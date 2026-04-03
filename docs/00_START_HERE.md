@@ -4,11 +4,13 @@ This repo is easiest to understand if you stop thinking in terms of scripts and 
 
 A bounded research cycle in Edge is:
 
-`proposal -> preflight -> validated plan -> run -> run manifest -> candidate artifacts -> promotion artifacts -> diagnostics or packaging`
+`proposal -> preflight -> validated plan -> run -> run manifest -> candidate artifacts -> promotion artifacts -> diagnostics -> exported thesis batch`
 
 A thesis packaging cycle is:
 
 `seed inventory -> testing -> empirical evidence -> evidence bundle -> packaged thesis -> overlap graph -> live/runtime consumption`
+
+That second lane is advanced maintenance work. A new operator should be able to use the repo without learning the bootstrap sequence first.
 
 ## What this repository is for
 
@@ -34,6 +36,7 @@ Before you run anything, understand these distinctions.
 
 - **candidate**: a bounded statistical result produced by a run
 - **thesis**: a packaged object with trigger, context, invalidation, governance, and evidence fields suitable for downstream consumption
+- **thesis batch**: the runtime JSON file exported for one explicit run under `data/live/theses/<run_id>/promoted_theses.json`
 
 ### Promotion class versus deployment state
 
@@ -50,15 +53,17 @@ Before you run anything, understand these distinctions.
 Treat the repo as four operator actions:
 
 1. `discover`
-2. `package`
-3. `validate`
-4. `review`
+2. `review`
+3. `export`
+4. `validate`
+
+Treat `package` as an advanced bootstrap/governance lane rather than the default next step after every good run.
 
 Use these aliases first:
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run
-make package
+make export RUN_ID=<run_id>
 make validate
 make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report
 make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
@@ -95,7 +100,13 @@ If the run is meant to compare against a baseline slice, then also run:
 make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
 ```
 
-If the work graduates from bounded run analysis into reusable packaging, move to the bootstrap lane and run:
+If the work is ready for runtime consumption from one specific run, do this next:
+
+```bash
+make export RUN_ID=<run_id>
+```
+
+Only if you are intentionally maintaining legacy/bootstrap packaging artifacts should you move to the advanced packaging lane and run:
 
 ```bash
 make package

@@ -23,8 +23,44 @@ def test_build_thesis_bootstrap_baseline_handles_empty_store(tmp_path: Path, mon
 
     assert payload["thesis_count"] == 0
     assert payload["status"] == "missing"
+    assert payload["thesis_source_mode"] == "none"
     assert overlap["thesis_count"] == 0
-    assert "No canonical promoted thesis store is available yet." in md
+    assert "No explicit canonical promoted thesis source was provided." in md
+
+
+def test_build_thesis_bootstrap_baseline_uses_explicit_run_id(
+    tmp_path: Path, monkeypatch
+) -> None:
+    class _DummyStore:
+        def __init__(self) -> None:
+            self.source_path = tmp_path / "data" / "live" / "theses" / "run_123" / "promoted_theses.json"
+
+        def all(self):
+            return [object(), object()]
+
+        def active_theses(self):
+            return [object()]
+
+    monkeypatch.setattr(
+        "project.research.seed_bootstrap.ThesisStore.from_run_id",
+        lambda run_id, *, data_root=None: _DummyStore(),
+    )
+
+    out = build_thesis_bootstrap_baseline(
+        docs_dir=tmp_path / "docs",
+        data_root=tmp_path / "data",
+        thesis_run_id="run_123",
+    )
+
+    payload = json.loads(Path(out["thesis_store_json_path"]).read_text(encoding="utf-8"))
+    md = Path(out["baseline_md_path"]).read_text(encoding="utf-8")
+
+    assert payload["thesis_source_mode"] == "run_id"
+    assert payload["thesis_run_id"] == "run_123"
+    assert payload["thesis_count"] == 2
+    assert payload["active_thesis_count"] == 1
+    assert payload["status"] == "available"
+    assert "thesis_run_id: `run_123`" in md
 
 
 def test_build_promotion_seed_inventory_contains_fallback_candidates(tmp_path: Path) -> None:

@@ -8,7 +8,7 @@ The operator path is designed to answer one bounded question at a time while lea
 
 Canonical loop:
 
-`proposal -> preflight -> plan -> run -> inspect manifest -> inspect candidates -> inspect promotion outputs -> diagnose/compare -> decide keep/modify/kill/package`
+`proposal -> preflight -> plan -> run -> inspect manifest -> inspect candidates -> inspect promotion outputs -> diagnose/compare -> decide keep/modify/kill -> export thesis batch`
 
 ## Step 1 — author a bounded proposal
 
@@ -192,12 +192,39 @@ Use when the work is explicitly bounded against a prior slice or when you need t
 
 ## Decision logic after review
 
-A run usually falls into one of four next actions.
+A run usually falls into one of five next actions.
 
 - **repair** — fix mechanical or artifact issues first
 - **confirm** — freeze the promising part and test an adjacent or bounded slice
 - **kill/reframe** — the claim is not supported or the proposal was too broad
-- **package** — the claim is strong enough to enter the thesis bootstrap lane
+- **export** — the run is strong enough to become an explicit runtime thesis batch
+- **package** — advanced bootstrap/governance work beyond the one-run export path
+
+## Step 6 — export a thesis batch for runtime
+
+Use export when one specific promoted run should become runtime-readable input.
+
+```bash
+make export RUN_ID=<run_id>
+```
+
+Direct module form:
+
+```bash
+python -m project.research.export_promoted_theses --run_id <run_id>
+```
+
+What export gives you:
+
+- `data/live/theses/<run_id>/promoted_theses.json`
+- `data/live/theses/index.json` as a catalog artifact
+- a runtime batch tied to one explicit run lineage
+
+Runtime should then be pointed at that batch explicitly using `strategy_runtime.thesis_path` or `strategy_runtime.thesis_run_id`.
+If you need an explicit operator-managed bridge beyond raw export, the module surface also supports:
+
+- `--register-runtime <name>` to record a named runtime registration in the thesis index
+- `--set-deployment-state <thesis_id_or_candidate_id>=monitor_only|paper_only|live_enabled` for explicit deployment-state overrides
 
 ## Campaign workflow
 
@@ -228,4 +255,5 @@ Use them when you need warnings on breadth or a compact view of resolved detecto
 - Prefer plan before run.
 - Prefer compare for confirmation work.
 - Use diagnose before mutating the next proposal.
-- Move to `make package` only when you are trying to create reusable packaged theses rather than answer one bounded run question.
+- Prefer explicit `export_promoted_theses --run_id <run_id>` before `make package` when your goal is runtime input from one bounded run.
+- Move to `make package` only when you are trying to do broader thesis bootstrap/governance work rather than answer one bounded run question.

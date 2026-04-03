@@ -7,7 +7,6 @@ from typing import Any, Iterable, Mapping
 
 import yaml
 
-from project.artifacts import live_thesis_index_path
 from project.core.config import get_data_root
 from project.events.contract_registry import load_active_event_contracts
 from project.events.governance import get_event_governance_metadata
@@ -310,20 +309,38 @@ def build_promotion_seed_inventory(*, docs_dir: str | Path | None = None, max_ca
     return {"csv_path": csv_path, "md_path": md_path}
 
 
-def build_thesis_bootstrap_baseline(*, docs_dir: str | Path | None = None, data_root: str | Path | None = None) -> dict[str, Path]:
+def build_thesis_bootstrap_baseline(
+    *,
+    docs_dir: str | Path | None = None,
+    data_root: str | Path | None = None,
+    thesis_run_id: str | None = None,
+    thesis_path: str | Path | None = None,
+) -> dict[str, Path]:
     out_dir = _ensure_dir(Path(docs_dir) if docs_dir is not None else DOCS_GENERATED)
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
 
-    live_index_path = live_thesis_index_path(resolved_data_root)
-    live_index = _read_json(live_index_path)
-    latest_run_id = str(live_index.get("latest_run_id", "")).strip()
     thesis_count = 0
     active_count = 0
     thesis_source_path = ""
+    normalized_thesis_run_id = str(thesis_run_id or "").strip()
+    normalized_thesis_path = str(thesis_path or "").strip()
+    thesis_source_mode = "none"
     thesis_status = "missing"
-    if latest_run_id:
+    if normalized_thesis_path:
+        thesis_source_mode = "path"
+        thesis_source_path = normalized_thesis_path
         try:
-            store = ThesisStore.from_run_id(latest_run_id, data_root=resolved_data_root)
+            store = ThesisStore.from_path(normalized_thesis_path)
+            thesis_count = len(store.all())
+            active_count = len(store.active_theses())
+            thesis_source_path = str(store.source_path or "")
+            thesis_status = "available"
+        except Exception:
+            thesis_status = "unreadable"
+    elif normalized_thesis_run_id:
+        thesis_source_mode = "run_id"
+        try:
+            store = ThesisStore.from_run_id(normalized_thesis_run_id, data_root=resolved_data_root)
             thesis_count = len(store.all())
             active_count = len(store.active_theses())
             thesis_source_path = str(store.source_path or "")
@@ -334,9 +351,9 @@ def build_thesis_bootstrap_baseline(*, docs_dir: str | Path | None = None, data_
     thesis_store_payload = {
         "schema_version": "thesis_store_pre_bootstrap_v1",
         "data_root": str(resolved_data_root),
-        "live_index_path": str(live_index_path),
-        "has_live_index": bool(live_index),
-        "latest_run_id": latest_run_id,
+        "thesis_source_mode": thesis_source_mode,
+        "thesis_run_id": normalized_thesis_run_id,
+        "thesis_path": normalized_thesis_path,
         "thesis_count": thesis_count,
         "active_thesis_count": active_count,
         "source_path": thesis_source_path,
@@ -364,7 +381,10 @@ def build_thesis_bootstrap_baseline(*, docs_dir: str | Path | None = None, data_
 
     observations = []
     if thesis_count == 0:
-        observations.append("No canonical promoted thesis store is available yet.")
+        if thesis_source_mode == "none":
+            observations.append("No explicit canonical promoted thesis source was provided.")
+        else:
+            observations.append("The explicitly referenced promoted thesis source is empty or unavailable.")
     if int(overlap_payload.get("thesis_count", 0) or 0) == 0:
         observations.append("The thesis overlap graph is empty, so allocator overlap controls are not yet operating on real theses.")
     if not observations:
@@ -374,8 +394,9 @@ def build_thesis_bootstrap_baseline(*, docs_dir: str | Path | None = None, data_
         "# Thesis bootstrap baseline",
         "",
         f"- data_root: `{resolved_data_root}`",
-        f"- live_index_present: `{bool(live_index)}`",
-        f"- latest_run_id: `{latest_run_id or 'none'}`",
+        f"- thesis_source_mode: `{thesis_source_mode}`",
+        f"- thesis_run_id: `{normalized_thesis_run_id or 'none'}`",
+        f"- thesis_path: `{normalized_thesis_path or 'none'}`",
         f"- thesis_count: `{thesis_count}`",
         f"- active_thesis_count: `{active_count}`",
         f"- overlap_graph_thesis_count: `{int(overlap_payload.get('thesis_count', 0) or 0)}`",
