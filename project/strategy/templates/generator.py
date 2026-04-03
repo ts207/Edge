@@ -33,9 +33,12 @@ def generate_from_concept(concept: ControlSpec) -> List[StrategySpec]:
     for horizon in horizons:
         for perm in perms:
             params = dict(zip(keys, perm))
+            primary_event_id = str(
+                concept.event_definition.event_type or concept.event_definition.canonical_family
+            ).strip().upper()
 
             s = StrategySpec(
-                event_family=concept.event_definition.canonical_family,
+                event_family=primary_event_id,
                 entry_signal=concept.templates.base,
                 exit_signal="exit",
                 position_cap=1.0,
@@ -73,13 +76,14 @@ def generate_candidates(
     perms = list(product(*pools))
     random.shuffle(perms)
     subset = perms[:n]
+    primary_event_id = str(event_family).strip().upper()
 
     for perm in subset:
         params = dict(zip(keys, perm))
         params.update(priors.get("params", {}))
 
         s = StrategySpec(
-            event_family=event_family,
+            event_family=primary_event_id,
             entry_signal=priors.get("entry_signal", "enter"),
             exit_signal=priors.get("exit_signal", "exit"),
             position_cap=priors.get("position_cap", 1.0),

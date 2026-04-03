@@ -12,6 +12,8 @@ def test_deterministic_generator():
     c1 = generate_candidates("TEST", {}, grids, 2, 42)
     c2 = generate_candidates("TEST", {}, grids, 2, 42)
     assert len(c1) == 2
+    assert c1[0].primary_event_id == "TEST"
+    assert c1[0].compat_event_family == "TEST"
     assert c1[0].strategy_id == c2[0].strategy_id
     assert c1[1].strategy_id == c2[1].strategy_id
 
@@ -19,6 +21,7 @@ def test_deterministic_generator():
 def test_reordering_spec_normalization():
     s1 = StrategySpec("V", "en", "ex", params={"x": 1.0, "y": 2.0})
     s2 = StrategySpec("V", "en", "ex", params={"y": 2.0, "x": 1.0})
+    assert s1.primary_event_id == "V"
     assert s1.strategy_id == s2.strategy_id
 
 

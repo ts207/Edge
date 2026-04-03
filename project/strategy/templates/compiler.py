@@ -44,8 +44,8 @@ def compile_positions(spec: StrategySpec, bundle: DataBundle) -> tuple[pd.Series
     """Compile a spec into an integer position series avoiding lookahead."""
     idx = bundle.prices.index
 
-    entries = bundle.get_event_signal(spec.event_family, spec.entry_signal)
-    exits = bundle.get_event_signal(spec.event_family, spec.exit_signal)
+    entries = bundle.get_event_signal(spec.primary_event_id, spec.entry_signal)
+    exits = bundle.get_event_signal(spec.primary_event_id, spec.exit_signal)
 
     from project.strategy.templates.validation import validate_pit_invariants
 

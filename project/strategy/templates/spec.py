@@ -18,6 +18,14 @@ class StrategySpec:
     params: Dict[str, float] = field(default_factory=dict)
 
     @property
+    def primary_event_id(self) -> str:
+        return str(self.event_family).strip().upper()
+
+    @property
+    def compat_event_family(self) -> str:
+        return self.primary_event_id
+
+    @property
     def strategy_id(self) -> str:
         return hashlib.sha256(json.dumps(self.normalize(), sort_keys=True).encode()).hexdigest()
 

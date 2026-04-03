@@ -28,8 +28,19 @@ class Hypothesis:
     family_id: str
     cluster_id: str
 
+    @property
+    def primary_event_id(self) -> str:
+        return str(self.event_type).strip().upper()
+
+    @property
+    def compat_event_family(self) -> str:
+        return str(self.event_family).strip().upper()
+
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["primary_event_id"] = self.primary_event_id
+        payload["compat_event_family"] = self.compat_event_family
+        return payload
 
     def to_spec(self) -> HypothesisSpec:
         """Return the canonical HypothesisSpec representation."""
@@ -148,6 +159,8 @@ class HypothesisRegistry:
         if not rows:
             return pd.DataFrame(
                 columns=[
+                    "primary_event_id",
+                    "compat_event_family",
                     "event_family",
                     "event_type",
                     "symbol_scope",

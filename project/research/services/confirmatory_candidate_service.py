@@ -622,6 +622,8 @@ def build_adjacent_survivorship_payload(
         "origin_survivor_count": int(len(origin)),
         "adjacent_survivor_count": int(sum(1 for row in rows if row["survived_adjacent_window"])),
         "failure_reason_counts": failure_reason_counts,
+        "primary_event_ids": list(families.keys()),
+        "by_primary_event_id": families,
         "by_event_family": families,
         "candidate_rows": rows,
         "origin_path": str(origin_path),

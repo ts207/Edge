@@ -273,6 +273,11 @@ def test_adjacent_survivorship_classifies_fail_reasons(tmp_path):
         target_run_id="target_run",
     )
     report = json.loads(out_path.read_text(encoding="utf-8"))
+    assert report["primary_event_ids"] == [
+        "STATE_CHOP_STATE",
+        "TRANSITION_TRENDING_STATE_CHOP_STATE",
+    ]
+    assert report["by_primary_event_id"]["STATE_CHOP_STATE"]["origin_count"] == 1
     assert report["by_event_family"]["STATE_CHOP_STATE"]["origin_count"] == 1
 
 

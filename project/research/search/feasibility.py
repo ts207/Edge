@@ -174,7 +174,9 @@ def check_hypothesis_feasibility(
     if template_reason:
         reasons.append(template_reason)
         details["template_id"] = spec.template_id
-        details["family"] = _event_family(spec, registry)
+        details["primary_event_id"] = spec.trigger.event_id or ""
+        details["compat_event_family"] = _event_family(spec, registry)
+        details["family"] = details["compat_event_family"]
 
     if spec.feature_condition is not None and available_columns is not None:
         fc_column = _existing_column(

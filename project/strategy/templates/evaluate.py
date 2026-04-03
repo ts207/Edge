@@ -53,7 +53,9 @@ def evaluate_candidates(
 
         res = {
             "strategy_id": spec.strategy_id,
-            "event_family": spec.event_family,
+            "primary_event_id": spec.primary_event_id,
+            "compat_event_family": spec.compat_event_family,
+            "event_family": spec.compat_event_family,
             "entry_signal": spec.entry_signal,
             "exit_signal": spec.exit_signal,
             "trades": trades,
