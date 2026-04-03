@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from project.research.agent_io.proposal_schema import (
         AgentProposal,
         compile_single_hypothesis_to_agent_proposal,
+        detect_operator_proposal_format,
         load_agent_proposal,
         load_operator_proposal,
     )
@@ -71,6 +72,10 @@ _EXPORTS = {
         "project.research.agent_io.proposal_schema",
         "compile_single_hypothesis_to_agent_proposal",
     ),
+    "detect_operator_proposal_format": (
+        "project.research.agent_io.proposal_schema",
+        "detect_operator_proposal_format",
+    ),
     "load_agent_proposal": ("project.research.agent_io.proposal_schema", "load_agent_proposal"),
     "load_operator_proposal": ("project.research.agent_io.proposal_schema", "load_operator_proposal"),
     "proposal_to_experiment_config": (
@@ -106,6 +111,7 @@ __all__ = [
     "generate_run_id",
     "issue_proposal",
     "compile_single_hypothesis_to_agent_proposal",
+    "detect_operator_proposal_format",
     "load_agent_proposal",
     "load_operator_proposal",
     "proposal_to_experiment_config",

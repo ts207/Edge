@@ -774,6 +774,11 @@ def load_operator_proposal(path_or_payload: str | Path | Dict[str, Any]) -> Agen
     return load_agent_proposal(raw)
 
 
+def detect_operator_proposal_format(path_or_payload: str | Path | Dict[str, Any]) -> str:
+    raw = _load_proposal_payload(path_or_payload)
+    return "single_hypothesis" if "hypothesis" in raw else "legacy"
+
+
 def _validate_proposal(proposal: AgentProposal) -> None:
     if not proposal.program_id:
         raise ValueError("program_id is required")

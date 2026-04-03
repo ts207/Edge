@@ -5,7 +5,10 @@ from typing import Any
 
 from project.core.config import get_data_root
 from project.operator.bounded import validate_bounded_proposal
-from project.research.agent_io.proposal_schema import load_operator_proposal
+from project.research.agent_io.proposal_schema import (
+    detect_operator_proposal_format,
+    load_operator_proposal,
+)
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
 
 
@@ -49,6 +52,7 @@ def explain_proposal(
     out_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
+    proposal_format = detect_operator_proposal_format(proposal_path)
     proposal = load_operator_proposal(proposal_path)
     translation = translate_and_validate_proposal(
         proposal,
@@ -56,10 +60,22 @@ def explain_proposal(
         out_dir=Path(out_dir) if out_dir is not None else None,
     )
     bounded = validate_bounded_proposal(proposal, data_root=resolved_data_root)
+    experiment_config = dict(translation.get("experiment_config", {}) or {})
+    experiment_summary = {
+        "instrument_scope": dict(experiment_config.get("instrument_scope", {}) or {}),
+        "templates": dict(experiment_config.get("templates", {}) or {}),
+        "evaluation": dict(experiment_config.get("evaluation", {}) or {}),
+        "promotion": dict(experiment_config.get("promotion", {}) or {}),
+        "bounded": experiment_config.get("bounded"),
+    }
     return {
         "proposal_path": str(proposal_path),
+        "proposal_format": proposal_format,
         "program_id": proposal.program_id,
         "description": proposal.description,
+        "normalized_proposal": proposal.to_dict(),
+        "compiled_trigger_space": dict(proposal.trigger_space),
+        "resolved_experiment_summary": experiment_summary,
         "run_mode": proposal.run_mode,
         "objective_name": proposal.objective_name,
         "symbols": list(proposal.symbols),

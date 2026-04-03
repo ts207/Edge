@@ -34,7 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ("plan", "Translate and validate a proposal without executing the run."),
         ("run", "Issue a proposal through the canonical operator path."),
         ("lint", "Validate a proposal and emit bounded-scope warnings."),
-        ("explain", "Explain the resolved search surface and required dependencies."),
+        ("explain", "Explain normalized proposal, compiled trigger space, and resolved experiment summary."),
     ):
         proposal_parser = operator_sub.add_parser(name, help=help_text)
         proposal_parser.add_argument("--proposal", required=True)

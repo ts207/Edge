@@ -1,73 +1,96 @@
 # Quality gates and promotion
 
-A run is trustworthy only when it survives more than one kind of check.
+This repo does not treat one good backtest row as enough. Quality is layered.
 
-## Quality is multi-layered
+## The six layers of trust
 
-Do not compress quality into one number.
+1. contract integrity
+2. mechanical integrity
+3. research/statistical quality
+4. promotion quality
+5. packaging quality
+6. deployment discipline
 
-A good result in this repo has to survive at least these layers:
+A result is only trustworthy when it survives the layers relevant to the claim you are making.
 
-1. **contract integrity** — proposal, schema, and artifact contracts are valid
-2. **mechanical integrity** — required inputs and outputs exist and reconcile
-3. **statistical quality** — the candidate survives phase-2 style filters
-4. **promotion quality** — the candidate survives stronger promotion-oriented rules
-5. **packaging quality** — the thesis object is packaged with evidence, governance, and runtime-safe fields
-6. **deployment discipline** — promotion class and deployment state are not conflated
+## Layer 1: contract integrity
 
-## Mechanical quality
+Questions:
 
-Mechanical quality asks whether the run is even interpretable.
+- did the proposal validate
+- did schemas reconcile
+- did the plan build without violating repo contracts
 
-Typical blockers:
+Failure here means the question was not even asked cleanly.
 
-- missing manifest or missing required outputs
-- broken schema or artifact contracts
-- missing dataset coverage
-- replay or runtime-invariant failures
-- inconsistent generated artifacts
+## Layer 2: mechanical integrity
 
-A run that fails mechanically is a repair problem, not a market-signal conclusion.
+Questions:
 
-## Statistical quality
+- did the pipeline run as intended
+- do required artifacts exist
+- does the manifest reconcile with outputs
+- did feature, data, or runtime-invariant checks fail
 
-Phase-2 style quality asks whether a bounded claim has enough evidence to stay alive.
+Failure here is a repair problem, not a market conclusion.
 
-Typical dimensions include:
+## Layer 3: research quality
 
-- sample count
-- sign stability
-- robustness
-- cost-adjusted expectancy
-- multiple-testing controls
-- regime behavior
+Questions:
 
-This is where candidates are kept, weakened, or rejected as research results.
+- is there any effect worth caring about
+- does it survive costs and sample-quality checks
+- does it remain directionally coherent across relevant slices
 
-## Promotion quality
+This is where a candidate becomes worth discussing.
 
-Promotion asks a stricter question:
+## Layer 4: promotion quality
 
-> Is the surviving candidate strong enough to be carried forward as a governed edge or packaged thesis input?
+Promotion asks a narrower question:
 
-Promotion logic is owned by `project/research/services/promotion_service.py`.
+> is the surviving candidate strong enough to carry forward as a governed thesis input?
 
-Common promotion concerns include:
+Typical promotion concerns:
 
-- q-value thresholds
-- minimum event/sample support
-- stability score
+- q-value controls
+- support and coverage
+- stability
 - sign consistency
-- cost survival ratio
+- cost survival
 - negative-control behavior
 - time-slice or regime-slice support
-- overlap or redundancy concerns
 
-## Promotion ladder
+## Layer 5: packaging quality
 
-These lifecycle labels remain useful internally, but they are not the primary operator-facing permission model.
+Packaging quality asks whether the result has been turned into a usable runtime contract with:
 
-The lifecycle used by the repo is:
+- explicit trigger and context clauses
+- invalidation logic
+- governance metadata
+- evidence summaries
+- overlap metadata
+- serializable thesis-batch output
+
+## Layer 6: deployment discipline
+
+This is where many users get confused.
+
+Evidence strength and runtime permission are separate.
+
+- `promotion_class` answers how strong the evidence is
+- `deployment_state` answers where the thesis may be used
+
+Operator-facing permission should be read from deployment state:
+
+- `monitor_only`
+- `paper_only`
+- `live_enabled`
+
+`live_enabled` is the only state that may reach trading runtime.
+
+## Internal promotion ladder
+
+The repo still tracks:
 
 1. `candidate`
 2. `tested`
@@ -75,115 +98,36 @@ The lifecycle used by the repo is:
 4. `paper_promoted`
 5. `production_promoted`
 
-This ladder is meaningful. Do not collapse it into a generic “good thesis” label, but also do not mistake it for runtime permission.
+This ladder remains useful as internal evidence metadata. It is not the main operator-facing permission model.
 
-### `candidate`
+## The operator-facing readout
 
-The claim exists as a structured research output, but it is not yet packaged as a reusable thesis.
-
-### `tested`
-
-The claim has enough supporting testing structure to be tracked in the bootstrap lane.
-
-### `seed_promoted`
-
-The claim is packaged strongly enough for thesis-store membership and monitor-oriented use.
-
-This is not the same thing as production readiness.
-
-### `paper_promoted`
-
-The claim clears a stronger bar for paper-style review or downstream non-live evaluation.
-
-### `production_promoted`
-
-This is the strongest class. It should be rare and deliberately earned.
-
-## Promotion class versus deployment state
-
-These are separate fields for a reason.
-
-- **promotion class** = how strong the evidence is
-- **deployment state** = where the thesis may be used now
-
-For operator decisions, deployment state is the primary permission model:
-
-- `monitor_only` means no trading
-- `paper_only` means paper/shadow use only
-- `live_enabled` is the only state that permits trading runtime
-
-Typical pairings:
-
-- `seed_promoted` + `monitor_only`
-- `paper_promoted` + `paper_only`
-- `production_promoted` + `live_enabled`
-
-Never infer one from the other.
-
-## Operator-facing readout
-
-When summarizing whether something can be used by runtime, prefer this order:
+When someone asks “can this trade?”, answer in this order:
 
 1. was a thesis batch exported from a specific run
-2. what deployment state that batch carries
-3. what evidence caveat the promotion class still implies
+2. what `deployment_state` does that thesis carry
+3. what evidence caveats still matter from `promotion_class`
 
-That order is clearer than leading with `seed_promoted` / `paper_promoted` / `production_promoted`.
-The question "can this trade?" should be answerable from deployment state alone.
+That sequence is operationally clearer than starting from internal promotion vocabulary.
 
-## Bootstrap lane quality
+## Decision rubric after a run
 
-The bootstrap lane adds another layer beyond candidate survival.
+### Repair
 
-A packaging-ready thesis should have a coherent chain across:
+Use when artifact, schema, or manifest integrity failed.
 
-- seed inventory membership
-- testing scorecards
-- empirical summaries
-- evidence bundles
-- packaging summary
-- overlap graph membership
-- thesis-store serialization
+### Confirm
 
-If one of those is missing, the thesis may still be interesting, but the packaging state is incomplete.
+Use when the mechanism still looks plausible but requires one bounded follow-up.
 
-## Current packaging policy implication
+### Kill
 
-In this snapshot, the thesis store already exists under `data/live/theses/`. That means promotion and packaging are active concepts in the repo rather than placeholders.
+Use when the claim is not supported after costs, stability, or regime review.
 
-## How to classify a bad result
+### Export
 
-Use these buckets.
+Use when the run produced promoted results strong enough to become runtime-readable thesis input.
 
-### Mechanical failure
+### Package
 
-The run or artifact path is broken.
-
-Action: repair the pipeline, config, or artifact contract.
-
-### Low-power failure
-
-The strongest row exists but sample size is too small to treat the outcome as decisive.
-
-Action: widen sample or coarsen the slice carefully.
-
-### Regime-instability failure
-
-The effect flips or collapses across regimes or time slices.
-
-Action: freeze regime assumptions and run confirmatory follow-ups.
-
-### No-effect failure
-
-The bounded claim is simply not supported.
-
-Action: kill or reframe.
-
-## Common mistakes
-
-- treating positive expectancy as enough
-- ignoring multiple-testing and stability issues
-- assuming a promoted row is a packaged thesis
-- assuming `seed_promoted` means live-ready
-- leading with promotion class when deployment state is the actual runtime permission
-- reading only one table and inferring the entire quality story
+Use only when you intentionally need broader bootstrap/governance maintenance beyond the one-run export path.

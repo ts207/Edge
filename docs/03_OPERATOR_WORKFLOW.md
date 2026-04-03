@@ -1,32 +1,20 @@
 # Operator workflow
 
-This document explains the canonical bounded-work loop.
+This document owns the normal operator loop.
 
-## Workflow summary
+The canonical path is:
 
-The operator path is designed to answer one bounded question at a time while leaving a complete artifact trail.
+`proposal -> explain -> preflight -> plan -> run -> review -> export thesis batch`
 
-Canonical loop:
+## Step 1: author one bounded proposal
 
-`proposal -> preflight -> plan -> run -> inspect manifest -> inspect candidates -> inspect promotion outputs -> diagnose/compare -> decide keep/modify/kill -> export thesis batch`
+The operator front door is one atomic hypothesis, not an open search space.
 
-## Step 1 — author a bounded proposal
+Canonical example:
 
-A proposal should be narrow enough that you can answer all of these before running it:
+- [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
 
-- what event or regime class is being tested
-- what single template is being tested
-- what single symbol is being tested
-- what date window is allowed
-- what contexts are included or excluded
-- what exact horizon, direction, and entry lag are being tested
-- whether this is research-only, confirmation-oriented, or bounded off a baseline run
-
-A minimal example now exists at:
-
-- `spec/proposals/canonical_event_hypothesis_h24.yaml`
-
-Operator-facing proposals now use a single-hypothesis shape:
+Minimal shape:
 
 ```yaml
 program_id: volshock_btc_long_12b
@@ -46,11 +34,29 @@ hypothesis:
   entry_lag_bars: 1
 ```
 
-The operator loader compiles this bounded front-door format into the legacy internal `AgentProposal`.
+The operator loader validates this shape strictly, then compiles it into legacy `AgentProposal` so downstream experiment code does not need to change.
 
-## Step 2 — preflight
+## Step 2: explain the normalized proposal
 
-Use preflight to verify that the proposal is structurally valid, local datasets resolve, and the artifact root is writable.
+Use explain before planning when you want to inspect what the repo believes you asked for.
+
+```bash
+edge operator explain --proposal <proposal.yaml>
+```
+
+`explain` is the fastest way to inspect:
+
+- proposal format detection
+- normalized `AgentProposal`
+- compiled trigger space
+- resolved experiment summary
+- estimated hypothesis count
+
+Use this to catch normalization mistakes before you look at pipeline behavior.
+
+## Step 3: preflight
+
+Use preflight to verify that the proposal is valid, translatable, and locally runnable.
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight
@@ -62,19 +68,19 @@ Direct CLI:
 edge operator preflight --proposal <proposal.yaml>
 ```
 
-Preflight checks include:
+Preflight checks:
 
-- proposal validity
-- validated plan generation
-- search-spec existence
-- local dataset coverage by symbol
-- artifact-root writability
+- proposal loading and validation
+- experiment translation viability
+- search-spec availability
+- local dataset coverage
+- writable artifact root
 
-Use preflight before plan or run when the data root or proposal shape is uncertain.
+Preflight does not create a durable run and does not change runtime state.
 
-## Step 3 — plan
+## Step 4: plan
 
-Use plan to translate the proposal into a validated experiment config and a set of `run_all` overrides without committing to full execution semantics.
+Use plan to materialize the executable research contract without committing to full execution.
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=plan
@@ -86,18 +92,20 @@ Direct CLI:
 edge operator plan --proposal <proposal.yaml>
 ```
 
-What plan gives you:
+Planning writes or reports:
 
-- validated proposal expansion
-- detector/feature/state requirements
+- normalized proposal expansion
+- `experiment.yaml`
+- `run_all_overrides.json`
+- required detectors, features, and states
 - estimated hypothesis count
-- experiment config bundle
-- run-all override bundle
-- a stable record under proposal memory
+- proposal memory metadata
 
-## Step 4 — run
+If the proposal includes `bounded:`, this is also where the baseline proposal is normalized and checked so the bounded diff happens on comparable `AgentProposal` objects.
 
-Use run when the proposal is ready to become a durable run with artifacts.
+## Step 5: run
+
+Use run to create a durable research run with manifests and reports.
 
 ```bash
 make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=run
@@ -111,98 +119,64 @@ edge operator run --proposal <proposal.yaml>
 
 Under the hood, the operator path:
 
-1. copies the proposal into proposal memory
-2. writes `experiment.yaml`
-3. writes `run_all_overrides.json`
-4. invokes `project.pipelines.run_all`
-5. updates proposal memory and run-scoped artifacts
+1. loads and normalizes the proposal
+2. validates bounded-mode constraints if present
+3. writes proposal memory
+4. writes `experiment.yaml`
+5. writes `run_all_overrides.json`
+6. invokes `project.pipelines.run_all`
+7. updates run-scoped manifests and reports
 
-## What gets written during proposal issuance
+## Step 6: inspect the run
 
-A normal operator-issued run produces three different classes of outputs.
+Inspect outputs in this order:
 
-### Proposal memory
+1. `data/runs/<run_id>/run_manifest.json`
+2. `data/reports/phase2/<run_id>/phase2_candidates.parquet`
+3. `data/reports/phase2/<run_id>/phase2_diagnostics.json`
+4. `data/reports/promotions/<run_id>/...`
+5. `data/reports/operator/<run_id>/operator_summary.*`
 
-Under:
+The manifest answers whether the run is mechanically trustworthy. Promotion outputs answer whether the result survived the evidence gates strongly enough to matter.
 
-- `data/artifacts/experiments/<program_id>/memory/`
-- `data/artifacts/experiments/<program_id>/memory/proposals.parquet`
-- `data/artifacts/experiments/<program_id>/memory/proposals/<run_id>/...`
+## Step 7: review
 
-### Run-scoped execution outputs
+There are three canonical post-run review surfaces.
 
-Typically under:
-
-- `data/runs/<run_id>/run_manifest.json`
-- `data/reports/phase2/<run_id>/...`
-- `data/reports/promotions/<run_id>/...`
-
-### Operator review outputs
-
-Under:
-
-- `data/reports/operator/<run_id>/operator_summary.json`
-- `data/reports/operator/<run_id>/operator_summary.md`
-
-## Step 5 — review the run
-
-There are three post-run review surfaces.
-
-### Diagnose one run
+Diagnose one run:
 
 ```bash
 make review RUN_ID=<run_id> REVIEW_ACTION=diagnose
-```
-
-Direct CLI:
-
-```bash
 edge operator diagnose --run_id <run_id>
 ```
 
-Use when you need a structured explanation of why the run failed or why it is not promotable.
-
-### Regime-report one run
+Check regime sensitivity:
 
 ```bash
 make review RUN_ID=<run_id> REVIEW_ACTION=regime-report
-```
-
-Direct CLI:
-
-```bash
 edge operator regime-report --run_id <run_id>
 ```
 
-Use when you need to know whether the strongest result survives or flips across regimes.
-
-### Compare two or more runs
+Compare a bounded follow-up against a baseline:
 
 ```bash
 make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
-```
-
-Direct CLI:
-
-```bash
 edge operator compare --run_ids <baseline_run,followup_run>
 ```
 
-Use when the work is explicitly bounded against a prior slice or when you need time-slice comparisons.
+## Step 8: decide
 
-## Decision logic after review
+Most runs end in one of these next actions:
 
-A run usually falls into one of five next actions.
+- `repair` — the run or artifact contract broke
+- `confirm` — the mechanism survives, but needs one bounded follow-up
+- `kill` — the claim is not supported
+- `export` — the run is good enough to become runtime-readable thesis input
+- `package` — advanced/internal bootstrap maintenance, not the default path
 
-- **repair** — fix mechanical or artifact issues first
-- **confirm** — freeze the promising part and test an adjacent or bounded slice
-- **kill/reframe** — the claim is not supported or the proposal was too broad
-- **export** — the run is strong enough to become an explicit runtime thesis batch
-- **package** — advanced bootstrap/governance work beyond the one-run export path
+## Step 9: export the thesis batch
 
-## Step 6 — export a thesis batch for runtime
-
-Use export when one specific promoted run should become runtime-readable input.
+Use export when one specific promoted run should become runtime input.
 
 ```bash
 make export RUN_ID=<run_id>
@@ -214,46 +188,27 @@ Direct module form:
 python -m project.research.export_promoted_theses --run_id <run_id>
 ```
 
-What export gives you:
+This writes:
 
 - `data/live/theses/<run_id>/promoted_theses.json`
-- `data/live/theses/index.json` as a catalog artifact
-- a runtime batch tied to one explicit run lineage
+- `data/live/theses/index.json` as catalog metadata
 
-Runtime should then be pointed at that batch explicitly using `strategy_runtime.thesis_path` or `strategy_runtime.thesis_run_id`.
-If you need an explicit operator-managed bridge beyond raw export, the module surface also supports:
-
-- `--register-runtime <name>` to record a named runtime registration in the thesis index
-- `--set-deployment-state <thesis_id_or_candidate_id>=monitor_only|paper_only|live_enabled` for explicit deployment-state overrides
-
-## Campaign workflow
-
-Campaigns are a higher-level surface that repeatedly issue bounded proposals with mutation logic.
-
-Entry point:
+Optional explicit bridge controls live on the module surface:
 
 ```bash
-edge operator campaign start <campaign_spec.yaml> --plan_only 1
+python -m project.research.export_promoted_theses \
+  --run_id <run_id> \
+  --register-runtime <name> \
+  --set-deployment-state <thesis_id_or_candidate_id>=monitor_only|paper_only|live_enabled
 ```
 
-Use campaigns only when you already understand the single-proposal workflow. Campaigns build on the bounded operator path; they do not replace it.
+## Step 10: point runtime at the batch explicitly
 
-## Proposal-side helper commands
+Runtime should be configured with exactly one explicit thesis source:
 
-Two additional proposal tools are useful before execution:
+- `strategy_runtime.thesis_path`
+- or `strategy_runtime.thesis_run_id`
 
-```bash
-edge operator lint --proposal <proposal.yaml>
-edge operator explain --proposal <proposal.yaml>
-```
+It should not infer “latest”.
 
-Use them when you need warnings on breadth or a compact view of resolved detectors, features, states, and run-all overrides.
-
-## Strong operating rules
-
-- Bound one mechanism slice at a time.
-- Prefer plan before run.
-- Prefer compare for confirmation work.
-- Use diagnose before mutating the next proposal.
-- Prefer explicit `export_promoted_theses --run_id <run_id>` before `make package` when your goal is runtime input from one bounded run.
-- Move to `make package` only when you are trying to do broader thesis bootstrap/governance work rather than answer one bounded run question.
+Trading permission is still separate from export. Runtime may only trade when the selected thesis carries `deployment_state=live_enabled`.

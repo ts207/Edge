@@ -1,167 +1,142 @@
 # Testing and maintenance
 
-This document explains how to keep the repo and its documentation coherent.
+This document explains how to keep the repo and the docs aligned with the actual contracts.
 
-## Core principle
+## Default verification surface
 
-This repo is guarded by tests that enforce both behavior and architectural shape. Documentation has to stay aligned with those contracts.
-
-## Main verification surfaces
-
-### Canonical validation shortcut
+Use:
 
 ```bash
 make validate
 ```
 
-This is the easiest repo-level gate for day-to-day work.
+That is the shortest repo-level gate for normal maintenance.
 
-### Researcher verification
+## Researcher verification
+
+Contract block:
 
 ```bash
 python -m project.scripts.run_researcher_verification --mode contracts
 ```
 
-For a completed run:
+Experiment block:
 
 ```bash
 python -m project.scripts.run_researcher_verification --mode experiment --run-id <run_id>
 ```
 
-The detailed contract is documented in [VERIFICATION.md](VERIFICATION.md).
+Use the experiment block after a completed run or after a fix that was triggered by one specific run.
 
-### Minimum green gate
+## Minimum green gate
+
+Use:
 
 ```bash
 make minimum-green-gate
 ```
 
-This exercises a deeper repo-health block that includes compile checks, architecture tests, generated-doc drift checks, selected regressions, and golden workflows.
+This is deeper than day-to-day validation and is appropriate when you changed architecture, command surfaces, or broader repo contracts.
+
+## What changes require which checks
+
+### You changed proposal loading, operator flow, or front-door docs
+
+Run:
+
+```bash
+make validate
+python -m project.scripts.generate_operator_surface_inventory
+```
+
+Then inspect:
+
+- `README.md`
+- `docs/00_START_HERE.md`
+- `docs/03_OPERATOR_WORKFLOW.md`
+- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
+- `docs/operator_command_inventory.md`
+
+### You changed thesis export or runtime-facing thesis handling
+
+Run:
+
+```bash
+make validate
+python -m project.research.export_promoted_theses --run_id <run_id>
+python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
+```
+
+Then inspect:
+
+- `data/live/theses/<run_id>/promoted_theses.json`
+- `data/live/theses/index.json`
+- `docs/generated/thesis_overlap_graph.md`
+- `docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md`
+
+### You changed advanced bootstrap/package surfaces
+
+Run:
+
+```bash
+make validate
+make package
+./project/scripts/regenerate_artifacts.sh
+```
+
+Then inspect:
+
+- `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
+- bootstrap-maintenance generated docs under `docs/generated/`
+
+### You changed architecture boundaries or doc ownership
+
+Run:
+
+```bash
+make validate
+python -m project.scripts.build_system_map
+```
+
+Then inspect:
+
+- `docs/ARCHITECTURE_SURFACE_INVENTORY.md`
+- `docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md`
+- `docs/generated/system_map.md`
 
 ## Generated-doc maintenance
 
-Generated docs should be rebuilt when the underlying contract or inventory changes.
+Generated docs should be regenerated, not hand-edited.
 
-Important regeneration surfaces include:
+Important generators:
 
 ```bash
 python -m project.scripts.build_system_map
 python -m project.scripts.generate_operator_surface_inventory
 python -m project.scripts.build_event_contract_artifacts
 python -m project.scripts.build_seed_bootstrap_artifacts
-# optional explicit thesis context:
-# python -m project.scripts.build_seed_bootstrap_artifacts --thesis_run_id <run_id>
 python -m project.scripts.build_seed_empirical_artifacts
 python -m project.scripts.build_seed_packaging_artifacts
 python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ./project/scripts/regenerate_artifacts.sh
 ```
 
-Use the full regeneration script when multiple inventory surfaces may have drifted together.
+## Canonical doc ownership
 
-## What docs are test-coupled
+- repo orientation: `README.md`, `docs/00_START_HERE.md`
+- stable model: `docs/01_PROJECT_MODEL.md`
+- operator loop: `docs/03_OPERATOR_WORKFLOW.md`
+- command selection: `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
+- artifact interpretation: `docs/05_ARTIFACTS_AND_INTERPRETATION.md`
+- quality and permission: `docs/06_QUALITY_GATES_AND_PROMOTION.md`
+- advanced bootstrap lane: `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
+- runtime thesis model: `docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md`
 
-A few docs are effectively part of the contract surface because tests assert their content or existence.
-
-Examples:
-
-- `README.md`
-- `docs/00_START_HERE.md`
-- `docs/02_REPOSITORY_MAP.md`
-- `docs/operator_command_inventory.md`
-- `docs/ARCHITECTURE_SURFACE_INVENTORY.md`
-- `docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md`
-- `docs/RESEARCH_CALIBRATION_BASELINE.md`
-
-When editing these, run targeted tests or full validation.
-
-## Maintenance loops by change type
-
-### You changed a proposal or operator surface
-
-Run:
-
-```bash
-make validate
-python -m project.scripts.generate_operator_surface_inventory
-```
-
-Then check:
-
-- `README.md`
-- `docs/00_START_HERE.md`
-- `docs/03_OPERATOR_WORKFLOW.md`
-- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-
-### You changed event, ontology, or registry contracts
-
-Run:
-
-```bash
-make validate
-python -m project.scripts.build_event_contract_artifacts
-python -m project.scripts.build_system_map
-```
-
-Then check:
-
-- `docs/generated/event_contract_reference.md`
-- `docs/02_REPOSITORY_MAP.md`
-- `docs/05_ARTIFACTS_AND_INTERPRETATION.md`
-
-### You changed thesis packaging or overlap logic
-
-Run:
-
-```bash
-python -m project.research.export_promoted_theses --run_id <run_id>
-make package
-python -m project.scripts.build_thesis_overlap_artifacts
-```
-
-Then check:
-
-- `data/live/theses/index.json`
-- `data/live/theses/<run_id>/promoted_theses.json`
-- `docs/generated/seed_thesis_catalog.md`
-- `docs/generated/seed_thesis_packaging_summary.md`
-- `docs/generated/thesis_overlap_graph.md`
-- `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
-- `docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md`
-
-### You changed architectural boundaries
-
-Run:
-
-```bash
-make validate
-python -m project.scripts.build_system_map
-```
-
-Then check:
-
-- `docs/ARCHITECTURE_SURFACE_INVENTORY.md`
-- `docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md`
-- `docs/generated/system_map.md`
-
-## Documentation maintenance rule
-
-When behavior changes, update the doc that owns the concept instead of adding a new one-off note.
-
-Ownership map:
-
-- repo mental model -> `README.md`, `docs/00_START_HERE.md`, `docs/01_PROJECT_MODEL.md`
-- repo structure -> `docs/02_REPOSITORY_MAP.md`
-- operator lifecycle -> `docs/03_OPERATOR_WORKFLOW.md`
-- command selection -> `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-- artifacts and reports -> `docs/05_ARTIFACTS_AND_INTERPRETATION.md`
-- quality and promotion -> `docs/06_QUALITY_GATES_AND_PROMOTION.md`
-- packaging lane -> `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
-- runtime thesis consumption -> `docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md`
+When behavior changes, update the owner doc instead of adding a one-off note elsewhere.
 
 ## Anti-patterns
 
-- updating generated docs manually instead of regenerating them
-- creating new planning markdown instead of updating canonical docs
-- teaching wrappers instead of canonical surfaces
-- changing command behavior without updating the operator docs and README
+- editing generated docs by hand
+- changing command behavior without updating the owning canonical doc
+- teaching low-level wrappers before the operator surface
+- leaving legacy or bootstrap surfaces undocumented as advanced/internal after a behavior change

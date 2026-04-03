@@ -2,202 +2,164 @@
 
 This document defines the stable mental model for the repository.
 
-## System overview
+## System boundary
 
-Edge is a governed research-and-packaging system for event-driven crypto hypotheses.
+Edge is a governed bridge from bounded research to explicit runtime inputs.
 
-At a high level, it does five things:
+It does five things:
 
-1. **defines domain contracts** for events, episodes, states, templates, regimes, and promotion rules
-2. **turns proposals into bounded experiment plans**
-3. **executes orchestrated pipeline stages** to produce candidate and promotion artifacts
-4. **exports promoted run results into runtime thesis batches**
-5. **serves packaged theses to live/runtime and portfolio logic**
+1. define the allowed domain through specs, registries, and contracts
+2. accept one operator-facing proposal as a bounded hypothesis
+3. normalize that proposal into `AgentProposal` and translate it into a validated experiment plan
+4. execute the plan and write durable run and promotion artifacts
+5. export one run-derived thesis batch for explicit runtime consumption
 
-That makes the repo neither purely backtest-only nor purely live-only. It is a bridge from governed research to packaged runtime inputs.
+The repo is not a notebook workspace and it is not a live trading engine by itself. It is the controlled path between research claims and runtime-readable thesis objects.
+
+## Canonical lifecycle
+
+Research lifecycle:
+
+`single hypothesis proposal -> normalized AgentProposal -> validated plan -> run -> review -> export thesis batch`
+
+Runtime lifecycle:
+
+`explicit thesis batch selection -> deployment-state check -> runtime retrieval -> decisioning -> optional trade submission`
+
+These are connected, but not identical. A good run is not automatically a live tradable thesis.
 
 ## Core objects
 
-### Proposal
+### Operator proposal
 
-A proposal is the operator-facing contract for bounded research.
-
-It specifies at least:
+The operator-facing proposal is authored as one atomic hypothesis. It states:
 
 - `program_id`
-- date window
-- symbol scope
-- timeframe
+- `description`
+- `start`, `end`
+- one symbol
+- one timeframe
 - one trigger
 - one template
-- one horizon
 - one direction
+- one horizon
 - one entry lag
-- objective and promotion profile
+- optional contexts, overlays, and bounded-baseline metadata
 
-The proposal contract lives in `project/research/agent_io/proposal_schema.py`.
+Canonical example:
+
+- [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
+
+### Normalized `AgentProposal`
+
+The new front door compiles into the legacy internal `AgentProposal`. This is the compatibility bridge that lets downstream code stay unchanged while the operator path is simplified.
 
 ### Experiment plan
 
-A validated plan is the translated form of a proposal. It resolves:
+The proposal translator resolves:
 
 - required detectors
 - required features
 - required states
 - estimated hypothesis count
-- run-all overrides
-- boundedness warnings or blocks
+- `experiment.yaml`
+- `run_all_overrides.json`
 
-The translation path lives in `project/research/agent_io/proposal_to_experiment.py`.
+The validated plan is the executable research contract.
 
-### Event
+### Run
 
-An event is a discrete, timestamped trigger.
+A run is the durable execution unit identified by `run_id`. It owns:
 
-Examples in the repo include:
-
-- `VOL_SHOCK`
-- `LIQUIDATION_CASCADE`
-- `BASIS_DISLOC`
-- `LIQUIDITY_VACUUM`
-
-Event specifications live primarily in `spec/events/` and the canonical registry surfaces.
-
-### Episode
-
-An episode is a structured multi-step process built from one or more events.
-
-Episodes matter when the repo needs stateful semantics rather than single-bar semantics.
-
-Episode contracts live in `spec/episodes/` and `project/episodes/`.
-
-### Template
-
-A template describes the shape of the claim being tested around a trigger.
-
-Typical examples are continuation- or reversal-style hypothesis shapes. Templates constrain how the search surface is expanded.
-
-Template and search-limit data come from the registry layer under `project/configs/registries/`.
+- proposal memory
+- `data/runs/<run_id>/run_manifest.json`
+- phase-2 outputs
+- promotion outputs
+- operator review outputs
 
 ### Candidate
 
-A candidate is the structured output of phase-2 search or downstream promotion filtering.
+A candidate is a research result that survived enough of the search/evaluation path to be reviewed. It is not yet a runtime contract.
 
-It is not yet a packaged runtime thesis. It is still a research output that must survive additional gates.
+### Packaged thesis
 
-### Promotion artifact
-
-Promotion artifacts record whether a candidate survives promotion-oriented rules such as:
-
-- q-value constraints
-- sample quality
-- stability
-- sign consistency
-- cost survival
-- negative-control behavior
-- coverage and support checks
-
-The canonical service ownership for promotion logic is in `project/research/services/promotion_service.py`.
-
-### Thesis
-
-A thesis is a packaged object that downstream consumers can retrieve and reason over.
-
-A promoted thesis contains fields such as:
-
-- trigger clause
-- confirmation clause
-- context clause
-- invalidation clause
-- governance metadata
-- evidence summary
-- promotion class
-- deployment state
-- overlap metadata
-
-Packaged theses live under `data/live/theses/` and the contract lives in `project/live/contracts/promoted_thesis.py`.
+A packaged thesis is a governed object with trigger, context, invalidation, evidence, and governance metadata. Runtime consumes packaged theses, not raw candidate rows.
 
 ### Thesis batch
 
-A thesis batch is the runtime JSON artifact exported for one explicit run.
-
-Canonical path:
+A thesis batch is the exported runtime file for one run:
 
 - `data/live/theses/<run_id>/promoted_theses.json`
 
-## Lifecycle model
+This run-level batch is the canonical runtime input.
 
-### Bounded discovery lifecycle
+## Evidence versus permission
 
-`proposal -> preflight -> plan -> run -> run manifest -> phase2 candidates -> promotion outputs -> diagnose/compare/regime report -> exported thesis batch`
+Two fields answer different questions:
 
-This lifecycle is for answering a bounded question.
+- `promotion_class` answers how strong the evidence is
+- `deployment_state` answers where the thesis may be used right now
 
-### Thesis packaging lifecycle
-
-`candidate -> tested -> seed_promoted -> paper_promoted -> production_promoted`
-
-This lifecycle is an internal governance ladder. Runtime should still consume an explicit exported batch and inspect deployment state directly.
-For operator questions, the real permission model is:
+Operator-facing permission should be read from deployment state:
 
 - `monitor_only`
 - `paper_only`
 - `live_enabled`
 
-The question "can this trade?" should be answered from deployment state, not from the internal promotion ladder.
+The question “can this trade?” should be answerable from `deployment_state` alone.
 
 ## Subsystem roles
 
 ### Specs and registries
 
-These surfaces define what the repo is allowed to talk about.
+These define the domain and the allowed search/runtime vocabulary:
 
-- `spec/` — domain specs and authored policies
-- `project/configs/registries/` — runtime-friendly registry inputs for events, states, templates, detectors, and search limits
-- `project/domain/` and `project/spec_registry/` — compiled/domain views of those specs
+- `spec/`
+- `project/configs/registries/`
+- `project/domain/`
+- `project/spec_registry/`
+
+### Operator and proposal IO
+
+These own proposal loading, normalization, validation, issuance, and translation:
+
+- `project/cli.py`
+- `project/operator/`
+- `project/research/agent_io/`
 
 ### Pipelines
 
-These surfaces coordinate data preparation and stage execution.
+These own stage planning, orchestration, provenance, and manifest writing:
 
-- `project/pipelines/` — orchestration, stage planning, execution, provenance, wrappers
-- `project/contracts/pipeline_registry.py` — stage-family and artifact contracts
+- `project/pipelines/`
+- `project/contracts/pipeline_registry.py`
 
-### Research
+### Research and promotion
 
-These surfaces own search, evaluation, promotion, reporting, knowledge, and packaging.
+These own candidate generation, evaluation, promotion, reporting, export, and packaging:
 
 - `project/research/`
 - `project/research/services/`
-- `project/research/agent_io/`
 
-### Live/runtime
+### Runtime and portfolio
 
-These surfaces consume packaged theses and current context.
+These consume exported thesis batches and current market context:
 
 - `project/live/`
 - `project/portfolio/`
 - `project/engine/`
 
-## Current canonical surfaces
+## Stable invariants
 
-The repo has many modules, but only a small set should anchor your mental model.
+- one operator proposal should describe one bounded claim
+- all operator proposals normalize to `AgentProposal` before downstream processing
+- runtime thesis batches are run-derived and selected explicitly
+- `data/live/theses/index.json` is a catalog, not a runtime default selector
+- `deployment_state=live_enabled` is the only state that may reach trading runtime
 
-Primary surfaces:
+## What remains compatibility-only
 
-- `project.cli`
-- `project.pipelines.run_all`
-- `project.contracts.pipeline_registry`
-- `project.research.services.*`
-- `project.research.agent_io.*`
-- `project.live.*`
-
-Generated inventory for those surfaces exists in `docs/generated/system_map.md`.
-
-## Design constraints that shape the docs
-
-- Proposals bound the search surface before execution.
-- Services own policy; wrappers should stay thin.
-- Packaged theses are the runtime contract, not raw candidate rows.
-- Quality is multi-stage; statistical survival alone is not enough.
-- Generated inventories are important, but they are not the teaching surface.
+- legacy proposal authoring shapes
+- internal promotion ladder as a primary teaching surface
+- bootstrap/package flows as the default way to create runtime thesis input
+- implicit latest thesis resolution
