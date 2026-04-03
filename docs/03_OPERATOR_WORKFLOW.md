@@ -16,6 +16,28 @@ Default policy:
 - use the thesis bootstrap lane only when you are turning tested claims into canonical thesis objects
 - follow [docs/templates/bounded_experiment_template.md](templates/bounded_experiment_template.md) for the standing research loop, required artifacts, promotion gates, and governance cadence
 
+## Operator actions
+
+Reduce the visible repo surface to four actions:
+
+1. `discover`
+   - `edge operator preflight`
+   - `edge operator plan`
+   - `edge operator run`
+2. `package`
+   - thesis bootstrap builders
+   - thesis overlap / structural confirmation builders
+3. `validate`
+   - contract verification
+   - smoke workflows
+   - governance and replay checks
+4. `review`
+   - `edge operator diagnose`
+   - `edge operator regime-report`
+   - `edge operator compare`
+
+Everything else is internal or maintenance-oriented.
+
 ---
 
 ## Preferred bounded experiment workflow

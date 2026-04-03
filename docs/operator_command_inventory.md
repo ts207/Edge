@@ -2,6 +2,15 @@
 
 Generated from `project/cli.py` and `Makefile`. Update this file with `python -m project.scripts.generate_operator_surface_inventory`.
 
+## Preferred front door
+
+Use these surfaces first:
+
+- `edge operator preflight|plan|run` for bounded research issuance
+- thesis bootstrap builders for `package` and thesis-store refresh
+- `edge operator diagnose|regime-report|compare` for post-run review
+- maintained `make` targets only for common workflow bundles and maintenance
+
 ## Canonical operator commands
 
 - `edge operator campaign`
@@ -16,10 +25,6 @@ Generated from `project/cli.py` and `Makefile`. Update this file with `python -m
 
 ## Make targets
 
-- `CLEAN_SCRIPT`
-- `ROOT_DIR`
-- `RUN_ALL`
-- `SHARED_VENV_PYTHON`
 - `baseline`
 - `bench-pipeline`
 - `benchmark-m0`
@@ -73,10 +78,6 @@ Generated from `project/cli.py` and `Makefile`. Update this file with `python -m
     "edge operator run"
   ],
   "make_targets": [
-    "CLEAN_SCRIPT",
-    "ROOT_DIR",
-    "RUN_ALL",
-    "SHARED_VENV_PYTHON",
     "baseline",
     "bench-pipeline",
     "benchmark-m0",

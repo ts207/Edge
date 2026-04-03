@@ -19,6 +19,7 @@ from project.live.contracts import (
 )
 from project.live.thesis_specs import get_thesis_definition
 from project.portfolio.thesis_overlap import overlap_group_id_for_thesis, write_thesis_overlap_artifacts
+from project.research.artifact_hygiene import build_artifact_refs, infer_workspace_root, invalid_artifact_header
 from project.research.seed_bootstrap import DOCS_GENERATED
 from project.research.seed_empirical import _load_empirical_bundles
 
@@ -535,29 +536,42 @@ def package_seed_promoted_theses(
     summary_json = docs_root / "seed_thesis_packaging_summary.json"
     summary_md = docs_root / "seed_thesis_packaging_summary.md"
     catalog_md = docs_root / "seed_thesis_catalog.md"
+    workspace_root = infer_workspace_root(docs_root, data_root_path)
+    artifact_refs, invalid_refs = build_artifact_refs(
+        {
+            "thesis_store": output_path,
+            "thesis_index": index_path,
+            "card_dir": card_dir,
+            "overlap_json": docs_root / "thesis_overlap_graph.json",
+            "overlap_md": docs_root / "thesis_overlap_graph.md",
+        },
+        workspace_root=workspace_root,
+    )
     summary_payload = {
         "package_run_id": package_run_id,
         "generated_at_utc": _utc_now(),
         "packaged_count": len(theses),
         "thesis_ids": packaged_ids,
-        "output_path": str(output_path),
-        "index_path": str(index_path),
-        "card_dir": str(card_dir),
+        "workspace_root": workspace_root.as_posix(),
+        "artifact_refs": artifact_refs,
         "overlap_group_count": int(overlap_payload.get("overlap_group_count", 0) or 0),
         "overlap_edge_count": len(overlap_payload.get("edges", [])) if isinstance(overlap_payload.get("edges", []), list) else 0,
         "freshness_dates": {thesis.thesis_id: thesis.evidence_freshness_date for thesis in theses},
         "review_due_dates": {thesis.thesis_id: thesis.review_due_date for thesis in theses},
+        "invalid_artifact_refs": invalid_refs,
     }
     summary_json.write_text(json.dumps(summary_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    summary_lines = [
+    summary_lines = invalid_artifact_header(invalid_refs) + [
         "# Seed thesis packaging summary",
         "",
         f"- package_run_id: `{package_run_id}`",
         f"- packaged_count: `{len(theses)}`",
         f"- overlap_group_count: `{summary_payload['overlap_group_count']}`",
         f"- overlap_edge_count: `{summary_payload['overlap_edge_count']}`",
-        f"- thesis_store: `{output_path}`",
-        f"- thesis_index: `{index_path}`",
+        f"- thesis_store: `{artifact_refs['thesis_store']['path']}`",
+        f"- thesis_index: `{artifact_refs['thesis_index']['path']}`",
+        f"- overlap_json: `{artifact_refs['overlap_json']['path']}`",
+        f"- overlap_md: `{artifact_refs['overlap_md']['path']}`",
         "",
         "## Packaged theses",
         "",

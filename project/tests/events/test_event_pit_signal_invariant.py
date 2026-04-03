@@ -61,7 +61,7 @@ def _make_events(
     )
 
 
-def test_signal_flag_absent_at_and_before_detected_ts(monkeypatch):
+def test_signal_flag_absent_at_and_before_detected_ts(monkeypatch, tmp_path: Path):
     """_signal must be False at detected_ts (the bar where event was detected)."""
     monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: _symbol_grid())
 
@@ -74,7 +74,7 @@ def test_signal_flag_absent_at_and_before_detected_ts(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r1",
         timeframe="5m",
     )
@@ -100,7 +100,7 @@ def test_signal_flag_absent_at_and_before_detected_ts(monkeypatch):
     assert bool(row_0015[signal_col]) is False
 
 
-def test_signal_flag_replay_no_retroactive_set(monkeypatch):
+def test_signal_flag_replay_no_retroactive_set(monkeypatch, tmp_path: Path):
     """
     Sequential replay: scan bars in order and confirm that at every bar t,
     no _signal[t'] was True for t' <= detected_ts.
@@ -116,7 +116,7 @@ def test_signal_flag_replay_no_retroactive_set(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r2",
         timeframe="5m",
     )
@@ -144,7 +144,7 @@ def test_signal_flag_replay_no_retroactive_set(monkeypatch):
             )
 
 
-def test_detected_ts_defaults_to_enter_ts_when_absent(monkeypatch):
+def test_detected_ts_defaults_to_enter_ts_when_absent(monkeypatch, tmp_path: Path):
     """When events have no detected_ts column, registry falls back to enter_ts."""
     monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: _symbol_grid())
 
@@ -166,7 +166,7 @@ def test_detected_ts_defaults_to_enter_ts_when_absent(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r3",
         timeframe="5m",
     )
@@ -181,7 +181,7 @@ def test_detected_ts_defaults_to_enter_ts_when_absent(monkeypatch):
     assert bool(row_0005[signal_col]) is False
 
 
-def test_signal_bar_clamped_to_grid_when_detected_off_grid(monkeypatch):
+def test_signal_bar_clamped_to_grid_when_detected_off_grid(monkeypatch, tmp_path: Path):
     """
     When detected_ts is between bars, _signal fires at the first bar strictly
     after detected_ts (grid-snapped forward).
@@ -208,7 +208,7 @@ def test_signal_bar_clamped_to_grid_when_detected_off_grid(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r4",
         timeframe="5m",
     )
@@ -222,7 +222,7 @@ def test_signal_bar_clamped_to_grid_when_detected_off_grid(monkeypatch):
     assert signal_true_rows.iloc[0]["timestamp"] == pd.Timestamp("2026-01-01T00:10:00Z", tz="UTC")
 
 
-def test_explicit_detected_ts_later_than_enter_ts(monkeypatch):
+def test_explicit_detected_ts_later_than_enter_ts(monkeypatch, tmp_path: Path):
     """
     If analyzer emits detected_ts > enter_ts (e.g. confirmation lag),
     _signal fires at first bar > detected_ts, NOT at first bar > enter_ts.
@@ -250,7 +250,7 @@ def test_explicit_detected_ts_later_than_enter_ts(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r5",
         timeframe="5m",
     )

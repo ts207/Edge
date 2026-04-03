@@ -70,37 +70,25 @@ High-value code surfaces:
 - `project/scripts/` — maintained artifact builders and bootstrap utilities
 - `project/tests/` — architecture, smoke, contracts, regressions, replay, runtime, docs, domain, strategy, synthetic truth
 
-## Command Surface
+## Operator surface
 
-Installed console scripts from `pyproject.toml`:
+Treat the repo as four actions:
 
-- `edge`
-- `edge-backtest` (alias `backtest`)
-- `edge-run-all`
-- `edge-live-engine`
-- `edge-phase2-discovery`
-- `edge-promote`
-- `edge-smoke`
-- `compile-strategy-blueprints`
-- `build-strategy-candidates`
-- `ontology-consistency-audit`
+1. `discover`
+2. `package`
+3. `validate`
+4. `review`
 
-Maintained `make` targets:
+Preferred front door:
 
-- `make discover-target EVENT=<EVENT> SYMBOLS=<SYMBOLS>`
-- `make discover-edges`
-- `make discover-blueprints`
-- `make run`
-- `make baseline`
-- `make golden-workflow`
-- `make golden-certification`
-- `make benchmark-maintenance-smoke`
-- `make benchmark-maintenance`
-- `make minimum-green-gate`
-- `make test`
-- `make test-fast`
-- `make lint`
-- `make format-check`
+- `edge operator preflight --proposal <proposal.yaml>`
+- `edge operator plan --proposal <proposal.yaml>`
+- `edge operator run --proposal <proposal.yaml>`
+- `edge operator diagnose --run_id <run_id>`
+- `edge operator regime-report --run_id <run_id>`
+- `edge operator compare --run_ids <baseline_run,followup_run>`
+
+Use broad `make` targets and direct `run_all` entrypoints only when you already know the exact bounded slice or need workflow maintenance.
 
 ## Thesis Bootstrap Surface
 
@@ -165,6 +153,7 @@ Use the bootstrap scripts only when you are moving from tested claims into canon
 ## Documentation
 
 - [docs/README.md](docs/README.md) — full doc index
+- [docs/00_START_HERE.md](docs/00_START_HERE.md) — shortest canonical repo entry
 - [docs/03_OPERATOR_WORKFLOW.md](docs/03_OPERATOR_WORKFLOW.md) — canonical research loop + thesis bootstrap lane
 - [docs/04_COMMANDS_AND_ENTRY_POINTS.md](docs/04_COMMANDS_AND_ENTRY_POINTS.md) — command reference
 - [docs/06_QUALITY_GATES_AND_PROMOTION.md](docs/06_QUALITY_GATES_AND_PROMOTION.md) — gate policy + promotion classes

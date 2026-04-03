@@ -217,3 +217,6 @@ def test_run_shadow_live_thesis_validation_tracks_confirmation_only_when_window_
     assert stats["confirmation_match_cycles"] > 0
     assert summary["confirmation_thesis_stats_by_id"]["THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM"]["confirmation_match_cycles"] > 0
     assert summary["quality_checks"]["overlap_metadata_visible_consistently"] is True
+    assert summary["invalid_artifact_refs"] == []
+    assert summary["artifact_refs"]["trace"]["path"].startswith("shadow/")
+    assert "/home/irene/" not in out["summary_md"].read_text(encoding="utf-8")

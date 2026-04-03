@@ -23,6 +23,7 @@ def validate_search_spec_doc(search_cfg: Dict[str, Any], *, source: str = "<memo
 
     # Resolve and validate entry lags eagerly so stale same-bar configs fail before generation.
     resolve_entry_lags(search_cfg)
+    resolve_templates(search_cfg)
 
 
 def expand_triggers(search_cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,12 +80,32 @@ def expand_triggers(search_cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def resolve_templates(search_cfg: Dict[str, Any]) -> List[str]:
-    # Check both 'templates' and 'template_ids' if needed,
-    # but generator currently uses 'templates'
+    registry = get_domain_registry()
     templates = search_cfg.get("templates", [])
     if templates == "*":
-        return list(get_domain_registry().default_templates())
-    return templates
+        return list(registry.default_hypothesis_templates())
+
+    resolved = [templates] if isinstance(templates, str) else list(templates)
+    normalized: List[str] = []
+    seen: set[str] = set()
+    invalid_filter_templates: List[str] = []
+    for raw in resolved:
+        token = str(raw).strip()
+        if not token:
+            continue
+        if registry.is_filter_template(token):
+            invalid_filter_templates.append(token)
+            continue
+        if token not in seen:
+            normalized.append(token)
+            seen.add(token)
+    if invalid_filter_templates:
+        raise ValueError(
+            "Search spec templates must be hypothesis templates; "
+            "filter templates belong in filter-template expansion, not top-level templates: "
+            + ", ".join(sorted(set(invalid_filter_templates)))
+        )
+    return normalized
 
 
 def resolve_execution_templates(family: str) -> List[str]:

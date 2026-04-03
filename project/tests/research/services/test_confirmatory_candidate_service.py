@@ -278,6 +278,7 @@ def test_adjacent_survivorship_classifies_fail_reasons(tmp_path):
         "TRANSITION_TRENDING_STATE_CHOP_STATE",
     ]
     assert report["by_primary_event_id"]["STATE_CHOP_STATE"]["origin_count"] == 1
+    assert report["compat_grouping_aliases"]["by_event_family"] == "by_primary_event_id"
     assert report["by_event_family"]["STATE_CHOP_STATE"]["origin_count"] == 1
 
 

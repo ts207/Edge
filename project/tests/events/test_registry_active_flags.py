@@ -22,7 +22,7 @@ def _symbol_grid() -> pd.Series:
     )
 
 
-def test_build_event_flags_emits_impulse_and_active_columns(monkeypatch):
+def test_build_event_flags_emits_impulse_and_active_columns(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: _symbol_grid())
 
     events = pd.DataFrame(
@@ -40,7 +40,7 @@ def test_build_event_flags_emits_impulse_and_active_columns(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r1",
         timeframe="5m",
     )
@@ -62,7 +62,7 @@ def test_build_event_flags_emits_impulse_and_active_columns(monkeypatch):
     assert bool(row_0015[active_col]) is True
 
 
-def test_build_event_flags_emits_direction_column_at_signal_bar(monkeypatch):
+def test_build_event_flags_emits_direction_column_at_signal_bar(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: _symbol_grid())
 
     events = pd.DataFrame(
@@ -81,7 +81,7 @@ def test_build_event_flags_emits_direction_column_at_signal_bar(monkeypatch):
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r_dir",
         timeframe="5m",
     )
@@ -94,7 +94,7 @@ def test_build_event_flags_emits_direction_column_at_signal_bar(monkeypatch):
     assert np.isnan(row_0010["evt_direction_false_breakout"])
 
 
-def test_build_event_flags_all_symbol_event_sets_active_for_all_symbols(monkeypatch):
+def test_build_event_flags_all_symbol_event_sets_active_for_all_symbols(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: _symbol_grid())
 
     events = pd.DataFrame(
@@ -112,7 +112,7 @@ def test_build_event_flags_all_symbol_event_sets_active_for_all_symbols(monkeypa
     flags = registry.build_event_flags(
         events=events,
         symbols=["BTCUSDT", "ETHUSDT"],
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         run_id="r2",
         timeframe="5m",
     )

@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
-from pathlib import Path
 from project.events.registry import build_event_flags, _active_signal_column
 
 
-def test_build_event_flags_correctness():
+def test_build_event_flags_correctness(tmp_path: Path):
     # 1. Setup small synthetic grid (1 day, 5m bars = 288 bars)
     ts = pd.date_range("2024-01-01", periods=10, freq="5min", tz="UTC")
     symbols = ["BTCUSDT", "ETHUSDT"]
@@ -57,7 +55,7 @@ def test_build_event_flags_correctness():
     events["features_at_event"] = "{}"
 
     # 3. Run vectorized implementation
-    flags = build_event_flags(events=events, symbols=symbols, data_root=Path("/tmp"), run_id="test")
+    flags = build_event_flags(events=events, symbols=symbols, data_root=tmp_path, run_id="test")
 
     # 4. Assertions
     # BTCUSDT check

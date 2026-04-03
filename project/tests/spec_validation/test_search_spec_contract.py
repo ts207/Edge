@@ -55,6 +55,21 @@ def test_validate_search_spec_rejects_zero_entry_lag() -> None:
         )
 
 
+def test_validate_search_spec_rejects_filter_templates_as_top_level_hypothesis_templates() -> None:
+    with pytest.raises(ValueError, match="filter templates belong in filter-template expansion"):
+        validate_search_spec_doc(
+            {
+                "kind": "search_spec",
+                "triggers": {"events": ["VOL_SHOCK"]},
+                "templates": ["only_if_regime"],
+                "horizons": ["15m"],
+                "directions": ["long"],
+                "entry_lag": 1,
+            },
+            source="inline_search_spec",
+        )
+
+
 def test_spec_validation_cli_checks_real_search_specs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     search_dir = tmp_path / "search"
     search_dir.mkdir(parents=True, exist_ok=True)

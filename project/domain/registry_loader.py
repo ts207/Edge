@@ -32,6 +32,20 @@ _SPECIAL_EVENT_SPEC_KINDS = {
     "event_unified_registry",
 }
 _DOMAIN_GRAPH_RELATIVE_PATH = "spec/domain/domain_graph.yaml"
+_EVENT_RUNTIME_RAW_KEYS = (
+    "templates",
+    "horizons",
+    "conditioning_cols",
+    "max_candidates_per_run",
+    "state_overrides",
+    "precedence_reason",
+)
+_OPERATOR_RUNTIME_RAW_KEYS = (
+    "side_policy",
+    "label_target",
+    "requires_direction",
+    "supports_trigger_types",
+)
 
 
 def _event_spec_dir() -> Path:
@@ -359,6 +373,7 @@ def _load_operators(unified: Dict[str, Any]) -> Dict[str, TemplateOperatorDefini
             compatible_families=tuple(
                 str(x).strip().upper() for x in row.get("compatible_families", []) or []
             ),
+            template_kind=str(row.get("template_kind", "")).strip().lower(),
             raw=dict(row),
         )
     return out
@@ -528,6 +543,86 @@ def _merge_mapping(base: Any, override: Any) -> Dict[str, Any]:
     return out
 
 
+def _slim_mapping(value: Any) -> Dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _slim_event_raw(raw: Any) -> Dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, Any] = {}
+    for key in _EVENT_RUNTIME_RAW_KEYS:
+        value = raw.get(key)
+        if value in (None, "", [], {}, ()):
+            continue
+        if isinstance(value, dict):
+            out[key] = dict(value)
+        elif isinstance(value, (list, tuple)):
+            out[key] = list(value)
+        else:
+            out[key] = value
+    return out
+
+
+def _slim_operator_raw(raw: Any) -> Dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, Any] = {}
+    for key in _OPERATOR_RUNTIME_RAW_KEYS:
+        value = raw.get(key)
+        if value in (None, "", [], {}, ()):
+            continue
+        if isinstance(value, (list, tuple)):
+            out[key] = [str(item).strip() for item in value if str(item).strip()]
+        else:
+            out[key] = value
+    return out
+
+
+def _thin_unified_payload(registry: DomainRegistry) -> Dict[str, Any]:
+    payload = registry.unified_payload if isinstance(registry.unified_payload, dict) else {}
+    families = payload.get("families", {})
+    defaults = payload.get("defaults", {})
+    state_overrides = payload.get("state_overrides", {})
+    return {
+        "version": int(payload.get("version", 1) or 1),
+        "kind": "event_unified_registry",
+        "defaults": dict(defaults) if isinstance(defaults, dict) else {},
+        "families": dict(families) if isinstance(families, dict) else {},
+        "state_overrides": dict(state_overrides) if isinstance(state_overrides, dict) else {},
+        "events": {
+            event_type: _slim_event_raw(spec.raw)
+            for event_type, spec in sorted(registry.event_definitions.items())
+        },
+    }
+
+
+def _thin_template_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
+    payload = registry.template_registry_payload if isinstance(registry.template_registry_payload, dict) else {}
+    defaults = payload.get("defaults", {})
+    families = payload.get("families", {})
+    return {
+        "version": int(payload.get("version", 1) or 1),
+        "kind": "template_registry",
+        "defaults": dict(defaults) if isinstance(defaults, dict) else {},
+        "families": dict(families) if isinstance(families, dict) else {},
+    }
+
+
+def _thin_family_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
+    payload = registry.family_registry_payload if isinstance(registry.family_registry_payload, dict) else {}
+    return {
+        "version": int(payload.get("version", 1) or 1),
+        "kind": "family_registry",
+        "event_families": dict(payload.get("event_families", {}))
+        if isinstance(payload.get("event_families"), dict)
+        else {},
+        "state_families": dict(payload.get("state_families", {}))
+        if isinstance(payload.get("state_families"), dict)
+        else {},
+    }
+
+
 def _build_domain_registry_from_sources() -> DomainRegistry:
     unified = load_unified_event_registry()
     if not unified:
@@ -621,9 +716,8 @@ def _event_definition_payload(spec: EventDefinition) -> Dict[str, Any]:
         "suppressed_by": list(spec.suppressed_by),
         "maturity_scores": dict(spec.maturity_scores),
         "parameters": dict(spec.parameters),
-        "raw": dict(spec.raw),
+        "raw": _slim_event_raw(spec.raw),
         "spec_path": spec.spec_path,
-        "source_kind": spec.source_kind,
     }
 
 
@@ -646,17 +740,25 @@ def _state_definition_payload(spec: StateDefinition) -> Dict[str, Any]:
         "description": spec.description,
         "context_family": spec.context_family,
         "context_label": spec.context_label,
-        "raw": dict(spec.raw),
         "spec_path": spec.spec_path,
-        "source_kind": spec.source_kind,
     }
 
 
 def _operator_definition_payload(spec: TemplateOperatorDefinition) -> Dict[str, Any]:
+    raw = _slim_operator_raw(spec.raw)
     return {
         "template_id": spec.template_id,
         "compatible_families": list(spec.compatible_families),
-        "raw": dict(spec.raw),
+        "template_kind": spec.template_kind,
+        "side_policy": str(raw.get("side_policy", "both")).strip().lower() or "both",
+        "label_target": str(raw.get("label_target", "fwd_return_h")).strip().lower()
+        or "fwd_return_h",
+        "requires_direction": bool(raw.get("requires_direction", True)),
+        "supports_trigger_types": [
+            str(item).strip().upper()
+            for item in raw.get("supports_trigger_types", [])
+            if str(item).strip()
+        ],
     }
 
 
@@ -675,9 +777,7 @@ def _regime_definition_payload(spec: RegimeDefinition) -> Dict[str, Any]:
         "routing_profile_id": spec.routing_profile_id,
         "scorecard_version": spec.scorecard_version,
         "scorecard_source_run": spec.scorecard_source_run,
-        "raw": dict(spec.raw),
         "spec_path": spec.spec_path,
-        "source_kind": spec.source_kind,
     }
 
 
@@ -707,9 +807,7 @@ def _thesis_definition_payload(spec: ThesisDefinition) -> Dict[str, Any]:
         "symbol_scope": dict(spec.symbol_scope),
         "detection": dict(spec.detection),
         "notes": spec.notes,
-        "raw": dict(spec.raw),
         "spec_path": spec.spec_path,
-        "source_kind": spec.source_kind,
     }
 
 
@@ -721,7 +819,7 @@ def _domain_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
             "status": "generated",
             "notes": "Generated compiled domain graph. Runtime and research code should consume this artifact directly.",
         },
-        "unified_payload": dict(registry.unified_payload),
+        "unified_payload": _thin_unified_payload(registry),
         "event_definitions": {
             event_type: _event_definition_payload(spec)
             for event_type, spec in sorted(registry.event_definitions.items())
@@ -744,8 +842,8 @@ def _domain_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
         },
         "gates_spec": dict(registry.gates_spec),
         "unified_registry_path": registry.unified_registry_path,
-        "template_registry_payload": dict(registry.template_registry_payload),
-        "family_registry_payload": dict(registry.family_registry_payload),
+        "template_registry_payload": _thin_template_registry_payload(registry),
+        "family_registry_payload": _thin_family_registry_payload(registry),
         "context_state_map": [
             {"family": family, "label": label, "state_id": state_id}
             for (family, label), state_id in sorted(registry.context_state_map.items())
@@ -813,9 +911,9 @@ def _event_definition_from_payload(row: Dict[str, Any]) -> EventDefinition:
         suppressed_by=tuple(row.get("suppressed_by", []) if isinstance(row.get("suppressed_by"), (list, tuple)) else ()),
         maturity_scores=dict(row.get("maturity_scores", {})) if isinstance(row.get("maturity_scores"), dict) else {},
         parameters=dict(row.get("parameters", {})) if isinstance(row.get("parameters"), dict) else {},
-        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        raw=_slim_event_raw(row.get("raw", {})),
         spec_path=str(row.get("spec_path", "")).strip(),
-        source_kind=str(row.get("source_kind", "domain_graph")).strip() or "domain_graph",
+        source_kind="domain_graph",
     )
 
 
@@ -824,7 +922,7 @@ def _state_definition_from_payload(row: Dict[str, Any]) -> StateDefinition:
         state_id=str(row.get("state_id", "")).strip().upper(),
         family=str(row.get("family", "")).strip().upper(),
         source_event_type=str(row.get("source_event_type", "")).strip().upper(),
-        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        raw={},
         state_scope=str(row.get("state_scope", "source_only")).strip().lower() or "source_only",
         min_events=int(row.get("min_events", 200) or 200),
         activation_rule=str(row.get("activation_rule", "")).strip(),
@@ -848,17 +946,30 @@ def _state_definition_from_payload(row: Dict[str, Any]) -> StateDefinition:
         context_family=str(row.get("context_family", "")).strip(),
         context_label=str(row.get("context_label", "")).strip(),
         spec_path=str(row.get("spec_path", "")).strip(),
-        source_kind=str(row.get("source_kind", "domain_graph")).strip() or "domain_graph",
+        source_kind="domain_graph",
     )
 
 
 def _operator_definition_from_payload(row: Dict[str, Any]) -> TemplateOperatorDefinition:
+    raw = {
+        "template_kind": str(row.get("template_kind", "")).strip().lower(),
+        "side_policy": str(row.get("side_policy", "both")).strip().lower() or "both",
+        "label_target": str(row.get("label_target", "fwd_return_h")).strip().lower()
+        or "fwd_return_h",
+        "requires_direction": bool(row.get("requires_direction", True)),
+        "supports_trigger_types": [
+            str(item).strip().upper()
+            for item in row.get("supports_trigger_types", [])
+            if str(item).strip()
+        ],
+    }
     return TemplateOperatorDefinition(
         template_id=str(row.get("template_id", "")).strip(),
         compatible_families=tuple(
             str(item).strip().upper() for item in row.get("compatible_families", []) if str(item).strip()
         ),
-        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        template_kind=str(row.get("template_kind", "")).strip().lower(),
+        raw=raw,
     )
 
 
@@ -895,9 +1006,9 @@ def _thesis_definition_from_payload(row: Dict[str, Any]) -> ThesisDefinition:
         symbol_scope=dict(row.get("symbol_scope", {})) if isinstance(row.get("symbol_scope"), dict) else {},
         detection=dict(row.get("detection", {})) if isinstance(row.get("detection"), dict) else {},
         notes=str(row.get("notes", "")).strip(),
-        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        raw={},
         spec_path=str(row.get("spec_path", "")).strip(),
-        source_kind=str(row.get("source_kind", "domain_graph")).strip() or "domain_graph",
+        source_kind="domain_graph",
     )
 
 
@@ -920,9 +1031,9 @@ def _regime_definition_from_payload(row: Dict[str, Any]) -> RegimeDefinition:
         routing_profile_id=str(row.get("routing_profile_id", "")).strip(),
         scorecard_version=str(row.get("scorecard_version", "")).strip(),
         scorecard_source_run=str(row.get("scorecard_source_run", "")).strip(),
-        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        raw={},
         spec_path=str(row.get("spec_path", "")).strip(),
-        source_kind=str(row.get("source_kind", "regime_registry")).strip() or "regime_registry",
+        source_kind="domain_graph",
     )
 
 

@@ -624,6 +624,9 @@ def build_adjacent_survivorship_payload(
         "failure_reason_counts": failure_reason_counts,
         "primary_event_ids": list(families.keys()),
         "by_primary_event_id": families,
+        "compat_grouping_aliases": {
+            "by_event_family": "by_primary_event_id",
+        },
         "by_event_family": families,
         "candidate_rows": rows,
         "origin_path": str(origin_path),

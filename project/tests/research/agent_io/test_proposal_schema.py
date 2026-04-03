@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import yaml
+
+
 def test_proxy_canonical_events_have_evidence_tier_in_registry():
     """TICKET-014: proxy canonical events must have evidence_tier in canonical_event_registry.yaml."""
     from project.spec_registry import load_yaml_relative
@@ -97,10 +104,38 @@ def test_proposal_schema_canonicalizes_carry_state_aliases():
     assert proposal.contexts["carry_state"] == ["funding_pos", "funding_neg", "neutral"]
 
 
-def test_synthetic_proposal_carries_explicit_pipeline_overrides():
+def test_synthetic_proposal_carries_explicit_pipeline_overrides(tmp_path: Path):
     from project.research.agent_io.proposal_schema import load_agent_proposal
 
-    proposal = load_agent_proposal("spec/proposals/demo_synthetic_fast.yaml")
+    proposal_path = tmp_path / "demo_synthetic_fast.yaml"
+    proposal_path.write_text(
+        yaml.safe_dump(
+            {
+                "program_id": "demo_synthetic_fast",
+                "objective": "synthetic test",
+                "symbols": ["BTCUSDT"],
+                "timeframe": "5m",
+                "start": "2024-01-01",
+                "end": "2024-01-31",
+                "trigger_space": {
+                    "allowed_trigger_types": ["EVENT"],
+                    "events": {"include": ["VOL_SHOCK"]},
+                },
+                "templates": ["continuation"],
+                "horizons_bars": [12],
+                "directions": ["long"],
+                "entry_lags": [1],
+                "discovery_profile": "synthetic",
+                "phase2_gate_profile": "synthetic",
+                "search_spec": "synthetic_truth",
+                "config_overlays": ["project/configs/golden_synthetic_discovery_fast.yaml"],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    proposal = load_agent_proposal(proposal_path)
 
     assert proposal.discovery_profile == "synthetic"
     assert proposal.phase2_gate_profile == "synthetic"

@@ -42,7 +42,7 @@ def _patch_robustness(monkeypatch) -> None:
     )
 
 
-def test_prepare_search_features_for_symbol_merges_event_direction_metadata(monkeypatch):
+def test_prepare_search_features_for_symbol_merges_event_direction_metadata(monkeypatch, tmp_path: Path):
     base = _base_features()
 
     monkeypatch.setattr(
@@ -72,7 +72,7 @@ def test_prepare_search_features_for_symbol_merges_event_direction_metadata(monk
         run_id="dummy",
         symbol="BTCUSDT",
         timeframe="5m",
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         load_features_fn=lambda **kwargs: base.copy(),
     )
 
@@ -81,7 +81,7 @@ def test_prepare_search_features_for_symbol_merges_event_direction_metadata(monk
     assert features.loc[0, direction_col] == 1.0
 
 
-def test_prepare_search_features_for_symbol_coalesces_duplicate_event_direction_columns(monkeypatch):
+def test_prepare_search_features_for_symbol_coalesces_duplicate_event_direction_columns(monkeypatch, tmp_path: Path):
     base = _base_features()
     direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
 
@@ -113,7 +113,7 @@ def test_prepare_search_features_for_symbol_coalesces_duplicate_event_direction_
         run_id="dummy",
         symbol="BTCUSDT",
         timeframe="5m",
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         load_features_fn=lambda **kwargs: base.copy(),
     )
 
@@ -124,7 +124,7 @@ def test_prepare_search_features_for_symbol_coalesces_duplicate_event_direction_
     assert features.loc[0, direction_col] == 1.0
 
 
-def test_prepare_search_features_for_symbol_preserves_direction_sign_from_flags(monkeypatch):
+def test_prepare_search_features_for_symbol_preserves_direction_sign_from_flags(monkeypatch, tmp_path: Path):
     base = _base_features()
     direction_col = ColumnRegistry.event_direction_cols("VOL_SHOCK")[0]
 
@@ -148,7 +148,7 @@ def test_prepare_search_features_for_symbol_preserves_direction_sign_from_flags(
         run_id="dummy",
         symbol="BTCUSDT",
         timeframe="5m",
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         load_features_fn=lambda **kwargs: base.copy(),
     )
 
@@ -158,6 +158,7 @@ def test_prepare_search_features_for_symbol_preserves_direction_sign_from_flags(
 
 def test_prepare_search_features_for_symbol_materializes_expected_zero_hit_event_columns(
     monkeypatch,
+    tmp_path: Path,
 ):
     base = _base_features()
 
@@ -174,7 +175,7 @@ def test_prepare_search_features_for_symbol_materializes_expected_zero_hit_event
         run_id="dummy",
         symbol="BTCUSDT",
         timeframe="5m",
-        data_root=Path("/tmp"),
+        data_root=tmp_path,
         expected_event_ids=["VOL_SHOCK"],
         load_features_fn=lambda **kwargs: base.copy(),
     )

@@ -22,6 +22,10 @@ def test_reordering_spec_normalization():
     s1 = StrategySpec("V", "en", "ex", params={"x": 1.0, "y": 2.0})
     s2 = StrategySpec("V", "en", "ex", params={"y": 2.0, "x": 1.0})
     assert s1.primary_event_id == "V"
+    normalized = s1.normalize()
+    assert normalized["primary_event_id"] == "V"
+    assert normalized["compat_event_family"] == "V"
+    assert normalized["event_family"] == "V"
     assert s1.strategy_id == s2.strategy_id
 
 

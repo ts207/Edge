@@ -143,7 +143,14 @@ def test_domain_registry_helpers_work_on_small_synthetic_registry():
             "S2": StateDefinition("S2", "SFAM", "SRC", {"b": 2}),
         },
         template_operator_definitions={
-            "templ": TemplateOperatorDefinition("templ", ("FAM",), {"a": 1}),
+            "templ": TemplateOperatorDefinition("templ", ("FAM",), "execution_template", {"a": 1}),
+            "t2": TemplateOperatorDefinition(
+                "t2",
+                ("FAM",),
+                "filter_template",
+                {"feature": "x", "operator": ">=", "threshold": 1.0},
+            ),
+            "t3": TemplateOperatorDefinition("t3", ("FAM",), "execution_template", {"a": 2}),
         },
         regime_definitions={
             "FAM": RegimeDefinition(canonical_regime="FAM", bucket="trade_generating"),
@@ -185,8 +192,13 @@ def test_domain_registry_helpers_work_on_small_synthetic_registry():
     assert registry.event_ids == ("E1", "E2")
     assert registry.valid_state_ids == ("ALIAS1", "S1", "S2")
     assert registry.default_templates() == ("t1", "t2")
+    assert registry.default_hypothesis_templates() == ("t1",)
     assert registry.family_filter_templates("fam")[0]["feature"] == "x"
     assert registry.family_execution_templates("fam") == ("t3",)
+    assert registry.family_hypothesis_templates("fam") == ("t3",)
+    assert registry.template_kind("t2") == "filter_template"
+    assert registry.is_filter_template("t2") is True
+    assert registry.is_hypothesis_template("t2") is False
     assert registry.default_entry_lags() == (1, 2)
     assert registry.stress_scenario_rows()[0]["name"] == "stress"
     assert registry.kill_switch_candidates() == ["a", "b"]

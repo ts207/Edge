@@ -13,16 +13,17 @@ from project.tests.conftest import REPO_ROOT
 _REPO_ROOT = str(REPO_ROOT)
 
 
-def _env_with_pythonpath() -> dict:
+def _env_with_pythonpath(data_root: Path) -> dict:
     env = os.environ.copy()
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = f"{_REPO_ROOT}:{existing}" if existing else _REPO_ROOT
-    env["BACKTEST_DATA_ROOT"] = str(Path(_REPO_ROOT) / "data")
+    env["BACKTEST_DATA_ROOT"] = str(data_root)
     return env
 
 
-def test_run_all_plan_only():
+def test_run_all_plan_only(tmp_path: Path):
     """Verify that run_all.py --plan_only 1 works without execution."""
+    data_root = tmp_path / "data"
     cmd = [
         sys.executable,
         "-m",
@@ -39,7 +40,7 @@ def test_run_all_plan_only():
         "1",
     ]
     result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath()
+        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath(data_root)
     )
     assert result.returncode == 0, result.stderr
     assert "Plan for run smoke_test_plan" in result.stdout
@@ -48,7 +49,8 @@ def test_run_all_plan_only():
     assert "expectancy_tail=analysis:True robustness:True checklist:True" in result.stdout
 
 
-def test_run_all_plan_only_shows_template_only_event_widening():
+def test_run_all_plan_only_shows_template_only_event_widening(tmp_path: Path):
+    data_root = tmp_path / "data"
     cmd = [
         sys.executable,
         "-m",
@@ -67,15 +69,16 @@ def test_run_all_plan_only_shows_template_only_event_widening():
         "1",
     ]
     result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath()
+        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath(data_root)
     )
 
     assert result.returncode == 0, result.stderr
     assert "phase2_event_type=all (template_only_auto_widen)" in result.stdout
 
 
-def test_run_all_dry_run():
+def test_run_all_dry_run(tmp_path: Path):
     """Verify that run_all.py --dry_run 1 initializes manifest but does not execute."""
+    data_root = tmp_path / "data"
     run_id = f"smoke_test_dry_{uuid.uuid4().hex[:8]}"
     cmd = [
         sys.executable,
@@ -93,11 +96,11 @@ def test_run_all_dry_run():
         "1",
     ]
     result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath()
+        cmd, capture_output=True, text=True, cwd=_REPO_ROOT, env=_env_with_pythonpath(data_root)
     )
     assert result.returncode == 0, result.stderr
     assert f"Dry run for {run_id} completed" in result.stdout
-    manifest_path = Path(_REPO_ROOT) / "data" / "runs" / run_id / "run_manifest.json"
+    manifest_path = data_root / "runs" / run_id / "run_manifest.json"
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert payload["status"] == "success"
     assert payload["dry_run"] is True

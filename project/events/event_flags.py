@@ -376,9 +376,17 @@ def merge_event_flags_for_selected_event_types(
 
     missing = [c for c in out_cols if c not in merged.columns]
     if missing:
-        fill = pd.DataFrame(index=merged.index)
-        for c in missing:
-            fill[c] = np.nan if c.startswith("evt_direction_") or c.endswith("_direction") else False
+        fill = pd.DataFrame(
+            {
+                c: (
+                    pd.Series(np.nan, index=merged.index)
+                    if c.startswith("evt_direction_") or c.endswith("_direction")
+                    else pd.Series(False, index=merged.index)
+                )
+                for c in missing
+            },
+            index=merged.index,
+        )
         merged = pd.concat([merged, fill], axis=1)
     merged = merged[out_cols].copy()
 

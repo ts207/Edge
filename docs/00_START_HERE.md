@@ -45,6 +45,17 @@ Use this precedence when sources disagree:
 
 That rule matters because a successful process exit does not prove a good run, and older prose can lag implementation.
 
+## Canonical actions
+
+Treat the repo as four operator actions:
+
+1. `discover` — bounded proposal issuance and run execution
+2. `package` — thesis bootstrap, empirical evidence, packaging, overlap
+3. `validate` — contract, smoke, governance, and replay checks
+4. `review` — diagnose, compare, and regime-report after a run
+
+Everything else is support machinery.
+
 ## First day tasks
 
 If you are new, do these in order:
@@ -83,3 +94,13 @@ Use the bootstrap lane when:
 - the thesis store is empty or sparse
 - you need testing, empirical scoring, or packaging artifacts rather than another discovery run
 - you are trying to populate `data/live/theses/` or regenerate `docs/generated/thesis_overlap_graph.*`
+
+## What to ignore at first
+
+Do not start from:
+
+- raw loader internals
+- sidecar registries and compatibility aliases
+- long `make` target inventories
+- migration notes
+- low-level pipeline wrappers unless you already know why you need them

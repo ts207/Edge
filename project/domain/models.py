@@ -83,6 +83,7 @@ class StateDefinition:
 class TemplateOperatorDefinition:
     template_id: str
     compatible_families: tuple[str, ...]
+    template_kind: str = ""
     raw: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -175,6 +176,26 @@ class DomainRegistry:
     def get_operator(self, template_id: str) -> TemplateOperatorDefinition | None:
         return self.template_operator_definitions.get(str(template_id).strip())
 
+    def template_kind(self, template_id: str) -> str:
+        operator = self.get_operator(template_id)
+        if operator is None:
+            return ""
+        token = str(operator.template_kind).strip().lower()
+        if token:
+            return token
+        raw = operator.raw if isinstance(operator.raw, dict) else {}
+        return str(raw.get("template_kind", "")).strip().lower()
+
+    def is_filter_template(self, template_id: str) -> bool:
+        return self.template_kind(template_id) == "filter_template"
+
+    def is_execution_template(self, template_id: str) -> bool:
+        return self.template_kind(template_id) == "execution_template"
+
+    def is_hypothesis_template(self, template_id: str) -> bool:
+        kind = self.template_kind(template_id)
+        return kind in {"", "execution_template", "expression_template"}
+
     def has_regime(self, canonical_regime: str) -> bool:
         return str(canonical_regime).strip().upper() in self.regime_definitions
 
@@ -188,10 +209,45 @@ class DomainRegistry:
         return self.thesis_definitions.get(str(thesis_id).strip().upper())
 
     def operator_rows(self) -> Dict[str, Dict[str, Any]]:
-        return {name: dict(spec.raw) for name, spec in self.template_operator_definitions.items()}
+        rows: Dict[str, Dict[str, Any]] = {}
+        for name, spec in self.template_operator_definitions.items():
+            row = dict(spec.raw)
+            row.setdefault("template_id", spec.template_id)
+            row.setdefault("compatible_families", list(spec.compatible_families))
+            row.setdefault("template_kind", spec.template_kind)
+            rows[name] = row
+        return rows
 
     def thesis_rows(self) -> Dict[str, Dict[str, Any]]:
-        return {name: dict(spec.raw) for name, spec in self.thesis_definitions.items()}
+        rows: Dict[str, Dict[str, Any]] = {}
+        for name, spec in self.thesis_definitions.items():
+            row = dict(spec.raw)
+            row.setdefault("thesis_id", spec.thesis_id)
+            row.setdefault("thesis_kind", spec.thesis_kind)
+            row.setdefault("event_family", spec.event_family)
+            row.setdefault("primary_event_id", spec.primary_event_id)
+            row.setdefault("canonical_regime", spec.canonical_regime)
+            row.setdefault("timeframe", spec.timeframe)
+            row.setdefault("event_side", spec.event_side)
+            row.setdefault("promotion_class", spec.promotion_class)
+            row.setdefault("deployment_state", spec.deployment_state)
+            row.setdefault("trigger_events", list(spec.trigger_events))
+            row.setdefault("confirmation_events", list(spec.confirmation_events))
+            row.setdefault("required_episodes", list(spec.required_episodes))
+            row.setdefault("disallowed_regimes", list(spec.disallowed_regimes))
+            row.setdefault("source_event_contract_ids", list(spec.source_event_contract_ids))
+            row.setdefault("source_episode_contract_ids", list(spec.source_episode_contract_ids))
+            row.setdefault("required_context", dict(spec.required_context))
+            row.setdefault("supportive_context", dict(spec.supportive_context))
+            row.setdefault("expected_response", dict(spec.expected_response))
+            row.setdefault("invalidation", dict(spec.invalidation))
+            row.setdefault("freshness_policy", dict(spec.freshness_policy))
+            row.setdefault("governance", dict(spec.governance))
+            row.setdefault("symbol_scope", dict(spec.symbol_scope))
+            row.setdefault("detection", dict(spec.detection))
+            row.setdefault("notes", spec.notes)
+            rows[name] = row
+        return rows
 
     def family_templates(self, family_name: str) -> tuple[str, ...]:
         template_families = self.template_registry_payload.get("families", {})
@@ -253,7 +309,27 @@ class DomainRegistry:
 
     def event_row(self, event_type: str) -> Dict[str, Any]:
         event = self.get_event(event_type)
-        return dict(event.raw) if event is not None else {}
+        if event is None:
+            return {}
+        row = dict(event.raw)
+        row.setdefault("event_type", event.event_type)
+        row.setdefault("canonical_family", event.canonical_family)
+        row.setdefault("canonical_regime", event.canonical_regime)
+        row.setdefault("legacy_family", event.legacy_family)
+        row.setdefault("event_kind", event.event_kind)
+        row.setdefault("reports_dir", event.reports_dir)
+        row.setdefault("events_file", event.events_file)
+        row.setdefault("signal_column", event.signal_column)
+        row.setdefault("subtype", event.subtype)
+        row.setdefault("phase", event.phase)
+        row.setdefault("evidence_mode", event.evidence_mode)
+        row.setdefault("asset_scope", event.asset_scope)
+        row.setdefault("venue_scope", event.venue_scope)
+        row.setdefault("research_only", event.research_only)
+        row.setdefault("strategy_only", event.strategy_only)
+        row.setdefault("notes", event.notes)
+        row.setdefault("parameters", dict(event.parameters))
+        return row
 
     def event_spec_path(self, event_type: str) -> str:
         event = self.get_event(event_type)
@@ -375,14 +451,22 @@ class DomainRegistry:
                 seen.add(token)
         return tuple(out)
 
+    def default_hypothesis_templates(self) -> tuple[str, ...]:
+        return tuple(
+            template_id
+            for template_id in self.default_templates()
+            if self.is_hypothesis_template(template_id)
+        )
+
     def family_filter_templates(self, family_name: str) -> tuple[Dict[str, Any], ...]:
-        filter_block = self.template_registry_payload.get("filter_templates", {})
-        if not isinstance(filter_block, Mapping):
-            return ()
         allowed = set(self.family_templates(family_name))
         out: list[Dict[str, Any]] = []
-        for name, cond in filter_block.items():
-            if name in allowed and isinstance(cond, Mapping):
+        for name in sorted(allowed):
+            operator = self.get_operator(name)
+            if operator is None or operator.template_kind != "filter_template":
+                continue
+            cond = operator.raw if isinstance(operator.raw, dict) else {}
+            if isinstance(cond, Mapping):
                 out.append(
                     {
                         "name": str(name),
@@ -394,13 +478,15 @@ class DomainRegistry:
         return tuple(out)
 
     def family_execution_templates(self, family_name: str) -> tuple[str, ...]:
+        return self.family_hypothesis_templates(family_name)
+
+    def family_hypothesis_templates(self, family_name: str) -> tuple[str, ...]:
         allowed = self.family_templates(family_name)
         if not allowed:
-            allowed = self.default_templates()
+            allowed = self.default_hypothesis_templates()
         if not allowed:
             return ()
-        filter_names = {row["name"] for row in self.family_filter_templates(family_name)}
-        return tuple(name for name in allowed if name not in filter_names)
+        return tuple(name for name in allowed if self.is_hypothesis_template(name))
 
     def default_entry_lags(self) -> tuple[int, ...]:
         defaults = self.template_defaults()

@@ -165,7 +165,7 @@ def _legacy_family_by_event() -> Dict[str, str]:
 @lru_cache(maxsize=1)
 def _operator_registry() -> Dict[str, Dict[str, Any]]:
     registry = get_domain_registry()
-    return {name: dict(spec.raw) for name, spec in registry.template_operator_definitions.items()}
+    return registry.operator_rows()
 
 
 @lru_cache(maxsize=None)

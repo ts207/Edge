@@ -13,6 +13,7 @@ from project.core.config import get_data_root
 from project.live.contracts.live_trade_context import LiveTradeContext
 from project.live.decision import decide_trade_intent
 from project.live.thesis_store import ThesisStore
+from project.research.artifact_hygiene import build_artifact_refs, infer_workspace_root, invalid_artifact_header
 from project.research.thesis_evidence_runner import (
     DOCS_DIR,
     _liquidation_cascade_events,
@@ -324,20 +325,29 @@ def run_shadow_live_thesis_validation(
             "no_unexplained_holds": unexplained_hold_count == 0,
             "overlap_metadata_visible_consistently": overlap_metadata_missing == 0,
         },
-        "trace_path": str(trace_path),
     }
+    workspace_root = infer_workspace_root(resolved_data_root, resolved_docs, report_dir)
+    artifact_refs, invalid_refs = build_artifact_refs(
+        {
+            "trace": trace_path,
+        },
+        workspace_root=workspace_root,
+    )
+    summary_payload["workspace_root"] = workspace_root.as_posix()
+    summary_payload["artifact_refs"] = artifact_refs
+    summary_payload["invalid_artifact_refs"] = invalid_refs
     summary_json = report_dir / "shadow_live_thesis_summary.json"
     summary_md = report_dir / "shadow_live_thesis_summary.md"
     summary_json.write_text(json.dumps(summary_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    lines = [
+    lines = invalid_artifact_header(invalid_refs) + [
         "# Shadow live thesis summary",
         "",
         f"- run_id: `{run_id}`",
         f"- contexts_evaluated: `{len(trace_rows)}`",
         f"- window: `{start_time}` -> `{max_ts}`",
         f"- symbols: `{', '.join(symbols)}`",
-        f"- trace_path: `{trace_path}`",
+        f"- trace_path: `{artifact_refs['trace']['path']}`",
         "",
         "## Action counts",
         "",
@@ -371,6 +381,22 @@ def run_shadow_live_thesis_validation(
         "",
     ])
     summary_md.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+    artifact_refs, invalid_refs = build_artifact_refs(
+        {
+            "trace": trace_path,
+            "summary_json": summary_json,
+            "summary_md": summary_md,
+        },
+        workspace_root=workspace_root,
+    )
+    summary_payload["artifact_refs"] = artifact_refs
+    summary_payload["invalid_artifact_refs"] = invalid_refs
+    summary_json.write_text(json.dumps(summary_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    summary_md.write_text(
+        "\n".join(invalid_artifact_header(invalid_refs) + lines[len(invalid_artifact_header(invalid_refs)):]).rstrip() + "\n",
+        encoding="utf-8",
+    )
 
     docs_summary_json = resolved_docs / "shadow_live_thesis_summary.json"
     docs_summary_md = resolved_docs / "shadow_live_thesis_summary.md"

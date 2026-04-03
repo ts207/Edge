@@ -190,7 +190,7 @@ def _routing_templates_for_regime(canonical_regime: str) -> list[str]:
             if template not in seen:
                 templates.append(template)
                 seen.add(template)
-    return templates or list(registry.default_templates() or ("mean_reversion",))
+    return templates or list(registry.default_hypothesis_templates() or ("mean_reversion",))
 
 
 def _max_templates_per_run() -> int:
@@ -235,7 +235,7 @@ def _native_templates_for_event(event_type: str) -> list[str]:
         return family_templates[:max_templates]
     return [
         template
-        for template in (registry.default_templates() or ("mean_reversion",))
+        for template in (registry.default_hypothesis_templates() or ("mean_reversion",))
         if template in allowed_templates
     ][:max_templates]
 

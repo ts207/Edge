@@ -79,7 +79,7 @@ def _signal_bar(flags: pd.DataFrame, signal_col: str, symbol: str) -> pd.Timesta
 class TestImpulseThresholdFamily:
     """OI_SPIKE, FUNDING_EXTREME — single-bar threshold crossing."""
 
-    def _build_flags(self, monkeypatch, k: int, n_bars: int = 12):
+    def _build_flags(self, monkeypatch, data_root: Path, k: int, n_bars: int = 12):
         """k = index of the bar where condition first becomes true (0-based)."""
         grid = _grid(n_bars)
         monkeypatch.setattr(registry, "_load_symbol_timestamps", lambda **kwargs: grid)
@@ -98,23 +98,23 @@ class TestImpulseThresholdFamily:
         return registry.build_event_flags(
             events=events,
             symbols=["ETHUSDT"],
-            data_root=Path("/tmp"),
+            data_root=data_root,
             run_id="imp_test",
             timeframe="5m",
         ), grid
 
-    def test_signal_at_k_plus_one(self, monkeypatch):
+    def test_signal_at_k_plus_one(self, monkeypatch, tmp_path: Path):
         k = 4
-        flags, grid = self._build_flags(monkeypatch, k=k)
+        flags, grid = self._build_flags(monkeypatch, tmp_path, k=k)
         sig_col = _signal_ts_column("vol_shock_relaxation_event")
 
         sig_ts = _signal_bar(flags, sig_col, "ETHUSDT")
         expected = grid.iloc[k + 1]
         assert sig_ts == expected, f"Expected signal at {expected}, got {sig_ts}"
 
-    def test_no_signal_at_or_before_k(self, monkeypatch):
+    def test_no_signal_at_or_before_k(self, monkeypatch, tmp_path: Path):
         k = 6
-        flags, grid = self._build_flags(monkeypatch, k=k)
+        flags, grid = self._build_flags(monkeypatch, tmp_path, k=k)
         sig_col = _signal_ts_column("vol_shock_relaxation_event")
 
         for i in range(k + 1):  # bars 0..k inclusive
@@ -125,7 +125,7 @@ class TestImpulseThresholdFamily:
                 f"PIT violation: _signal at bar {i} (ts={ts}) <= detected_ts bar {k}"
             )
 
-    def test_condition_true_only_after_k_bars(self, monkeypatch):
+    def test_condition_true_only_after_k_bars(self, monkeypatch, tmp_path: Path):
         """
         Simulate a rolling z-score: the threshold is exceeded only at bar k.
         With k = 7, bars 0..6 are below threshold, bar 7 crosses it.
@@ -149,7 +149,7 @@ class TestImpulseThresholdFamily:
         flags = registry.build_event_flags(
             events=events,
             symbols=["BTCUSDT"],
-            data_root=Path("/tmp"),
+            data_root=tmp_path,
             run_id="imp2",
             timeframe="5m",
         )
@@ -176,7 +176,7 @@ class TestImpulseThresholdFamily:
 class TestWindowEventFamily:
     """VOL_SHOCK, LIQUIDATION_CASCADE — event spans multiple bars."""
 
-    def test_active_window_and_signal_bar(self, monkeypatch):
+    def test_active_window_and_signal_bar(self, monkeypatch, tmp_path: Path):
         n_bars = 16
         k = 3
         grid = _grid(n_bars)
@@ -195,7 +195,7 @@ class TestWindowEventFamily:
         flags = registry.build_event_flags(
             events=events,
             symbols=["BTCUSDT"],
-            data_root=Path("/tmp"),
+            data_root=tmp_path,
             run_id="win_test",
             timeframe="5m",
         )
@@ -218,7 +218,7 @@ class TestWindowEventFamily:
         # _signal = False at bar k (detected bar itself)
         assert not bool(row_k[sig_col])
 
-    def test_window_event_last_bar_of_grid(self, monkeypatch):
+    def test_window_event_last_bar_of_grid(self, monkeypatch, tmp_path: Path):
         """When event is at the last bar, there is no next bar → _signal never fires."""
         n_bars = 8
         grid = _grid(n_bars)
@@ -235,7 +235,7 @@ class TestWindowEventFamily:
         flags = registry.build_event_flags(
             events=events,
             symbols=["BTCUSDT"],
-            data_root=Path("/tmp"),
+            data_root=tmp_path,
             run_id="win_last",
             timeframe="5m",
         )
@@ -259,7 +259,7 @@ class TestConfirmationLagFamily:
     phenom_enter_ts = onset; detected_ts = first bar that satisfies persistence.
     """
 
-    def test_signal_after_confirmation_lag(self, monkeypatch):
+    def test_signal_after_confirmation_lag(self, monkeypatch, tmp_path: Path):
         n_bars = 20
         k_onset = 3  # funding crossed extreme at bar 3
         m = 4  # persistence required: bars 3,4,5,6 all extreme → confirmed at bar 6
@@ -289,7 +289,7 @@ class TestConfirmationLagFamily:
         flags = registry.build_event_flags(
             events=events,
             symbols=["BTCUSDT"],
-            data_root=Path("/tmp"),
+            data_root=tmp_path,
             run_id="conf_lag",
             timeframe="5m",
         )

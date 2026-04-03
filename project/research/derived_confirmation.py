@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from project.core.config import get_data_root
+from project.research.artifact_hygiene import build_artifact_refs, infer_workspace_root, invalid_artifact_header
 from project.research.seed_bootstrap import DOCS_GENERATED
 from project.research.seed_empirical import _jsonl_records
 
@@ -196,18 +197,25 @@ def synthesize_confirmation_bundle(
         'generated_bundle_count': len(bundles),
         'symbols': shared_symbols,
         'overlap_factor': overlap_factor,
-        'bundle_path': str(bundle_path),
         'derived_from_component_evidence': True,
     }
+    workspace_root = infer_workspace_root(resolved_data_root, docs_root)
+    artifact_refs, invalid_refs = build_artifact_refs(
+        {"bundle_path": bundle_path},
+        workspace_root=workspace_root,
+    )
+    payload["workspace_root"] = workspace_root.as_posix()
+    payload["artifact_refs"] = artifact_refs
+    payload["invalid_artifact_refs"] = invalid_refs
     summary_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-    lines = [
+    lines = invalid_artifact_header(invalid_refs) + [
         '# Structural confirmation synthesis summary',
         '',
         f'- candidate_id: `{candidate_id}`',
         f'- component_candidates: `{component_ids[0]}`, `{component_ids[1]}`',
         f'- generated_bundle_count: `{len(bundles)}`',
         f'- overlap_factor: `{overlap_factor}`',
-        f'- bundle_path: `{bundle_path}`',
+        f"- bundle_path: `{artifact_refs['bundle_path']['path']}`",
         '',
         'This artifact is a conservative bridge synthesized from existing raw-data evidence bundles for the component events.',
         'It is suitable for seed packaging and overlap activation, but it does not replace a direct paired-event study.',

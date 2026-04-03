@@ -25,6 +25,7 @@ def test_runtime_template_registry_payload_uses_canonical_operator_runtime_field
     assert payload["metadata"]["authored_source"] == "spec/templates/registry.yaml"
     continuation = payload["templates"]["continuation"]
     assert continuation["enabled"] is True
+    assert continuation["template_kind"] == "execution_template"
     assert continuation["supports_contexts"] is True
     assert continuation["supports_trigger_types"] == ["EVENT", "STATE", "SEQUENCE", "INTERACTION"]
 

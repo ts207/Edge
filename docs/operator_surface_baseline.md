@@ -1,20 +1,21 @@
 # Operator Surface Baseline
 
-This document records the current operator-facing execution surfaces after Sprint 1.
+This document records the reduced operator-facing execution surface.
 
 ## Canonical
 
-Use one command family for normal research issuance:
+Use one command family for normal research issuance and one packaging lane for thesis work:
 
 - `edge operator preflight`
 - `edge operator plan`
 - `edge operator run`
+- thesis bootstrap builders for packaging and overlap refresh
 
 `edge` and `edge-backtest` point to the same CLI surface. `backtest` remains an alias.
 
 ## Transitional
 
-These remain valid, but they are no longer the recommended front door for normal operator work:
+These remain valid, but they are not the recommended front door for normal operator work:
 
 - `python -m project.research.agent_io.proposal_to_experiment`
 - `python -m project.research.agent_io.execute_proposal`
@@ -30,10 +31,16 @@ These are still maintained for compatibility or specialized workflows, but shoul
 - broad `make` orchestration targets for routine bounded research
 - direct `run_all` invocation for proposal-shaped work
 - ad hoc shell wrappers around proposal compilation and run issuance
+- low-level loader / sidecar tooling
+- migration notes and compatibility registries as a way to understand normal workflow
 
-## Sprint 1 Decision
+## Current decision
 
 The repo keeps its existing engines and wrappers, but the preferred workflow is now:
+
+`discover -> package -> validate -> review`
+
+with bounded research issuance anchored on:
 
 `preflight -> plan -> run`
 

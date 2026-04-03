@@ -25,7 +25,13 @@ def extract_make_targets(makefile_text: str) -> list[str]:
             continue
         if ":" in line and not line.startswith("."):
             target = line.split(":", 1)[0].strip()
-            if target and " " not in target:
+            if (
+                target
+                and " " not in target
+                and not target.isupper()
+                and "=" not in target
+                and not target.startswith("$")
+            ):
                 targets.append(target)
     return sorted(dict.fromkeys(targets))
 
@@ -44,6 +50,15 @@ def render_markdown(inventory: dict[str, list[str]]) -> str:
         "# Operator command inventory",
         "",
         "Generated from `project/cli.py` and `Makefile`. Update this file with `python -m project.scripts.generate_operator_surface_inventory`.",
+        "",
+        "## Preferred front door",
+        "",
+        "Use these surfaces first:",
+        "",
+        "- `edge operator preflight|plan|run` for bounded research issuance",
+        "- thesis bootstrap builders for `package` and thesis-store refresh",
+        "- `edge operator diagnose|regime-report|compare` for post-run review",
+        "- maintained `make` targets only for common workflow bundles and maintenance",
         "",
         "## Canonical operator commands",
         "",

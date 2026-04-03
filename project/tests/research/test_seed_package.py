@@ -218,6 +218,11 @@ def test_package_seed_promoted_theses_creates_store_cards_and_overlap(tmp_path: 
     index = json.loads(outputs["thesis_index"].read_text(encoding="utf-8"))
     assert index["latest_run_id"] == "seed_pack_test"
 
+    summary = json.loads(outputs["summary_json"].read_text(encoding="utf-8"))
+    assert summary["invalid_artifact_refs"] == []
+    assert summary["artifact_refs"]["thesis_store"]["path"].startswith("data/")
+    assert "/home/irene/" not in outputs["summary_md"].read_text(encoding="utf-8")
+
     overlap_payload = json.loads(outputs["overlap_json"].read_text(encoding="utf-8"))
     assert overlap_payload["thesis_count"] == 2
     catalog_text = outputs["catalog_md"].read_text(encoding="utf-8")

@@ -31,6 +31,8 @@ class StrategySpec:
 
     def normalize(self) -> Dict[str, object]:
         return {
+            "primary_event_id": self.primary_event_id,
+            "compat_event_family": self.compat_event_family,
             "event_family": str(self.event_family).strip().upper(),
             "entry_signal": str(self.entry_signal).strip().lower(),
             "exit_signal": str(self.exit_signal).strip().lower(),

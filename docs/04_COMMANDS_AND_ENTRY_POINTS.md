@@ -1,6 +1,50 @@
 # Commands And Entry Points
 
-This file lists the main maintained ways to interact with the repository.
+This file is a reference, not the front door.
+
+Use the repo through four actions:
+
+1. `discover`
+2. `package`
+3. `validate`
+4. `review`
+
+If you are choosing where to start, use [00_START_HERE.md](00_START_HERE.md) and [03_OPERATOR_WORKFLOW.md](03_OPERATOR_WORKFLOW.md) first.
+
+## Preferred front door
+
+### Discover
+
+```bash
+edge operator preflight --proposal /abs/path/to/proposal.yaml
+edge operator plan --proposal /abs/path/to/proposal.yaml
+edge operator run --proposal /abs/path/to/proposal.yaml
+```
+
+### Review
+
+```bash
+edge operator diagnose --run_id <run_id>
+edge operator regime-report --run_id <run_id>
+edge operator compare --run_ids <baseline_run,followup_run>
+```
+
+### Package
+
+```bash
+python -m project.scripts.build_seed_bootstrap_artifacts
+python -m project.scripts.build_seed_testing_artifacts
+python -m project.scripts.build_seed_empirical_artifacts
+python -m project.scripts.build_seed_packaging_artifacts
+python -m project.scripts.build_thesis_overlap_artifacts
+```
+
+### Validate
+
+```bash
+.venv/bin/python -m project.scripts.run_researcher_verification --mode contracts
+make minimum-green-gate
+```
 
 ## Console scripts
 
@@ -163,3 +207,13 @@ Prefer:
 - `make` targets for maintained common workflows
 
 Do not default to ad hoc Python one-offs when a maintained entry point already exists.
+
+## Internal / maintenance surfaces
+
+These still exist, but they should not be the first surface an operator learns:
+
+- direct proposal compiler modules
+- raw `run_all` orchestration entry points
+- broad `make` targets used as workflow bundles
+- migration utilities
+- low-level loader and sidecar scripts

@@ -134,14 +134,14 @@ def _render_canonical_map_markdown(payload: Mapping[str, Mapping[str, Any]]) -> 
     return "\n".join(lines).rstrip() + "\n"
 
 
-def build_outputs() -> Dict[Path, str]:
+def build_outputs(base_dir: str = "docs/generated") -> Dict[Path, str]:
     rows = _rows()
     mapping_payload = {"rows": rows}
     canonical_payload = _canonical_map(rows)
     composite_rows = _catalog(rows, flag="is_composite")
     context_rows = _catalog(rows, flag="is_context_tag")
     strategy_rows = _catalog(rows, flag="is_strategy_construct")
-    out_root = Path("docs/generated")
+    out_root = Path(base_dir)
     return {
         out_root / "event_ontology_mapping.json": _json_text(mapping_payload),
         out_root / "event_ontology_mapping.md": _render_mapping_markdown(rows),
@@ -164,11 +164,12 @@ def build_outputs() -> Dict[Path, str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate event ontology mapping artifacts.")
+    parser.add_argument("--base-dir", default="docs/generated")
     parser.add_argument("--check", action="store_true", help="Fail if generated artifacts drift.")
     args = parser.parse_args(argv)
 
     drift: list[str] = []
-    for path, content in build_outputs().items():
+    for path, content in build_outputs(args.base_dir).items():
         if not _write_or_check(path, content, check=args.check):
             drift.append(str(path))
     if drift:

@@ -38,6 +38,7 @@ def build_runtime_template_registry_payload() -> Dict[str, Any]:
             continue
         templates[str(template_id)] = {
             "enabled": bool(row.get("enabled", True)),
+            "template_kind": str(row.get("template_kind", "")).strip().lower(),
             "supports_contexts": bool(row.get("supports_contexts", True)),
             "supports_directions": [
                 str(item).strip()
