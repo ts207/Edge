@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from project.core.config import get_data_root
 from project.operator.bounded import validate_bounded_proposal
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
 
 
@@ -18,7 +17,7 @@ def lint_proposal(
     out_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
-    proposal = load_agent_proposal(proposal_path)
+    proposal = load_operator_proposal(proposal_path)
     translation = translate_and_validate_proposal(
         proposal,
         registry_root=Path(registry_root),
@@ -50,7 +49,7 @@ def explain_proposal(
     out_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
-    proposal = load_agent_proposal(proposal_path)
+    proposal = load_operator_proposal(proposal_path)
     translation = translate_and_validate_proposal(
         proposal,
         registry_root=Path(registry_root),

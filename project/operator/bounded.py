@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from project.core.config import get_data_root
-from project.research.agent_io.proposal_schema import AgentProposal, load_agent_proposal
+from project.research.agent_io.proposal_schema import AgentProposal, load_operator_proposal
 from project.research.knowledge.memory import read_memory_table
 
 _TRACKED_FIELDS: tuple[str, ...] = (
@@ -95,7 +95,7 @@ def validate_bounded_proposal(
         baseline_run_id=baseline_run_id,
         data_root=resolved_data_root,
     )
-    baseline = load_agent_proposal(baseline_path)
+    baseline = load_operator_proposal(baseline_path)
     if baseline.program_id != proposal.program_id:
         raise ValueError(
             f'Bounded baseline program mismatch: baseline={baseline.program_id!r} current={proposal.program_id!r}'

@@ -32,7 +32,7 @@ from project.research.agent_io.campaign_planner import (
     CampaignPlanResult,
 )
 from project.research.agent_io.issue_proposal import generate_run_id, issue_proposal
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.research.knowledge.memory import (
     MemoryPaths,
     ensure_memory_store,

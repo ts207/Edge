@@ -11,7 +11,7 @@ import pandas as pd
 
 from project.core.config import get_data_root
 from project.research.agent_io.execute_proposal import execute_proposal
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.operator.bounded import validate_bounded_proposal
 from project.research.knowledge.memory import (
     ensure_memory_store,
@@ -66,7 +66,7 @@ def issue_proposal(
     check: bool = False,
 ) -> Dict[str, Any]:
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
-    proposal = load_agent_proposal(proposal_path)
+    proposal = load_operator_proposal(proposal_path)
     bounded_validation = validate_bounded_proposal(proposal, data_root=resolved_data_root)
     proposal_payload = proposal.to_dict()
     resolved_run_id = (

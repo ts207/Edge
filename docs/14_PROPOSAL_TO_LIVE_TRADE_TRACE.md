@@ -43,12 +43,14 @@ A proposal specifies, among other things:
 - `program_id`
 - time window: `start`, `end`
 - `symbols`
-- `trigger_space`
-- included `templates`
+- `hypothesis.trigger`
+- `hypothesis.template`
+- `hypothesis.direction`
+- `hypothesis.horizon_bars`
+- `hypothesis.entry_lag_bars`
 - `objective_name`
 - `promotion_profile`
 - `timeframe`
-- horizons, directions, entry lags
 - contexts and exclusions
 - optional bounded-change contract via `bounded`
 - optional config overlays and knob overrides
@@ -82,7 +84,7 @@ Preflight does **not** execute the run. It checks whether the proposal can be tr
 It performs these checks:
 
 1. **proposal loads and validates**
-   - `load_agent_proposal(...)`
+   - `load_operator_proposal(...)`
 2. **proposal can be translated into an experiment plan**
    - `translate_and_validate_proposal(...)`
 3. **search spec exists**

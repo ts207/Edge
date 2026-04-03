@@ -1,75 +1,16 @@
 {
   "summary": {
-    "attention_task_count": 2,
-    "overall_status": "attention",
-    "passed_task_count": 8,
+    "attention_task_count": 0,
+    "overall_status": "passed",
+    "passed_task_count": 10,
     "task_count": 10
   },
   "tasks": [
     {
       "details": {
         "default_executable_but_not_planning": [
-          "ABSORPTION_PROXY",
-          "BAND_BREAK",
-          "BASIS_DISLOC",
-          "BETA_SPIKE_EVENT",
-          "BREAKOUT_TRIGGER",
-          "CHOP_TO_TREND_SHIFT",
-          "CLIMAX_VOLUME_BAR",
-          "CORRELATION_BREAKDOWN_EVENT",
           "CROSS_ASSET_DESYNC_EVENT",
-          "CROSS_VENUE_DESYNC",
-          "DELEVERAGING_WAVE",
-          "DEPTH_COLLAPSE",
-          "DEPTH_STRESS_PROXY",
-          "FAILED_CONTINUATION",
-          "FALSE_BREAKOUT",
-          "FEE_REGIME_CHANGE_EVENT",
-          "FLOW_EXHAUSTION_PROXY",
-          "FND_DISLOC",
-          "FORCED_FLOW_EXHAUSTION",
-          "FUNDING_EXTREME_ONSET",
-          "FUNDING_FLIP",
-          "FUNDING_NORMALIZATION_TRIGGER",
-          "FUNDING_PERSISTENCE_TRIGGER",
-          "GAP_OVERSHOOT",
-          "INDEX_COMPONENT_DIVERGENCE",
-          "LEAD_LAG_BREAK",
-          "LIQUIDATION_CASCADE",
-          "LIQUIDATION_EXHAUSTION_REVERSAL",
-          "LIQUIDITY_GAP_PRINT",
-          "LIQUIDITY_SHOCK",
-          "LIQUIDITY_STRESS_DIRECT",
-          "LIQUIDITY_STRESS_PROXY",
-          "LIQUIDITY_VACUUM",
-          "MOMENTUM_DIVERGENCE_TRIGGER",
-          "OI_FLUSH",
-          "OI_SPIKE_NEGATIVE",
-          "OI_SPIKE_POSITIVE",
-          "ORDERFLOW_IMBALANCE_SHOCK",
-          "OVERSHOOT_AFTER_SHOCK",
-          "POST_DELEVERAGING_REBOUND",
-          "PRICE_VOL_IMBALANCE_PROXY",
-          "PULLBACK_PIVOT",
-          "RANGE_BREAKOUT",
-          "RANGE_COMPRESSION_END",
-          "SLIPPAGE_SPIKE_EVENT",
-          "SPOT_PERP_BASIS_SHOCK",
-          "SPREAD_BLOWOUT",
-          "SPREAD_REGIME_WIDENING_EVENT",
-          "SUPPORT_RESISTANCE_BREAK",
-          "SWEEP_STOPRUN",
-          "TREND_ACCELERATION",
-          "TREND_DECELERATION",
-          "TREND_EXHAUSTION_TRIGGER",
-          "TREND_TO_CHOP_SHIFT",
-          "VOL_CLUSTER_SHIFT",
-          "VOL_REGIME_SHIFT_EVENT",
-          "VOL_RELAXATION_START",
-          "VOL_SHOCK",
-          "VOL_SPIKE",
-          "WICK_REVERSAL_PROXY",
-          "ZSCORE_STRETCH"
+          "DEPTH_COLLAPSE"
         ],
         "runtime_aliases": [
           "ABSORPTION_EVENT",
@@ -92,7 +33,7 @@
         "active_event_count": 70,
         "alias_count": 8,
         "default_executable_event_count": 61,
-        "planning_event_count": 0,
+        "planning_event_count": 59,
         "registered_detector_entry_count": 72
       },
       "title": "Audit event universe",
@@ -158,98 +99,50 @@
     {
       "details": {
         "non_planning_active_events": [
-          "ABSORPTION_PROXY",
-          "BAND_BREAK",
-          "BASIS_DISLOC",
-          "BETA_SPIKE_EVENT",
-          "BREAKOUT_TRIGGER",
-          "CHOP_TO_TREND_SHIFT",
-          "CLIMAX_VOLUME_BAR",
           "COPULA_PAIRS_TRADING",
-          "CORRELATION_BREAKDOWN_EVENT",
           "CROSS_ASSET_DESYNC_EVENT",
-          "CROSS_VENUE_DESYNC",
-          "DELEVERAGING_WAVE",
           "DEPTH_COLLAPSE",
-          "DEPTH_STRESS_PROXY",
-          "FAILED_CONTINUATION",
-          "FALSE_BREAKOUT",
-          "FEE_REGIME_CHANGE_EVENT",
-          "FLOW_EXHAUSTION_PROXY",
-          "FND_DISLOC",
-          "FORCED_FLOW_EXHAUSTION",
-          "FUNDING_EXTREME_ONSET",
-          "FUNDING_FLIP",
-          "FUNDING_NORMALIZATION_TRIGGER",
-          "FUNDING_PERSISTENCE_TRIGGER",
           "FUNDING_TIMESTAMP_EVENT",
-          "GAP_OVERSHOOT",
-          "INDEX_COMPONENT_DIVERGENCE",
-          "LEAD_LAG_BREAK",
-          "LIQUIDATION_CASCADE",
-          "LIQUIDATION_EXHAUSTION_REVERSAL",
-          "LIQUIDITY_GAP_PRINT",
-          "LIQUIDITY_SHOCK",
-          "LIQUIDITY_STRESS_DIRECT",
-          "LIQUIDITY_STRESS_PROXY",
-          "LIQUIDITY_VACUUM",
-          "MOMENTUM_DIVERGENCE_TRIGGER",
-          "OI_FLUSH",
-          "OI_SPIKE_NEGATIVE",
-          "OI_SPIKE_POSITIVE",
-          "ORDERFLOW_IMBALANCE_SHOCK",
-          "OVERSHOOT_AFTER_SHOCK",
-          "POST_DELEVERAGING_REBOUND",
-          "PRICE_VOL_IMBALANCE_PROXY",
-          "PULLBACK_PIVOT",
-          "RANGE_BREAKOUT",
-          "RANGE_COMPRESSION_END",
           "SCHEDULED_NEWS_WINDOW_EVENT",
           "SEQ_FND_EXTREME_THEN_BREAKOUT",
           "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
           "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
           "SEQ_VOL_COMP_THEN_BREAKOUT",
           "SESSION_CLOSE_EVENT",
-          "SESSION_OPEN_EVENT",
-          "SLIPPAGE_SPIKE_EVENT",
-          "SPOT_PERP_BASIS_SHOCK",
-          "SPREAD_BLOWOUT",
-          "SPREAD_REGIME_WIDENING_EVENT",
-          "SUPPORT_RESISTANCE_BREAK",
-          "SWEEP_STOPRUN",
-          "TREND_ACCELERATION",
-          "TREND_DECELERATION",
-          "TREND_EXHAUSTION_TRIGGER",
-          "TREND_TO_CHOP_SHIFT",
-          "VOL_CLUSTER_SHIFT",
-          "VOL_REGIME_SHIFT_EVENT",
-          "VOL_RELAXATION_START",
-          "VOL_SHOCK",
-          "VOL_SPIKE",
-          "WICK_REVERSAL_PROXY",
-          "ZSCORE_STRETCH"
+          "SESSION_OPEN_EVENT"
         ],
         "planning_default_tiers": [
           "A",
           "B"
         ],
-        "planning_event_count": 0,
+        "planning_event_count": 59,
         "source_artifacts": [
           "docs/generated/event_maturity_matrix.csv",
           "docs/generated/event_tiers.md"
         ]
       },
       "id": "04_maturity_tiers",
-      "status": "attention",
+      "status": "passed",
       "summary": {
         "deployment_disposition_counts": {
-          "review_required": 70
+          "context_only": 4,
+          "primary_trigger_candidate": 8,
+          "repair_before_promotion": 1,
+          "research_only": 5,
+          "secondary_or_confirm": 52
         },
         "role_counts": {
-          "trigger": 70
+          "context": 4,
+          "filter": 1,
+          "research_only": 1,
+          "sequence_component": 4,
+          "trigger": 60
         },
         "tier_counts": {
-          "D": 70
+          "A": 8,
+          "B": 52,
+          "C": 5,
+          "D": 5
         }
       },
       "title": "Check maturity tiers",
@@ -497,23 +390,42 @@
     },
     {
       "details": {
-        "descriptive_non_planning_event_count": 0,
-        "descriptive_non_planning_events": [],
+        "descriptive_non_planning_event_count": 10,
+        "descriptive_non_planning_events": [
+          "COPULA_PAIRS_TRADING",
+          "CROSS_ASSET_DESYNC_EVENT",
+          "FUNDING_TIMESTAMP_EVENT",
+          "SCHEDULED_NEWS_WINDOW_EVENT",
+          "SEQ_FND_EXTREME_THEN_BREAKOUT",
+          "SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY",
+          "SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE",
+          "SEQ_VOL_COMP_THEN_BREAKOUT",
+          "SESSION_CLOSE_EVENT",
+          "SESSION_OPEN_EVENT"
+        ],
         "proxy_evidence_event_count": 0,
         "proxy_evidence_events": [],
         "proxy_evidence_planning_event_count": 0,
         "proxy_evidence_planning_events": [],
         "recommended_next_actions": [
+          "Keep context-only, research-only, and sequence-only events out of the default planning set to preserve promotion safety.",
           "Keep the new deep-analysis suite in artifact regeneration and contract verification so drift is caught automatically."
         ],
-        "residual_priorities": []
+        "residual_priorities": [
+          {
+            "event_count": 10,
+            "label": "keep_context_and_research_events_out_of_default_planning",
+            "priority": 1,
+            "reason": "Active events that are context-only, research-only, or sequence-only must stay outside the default planning set to preserve promotion safety."
+          }
+        ]
       },
       "id": "10_synthesis",
-      "status": "attention",
+      "status": "passed",
       "summary": {
-        "critical_issue_count": 1,
-        "overall_status": "attention",
-        "residual_priority_count": 0
+        "critical_issue_count": 0,
+        "overall_status": "passed",
+        "residual_priority_count": 1
       },
       "title": "Synthesize event findings",
       "verification_commands": [

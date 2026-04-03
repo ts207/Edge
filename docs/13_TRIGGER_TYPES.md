@@ -18,8 +18,8 @@ The repository supports six trigger types:
 - `SEQUENCE`
 - `INTERACTION`
 
-At the proposal layer, trigger types are declared in `trigger_space.allowed_trigger_types`.
-At the hypothesis layer, they are materialized as `TriggerSpec.trigger_type`.
+At the operator proposal layer, trigger types are declared in `hypothesis.trigger.type`.
+The operator loader compiles that bounded front-door shape into the legacy internal trigger space.
 
 Use the narrowest trigger type that directly matches the claim being tested.
 
@@ -40,12 +40,10 @@ Validation:
 Shape:
 
 ```yaml
-trigger_space:
-  allowed_trigger_types:
-    - EVENT
-  events:
-    include:
-      - BASIS_DISLOC
+hypothesis:
+  trigger:
+    type: event
+    event_id: BASIS_DISLOC
 ```
 
 Use when:
@@ -86,10 +84,10 @@ Validation:
 Shape:
 
 ```yaml
-trigger:
-  trigger_type: state
-  state_id: HIGH_VOL_REGIME
-  state_active: true
+hypothesis:
+  trigger:
+    type: state
+    state_id: HIGH_VOL_REGIME
 ```
 
 Use when:
@@ -120,10 +118,11 @@ Validation:
 Shape:
 
 ```yaml
-trigger:
-  trigger_type: transition
-  from_state: CHOP_REGIME
-  to_state: BULL_TREND_REGIME
+hypothesis:
+  trigger:
+    type: transition
+    from_state: CHOP_REGIME
+    to_state: BULL_TREND_REGIME
 ```
 
 Use when:
@@ -158,11 +157,12 @@ Allowed operators:
 Shape:
 
 ```yaml
-trigger:
-  trigger_type: feature_predicate
-  feature: funding_rate_scaled
-  operator: ">="
-  threshold: 2.0
+hypothesis:
+  trigger:
+    type: feature_predicate
+    feature: funding_rate_scaled
+    operator: ">="
+    threshold: 2.0
 ```
 
 Use when:
@@ -183,30 +183,27 @@ Definition:
 
 Required fields:
 
-- `sequence_id`
 - `events`
 
 Optional fields:
 
-- `max_gap`
+- `max_gap_bars`
 
 Validation:
 
 - Every event in `events` must exist in the event registry.
-- If `max_gap` is present, its length must equal `len(events) - 1`.
-- `max_gap` values must be non-negative.
+- `max_gap_bars` must be non-negative.
 
 Shape:
 
 ```yaml
-trigger:
-  trigger_type: sequence
-  sequence_id: FND_THEN_BREAK
-  events:
-    - FUNDING_EXTREME_ONSET
-    - RANGE_BREAKOUT
-  max_gap:
-    - 12
+hypothesis:
+  trigger:
+    type: sequence
+    events:
+      - FUNDING_EXTREME_ONSET
+      - RANGE_BREAKOUT
+    max_gap_bars: 12
 ```
 
 Use when:
@@ -227,7 +224,6 @@ Definition:
 
 Required fields:
 
-- `interaction_id`
 - `left`
 - `right`
 - `op`
@@ -250,13 +246,13 @@ Validation:
 Shape:
 
 ```yaml
-trigger:
-  trigger_type: interaction
-  interaction_id: VOL_CONFIRM
-  left: VOL_SHOCK
-  right: HIGH_VOL_REGIME
-  op: confirm
-  lag: 6
+hypothesis:
+  trigger:
+    type: interaction
+    left: VOL_SHOCK
+    right: HIGH_VOL_REGIME
+    op: confirm
+    lag: 6
 ```
 
 Use when:
@@ -289,10 +285,11 @@ Avoid:
 
 ## Proposal Surface vs Hypothesis Surface
 
-Proposal layer:
+Operator proposal layer:
 
-- Trigger types are declared in `trigger_space.allowed_trigger_types`.
-- Proposal validation normalizes those values to uppercase.
+- Trigger types are declared in `hypothesis.trigger.type`.
+- The operator-facing shape is always single-hypothesis and lowercase: `event`, `state`, `transition`, `feature_predicate`, `sequence`, `interaction`.
+- The loader compiles that shape into legacy `trigger_space.allowed_trigger_types` internally.
 
 Hypothesis layer:
 
@@ -301,7 +298,7 @@ Hypothesis layer:
 
 This means:
 
-- proposal YAML uses `EVENT`, `STATE`, `TRANSITION`, `FEATURE_PREDICATE`, `SEQUENCE`, `INTERACTION`
+- operator proposal YAML uses `event`, `state`, `transition`, `feature_predicate`, `sequence`, `interaction`
 - internal `TriggerSpec` instances use `event`, `state`, `transition`, `feature_predicate`, `sequence`, `interaction`
 
 ## Default Recommendation
@@ -324,12 +321,10 @@ These examples use identifiers that exist in the current registries:
 ### EVENT example
 
 ```yaml
-trigger_space:
-  allowed_trigger_types:
-    - EVENT
-  events:
-    include:
-      - BASIS_DISLOC
+hypothesis:
+  trigger:
+    type: event
+    event_id: BASIS_DISLOC
 ```
 
 Other valid event examples:
@@ -341,10 +336,10 @@ Other valid event examples:
 ### STATE example
 
 ```yaml
-trigger:
-  trigger_type: state
-  state_id: HIGH_VOL_REGIME
-  state_active: true
+hypothesis:
+  trigger:
+    type: state
+    state_id: HIGH_VOL_REGIME
 ```
 
 Other valid state examples:
@@ -361,10 +356,11 @@ Other valid state examples:
 ### TRANSITION example
 
 ```yaml
-trigger:
-  trigger_type: transition
-  from_state: CHOP_REGIME
-  to_state: BULL_TREND_REGIME
+hypothesis:
+  trigger:
+    type: transition
+    from_state: CHOP_REGIME
+    to_state: BULL_TREND_REGIME
 ```
 
 Other valid transition shapes:
@@ -375,11 +371,12 @@ Other valid transition shapes:
 ### FEATURE_PREDICATE example
 
 ```yaml
-trigger:
-  trigger_type: feature_predicate
-  feature: funding_rate_scaled
-  operator: ">="
-  threshold: 2.0
+hypothesis:
+  trigger:
+    type: feature_predicate
+    feature: funding_rate_scaled
+    operator: ">="
+    threshold: 2.0
 ```
 
 Use this style only when the feature exists in the feature surface for the run you are planning.
@@ -387,14 +384,13 @@ Use this style only when the feature exists in the feature surface for the run y
 ### SEQUENCE example
 
 ```yaml
-trigger:
-  trigger_type: sequence
-  sequence_id: BASIS_THEN_BREAKOUT
-  events:
-    - BASIS_DISLOC
-    - BREAKOUT_TRIGGER
-  max_gap:
-    - 12
+hypothesis:
+  trigger:
+    type: sequence
+    events:
+      - BASIS_DISLOC
+      - BREAKOUT_TRIGGER
+    max_gap_bars: 12
 ```
 
 Other valid sequence ingredients from the current event registry:
@@ -407,13 +403,13 @@ Other valid sequence ingredients from the current event registry:
 ### INTERACTION example
 
 ```yaml
-trigger:
-  trigger_type: interaction
-  interaction_id: VOL_CONFIRM
-  left: VOL_SHOCK
-  right: HIGH_VOL_REGIME
-  op: confirm
-  lag: 6
+hypothesis:
+  trigger:
+    type: interaction
+    left: VOL_SHOCK
+    right: HIGH_VOL_REGIME
+    op: confirm
+    lag: 6
 ```
 
 Other valid interaction shapes:
@@ -451,20 +447,14 @@ start: "2022-11-01"
 end: "2022-12-31"
 instrument_classes:
   - crypto
-trigger_space:
-  allowed_trigger_types:
-    - EVENT
-  events:
-    include:
-      - BASIS_DISLOC
-templates:
-  - mean_reversion
-horizons_bars:
-  - 12
-directions:
-  - short
-entry_lags:
-  - 1
+hypothesis:
+  trigger:
+    type: event
+    event_id: BASIS_DISLOC
+  template: mean_reversion
+  direction: short
+  horizon_bars: 12
+  entry_lag_bars: 1
 ```
 
 What this means:

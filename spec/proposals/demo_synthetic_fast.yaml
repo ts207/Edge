@@ -10,20 +10,14 @@ start: '2024-01-01'
 end: '2024-01-31'
 instrument_classes:
   - crypto
-trigger_space:
-  allowed_trigger_types:
-    - EVENT
-  events:
-    include:
-      - VOL_SHOCK
-templates:
-  - continuation
-horizons_bars:
-  - 12
-directions:
-  - long
-entry_lags:
-  - 1
+hypothesis:
+  trigger:
+    type: event
+    event_id: VOL_SHOCK
+  template: continuation
+  direction: long
+  horizon_bars: 12
+  entry_lag_bars: 1
 discovery_profile: synthetic
 phase2_gate_profile: synthetic
 search_spec: synthetic_truth

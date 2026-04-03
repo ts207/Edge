@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ def derive_mutation_strategy(*, baseline_summary: dict[str, Any], diagnostics: d
 
 
 def generate_next_proposal(*, baseline_proposal_path: str | Path, parent_run_id: str, diagnostics: dict[str, Any] | None = None, decision: dict[str, Any] | None = None, strategy: str | None = None, campaign_id: str | None = None, cycle_number: int = 1, branch_id: str = "main", branch_depth: int = 1) -> MutationResult:
-    proposal = load_agent_proposal(baseline_proposal_path)
+    proposal = load_operator_proposal(baseline_proposal_path)
     payload = proposal.to_dict()
     mutation = strategy or derive_mutation_strategy(
         baseline_summary={}, diagnostics=diagnostics, decision=decision

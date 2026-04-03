@@ -10,7 +10,7 @@ import pandas as pd
 
 from project.core.config import get_data_root
 from project.io.utils import list_parquet_files, resolve_raw_dataset_dir
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
 
 
@@ -90,7 +90,7 @@ def _proposal_preflight_checks(
     out_dir: Path,
 ) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
-    proposal = load_agent_proposal(proposal_path)
+    proposal = load_operator_proposal(proposal_path)
     translation = translate_and_validate_proposal(
         proposal_path,
         registry_root=registry_root,

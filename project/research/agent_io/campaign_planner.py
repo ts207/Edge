@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence
+from typing import Any, Dict, List, Sequence
 
 import pandas as pd
 import yaml
@@ -16,10 +16,13 @@ from project.core.config import get_data_root
 from project.events.event_specs import EVENT_REGISTRY_SPECS
 from project.events.governance import event_matches_filters, get_event_governance_metadata
 from project.research.agent_io.issue_proposal import generate_run_id, issue_proposal
-from project.research.agent_io.proposal_schema import load_agent_proposal
+from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.research.knowledge.memory import ensure_memory_store, read_memory_table
 from project.research.knowledge.schemas import canonical_json, region_key
-from project.spec_registry.search_space import DEFAULT_EVENT_PRIORITY_WEIGHT, load_event_priority_weights
+from project.spec_registry.search_space import (
+    DEFAULT_EVENT_PRIORITY_WEIGHT,
+    load_event_priority_weights,
+)
 
 _LOG = logging.getLogger(__name__)
 
@@ -557,7 +560,7 @@ def run_campaign_planner_cycle(
     proposal_path = planner.paths.proposals_dir / "planned_proposal.yaml"
     proposal_path.parent.mkdir(parents=True, exist_ok=True)
     proposal_path.write_text(yaml.safe_dump(top, sort_keys=False), encoding="utf-8")
-    proposal = load_agent_proposal(proposal_path)
+    proposal = load_operator_proposal(proposal_path)
     run_id = generate_run_id(program_id, proposal.to_dict())
     execution = issue_proposal(
         proposal_path,

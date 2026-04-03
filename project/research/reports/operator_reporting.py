@@ -9,10 +9,10 @@ from typing import Any
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.operator.stability import write_sprint4_outputs_for_run
 from project.research.knowledge.memory import read_memory_table, write_memory_table
 from project.research.knowledge.reflection import build_run_reflection
 from project.research.knowledge.schemas import canonical_json
-from project.operator.stability import write_sprint4_outputs_for_run
 from project.specs.manifest import load_run_manifest
 
 
@@ -215,8 +215,8 @@ def build_operator_summary(*, run_id: str, program_id: str | None = None, data_r
     proposal_path = str(proposal_row.get("proposal_path", "") or "")
     if proposal_path:
         try:
-            from project.research.agent_io.proposal_schema import load_agent_proposal
-            proposal = load_agent_proposal(proposal_path)
+            from project.research.agent_io.proposal_schema import load_operator_proposal
+            proposal = load_operator_proposal(proposal_path)
             trigger_space = proposal.trigger_space or {}
             events = trigger_space.get("events", {}) if isinstance(trigger_space, dict) else {}
             event_scope = sorted(str(k).strip() for k in events if str(k).strip())

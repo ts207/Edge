@@ -3,13 +3,13 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from typing import Any, Dict
 
 import yaml
 
-from project.research.agent_io.proposal_schema import AgentProposal, load_agent_proposal
+from project.research.agent_io.proposal_schema import AgentProposal, load_operator_proposal
 from project.spec_registry import load_yaml_path
 
 
@@ -147,7 +147,7 @@ def translate_and_validate_proposal(
     proposal = (
         proposal_or_path
         if isinstance(proposal_or_path, AgentProposal)
-        else load_agent_proposal(proposal_or_path)
+        else load_operator_proposal(proposal_or_path)
     )
     experiment_config = proposal_to_experiment_config(proposal, registry_root=registry_root)
     resolved_config_path = config_path

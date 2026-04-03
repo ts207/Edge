@@ -133,20 +133,14 @@ symbols:
 timeframe: 5m
 start: "2022-11-01"
 end: "2022-12-31"
-trigger_space:
-  allowed_trigger_types:
-    - EVENT
-  events:
-    include:
-      - BASIS_DISLOC
-templates:
-  - mean_reversion
-horizons_bars:
-  - 12
-directions:
-  - short
-entry_lags:
-  - 1
+hypothesis:
+  trigger:
+    type: event
+    event_id: BASIS_DISLOC
+  template: mean_reversion
+  direction: short
+  horizon_bars: 12
+  entry_lag_bars: 1
 search_control:
   max_hypotheses_total: 1
   max_hypotheses_per_template: 1
@@ -155,6 +149,8 @@ artifacts:
   write_hypothesis_log: true
   write_reports: true
 ```
+
+This operator-facing format is the only proposal shape that should be authored directly. The loader compiles it into the internal legacy `trigger_space` form.
 
 ### C. `experiment_review.md`
 

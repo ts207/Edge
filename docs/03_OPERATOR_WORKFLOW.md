@@ -15,16 +15,38 @@ Canonical loop:
 A proposal should be narrow enough that you can answer all of these before running it:
 
 - what event or regime class is being tested
-- what template family is allowed
-- what symbol scope is allowed
+- what single template is being tested
+- what single symbol is being tested
 - what date window is allowed
 - what contexts are included or excluded
-- what horizons and directions are allowed
+- what exact horizon, direction, and entry lag are being tested
 - whether this is research-only, confirmation-oriented, or bounded off a baseline run
 
 A minimal example now exists at:
 
-- `spec/proposals/demo_synthetic_fast.yaml`
+- `spec/proposals/canonical_event_hypothesis.yaml`
+
+Operator-facing proposals now use a single-hypothesis shape:
+
+```yaml
+program_id: volshock_btc_long_12b
+description: Long continuation after VOL_SHOCK on BTCUSDT 5m
+start: "2024-01-01"
+end: "2024-01-31"
+symbols: [BTCUSDT]
+timeframe: 5m
+instrument_classes: [crypto]
+hypothesis:
+  trigger:
+    type: event
+    event_id: VOL_SHOCK
+  template: continuation
+  direction: long
+  horizon_bars: 12
+  entry_lag_bars: 1
+```
+
+The operator loader compiles this bounded front-door format into the legacy internal `AgentProposal`.
 
 ## Step 2 — preflight
 

@@ -1,9 +1,9 @@
 # Event Deep Analysis Suite
 
-- Overall status: `attention`
+- Overall status: `passed`
 - Task count: `10`
-- Passed tasks: `8`
-- Tasks needing attention: `2`
+- Passed tasks: `10`
+- Tasks needing attention: `0`
 
 ## 01. Audit event universe
 
@@ -12,13 +12,13 @@
 - Summary:
   - `active_event_count`: `70`
   - `default_executable_event_count`: `61`
-  - `planning_event_count`: `0`
+  - `planning_event_count`: `59`
   - `registered_detector_entry_count`: `72`
   - `alias_count`: `8`
 
 - Details:
   - `runtime_aliases`: `['ABSORPTION_EVENT', 'ABSORPTION_PROXY', 'BASIS_DISLOCATION', 'DEPTH_COLLAPSE', 'DEPTH_STRESS_PROXY', 'LIQUIDITY_STRESS_DIRECT', 'LIQUIDITY_STRESS_PROXY', 'VOL_REGIME_SHIFT']`
-  - `default_executable_but_not_planning`: `['ABSORPTION_PROXY', 'BAND_BREAK', 'BASIS_DISLOC', 'BETA_SPIKE_EVENT', 'BREAKOUT_TRIGGER', 'CHOP_TO_TREND_SHIFT', 'CLIMAX_VOLUME_BAR', 'CORRELATION_BREAKDOWN_EVENT', 'CROSS_ASSET_DESYNC_EVENT', 'CROSS_VENUE_DESYNC', 'DELEVERAGING_WAVE', 'DEPTH_COLLAPSE', 'DEPTH_STRESS_PROXY', 'FAILED_CONTINUATION', 'FALSE_BREAKOUT', 'FEE_REGIME_CHANGE_EVENT', 'FLOW_EXHAUSTION_PROXY', 'FND_DISLOC', 'FORCED_FLOW_EXHAUSTION', 'FUNDING_EXTREME_ONSET', 'FUNDING_FLIP', 'FUNDING_NORMALIZATION_TRIGGER', 'FUNDING_PERSISTENCE_TRIGGER', 'GAP_OVERSHOOT', 'INDEX_COMPONENT_DIVERGENCE', 'LEAD_LAG_BREAK', 'LIQUIDATION_CASCADE', 'LIQUIDATION_EXHAUSTION_REVERSAL', 'LIQUIDITY_GAP_PRINT', 'LIQUIDITY_SHOCK', 'LIQUIDITY_STRESS_DIRECT', 'LIQUIDITY_STRESS_PROXY', 'LIQUIDITY_VACUUM', 'MOMENTUM_DIVERGENCE_TRIGGER', 'OI_FLUSH', 'OI_SPIKE_NEGATIVE', 'OI_SPIKE_POSITIVE', 'ORDERFLOW_IMBALANCE_SHOCK', 'OVERSHOOT_AFTER_SHOCK', 'POST_DELEVERAGING_REBOUND', 'PRICE_VOL_IMBALANCE_PROXY', 'PULLBACK_PIVOT', 'RANGE_BREAKOUT', 'RANGE_COMPRESSION_END', 'SLIPPAGE_SPIKE_EVENT', 'SPOT_PERP_BASIS_SHOCK', 'SPREAD_BLOWOUT', 'SPREAD_REGIME_WIDENING_EVENT', 'SUPPORT_RESISTANCE_BREAK', 'SWEEP_STOPRUN', 'TREND_ACCELERATION', 'TREND_DECELERATION', 'TREND_EXHAUSTION_TRIGGER', 'TREND_TO_CHOP_SHIFT', 'VOL_CLUSTER_SHIFT', 'VOL_REGIME_SHIFT_EVENT', 'VOL_RELAXATION_START', 'VOL_SHOCK', 'VOL_SPIKE', 'WICK_REVERSAL_PROXY', 'ZSCORE_STRETCH']`
+  - `default_executable_but_not_planning`: `['CROSS_ASSET_DESYNC_EVENT', 'DEPTH_COLLAPSE']`
   - `source_audits`: `['docs/generated/event_ontology_audit.json', 'docs/generated/detector_coverage.json']`
 
 - Verification commands:
@@ -63,16 +63,16 @@
 ## 04. Check maturity tiers
 
 - Task id: `04_maturity_tiers`
-- Status: `attention`
+- Status: `passed`
 - Summary:
-  - `tier_counts`: `{'D': 70}`
-  - `role_counts`: `{'trigger': 70}`
-  - `deployment_disposition_counts`: `{'review_required': 70}`
+  - `tier_counts`: `{'A': 8, 'B': 52, 'C': 5, 'D': 5}`
+  - `role_counts`: `{'context': 4, 'filter': 1, 'research_only': 1, 'sequence_component': 4, 'trigger': 60}`
+  - `deployment_disposition_counts`: `{'context_only': 4, 'primary_trigger_candidate': 8, 'repair_before_promotion': 1, 'research_only': 5, 'secondary_or_confirm': 52}`
 
 - Details:
   - `planning_default_tiers`: `['A', 'B']`
-  - `planning_event_count`: `0`
-  - `non_planning_active_events`: `['ABSORPTION_PROXY', 'BAND_BREAK', 'BASIS_DISLOC', 'BETA_SPIKE_EVENT', 'BREAKOUT_TRIGGER', 'CHOP_TO_TREND_SHIFT', 'CLIMAX_VOLUME_BAR', 'COPULA_PAIRS_TRADING', 'CORRELATION_BREAKDOWN_EVENT', 'CROSS_ASSET_DESYNC_EVENT', 'CROSS_VENUE_DESYNC', 'DELEVERAGING_WAVE', 'DEPTH_COLLAPSE', 'DEPTH_STRESS_PROXY', 'FAILED_CONTINUATION', 'FALSE_BREAKOUT', 'FEE_REGIME_CHANGE_EVENT', 'FLOW_EXHAUSTION_PROXY', 'FND_DISLOC', 'FORCED_FLOW_EXHAUSTION', 'FUNDING_EXTREME_ONSET', 'FUNDING_FLIP', 'FUNDING_NORMALIZATION_TRIGGER', 'FUNDING_PERSISTENCE_TRIGGER', 'FUNDING_TIMESTAMP_EVENT', 'GAP_OVERSHOOT', 'INDEX_COMPONENT_DIVERGENCE', 'LEAD_LAG_BREAK', 'LIQUIDATION_CASCADE', 'LIQUIDATION_EXHAUSTION_REVERSAL', 'LIQUIDITY_GAP_PRINT', 'LIQUIDITY_SHOCK', 'LIQUIDITY_STRESS_DIRECT', 'LIQUIDITY_STRESS_PROXY', 'LIQUIDITY_VACUUM', 'MOMENTUM_DIVERGENCE_TRIGGER', 'OI_FLUSH', 'OI_SPIKE_NEGATIVE', 'OI_SPIKE_POSITIVE', 'ORDERFLOW_IMBALANCE_SHOCK', 'OVERSHOOT_AFTER_SHOCK', 'POST_DELEVERAGING_REBOUND', 'PRICE_VOL_IMBALANCE_PROXY', 'PULLBACK_PIVOT', 'RANGE_BREAKOUT', 'RANGE_COMPRESSION_END', 'SCHEDULED_NEWS_WINDOW_EVENT', 'SEQ_FND_EXTREME_THEN_BREAKOUT', 'SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY', 'SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE', 'SEQ_VOL_COMP_THEN_BREAKOUT', 'SESSION_CLOSE_EVENT', 'SESSION_OPEN_EVENT', 'SLIPPAGE_SPIKE_EVENT', 'SPOT_PERP_BASIS_SHOCK', 'SPREAD_BLOWOUT', 'SPREAD_REGIME_WIDENING_EVENT', 'SUPPORT_RESISTANCE_BREAK', 'SWEEP_STOPRUN', 'TREND_ACCELERATION', 'TREND_DECELERATION', 'TREND_EXHAUSTION_TRIGGER', 'TREND_TO_CHOP_SHIFT', 'VOL_CLUSTER_SHIFT', 'VOL_REGIME_SHIFT_EVENT', 'VOL_RELAXATION_START', 'VOL_SHOCK', 'VOL_SPIKE', 'WICK_REVERSAL_PROXY', 'ZSCORE_STRETCH']`
+  - `planning_event_count`: `59`
+  - `non_planning_active_events`: `['COPULA_PAIRS_TRADING', 'CROSS_ASSET_DESYNC_EVENT', 'DEPTH_COLLAPSE', 'FUNDING_TIMESTAMP_EVENT', 'SCHEDULED_NEWS_WINDOW_EVENT', 'SEQ_FND_EXTREME_THEN_BREAKOUT', 'SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY', 'SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE', 'SEQ_VOL_COMP_THEN_BREAKOUT', 'SESSION_CLOSE_EVENT', 'SESSION_OPEN_EVENT']`
   - `source_artifacts`: `['docs/generated/event_maturity_matrix.csv', 'docs/generated/event_tiers.md']`
 
 - Verification commands:
@@ -173,21 +173,21 @@
 ## 10. Synthesize event findings
 
 - Task id: `10_synthesis`
-- Status: `attention`
+- Status: `passed`
 - Summary:
-  - `overall_status`: `attention`
-  - `critical_issue_count`: `1`
-  - `residual_priority_count`: `0`
+  - `overall_status`: `passed`
+  - `critical_issue_count`: `0`
+  - `residual_priority_count`: `1`
 
 - Details:
   - `proxy_evidence_event_count`: `0`
   - `proxy_evidence_planning_event_count`: `0`
   - `proxy_evidence_events`: `[]`
   - `proxy_evidence_planning_events`: `[]`
-  - `descriptive_non_planning_event_count`: `0`
-  - `descriptive_non_planning_events`: `[]`
-  - `residual_priorities`: `[]`
-  - `recommended_next_actions`: `['Keep the new deep-analysis suite in artifact regeneration and contract verification so drift is caught automatically.']`
+  - `descriptive_non_planning_event_count`: `10`
+  - `descriptive_non_planning_events`: `['COPULA_PAIRS_TRADING', 'CROSS_ASSET_DESYNC_EVENT', 'FUNDING_TIMESTAMP_EVENT', 'SCHEDULED_NEWS_WINDOW_EVENT', 'SEQ_FND_EXTREME_THEN_BREAKOUT', 'SEQ_LIQ_VACUUM_THEN_DEPTH_RECOVERY', 'SEQ_OI_SPIKEPOS_THEN_VOL_SPIKE', 'SEQ_VOL_COMP_THEN_BREAKOUT', 'SESSION_CLOSE_EVENT', 'SESSION_OPEN_EVENT']`
+  - `residual_priorities`: `[{'label': 'keep_context_and_research_events_out_of_default_planning', 'reason': 'Active events that are context-only, research-only, or sequence-only must stay outside the default planning set to preserve promotion safety.', 'event_count': 10, 'priority': 1}]`
+  - `recommended_next_actions`: `['Keep context-only, research-only, and sequence-only events out of the default planning set to preserve promotion safety.', 'Keep the new deep-analysis suite in artifact regeneration and contract verification so drift is caught automatically.']`
 
 - Verification commands:
   - `python -m project.scripts.build_event_deep_analysis_suite --check`

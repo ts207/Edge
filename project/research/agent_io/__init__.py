@@ -6,18 +6,32 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from project.research.agent_io.broad_discovery import (
         BroadDiscoveryConfig,
-        BroadDiscoveryRunner,
         BroadDiscoveryResult,
+        BroadDiscoveryRunner,
         EventAttribution,
         FamilyDiscoveryResult,
         FamilyEventConfig,
         run_broad_discovery,
     )
-    from project.research.agent_io.campaign_planner import CampaignPlanResult, CampaignPlanner, CampaignPlannerConfig, run_campaign_planner_cycle
-    from project.research.agent_io.closed_loop import CycleConfig, CycleResult, CampaignCycleRunner, run_autonomous_cycle
+    from project.research.agent_io.campaign_planner import (
+        CampaignPlanner,
+        CampaignPlannerConfig,
+        CampaignPlanResult,
+        run_campaign_planner_cycle,
+    )
+    from project.research.agent_io.closed_loop import (
+        CampaignCycleRunner,
+        CycleConfig,
+        CycleResult,
+        run_autonomous_cycle,
+    )
     from project.research.agent_io.execute_proposal import build_run_all_command, execute_proposal
     from project.research.agent_io.issue_proposal import generate_run_id, issue_proposal
-    from project.research.agent_io.proposal_schema import AgentProposal, load_agent_proposal
+    from project.research.agent_io.proposal_schema import (
+        AgentProposal,
+        load_agent_proposal,
+        load_operator_proposal,
+    )
     from project.research.agent_io.proposal_to_experiment import (
         build_run_all_overrides,
         proposal_to_experiment_config,
@@ -53,6 +67,7 @@ _EXPORTS = {
     "generate_run_id": ("project.research.agent_io.issue_proposal", "generate_run_id"),
     "issue_proposal": ("project.research.agent_io.issue_proposal", "issue_proposal"),
     "load_agent_proposal": ("project.research.agent_io.proposal_schema", "load_agent_proposal"),
+    "load_operator_proposal": ("project.research.agent_io.proposal_schema", "load_operator_proposal"),
     "proposal_to_experiment_config": (
         "project.research.agent_io.proposal_to_experiment",
         "proposal_to_experiment_config",
@@ -86,6 +101,7 @@ __all__ = [
     "generate_run_id",
     "issue_proposal",
     "load_agent_proposal",
+    "load_operator_proposal",
     "proposal_to_experiment_config",
     "translate_and_validate_proposal",
 ]
