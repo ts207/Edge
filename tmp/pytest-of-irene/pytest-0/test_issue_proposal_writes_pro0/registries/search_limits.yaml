@@ -1,0 +1,19 @@
+defaults:
+  directions:
+  - long
+  - short
+  entry_lags:
+  - 1
+  - 2
+  horizons_bars:
+  - 12
+  - 24
+limits:
+  max_directions_per_run: 10
+  max_entry_lags_per_run: 4
+  max_events_per_run: 10
+  max_horizons_per_run: 10
+  max_hypotheses_per_event_family: 300
+  max_hypotheses_per_template: 250
+  max_hypotheses_total: 1000
+  max_templates_per_run: 10

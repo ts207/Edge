@@ -1,0 +1,26 @@
+program_id: demo_synthetic_fast
+objective: synthetic test
+symbols:
+- BTCUSDT
+timeframe: 5m
+start: '2024-01-01'
+end: '2024-01-31'
+trigger_space:
+  allowed_trigger_types:
+  - EVENT
+  events:
+    include:
+    - VOL_SHOCK
+templates:
+- continuation
+horizons_bars:
+- 12
+directions:
+- long
+entry_lags:
+- 1
+discovery_profile: synthetic
+phase2_gate_profile: synthetic
+search_spec: synthetic_truth
+config_overlays:
+- project/configs/golden_synthetic_discovery_fast.yaml

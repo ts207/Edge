@@ -291,7 +291,7 @@ Run:
 Useful maintained surfaces:
 
 - [docs/08_TESTING_AND_MAINTENANCE.md](../08_TESTING_AND_MAINTENANCE.md)
-- [docs/12_AUDIT_RUN_SCHEDULE.md](../12_AUDIT_RUN_SCHEDULE.md)
+- [docs/05_ARTIFACTS_AND_INTERPRETATION.md](../05_ARTIFACTS_AND_INTERPRETATION.md)
 
 ### Monthly or after major refactors
 
