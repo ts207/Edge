@@ -201,6 +201,7 @@ def test_package_seed_promoted_theses_creates_store_cards_and_overlap(tmp_path: 
     assert len(theses) == 2
     thesis_by_id = {thesis.thesis_id: thesis for thesis in theses}
     thesis = thesis_by_id["THESIS_VOL_SHOCK"]
+    assert thesis.primary_event_id == "VOL_SHOCK"
     assert thesis.promotion_class == "paper_promoted"
     assert thesis.deployment_state == "paper_only"
     assert thesis.governance.overlap_group_id
@@ -219,3 +220,8 @@ def test_package_seed_promoted_theses_creates_store_cards_and_overlap(tmp_path: 
 
     overlap_payload = json.loads(outputs["overlap_json"].read_text(encoding="utf-8"))
     assert overlap_payload["thesis_count"] == 2
+    catalog_text = outputs["catalog_md"].read_text(encoding="utf-8")
+    assert "Primary event id" in catalog_text
+    assert "Compat event family" in catalog_text
+    card_text = outputs["card_dir"].joinpath("THESIS_VOL_SHOCK.md").read_text(encoding="utf-8")
+    assert "Primary event id" in card_text

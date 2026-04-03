@@ -175,13 +175,32 @@ class LiveEngineRunner:
     def _serialize_recent_decision(self, outcome: DecisionOutcome) -> Dict[str, Any]:
         top_match = outcome.ranked_matches[0] if outcome.ranked_matches else None
         thesis = top_match.thesis if top_match is not None else None
+        thesis_regime = ""
+        if thesis is not None:
+            thesis_regime = str(
+                thesis.canonical_regime
+                or (thesis.supportive_context or {}).get("canonical_regime", "")
+            ).strip().upper()
         return {
             "timestamp": str(outcome.context.timestamp),
             "symbol": str(outcome.context.symbol),
-            "event_family": str(outcome.context.event_family),
+            "primary_event_id": str(outcome.context.primary_event_id or outcome.context.event_family),
+            "canonical_regime": str(
+                thesis_regime
+                or outcome.context.canonical_regime
+                or outcome.context.regime_snapshot.get("canonical_regime", "")
+            ),
+            "compat_event_family": str(outcome.context.event_family),
             "event_side": str(outcome.context.event_side),
+            "active_event_ids": list(outcome.context.active_event_ids),
+            "compat_active_event_families": list(outcome.context.active_event_families),
+            "active_episode_ids": list(outcome.context.active_episode_ids),
             "action": str(outcome.trade_intent.action),
             "thesis_id": str(outcome.trade_intent.thesis_id),
+            "thesis_canonical_regime": thesis_regime,
+            "compat_thesis_event_family": str(
+                (thesis.event_family or thesis.primary_event_id) if thesis is not None else ""
+            ),
             "support_score": float(outcome.trade_intent.support_score),
             "contradiction_penalty": float(outcome.trade_intent.contradiction_penalty),
             "confidence_band": str(outcome.trade_intent.confidence_band),
@@ -527,15 +546,21 @@ class LiveEngineRunner:
             "exchange_status": str(self.state_store.account.exchange_status),
         }
 
-    def _supported_event_families(self) -> List[str]:
-        configured = self.strategy_runtime.get("supported_event_families", ["VOL_SHOCK"])
+    def _supported_event_ids(self) -> List[str]:
+        configured = self.strategy_runtime.get(
+            "supported_event_ids",
+            self.strategy_runtime.get("supported_event_families", ["VOL_SHOCK"]),
+        )
         if not isinstance(configured, list):
             return ["VOL_SHOCK"]
         values = [str(item).strip().upper() for item in configured if str(item).strip()]
         return values or ["VOL_SHOCK"]
 
+    def _supported_event_families(self) -> List[str]:
+        return self._supported_event_ids()
+
     def _requires_runtime_market_features(self) -> bool:
-        return self._strategy_runtime_enabled() and "LIQUIDATION_CASCADE" in set(self._supported_event_families())
+        return self._strategy_runtime_enabled() and "LIQUIDATION_CASCADE" in set(self._supported_event_ids())
 
     async def _fetch_runtime_market_features_from_rest(self, symbol: str) -> Dict[str, Any]:
         if self.rest_client is None:
@@ -693,9 +718,15 @@ class LiveEngineRunner:
         payload = {
             "timestamp": outcome.context.timestamp,
             "symbol": outcome.context.symbol,
-            "event_family": outcome.context.event_family,
+            "primary_event_id": str(outcome.context.primary_event_id or outcome.context.event_family),
+            "canonical_regime": str(
+                outcome.context.canonical_regime
+                or outcome.context.regime_snapshot.get("canonical_regime", "")
+            ),
+            "compat_event_family": outcome.context.event_family,
             "event_side": outcome.context.event_side,
-            "active_event_families": list(outcome.context.active_event_families),
+            "active_event_ids": list(outcome.context.active_event_ids),
+            "compat_active_event_families": list(outcome.context.active_event_families),
             "active_episode_ids": list(outcome.context.active_episode_ids),
             "action": outcome.trade_intent.action,
             "thesis_id": outcome.trade_intent.thesis_id,
@@ -781,7 +812,7 @@ class LiveEngineRunner:
 
         prior = self._latest_final_kline_by_key.get((symbol, timeframe))
         previous_close = float(prior.get("close", 0.0) or 0.0) if prior else None
-        supported = self._supported_event_families()
+        supported = self._supported_event_ids()
         provisional_move_bps = 0.0
         if previous_close is not None and previous_close > 0.0:
             provisional_move_bps = ((float(close) / float(previous_close)) - 1.0) * 10_000.0
@@ -799,7 +830,7 @@ class LiveEngineRunner:
             previous_close=previous_close,
             volume=volume,
             market_features=market_state,
-            supported_event_families=supported,
+            supported_event_ids=supported,
             detector_config=self.strategy_runtime.get("event_detector", {}),
         )
         self._latest_final_kline_by_key[(symbol, timeframe)] = {

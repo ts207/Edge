@@ -87,6 +87,26 @@ class TemplateOperatorDefinition:
 
 
 @dataclass(frozen=True)
+class RegimeDefinition:
+    canonical_regime: str
+    bucket: str
+    eligible_templates: tuple[str, ...] = ()
+    forbidden_templates: tuple[str, ...] = ()
+    risk_posture: str = ""
+    execution_style: str = ""
+    holding_horizon_profile: str = ""
+    stop_logic_profile: str = ""
+    profit_taking_profile: str = ""
+    overrides: Dict[str, Any] = field(default_factory=dict)
+    routing_profile_id: str = ""
+    scorecard_version: str = ""
+    scorecard_source_run: str = ""
+    raw: Dict[str, Any] = field(default_factory=dict)
+    spec_path: str = ""
+    source_kind: str = "regime_registry"
+
+
+@dataclass(frozen=True)
 class ThesisDefinition:
     thesis_id: str
     thesis_kind: str
@@ -120,6 +140,7 @@ class DomainRegistry:
     event_definitions: Dict[str, EventDefinition]
     state_definitions: Dict[str, StateDefinition]
     template_operator_definitions: Dict[str, TemplateOperatorDefinition]
+    regime_definitions: Dict[str, RegimeDefinition]
     gates_spec: Dict[str, Any]
     unified_registry_path: str
     template_registry_payload: Dict[str, Any] = field(default_factory=dict)
@@ -150,6 +171,12 @@ class DomainRegistry:
 
     def get_operator(self, template_id: str) -> TemplateOperatorDefinition | None:
         return self.template_operator_definitions.get(str(template_id).strip())
+
+    def has_regime(self, canonical_regime: str) -> bool:
+        return str(canonical_regime).strip().upper() in self.regime_definitions
+
+    def get_regime(self, canonical_regime: str) -> RegimeDefinition | None:
+        return self.regime_definitions.get(str(canonical_regime).strip().upper())
 
     def has_thesis(self, thesis_id: str) -> bool:
         return str(thesis_id).strip().upper() in self.thesis_definitions

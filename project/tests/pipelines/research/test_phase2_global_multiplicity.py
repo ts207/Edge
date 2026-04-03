@@ -36,6 +36,7 @@ def test_hierarchical_fdr_simes_and_within_family_bh():
     assert bool(noise["is_discovery"]) is False
     assert bool(strong["gate_multiplicity"]) is True
     assert bool(strong["gate_multiplicity_strict"]) is True
+    assert int(strong["num_tests_primary_event_id"]) == 2
     assert int(strong["num_tests_event_family"]) == 2
 
 
@@ -68,6 +69,7 @@ def test_apply_multiplicity_controls_research_excludes_low_sample_rows():
     assert bool(eligible["is_discovery"]) is True
     assert bool(low["multiplicity_pool_eligible"]) is False
     assert bool(eligible["multiplicity_pool_eligible"]) is True
+    assert int(eligible["num_tests_primary_event_id"]) == 1
     assert int(eligible["num_tests_event_family"]) == 1
 
 

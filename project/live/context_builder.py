@@ -26,8 +26,9 @@ def build_live_trade_context(
     execution_env: Mapping[str, Any],
 ) -> LiveTradeContext:
     move_bps = float(detected_event.features.get("move_bps", 0.0) or 0.0)
+    detected_regime = str(detected_event.canonical_regime or "").strip().upper()
     regime_snapshot: Dict[str, Any] = {
-        "canonical_regime": _canonical_regime_from_move(move_bps),
+        "canonical_regime": detected_regime or _canonical_regime_from_move(move_bps),
         "move_bps": move_bps,
     }
     if "spread_bps" in market_features and float(market_features.get("spread_bps", 0.0) or 0.0) <= 5.0:
@@ -36,13 +37,19 @@ def build_live_trade_context(
         regime_snapshot["microstructure_regime"] = "degraded"
 
     active_events: list[str] = []
-    for raw in list(market_features.get("active_event_families", [])) + [detected_event.event_family]:
+    raw_active_events = list(market_features.get("active_event_ids", [])) or list(
+        market_features.get("active_event_families", [])
+    )
+    for raw in raw_active_events + [detected_event.event_id or detected_event.event_family]:
         token = str(raw or "").strip().upper()
         if token and token not in active_events:
             active_events.append(token)
 
     contradiction_events: list[str] = []
-    for raw in market_features.get("contradiction_event_families", []):
+    raw_contradictions = list(market_features.get("contradiction_event_ids", [])) or list(
+        market_features.get("contradiction_event_families", [])
+    )
+    for raw in raw_contradictions:
         token = str(raw or "").strip().upper()
         if token and token not in contradiction_events:
             contradiction_events.append(token)
@@ -76,14 +83,18 @@ def build_live_trade_context(
         timestamp=str(timestamp),
         symbol=str(symbol).upper(),
         timeframe=str(timeframe),
+        primary_event_id=str(detected_event.event_id or detected_event.event_family).upper(),
         event_family=str(detected_event.event_family).upper(),
+        canonical_regime=str(regime_snapshot.get("canonical_regime", "")).strip().upper(),
         event_side=str(detected_event.event_side).lower(),
         live_features=dict(market_features),
         regime_snapshot=regime_snapshot,
         execution_env=dict(execution_env),
         portfolio_state=dict(portfolio_state),
         active_event_families=active_events,
+        active_event_ids=active_events,
         active_episode_ids=active_episode_ids,
         contradiction_event_families=contradiction_events,
+        contradiction_event_ids=contradiction_events,
         episode_snapshot=episode_snapshot,
     )

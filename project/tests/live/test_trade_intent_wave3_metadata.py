@@ -19,6 +19,7 @@ def test_decision_attaches_overlap_and_governance_metadata() -> None:
         status="active",
         symbol_scope={"mode": "single_symbol", "symbols": ["BTCUSDT"], "candidate_symbol": "BTCUSDT"},
         timeframe="5m",
+        primary_event_id="VOL_SHOCK",
         event_family="VOL_SHOCK",
         event_side="long",
         required_context={"symbol": "BTCUSDT"},
@@ -38,12 +39,15 @@ def test_decision_attaches_overlap_and_governance_metadata() -> None:
         symbol="BTCUSDT",
         timeframe="5m",
         event_family="VOL_SHOCK",
+        primary_event_id="VOL_SHOCK",
+        canonical_regime="VOLATILITY",
         event_side="long",
         live_features={"adverse_proxy": 0.0},
         regime_snapshot={"canonical_regime": "VOLATILITY"},
         execution_env={},
         portfolio_state={"available_balance": 1000.0},
         active_event_families=["VOL_SHOCK"],
+        active_event_ids=["VOL_SHOCK"],
         active_episode_ids=["EP_VOL_BREAKOUT"],
     )
 
@@ -53,3 +57,6 @@ def test_decision_attaches_overlap_and_governance_metadata() -> None:
     assert outcome.trade_intent.metadata["governance_tier"] == "A"
     assert outcome.trade_intent.metadata["operational_role"] == "trigger"
     assert outcome.trade_intent.metadata["active_episode_ids"] == ["EP_VOL_BREAKOUT"]
+    assert outcome.trade_intent.metadata["primary_event_id"] == "VOL_SHOCK"
+    assert outcome.trade_intent.metadata["canonical_regime"] == "VOLATILITY"
+    assert outcome.trade_intent.metadata["thesis_canonical_regime"] == "VOLATILITY"

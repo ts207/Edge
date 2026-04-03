@@ -18,7 +18,10 @@ SPEC_ROOT = REPO_ROOT / "spec"
 ONTOLOGY_SPEC_RELATIVE_PATHS: Dict[str, str] = {
     "taxonomy": "spec/multiplicity/taxonomy.yaml",
     "canonical_event_registry": "spec/events/canonical_event_registry.yaml",
+    "template_registry": "spec/templates/registry.yaml",
+    "regime_registry": "spec/regimes/registry.yaml",
     "state_registry": "spec/states/state_registry.yaml",
+    "state_family_registry": "spec/states/state_families.yaml",
     "thesis_registry": "spec/theses/thesis_registry.yaml",
     "template_verb_lexicon": "spec/hypotheses/template_verb_lexicon.yaml",
     "domain_graph": "spec/domain/domain_graph.yaml",
@@ -111,15 +114,67 @@ def load_event_ontology_mapping() -> Dict[str, Any]:
 
 @functools.lru_cache(maxsize=1)
 def load_template_registry() -> Dict[str, Any]:
-    unified = load_unified_event_registry()
-    if unified:
-        return unified
-    return load_yaml_relative("spec/templates/event_template_registry.yaml")
+    return load_yaml_relative("spec/templates/registry.yaml")
+
+
+@functools.lru_cache(maxsize=1)
+def load_regime_registry() -> Dict[str, Any]:
+    return load_yaml_relative("spec/regimes/registry.yaml")
+
+
+@functools.lru_cache(maxsize=1)
+def load_state_family_registry() -> Dict[str, Any]:
+    return load_yaml_relative("spec/states/state_families.yaml")
+
+
+def _iter_state_spec_paths() -> Iterable[Path]:
+    state_dir = SPEC_ROOT / "states"
+    excluded = {"state_registry.yaml", "state_families.yaml"}
+    for path in sorted(state_dir.glob("*.yaml")):
+        if path.name in excluded:
+            continue
+        yield path
 
 
 @functools.lru_cache(maxsize=1)
 def load_state_registry() -> Dict[str, Any]:
-    return load_yaml_relative("spec/states/state_registry.yaml")
+    family_payload = load_state_family_registry()
+    defaults = family_payload.get("defaults", {}) if isinstance(family_payload, dict) else {}
+    if not isinstance(defaults, dict):
+        defaults = {}
+    context_dimensions = (
+        family_payload.get("context_dimensions", {}) if isinstance(family_payload, dict) else {}
+    )
+    if not isinstance(context_dimensions, dict):
+        context_dimensions = {}
+    state_rows: list[Dict[str, Any]] = []
+    for path in _iter_state_spec_paths():
+        row = _read_yaml(path, required=False)
+        if not isinstance(row, dict):
+            continue
+        state_id = str(row.get("state_id", "")).strip().upper()
+        if not state_id:
+            continue
+        normalized = copy.deepcopy(row)
+        normalized["state_id"] = state_id
+        normalized.setdefault("version", 1)
+        normalized.setdefault("kind", "state_definition")
+        state_rows.append(normalized)
+    state_rows.sort(key=lambda row: str(row.get("state_id", "")).strip().upper())
+    return {
+        "version": 1,
+        "kind": "state_registry",
+        "metadata": {
+            "status": "generated",
+            "authored_sources": [
+                "spec/states/state_families.yaml",
+                "spec/states/*.yaml",
+            ],
+        },
+        "defaults": copy.deepcopy(defaults),
+        "context_dimensions": copy.deepcopy(context_dimensions),
+        "states": state_rows,
+    }
 
 
 @functools.lru_cache(maxsize=1)
@@ -354,6 +409,8 @@ def clear_caches() -> None:
     load_unified_event_registry.cache_clear()
     load_event_ontology_mapping.cache_clear()
     load_template_registry.cache_clear()
+    load_regime_registry.cache_clear()
+    load_state_family_registry.cache_clear()
     load_state_registry.cache_clear()
     load_thesis_registry.cache_clear()
     load_event_contract_overrides.cache_clear()

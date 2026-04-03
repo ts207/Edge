@@ -20,11 +20,13 @@ class EvaluationSummaryResult:
     generated_at: str
     phase2_root: str
     source_files: Dict[str, str]
+    primary_event_ids: List[str]
     event_families: List[str]
     total_candidates: int
     gate_pass_count: int
     gate_pass_rate: float
     top_fail_reasons: List[Dict[str, Any]]
+    by_primary_event_id: Dict[str, Dict[str, Any]]
     by_event_family: Dict[str, Dict[str, Any]]
     funnel_payload: Dict[str, Any] = field(default_factory=dict)
 
@@ -36,4 +38,4 @@ class EvaluationSummaryService:
     def summarize_run(
         self, run_id: str, config: Optional[EvaluationSummaryConfig] = None
     ) -> EvaluationSummaryResult:
-        return EvaluationSummaryResult(run_id, "", "", {}, [], 0, 0, 0.0, [], {})
+        return EvaluationSummaryResult(run_id, "", "", {}, [], [], 0, 0, 0.0, [], {}, {})

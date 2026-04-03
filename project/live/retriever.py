@@ -22,8 +22,11 @@ class ThesisMatch:
 
 
 def _context_events(context: LiveTradeContext) -> set[str]:
-    out = {str(context.event_family).strip().upper()}
-    out.update(str(item).strip().upper() for item in context.active_event_families if str(item).strip())
+    out = {
+        str(context.primary_event_id or context.event_family).strip().upper(),
+    }
+    active_ids = list(context.active_event_ids or []) or list(context.active_event_families or [])
+    out.update(str(item).strip().upper() for item in active_ids if str(item).strip())
     return {item for item in out if item}
 
 
@@ -35,9 +38,12 @@ def _context_episodes(context: LiveTradeContext) -> set[str]:
 
 
 def _context_contradictions(context: LiveTradeContext) -> set[str]:
+    contradiction_ids = list(context.contradiction_event_ids or []) or list(
+        context.contradiction_event_families or []
+    )
     return {
         str(item).strip().upper()
-        for item in context.contradiction_event_families
+        for item in contradiction_ids
         if str(item).strip()
     }
 
@@ -114,7 +120,7 @@ def _merge_mapping(primary: dict | None, fallback: dict | None) -> dict:
 def _requirements_for_matching(
     thesis: PromotedThesis,
     definition: ThesisDefinition | None,
-) -> tuple[set[str], set[str], set[str], set[str], str]:
+) -> tuple[set[str], set[str], set[str], set[str], str, str]:
     if definition is not None:
         trigger_events = {str(item).strip().upper() for item in definition.trigger_events if str(item).strip()}
         confirmation_events = {
@@ -126,13 +132,17 @@ def _requirements_for_matching(
         disallowed_regimes = {
             str(item).strip().upper() for item in definition.disallowed_regimes if str(item).strip()
         }
-        event_family = str(definition.event_family).strip().upper()
+        event_id = str(definition.event_family).strip().upper()
+        canonical_regime = str(
+            definition.supportive_context.get("canonical_regime", thesis.canonical_regime)
+        ).strip().upper()
         return (
             trigger_events,
             confirmation_events,
             required_episodes,
             disallowed_regimes,
-            event_family,
+            event_id,
+            canonical_regime,
         )
 
     requirements = thesis.requirements
@@ -146,8 +156,18 @@ def _requirements_for_matching(
     disallowed_regimes = {
         str(item).strip().upper() for item in requirements.disallowed_regimes if str(item).strip()
     }
-    event_family = str(thesis.event_family).strip().upper()
-    return trigger_events, confirmation_events, required_episodes, disallowed_regimes, event_family
+    event_id = str(thesis.primary_event_id or thesis.event_family).strip().upper()
+    canonical_regime = str(
+        thesis.canonical_regime or (thesis.supportive_context or {}).get("canonical_regime", "")
+    ).strip().upper()
+    return (
+        trigger_events,
+        confirmation_events,
+        required_episodes,
+        disallowed_regimes,
+        event_id,
+        canonical_regime,
+    )
 
 
 def _invalidation_for_matching(
@@ -208,7 +228,9 @@ def retrieve_ranked_theses(
     context_events = _context_events(context)
     context_episodes = _context_episodes(context)
     contradiction_events = _context_contradictions(context)
-    current_regime = str((context.regime_snapshot or {}).get("canonical_regime", "")).strip().upper()
+    current_regime = str(
+        context.canonical_regime or (context.regime_snapshot or {}).get("canonical_regime", "")
+    ).strip().upper()
 
     results: list[ThesisMatch] = []
     for thesis in candidates:
@@ -234,10 +256,11 @@ def retrieve_ranked_theses(
             confirmation_events,
             required_episodes,
             disallowed_regimes,
-            thesis_event_family,
+            thesis_event_id,
+            thesis_canonical_regime,
         ) = _requirements_for_matching(thesis, definition)
 
-        clause_triggers = trigger_events or ({thesis_event_family} if thesis_event_family else set())
+        clause_triggers = trigger_events or ({thesis_event_id} if thesis_event_id else set())
         matched_triggers = clause_triggers.intersection(context_events)
         if matched_triggers:
             support_score += 0.20
@@ -275,7 +298,18 @@ def retrieve_ranked_theses(
             reasons_against.append(f"regime_disallowed:{current_regime}")
             eligibility_passed = False
 
-        contradiction_overlap = contradiction_events.intersection(trigger_events | confirmation_events | {thesis_event_family})
+        if thesis_canonical_regime:
+            if thesis_canonical_regime == current_regime:
+                support_score += 0.05
+                reasons_for.append(f"canonical_regime_match:{thesis_canonical_regime}")
+            elif current_regime:
+                reasons_against.append(
+                    f"canonical_regime_mismatch:{thesis_canonical_regime}->{current_regime}"
+                )
+
+        contradiction_overlap = contradiction_events.intersection(
+            trigger_events | confirmation_events | {thesis_event_id}
+        )
         if contradiction_overlap:
             contradiction_penalty += 0.25
             reasons_against.append(f"contradiction_event:{','.join(sorted(contradiction_overlap))}")

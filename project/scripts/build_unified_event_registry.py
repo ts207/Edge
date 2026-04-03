@@ -259,7 +259,7 @@ def build_unified_registry(repo_root: Path) -> Dict[str, Any]:
 
     event_defaults = _load_yaml(events_root / "_defaults.yaml")
     event_family_defaults = _load_yaml(events_root / "_families.yaml")
-    template_registry = _load_yaml(spec_root / "templates" / "event_template_registry.yaml")
+    template_registry = _load_yaml(spec_root / "templates" / "registry.yaml")
 
     # Build event rows from per-event specs first.
     event_rows: Dict[str, Dict[str, Any]] = {}

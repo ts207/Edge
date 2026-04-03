@@ -114,6 +114,7 @@ class PromotionDecision:
 @dataclass(frozen=True)
 class EvidenceBundle:
     candidate_id: str
+    primary_event_id: str
     event_family: str
     event_type: str
     run_id: str

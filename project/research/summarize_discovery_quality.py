@@ -199,7 +199,7 @@ def _build_summary_from_flat_phase2_layout(
     if not families:
         return None
 
-    by_event_family: Dict[str, Dict[str, object]] = {}
+    by_primary_event_id: Dict[str, Dict[str, object]] = {}
     family_fail_counter: Dict[str, Counter[str]] = defaultdict(Counter)
     global_fail_counter: Counter[str] = Counter()
 
@@ -240,21 +240,21 @@ def _build_summary_from_flat_phase2_layout(
         )
         family_fail_counter[family].update(fail_reasons)
         global_fail_counter.update(fail_reasons)
-        by_event_family[family] = family_row
+        by_primary_event_id[family] = family_row
 
     for family, counter in family_fail_counter.items():
-        by_event_family.setdefault(family, _family_defaults())
-        by_event_family[family]["top_failure_reasons"] = [
+        by_primary_event_id.setdefault(family, _family_defaults())
+        by_primary_event_id[family]["top_failure_reasons"] = [
             {"reason": reason, "count": int(count)}
             for reason, count in counter.most_common(max(0, int(top_fail_reasons)))
         ]
 
-    event_families = sorted(by_event_family.keys())
+    primary_event_ids = sorted(by_primary_event_id.keys())
     total_candidates = int(
-        sum(int(by_event_family[family].get("total_candidates", 0)) for family in event_families)
+        sum(int(by_primary_event_id[event_id].get("total_candidates", 0)) for event_id in primary_event_ids)
     )
     gate_pass_count = int(
-        sum(int(by_event_family[family].get("gate_pass_count", 0)) for family in event_families)
+        sum(int(by_primary_event_id[event_id].get("gate_pass_count", 0)) for event_id in primary_event_ids)
     )
 
     return {
@@ -262,7 +262,8 @@ def _build_summary_from_flat_phase2_layout(
         "generated_at": _utc_now_iso(),
         "phase2_root": str(phase2_root),
         "source_files": source_files,
-        "event_families": event_families,
+        "primary_event_ids": primary_event_ids,
+        "event_families": primary_event_ids,
         "total_candidates": total_candidates,
         "gate_pass_count": gate_pass_count,
         "gate_pass_rate": float(gate_pass_count / total_candidates) if total_candidates else 0.0,
@@ -270,7 +271,8 @@ def _build_summary_from_flat_phase2_layout(
             {"reason": reason, "count": int(count)}
             for reason, count in global_fail_counter.most_common(max(0, int(top_fail_reasons)))
         ],
-        "by_event_family": by_event_family,
+        "by_primary_event_id": by_primary_event_id,
+        "by_event_family": by_primary_event_id,
     }
 
 
@@ -370,15 +372,17 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
             "generated_at": _utc_now_iso(),
             "phase2_root": str(phase2_root),
             "source_files": {},
+            "primary_event_ids": [],
             "event_families": [],
             "total_candidates": 0,
             "gate_pass_count": 0,
             "gate_pass_rate": 0.0,
             "top_fail_reasons": [],
+            "by_primary_event_id": {},
             "by_event_family": {},
         }
 
-    by_event_family: Dict[str, Dict[str, object]] = {}
+    by_primary_event_id: Dict[str, Dict[str, object]] = {}
     source_files: Dict[str, str] = {}
     global_fail_counter: Counter[str] = Counter()
     family_fail_counter: Dict[str, Counter[str]] = defaultdict(Counter)
@@ -418,7 +422,7 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
                 )
                 family_fail_counter[event_type].update(bridge_reasons)
                 global_fail_counter.update(bridge_reasons)
-                by_event_family[event_type] = family_row
+                by_primary_event_id[event_type] = family_row
             continue
 
         frames: List[pd.DataFrame] = []
@@ -492,7 +496,7 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
             family_fail_counter[family].update(bridge_reasons)
             global_fail_counter.update(bridge_reasons)
 
-        by_event_family[family] = family_row
+        by_primary_event_id[family] = family_row
 
     blueprints_path = DATA_ROOT / "reports" / "strategy_blueprints" / run_id / "blueprints.jsonl"
     blueprints_rows = _load_jsonl_rows(blueprints_path)
@@ -501,14 +505,14 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
         family = str(row.get("event_type", "")).strip()
         if not family:
             continue
-        by_event_family.setdefault(family, _family_defaults())
-        by_event_family[family]["compiled_bases"] = (
-            int(by_event_family[family].get("compiled_bases", 0)) + 1
+        by_primary_event_id.setdefault(family, _family_defaults())
+        by_primary_event_id[family]["compiled_bases"] = (
+            int(by_primary_event_id[family].get("compiled_bases", 0)) + 1
         )
         overlays = row.get("overlays", [])
         overlay_count = len(overlays) if isinstance(overlays, list) else 0
-        by_event_family[family]["compiled_overlays"] = int(
-            by_event_family[family].get("compiled_overlays", 0)
+        by_primary_event_id[family]["compiled_overlays"] = int(
+            by_primary_event_id[family].get("compiled_overlays", 0)
         ) + int(overlay_count)
 
         bp_id = str(row.get("id", "")).strip()
@@ -532,9 +536,9 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
             has_validation = isinstance(split_payload.get("validation"), dict)
             has_test = isinstance(split_payload.get("test"), dict)
             if has_validation and has_test:
-                by_event_family.setdefault(family, _family_defaults())
-                by_event_family[family]["wf_tested"] = (
-                    int(by_event_family[family].get("wf_tested", 0)) + 1
+                by_primary_event_id.setdefault(family, _family_defaults())
+                by_primary_event_id[family]["wf_tested"] = (
+                    int(by_primary_event_id[family].get("wf_tested", 0)) + 1
                 )
 
     promotion_report = _load_json_object(
@@ -551,10 +555,10 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
                 family = strategy_to_family.get(strategy_id, "")
             if not family:
                 continue
-            by_event_family.setdefault(family, _family_defaults())
+            by_primary_event_id.setdefault(family, _family_defaults())
             if bool(row.get("promoted", False)):
-                by_event_family[family]["wf_survivors"] = (
-                    int(by_event_family[family].get("wf_survivors", 0)) + 1
+                by_primary_event_id[family]["wf_survivors"] = (
+                    int(by_primary_event_id[family].get("wf_survivors", 0)) + 1
                 )
             reasons = row.get("fail_reasons", [])
             if isinstance(reasons, list):
@@ -563,18 +567,18 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
                 global_fail_counter.update(tokens)
 
     for family, counter in family_fail_counter.items():
-        by_event_family.setdefault(family, _family_defaults())
-        by_event_family[family]["top_failure_reasons"] = [
+        by_primary_event_id.setdefault(family, _family_defaults())
+        by_primary_event_id[family]["top_failure_reasons"] = [
             {"reason": reason, "count": int(count)}
             for reason, count in counter.most_common(max(0, int(top_fail_reasons)))
         ]
 
-    event_families = sorted(by_event_family.keys())
+    primary_event_ids = sorted(by_primary_event_id.keys())
     total_candidates = int(
-        sum(int(by_event_family[f].get("total_candidates", 0)) for f in event_families)
+        sum(int(by_primary_event_id[f].get("total_candidates", 0)) for f in primary_event_ids)
     )
     gate_pass_count = int(
-        sum(int(by_event_family[f].get("gate_pass_count", 0)) for f in event_families)
+        sum(int(by_primary_event_id[f].get("gate_pass_count", 0)) for f in primary_event_ids)
     )
     gate_pass_rate = float(gate_pass_count / total_candidates) if total_candidates else 0.0
 
@@ -588,21 +592,23 @@ def build_summary(*, run_id: str, phase2_root: Path, top_fail_reasons: int) -> d
         "generated_at": _utc_now_iso(),
         "phase2_root": str(phase2_root),
         "source_files": source_files,
-        "event_families": event_families,
+        "primary_event_ids": primary_event_ids,
+        "event_families": primary_event_ids,
         "total_candidates": total_candidates,
         "gate_pass_count": gate_pass_count,
         "gate_pass_rate": gate_pass_rate,
         "top_fail_reasons": top_reasons,
-        "by_event_family": by_event_family,
+        "by_primary_event_id": by_primary_event_id,
+        "by_event_family": by_primary_event_id,
     }
 
 
 def _build_funnel_payload(
     summary: Dict[str, object], *, top_fail_reasons: int
 ) -> Dict[str, object]:
-    by_event_family = summary.get("by_event_family", {})
-    if not isinstance(by_event_family, dict):
-        by_event_family = {}
+    by_primary_event_id = summary.get("by_primary_event_id", summary.get("by_event_family", {}))
+    if not isinstance(by_primary_event_id, dict):
+        by_primary_event_id = {}
 
     families: Dict[str, Dict[str, object]] = {}
     totals = {
@@ -618,8 +624,8 @@ def _build_funnel_payload(
     }
     global_fail_counter: Counter[str] = Counter()
 
-    for family in sorted(by_event_family.keys()):
-        row = by_event_family.get(family, {})
+    for event_id in sorted(by_primary_event_id.keys()):
+        row = by_primary_event_id.get(event_id, {})
         if not isinstance(row, dict):
             continue
         family_counts = {
@@ -648,7 +654,7 @@ def _build_funnel_payload(
                 if reason and count > 0:
                     global_fail_counter[reason] += count
 
-        families[family] = {
+        families[event_id] = {
             **family_counts,
             "top_failure_reasons": top_family if isinstance(top_family, list) else [],
         }
@@ -719,6 +725,7 @@ def main() -> int:
             manifest,
             "success",
             stats={
+                "primary_event_id_count": int(len(payload.get("primary_event_ids", []))),
                 "event_family_count": int(len(payload.get("event_families", []))),
                 "total_candidates": int(payload.get("total_candidates", 0) or 0),
                 "gate_pass_count": int(payload.get("gate_pass_count", 0) or 0),

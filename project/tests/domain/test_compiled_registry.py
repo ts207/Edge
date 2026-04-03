@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from project.domain.compiled_registry import get_domain_registry, refresh_domain_registry
-from project.domain.registry_loader import domain_graph_path
+from project.domain.registry_loader import compile_domain_registry, domain_graph_path
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.research.search.feasibility import check_hypothesis_feasibility
 
@@ -66,6 +68,7 @@ def test_domain_registry_exposes_runtime_metadata_from_event_specs():
     assert high_vol.instrument_classes == ("crypto", "equities", "futures")
     assert high_vol.runtime_tags == ("volatility",)
     assert high_vol.description == "Market is in a high volatility state."
+    assert high_vol.spec_path.endswith("HIGH_VOL_REGIME.yaml")
 
     continuation = registry.get_operator("continuation")
     assert continuation is not None
@@ -82,6 +85,10 @@ def test_domain_registry_exposes_runtime_metadata_from_event_specs():
     assert thesis.trigger_events == ("VOL_SHOCK",)
     assert thesis.confirmation_events == ("LIQUIDITY_VACUUM",)
     assert thesis.governance["operational_role"] == "confirm"
+    regime = registry.get_regime("LIQUIDITY_STRESS")
+    assert regime is not None
+    assert regime.execution_style == "spread_aware"
+    assert regime.spec_path.endswith("spec/regimes/registry.yaml")
 
 
 def test_domain_registry_exposes_context_and_searchable_family_views():
@@ -124,3 +131,41 @@ def test_domain_registry_loads_from_generated_domain_graph():
     registry = refresh_domain_registry()
     assert registry.unified_registry_path.endswith("event_registry_unified.yaml")
     assert registry.event_definitions["DEPTH_COLLAPSE"].canonical_regime == "LIQUIDITY_STRESS"
+
+
+def test_compile_domain_registry_requires_generated_graph_by_default(monkeypatch):
+    monkeypatch.setattr(
+        "project.domain.registry_loader._load_domain_registry_from_graph",
+        lambda: None,
+    )
+
+    def fail_on_source_compile():
+        raise AssertionError("source compilation should not be used implicitly")
+
+    monkeypatch.setattr(
+        "project.domain.registry_loader._build_domain_registry_from_sources",
+        fail_on_source_compile,
+    )
+
+    with pytest.raises(FileNotFoundError, match="Compiled domain graph is missing or invalid"):
+        compile_domain_registry()
+
+
+def test_refresh_domain_registry_can_explicitly_rebuild_from_sources(monkeypatch):
+    registry = get_domain_registry()
+    called = {"n": 0}
+
+    def fake_source_compile():
+        called["n"] += 1
+        return registry
+
+    monkeypatch.setattr(
+        "project.domain.compiled_registry.compile_domain_registry_from_sources",
+        fake_source_compile,
+    )
+    monkeypatch.setattr("project.domain.compiled_registry.clear_caches", lambda: None)
+
+    refreshed = refresh_domain_registry(rebuild_from_sources=True)
+
+    assert refreshed is registry
+    assert called["n"] == 1

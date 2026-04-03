@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ThesisEvidence(BaseModel):
@@ -82,7 +82,9 @@ class PromotedThesis(BaseModel):
     staleness_class: Literal["fresh", "watch", "stale", "unknown"] = "unknown"
     symbol_scope: Dict[str, Any] = Field(default_factory=dict)
     timeframe: str = Field(min_length=1)
-    event_family: str = Field(min_length=1)
+    primary_event_id: str = Field(min_length=1)
+    event_family: str = ""
+    canonical_regime: str = ""
     event_side: Literal["long", "short", "both", "conditional", "unknown"] = "unknown"
     required_context: Dict[str, Any] = Field(default_factory=dict)
     supportive_context: Dict[str, Any] = Field(default_factory=dict)
@@ -95,9 +97,31 @@ class PromotedThesis(BaseModel):
     requirements: ThesisRequirements = Field(default_factory=ThesisRequirements)
     source: ThesisSource = Field(default_factory=ThesisSource)
 
-    @field_validator("thesis_id", "timeframe", "event_family")
+    @model_validator(mode="before")
+    @classmethod
+    def _populate_compat_event_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        primary_event_id = str(
+            data.get("primary_event_id", "") or data.get("event_family", "")
+        ).strip()
+        event_family = str(
+            data.get("event_family", "") or data.get("primary_event_id", "")
+        ).strip()
+        if primary_event_id:
+            data["primary_event_id"] = primary_event_id
+        if event_family:
+            data["event_family"] = event_family
+        return data
+
+    @field_validator("thesis_id", "timeframe", "primary_event_id")
     @classmethod
     def _validate_non_empty(cls, value: str) -> str:
         if not str(value).strip():
             raise ValueError("field must be non-empty")
         return str(value).strip()
+
+    @field_validator("primary_event_id", "event_family", "canonical_regime")
+    @classmethod
+    def _normalize_optional_tokens(cls, value: str) -> str:
+        return str(value).strip().upper()

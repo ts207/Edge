@@ -23,6 +23,8 @@ from project.research.seed_testing import (
 
 EMPIRICAL_SCORECARD_FIELDS: tuple[str, ...] = (
     "candidate_id",
+    "primary_event_id",
+    "compat_event_family",
     "source_type",
     "source_contract_ids",
     "governance_tier",
@@ -62,6 +64,7 @@ EMPIRICAL_SCORECARD_FIELDS: tuple[str, ...] = (
 class EmpiricalBundle:
     run_id: str
     candidate_id: str
+    primary_event_id: str
     event_type: str
     event_family: str
     sample_size: int
@@ -175,6 +178,7 @@ def _extract_bundle(run_id: str, payload: Mapping[str, Any]) -> EmpiricalBundle 
     return EmpiricalBundle(
         run_id=run_id,
         candidate_id=candidate_id,
+        primary_event_id=str(payload.get("primary_event_id", event_type)).strip().upper(),
         event_type=event_type,
         event_family=str(payload.get("event_family", event_type)).strip().upper(),
         sample_size=int(safe_int(sample.get("n_events", 0), 0)),
@@ -390,6 +394,19 @@ def run_empirical_seed_pass(
         neg_control_rates = [bundle.negative_control_rate for bundle in evidence.bundles if bundle.negative_control_rate is not None]
         realized_oos_supported = any(bundle.realized_oos_supported for bundle in evidence.bundles)
         governance = get_event_governance_metadata(str(row.get("event_contract_ids", "")).split("|")[0]) if str(row.get("event_contract_ids", "")).strip() else {}
+        primary_event_id = next(
+            (bundle.primary_event_id for bundle in evidence.bundles if str(bundle.primary_event_id).strip()),
+            "",
+        )
+        if not primary_event_id:
+            required_contracts = evidence.required_contracts or _required_contracts(row)
+            primary_event_id = required_contracts[0] if required_contracts else ""
+        primary_event_id = str(primary_event_id).strip().upper()
+        compat_event_family = next(
+            (bundle.event_family for bundle in evidence.bundles if str(bundle.event_family).strip()),
+            "",
+        )
+        compat_event_family = str(compat_event_family or primary_event_id).strip().upper()
 
         scores = {
             "ontology_fidelity": _ontology_fidelity(row),
@@ -407,6 +424,8 @@ def run_empirical_seed_pass(
         empirical_rows.append(
             {
                 "candidate_id": row.get("candidate_id", ""),
+                "primary_event_id": primary_event_id,
+                "compat_event_family": compat_event_family,
                 "source_type": row.get("source_type", ""),
                 "source_contract_ids": row.get("source_contract_ids", ""),
                 "governance_tier": row.get("governance_tier", governance.get("tier", "")),

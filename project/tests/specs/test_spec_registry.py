@@ -4,7 +4,6 @@ from project.spec_registry import (
     load_blueprint_policy_spec,
     load_gates_spec,
     load_template_registry,
-    load_unified_event_registry,
 )
 
 
@@ -21,8 +20,8 @@ def test_registry_loads_blueprint_policy_with_defaults():
     assert policy["stop_target"]["target_to_stop_min_ratio"] >= 1.0
 
 
-def test_template_registry_prefers_unified_registry_when_present():
+def test_template_registry_loads_from_canonical_template_source():
     template_registry = load_template_registry()
-    unified = load_unified_event_registry()
-    assert template_registry == unified
-    assert template_registry.get("kind") == "event_unified_registry"
+    assert template_registry.get("kind") == "event_template_registry"
+    assert template_registry.get("metadata", {}).get("status") == "authoritative"
+    assert "operators" in template_registry

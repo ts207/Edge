@@ -15002,6 +15002,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: AFTERSHOCK_STATE
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_SHOCK
@@ -15017,7 +15019,7 @@ state_definitions:
       - pullback_entry
       - mean_reversion
       - only_if_regime
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/AFTERSHOCK_STATE.yaml
     source_kind: state_registry
   ARBITRAGE_CROWDING_STATE:
     state_id: ARBITRAGE_CROWDING_STATE
@@ -15046,6 +15048,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: ARBITRAGE_CROWDING_STATE
       family: INFORMATION_DESYNC
       source_event_type: INDEX_COMPONENT_DIVERGENCE
@@ -15060,7 +15064,7 @@ state_definitions:
       - basis_repair
       - lead_lag_follow
       - divergence_continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/ARBITRAGE_CROWDING_STATE.yaml
     source_kind: state_registry
   BASIS_ELEVATED_STATE:
     state_id: BASIS_ELEVATED_STATE
@@ -15089,6 +15093,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: BASIS_ELEVATED_STATE
       family: INFORMATION_DESYNC
       source_event_type: SPOT_PERP_BASIS_SHOCK
@@ -15103,7 +15109,7 @@ state_definitions:
       - basis_repair
       - lead_lag_follow
       - divergence_continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/BASIS_ELEVATED_STATE.yaml
     source_kind: state_registry
   BEAR_TREND_REGIME:
     state_id: BEAR_TREND_REGIME
@@ -15129,6 +15135,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: BEAR_TREND_REGIME
       family: REGIME_CONTEXT
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -15147,7 +15155,7 @@ state_definitions:
         tags:
         - trend
         state_engine: TrendRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/BEAR_TREND_REGIME.yaml
     source_kind: state_registry
   BETA_SPIKE_STATE:
     state_id: BETA_SPIKE_STATE
@@ -15172,6 +15180,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: BETA_SPIKE_STATE
       family: REGIME_TRANSITION
       source_event_type: BETA_SPIKE_EVENT
@@ -15182,7 +15192,7 @@ state_definitions:
       allowed_templates:
       - only_if_regime
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/BETA_SPIKE_STATE.yaml
     source_kind: state_registry
   BREAKOUT_HOLD_STATE:
     state_id: BREAKOUT_HOLD_STATE
@@ -15210,6 +15220,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: BREAKOUT_HOLD_STATE
       family: TREND_STRUCTURE
       source_event_type: RANGE_BREAKOUT
@@ -15223,7 +15235,7 @@ state_definitions:
       - trend_continuation
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/BREAKOUT_HOLD_STATE.yaml
     source_kind: state_registry
   BULL_TREND_REGIME:
     state_id: BULL_TREND_REGIME
@@ -15249,6 +15261,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: BULL_TREND_REGIME
       family: REGIME_CONTEXT
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -15267,7 +15281,7 @@ state_definitions:
         tags:
         - trend
         state_engine: TrendRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/BULL_TREND_REGIME.yaml
     source_kind: state_registry
   CHOP_REGIME:
     state_id: CHOP_REGIME
@@ -15293,6 +15307,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CHOP_REGIME
       family: REGIME_CONTEXT
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -15311,7 +15327,7 @@ state_definitions:
         tags:
         - sideways
         state_engine: TrendRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CHOP_REGIME.yaml
     source_kind: state_registry
   CHOP_STATE:
     state_id: CHOP_STATE
@@ -15338,6 +15354,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CHOP_STATE
       family: TREND_STRUCTURE
       source_event_type: TREND_DECELERATION
@@ -15352,7 +15370,7 @@ state_definitions:
       - false_breakout_reversal
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CHOP_STATE.yaml
     source_kind: state_registry
   CLOSE_WINDOW_STATE:
     state_id: CLOSE_WINDOW_STATE
@@ -15377,6 +15395,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CLOSE_WINDOW_STATE
       family: TEMPORAL_STRUCTURE
       source_event_type: SESSION_CLOSE_EVENT
@@ -15387,7 +15407,7 @@ state_definitions:
       allowed_templates:
       - mean_reversion
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CLOSE_WINDOW_STATE.yaml
     source_kind: state_registry
   COMPRESSION_STATE:
     state_id: COMPRESSION_STATE
@@ -15417,6 +15437,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: COMPRESSION_STATE
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_CLUSTER_SHIFT
@@ -15432,7 +15454,7 @@ state_definitions:
       - pullback_entry
       - mean_reversion
       - only_if_regime
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/COMPRESSION_STATE.yaml
     source_kind: state_registry
   CONVERGENCE_WINDOW_STATE:
     state_id: CONVERGENCE_WINDOW_STATE
@@ -15460,6 +15482,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CONVERGENCE_WINDOW_STATE
       family: INFORMATION_DESYNC
       source_event_type: LEAD_LAG_BREAK
@@ -15473,7 +15497,7 @@ state_definitions:
       - basis_repair
       - lead_lag_follow
       - divergence_continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CONVERGENCE_WINDOW_STATE.yaml
     source_kind: state_registry
   CORRELATION_BROKEN_STATE:
     state_id: CORRELATION_BROKEN_STATE
@@ -15501,6 +15525,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CORRELATION_BROKEN_STATE
       family: REGIME_TRANSITION
       source_event_type: CORRELATION_BREAKDOWN_EVENT
@@ -15514,7 +15540,7 @@ state_definitions:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CORRELATION_BROKEN_STATE.yaml
     source_kind: state_registry
   CROWDING_STATE:
     state_id: CROWDING_STATE
@@ -15545,6 +15571,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: CROWDING_STATE
       family: POSITIONING_EXTREMES
       source_event_type: FUNDING_EXTREME_ONSET
@@ -15565,7 +15593,7 @@ state_definitions:
         tags:
         - positioning
         state_engine: MarketStateEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/CROWDING_STATE.yaml
     source_kind: state_registry
   DELEVERAGING_STATE:
     state_id: DELEVERAGING_STATE
@@ -15592,6 +15620,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: DELEVERAGING_STATE
       family: POSITIONING_EXTREMES
       source_event_type: DELEVERAGING_WAVE
@@ -15604,7 +15634,7 @@ state_definitions:
       - continuation
       - tail_risk_avoid
       - convexity_capture
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/DELEVERAGING_STATE.yaml
     source_kind: state_registry
   DEPTH_RECOVERY_STATE:
     state_id: DEPTH_RECOVERY_STATE
@@ -15630,6 +15660,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: DEPTH_RECOVERY_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: DEPTH_COLLAPSE
@@ -15642,7 +15674,7 @@ state_definitions:
       - pullback_entry
       - continuation
       - mean_reversion
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/DEPTH_RECOVERY_STATE.yaml
     source_kind: state_registry
   DESYNC_PERSISTENCE_STATE:
     state_id: DESYNC_PERSISTENCE_STATE
@@ -15670,6 +15702,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: DESYNC_PERSISTENCE_STATE
       family: INFORMATION_DESYNC
       source_event_type: CROSS_VENUE_DESYNC
@@ -15683,7 +15717,7 @@ state_definitions:
       - basis_repair
       - lead_lag_follow
       - divergence_continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/DESYNC_PERSISTENCE_STATE.yaml
     source_kind: state_registry
   DISTRIBUTION_ACCUMULATION_STATE:
     state_id: DISTRIBUTION_ACCUMULATION_STATE
@@ -15710,6 +15744,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: DISTRIBUTION_ACCUMULATION_STATE
       family: FORCED_FLOW_AND_EXHAUSTION
       source_event_type: CLIMAX_VOLUME_BAR
@@ -15722,7 +15758,7 @@ state_definitions:
       - range_reversion
       - mean_reversion
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/DISTRIBUTION_ACCUMULATION_STATE.yaml
     source_kind: state_registry
   EXHAUSTION_STATE:
     state_id: EXHAUSTION_STATE
@@ -15749,6 +15785,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: EXHAUSTION_STATE
       family: FORCED_FLOW_AND_EXHAUSTION
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -15761,7 +15799,7 @@ state_definitions:
       - exhaustion_reversal
       - momentum_fade
       - drawdown_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/EXHAUSTION_STATE.yaml
     source_kind: state_registry
   FAILURE_STATE:
     state_id: FAILURE_STATE
@@ -15788,6 +15826,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: FAILURE_STATE
       family: TREND_STRUCTURE
       source_event_type: FALSE_BREAKOUT
@@ -15800,7 +15840,7 @@ state_definitions:
       - false_breakout_reversal
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/FAILURE_STATE.yaml
     source_kind: state_registry
   FEE_REGIME_STATE:
     state_id: FEE_REGIME_STATE
@@ -15825,6 +15865,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: FEE_REGIME_STATE
       family: EXECUTION_FRICTION
       source_event_type: FEE_REGIME_CHANGE_EVENT
@@ -15835,7 +15877,7 @@ state_definitions:
       allowed_templates:
       - tail_risk_avoid
       - slippage_aware_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/FEE_REGIME_STATE.yaml
     source_kind: state_registry
   FUNDING_FLIP_STATE:
     state_id: FUNDING_FLIP_STATE
@@ -15860,6 +15902,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: FUNDING_FLIP_STATE
       family: POSITIONING_EXTREMES
       source_event_type: FUNDING_FLIP
@@ -15870,7 +15914,7 @@ state_definitions:
       allowed_templates:
       - reversal_or_squeeze
       - trend_continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/FUNDING_FLIP_STATE.yaml
     source_kind: state_registry
   FUNDING_NORMALIZATION_STATE:
     state_id: FUNDING_NORMALIZATION_STATE
@@ -15902,6 +15946,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: FUNDING_NORMALIZATION_STATE
       family: POSITIONING_EXTREMES
       source_event_type: FUNDING_NORMALIZATION_TRIGGER
@@ -15919,7 +15965,7 @@ state_definitions:
       - only_if_funding
       - only_if_oi
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/FUNDING_NORMALIZATION_STATE.yaml
     source_kind: state_registry
   FUNDING_PERSISTENCE_STATE:
     state_id: FUNDING_PERSISTENCE_STATE
@@ -15951,6 +15997,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: FUNDING_PERSISTENCE_STATE
       family: POSITIONING_EXTREMES
       source_event_type: FUNDING_PERSISTENCE_TRIGGER
@@ -15968,7 +16016,7 @@ state_definitions:
       - only_if_funding
       - only_if_oi
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/FUNDING_PERSISTENCE_STATE.yaml
     source_kind: state_registry
   HIGH_FRICTION_STATE:
     state_id: HIGH_FRICTION_STATE
@@ -15995,6 +16043,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: HIGH_FRICTION_STATE
       family: EXECUTION_FRICTION
       source_event_type: SPREAD_REGIME_WIDENING_EVENT
@@ -16007,7 +16057,7 @@ state_definitions:
       - slippage_aware_filter
       - tail_risk_avoid
       - only_if_liquidity
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/HIGH_FRICTION_STATE.yaml
     source_kind: state_registry
   HIGH_VOL_REGIME:
     state_id: HIGH_VOL_REGIME
@@ -16039,6 +16089,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: HIGH_VOL_REGIME
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_CLUSTER_SHIFT
@@ -16064,7 +16116,7 @@ state_definitions:
         tags:
         - volatility
         state_engine: VolatilityRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/HIGH_VOL_REGIME.yaml
     source_kind: state_registry
   ILLIQUID_EXECUTION_STATE:
     state_id: ILLIQUID_EXECUTION_STATE
@@ -16091,6 +16143,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: ILLIQUID_EXECUTION_STATE
       family: EXECUTION_FRICTION
       source_event_type: SLIPPAGE_SPIKE_EVENT
@@ -16103,7 +16157,7 @@ state_definitions:
       - slippage_aware_filter
       - tail_risk_avoid
       - only_if_liquidity
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/ILLIQUID_EXECUTION_STATE.yaml
     source_kind: state_registry
   LIQUIDITY_ABSENCE_STATE:
     state_id: LIQUIDITY_ABSENCE_STATE
@@ -16134,6 +16188,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: LIQUIDITY_ABSENCE_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: LIQUIDITY_VACUUM
@@ -16150,7 +16206,7 @@ state_definitions:
       - continuation
       - only_if_liquidity
       - slippage_aware_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/LIQUIDITY_ABSENCE_STATE.yaml
     source_kind: state_registry
   LOW_FRICTION_STATE:
     state_id: LOW_FRICTION_STATE
@@ -16176,6 +16232,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: LOW_FRICTION_STATE
       family: EXECUTION_FRICTION
       source_event_type: SPREAD_REGIME_WIDENING_EVENT
@@ -16187,7 +16245,7 @@ state_definitions:
       allowed_templates:
       - continuation
       - pullback_entry
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/LOW_FRICTION_STATE.yaml
     source_kind: state_registry
   LOW_LIQUIDITY_STATE:
     state_id: LOW_LIQUIDITY_STATE
@@ -16217,6 +16275,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: LOW_LIQUIDITY_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: LIQUIDITY_VACUUM
@@ -16232,7 +16292,7 @@ state_definitions:
       - continuation
       - only_if_liquidity
       - slippage_aware_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/LOW_LIQUIDITY_STATE.yaml
     source_kind: state_registry
   LOW_VOL_REGIME:
     state_id: LOW_VOL_REGIME
@@ -16264,6 +16324,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: LOW_VOL_REGIME
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_CLUSTER_SHIFT
@@ -16289,7 +16351,7 @@ state_definitions:
         tags:
         - volatility
         state_engine: VolatilityRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/LOW_VOL_REGIME.yaml
     source_kind: state_registry
   MEAN_REVERSION_WINDOW_STATE:
     state_id: MEAN_REVERSION_WINDOW_STATE
@@ -16316,6 +16378,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MEAN_REVERSION_WINDOW_STATE
       family: FORCED_FLOW_AND_EXHAUSTION
       source_event_type: FORCED_FLOW_EXHAUSTION
@@ -16328,7 +16392,7 @@ state_definitions:
       - mean_reversion
       - range_reversion
       - drawdown_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MEAN_REVERSION_WINDOW_STATE.yaml
     source_kind: state_registry
   MS_BASIS_STATE:
     state_id: MS_BASIS_STATE
@@ -16354,6 +16418,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_BASIS_STATE
       family: STATISTICAL_DISLOCATION
       source_event_type: BASIS_DISLOC
@@ -16367,7 +16433,7 @@ state_definitions:
       - mean_reversion
       - overshoot_repair
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_BASIS_STATE.yaml
     source_kind: state_registry
   MS_CONTEXT_STATE_CODE:
     state_id: MS_CONTEXT_STATE_CODE
@@ -16390,6 +16456,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_CONTEXT_STATE_CODE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: LIQUIDITY_STRESS_DIRECT
@@ -16399,7 +16467,7 @@ state_definitions:
       decay_rule: composite code returns to neutral baseline
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_CONTEXT_STATE_CODE.yaml
     source_kind: state_registry
   MS_FUNDING_STATE:
     state_id: MS_FUNDING_STATE
@@ -16422,6 +16490,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_FUNDING_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: FUNDING_EXTREME_ONSET
@@ -16431,7 +16501,7 @@ state_definitions:
       decay_rule: funding rate normalizes to baseline range
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_FUNDING_STATE.yaml
     source_kind: state_registry
   MS_LIQUIDATION_STATE:
     state_id: MS_LIQUIDATION_STATE
@@ -16460,6 +16530,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_LIQUIDATION_STATE
       family: POSITIONING_EXTREMES
       source_event_type: LIQUIDATION_CASCADE
@@ -16480,7 +16552,7 @@ state_definitions:
         tags:
         - liquidity
         state_engine: MarketStateEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_LIQUIDATION_STATE.yaml
     source_kind: state_registry
   MS_LIQ_STATE:
     state_id: MS_LIQ_STATE
@@ -16503,6 +16575,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_LIQ_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: LIQUIDITY_STRESS_DIRECT
@@ -16512,7 +16586,7 @@ state_definitions:
       decay_rule: liquidity context normalizes
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_LIQ_STATE.yaml
     source_kind: state_registry
   MS_OI_STATE:
     state_id: MS_OI_STATE
@@ -16535,6 +16609,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_OI_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: OI_SPIKE_POSITIVE
@@ -16544,7 +16620,7 @@ state_definitions:
       decay_rule: open interest normalizes
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_OI_STATE.yaml
     source_kind: state_registry
   MS_SPREAD_STATE:
     state_id: MS_SPREAD_STATE
@@ -16567,6 +16643,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_SPREAD_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: LIQUIDITY_STRESS_DIRECT
@@ -16576,7 +16654,7 @@ state_definitions:
       decay_rule: spread normalizes to baseline
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_SPREAD_STATE.yaml
     source_kind: state_registry
   MS_TREND_STATE:
     state_id: MS_TREND_STATE
@@ -16599,6 +16677,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_TREND_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -16608,7 +16688,7 @@ state_definitions:
       decay_rule: trend context returns to neutral
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_TREND_STATE.yaml
     source_kind: state_registry
   MS_VOL_STATE:
     state_id: MS_VOL_STATE
@@ -16631,6 +16711,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: MS_VOL_STATE
       family: MICROSTRUCTURE_CONTEXT
       source_event_type: VOL_SHOCK
@@ -16640,7 +16722,7 @@ state_definitions:
       decay_rule: volatility normalizes
       allowed_templates:
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/MS_VOL_STATE.yaml
     source_kind: state_registry
   NEW_REGIME_STABILIZATION_STATE:
     state_id: NEW_REGIME_STABILIZATION_STATE
@@ -16669,6 +16751,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: NEW_REGIME_STABILIZATION_STATE
       family: REGIME_TRANSITION
       source_event_type: VOL_REGIME_SHIFT_EVENT
@@ -16683,7 +16767,7 @@ state_definitions:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/NEW_REGIME_STABILIZATION_STATE.yaml
     source_kind: state_registry
   OI_CONTRACTION_STATE:
     state_id: OI_CONTRACTION_STATE
@@ -16709,6 +16793,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: OI_CONTRACTION_STATE
       family: POSITIONING_EXTREMES
       source_event_type: OI_SPIKE_NEGATIVE
@@ -16720,7 +16806,7 @@ state_definitions:
       allowed_templates:
       - momentum_fade
       - mean_reversion
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/OI_CONTRACTION_STATE.yaml
     source_kind: state_registry
   OPEN_WINDOW_STATE:
     state_id: OPEN_WINDOW_STATE
@@ -16745,6 +16831,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: OPEN_WINDOW_STATE
       family: TEMPORAL_STRUCTURE
       source_event_type: SESSION_OPEN_EVENT
@@ -16755,7 +16843,7 @@ state_definitions:
       allowed_templates:
       - mean_reversion
       - volatility_expansion_follow
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/OPEN_WINDOW_STATE.yaml
     source_kind: state_registry
   OVERBOUGHT_STATE:
     state_id: OVERBOUGHT_STATE
@@ -16788,6 +16876,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: OVERBOUGHT_STATE
       family: TREND_STRUCTURE
       source_event_type: TREND_EXHAUSTION_TRIGGER
@@ -16812,7 +16902,7 @@ state_definitions:
         tags:
         - momentum
         state_engine: MomentumRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/OVERBOUGHT_STATE.yaml
     source_kind: state_registry
   OVERSHOOT_STATE:
     state_id: OVERSHOOT_STATE
@@ -16839,6 +16929,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: OVERSHOOT_STATE
       family: STATISTICAL_DISLOCATION
       source_event_type: OVERSHOOT_AFTER_SHOCK
@@ -16851,7 +16943,7 @@ state_definitions:
       - mean_reversion
       - overshoot_repair
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/OVERSHOOT_STATE.yaml
     source_kind: state_registry
   OVERSOLD_STATE:
     state_id: OVERSOLD_STATE
@@ -16883,6 +16975,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: OVERSOLD_STATE
       family: TREND_STRUCTURE
       source_event_type: TREND_DECELERATION
@@ -16906,7 +17000,7 @@ state_definitions:
         tags:
         - momentum
         state_engine: MomentumRegimeEngine
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/OVERSOLD_STATE.yaml
     source_kind: state_registry
   POST_ABSORPTION_STATE:
     state_id: POST_ABSORPTION_STATE
@@ -16933,6 +17027,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_ABSORPTION_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: ABSORPTION_PROXY
@@ -16945,7 +17041,7 @@ state_definitions:
       - mean_reversion
       - continuation
       - only_if_liquidity
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_ABSORPTION_STATE.yaml
     source_kind: state_registry
   POST_BREAKOUT_RETEST_STATE:
     state_id: POST_BREAKOUT_RETEST_STATE
@@ -16973,6 +17069,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_BREAKOUT_RETEST_STATE
       family: TREND_STRUCTURE
       source_event_type: RANGE_BREAKOUT
@@ -16986,7 +17084,7 @@ state_definitions:
       - trend_continuation
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_BREAKOUT_RETEST_STATE.yaml
     source_kind: state_registry
   POST_CASCADE_RECOVERY_STATE:
     state_id: POST_CASCADE_RECOVERY_STATE
@@ -17012,6 +17110,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_CASCADE_RECOVERY_STATE
       family: POSITIONING_EXTREMES
       source_event_type: LIQUIDATION_EXHAUSTION_REVERSAL
@@ -17023,7 +17123,7 @@ state_definitions:
       allowed_templates:
       - mean_reversion
       - continuation
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_CASCADE_RECOVERY_STATE.yaml
     source_kind: state_registry
   POST_CLIMAX_STATE:
     state_id: POST_CLIMAX_STATE
@@ -17049,6 +17149,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_CLIMAX_STATE
       family: FORCED_FLOW_AND_EXHAUSTION
       source_event_type: CLIMAX_VOLUME_BAR
@@ -17060,7 +17162,7 @@ state_definitions:
       allowed_templates:
       - momentum_fade
       - exhaustion_reversal
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_CLIMAX_STATE.yaml
     source_kind: state_registry
   POST_EXPANSION_STATE:
     state_id: POST_EXPANSION_STATE
@@ -17087,6 +17189,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_EXPANSION_STATE
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_SPIKE
@@ -17099,7 +17203,7 @@ state_definitions:
       - continuation
       - trend_continuation
       - volatility_expansion_follow
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_EXPANSION_STATE.yaml
     source_kind: state_registry
   POST_EXTREME_CARRY_STATE:
     state_id: POST_EXTREME_CARRY_STATE
@@ -17132,6 +17236,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_EXTREME_CARRY_STATE
       family: POSITIONING_EXTREMES
       source_event_type: FUNDING_EXTREME_ONSET
@@ -17150,7 +17256,7 @@ state_definitions:
       - only_if_funding
       - only_if_oi
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_EXTREME_CARRY_STATE.yaml
     source_kind: state_registry
   POST_FORCED_FLOW_STATE:
     state_id: POST_FORCED_FLOW_STATE
@@ -17177,6 +17283,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_FORCED_FLOW_STATE
       family: FORCED_FLOW_AND_EXHAUSTION
       source_event_type: FORCED_FLOW_EXHAUSTION
@@ -17189,7 +17297,7 @@ state_definitions:
       - mean_reversion
       - exhaustion_reversal
       - momentum_fade
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_FORCED_FLOW_STATE.yaml
     source_kind: state_registry
   POST_FUNDING_WINDOW_STATE:
     state_id: POST_FUNDING_WINDOW_STATE
@@ -17216,6 +17324,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_FUNDING_WINDOW_STATE
       family: TEMPORAL_STRUCTURE
       source_event_type: FUNDING_TIMESTAMP_EVENT
@@ -17228,7 +17338,7 @@ state_definitions:
       - mean_reversion
       - continuation
       - only_if_no_news_window
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_FUNDING_WINDOW_STATE.yaml
     source_kind: state_registry
   POST_LIQUIDATION_STATE:
     state_id: POST_LIQUIDATION_STATE
@@ -17257,6 +17367,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_LIQUIDATION_STATE
       family: POSITIONING_EXTREMES
       source_event_type: LIQUIDATION_CASCADE
@@ -17271,7 +17383,7 @@ state_definitions:
       - mean_reversion
       - continuation
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_LIQUIDATION_STATE.yaml
     source_kind: state_registry
   POST_NEWS_AFTERSHOCK_STATE:
     state_id: POST_NEWS_AFTERSHOCK_STATE
@@ -17297,6 +17409,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_NEWS_AFTERSHOCK_STATE
       family: TEMPORAL_STRUCTURE
       source_event_type: SCHEDULED_NEWS_WINDOW_EVENT
@@ -17308,7 +17422,7 @@ state_definitions:
       allowed_templates:
       - volatility_expansion_follow
       - drawdown_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_NEWS_AFTERSHOCK_STATE.yaml
     source_kind: state_registry
   POST_SWEEP_STATE:
     state_id: POST_SWEEP_STATE
@@ -17335,6 +17449,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: POST_SWEEP_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: SWEEP_STOPRUN
@@ -17347,7 +17463,7 @@ state_definitions:
       - stop_run_repair
       - overshoot_repair
       - mean_reversion
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/POST_SWEEP_STATE.yaml
     source_kind: state_registry
   PRE_BREAKOUT_TENSION_STATE:
     state_id: PRE_BREAKOUT_TENSION_STATE
@@ -17378,6 +17494,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: PRE_BREAKOUT_TENSION_STATE
       family: VOLATILITY_TRANSITION
       source_event_type: RANGE_COMPRESSION_END
@@ -17394,7 +17512,7 @@ state_definitions:
       - pullback_entry
       - mean_reversion
       - only_if_regime
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/PRE_BREAKOUT_TENSION_STATE.yaml
     source_kind: state_registry
   PRE_NEWS_STATE:
     state_id: PRE_NEWS_STATE
@@ -17419,6 +17537,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: PRE_NEWS_STATE
       family: TEMPORAL_STRUCTURE
       source_event_type: SCHEDULED_NEWS_WINDOW_EVENT
@@ -17429,7 +17549,7 @@ state_definitions:
       allowed_templates:
       - tail_risk_avoid
       - only_if_no_news_window
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/PRE_NEWS_STATE.yaml
     source_kind: state_registry
   PULLBACK_STATE:
     state_id: PULLBACK_STATE
@@ -17457,6 +17577,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: PULLBACK_STATE
       family: TREND_STRUCTURE
       source_event_type: PULLBACK_PIVOT
@@ -17470,7 +17592,7 @@ state_definitions:
       - trend_continuation
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/PULLBACK_STATE.yaml
     source_kind: state_registry
   REFILL_LAG_STATE:
     state_id: REFILL_LAG_STATE
@@ -17502,6 +17624,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: REFILL_LAG_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: LIQUIDITY_VACUUM
@@ -17519,7 +17643,7 @@ state_definitions:
       - continuation
       - only_if_liquidity
       - slippage_aware_filter
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/REFILL_LAG_STATE.yaml
     source_kind: state_registry
   RELAXATION_STATE:
     state_id: RELAXATION_STATE
@@ -17546,6 +17670,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: RELAXATION_STATE
       family: VOLATILITY_TRANSITION
       source_event_type: VOL_RELAXATION_START
@@ -17558,7 +17684,7 @@ state_definitions:
       - mean_reversion
       - pullback_entry
       - only_if_regime
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/RELAXATION_STATE.yaml
     source_kind: state_registry
   REPAIR_WINDOW_STATE:
     state_id: REPAIR_WINDOW_STATE
@@ -17585,6 +17711,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: REPAIR_WINDOW_STATE
       family: STATISTICAL_DISLOCATION
       source_event_type: GAP_OVERSHOOT
@@ -17597,7 +17725,7 @@ state_definitions:
       - mean_reversion
       - overshoot_repair
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/REPAIR_WINDOW_STATE.yaml
     source_kind: state_registry
   REVERSION_IN_PROGRESS_STATE:
     state_id: REVERSION_IN_PROGRESS_STATE
@@ -17623,6 +17751,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: REVERSION_IN_PROGRESS_STATE
       family: STATISTICAL_DISLOCATION
       source_event_type: BAND_BREAK
@@ -17634,7 +17764,7 @@ state_definitions:
       - mean_reversion
       - overshoot_repair
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/REVERSION_IN_PROGRESS_STATE.yaml
     source_kind: state_registry
   RISK_OFF_STATE:
     state_id: RISK_OFF_STATE
@@ -17663,6 +17793,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: RISK_OFF_STATE
       family: REGIME_TRANSITION
       source_event_type: TREND_TO_CHOP_SHIFT
@@ -17679,7 +17811,7 @@ state_definitions:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/RISK_OFF_STATE.yaml
     source_kind: state_registry
   RISK_ON_STATE:
     state_id: RISK_ON_STATE
@@ -17708,6 +17840,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: RISK_ON_STATE
       family: REGIME_TRANSITION
       source_event_type: CHOP_TO_TREND_SHIFT
@@ -17724,7 +17858,7 @@ state_definitions:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/RISK_ON_STATE.yaml
     source_kind: state_registry
   SPREAD_ELEVATED_STATE:
     state_id: SPREAD_ELEVATED_STATE
@@ -17750,6 +17884,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: SPREAD_ELEVATED_STATE
       family: LIQUIDITY_DISLOCATION
       source_event_type: SPREAD_BLOWOUT
@@ -17761,7 +17897,7 @@ state_definitions:
       - slippage_aware_filter
       - tail_risk_avoid
       - only_if_liquidity
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/SPREAD_ELEVATED_STATE.yaml
     source_kind: state_registry
   SQUEEZE_RISK_STATE:
     state_id: SQUEEZE_RISK_STATE
@@ -17790,6 +17926,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: SQUEEZE_RISK_STATE
       family: POSITIONING_EXTREMES
       source_event_type: OI_SPIKE_POSITIVE
@@ -17804,7 +17942,7 @@ state_definitions:
       - continuation
       - only_if_oi
       - only_if_funding
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/SQUEEZE_RISK_STATE.yaml
     source_kind: state_registry
   STRETCHED_STATE:
     state_id: STRETCHED_STATE
@@ -17830,6 +17968,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: STRETCHED_STATE
       family: STATISTICAL_DISLOCATION
       source_event_type: ZSCORE_STRETCH
@@ -17841,7 +17981,7 @@ state_definitions:
       - mean_reversion
       - overshoot_repair
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/STRETCHED_STATE.yaml
     source_kind: state_registry
   TRANSITION_TURBULENCE_STATE:
     state_id: TRANSITION_TURBULENCE_STATE
@@ -17870,6 +18010,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: TRANSITION_TURBULENCE_STATE
       family: REGIME_TRANSITION
       source_event_type: VOL_REGIME_SHIFT_EVENT
@@ -17884,7 +18026,7 @@ state_definitions:
       - mean_reversion
       - drawdown_filter
       - tail_risk_avoid
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/TRANSITION_TURBULENCE_STATE.yaml
     source_kind: state_registry
   TRENDING_STATE:
     state_id: TRENDING_STATE
@@ -17912,6 +18054,8 @@ state_definitions:
     context_family: ''
     context_label: ''
     raw:
+      version: 1
+      kind: state_definition
       state_id: TRENDING_STATE
       family: TREND_STRUCTURE
       source_event_type: TREND_ACCELERATION
@@ -17927,7 +18071,7 @@ state_definitions:
       - trend_continuation
       - continuation
       - only_if_trend
-    spec_path: /home/irene/Edge/spec/states/state_registry.yaml
+    spec_path: /home/irene/Edge/spec/states/TRENDING_STATE.yaml
     source_kind: state_registry
 template_operator_definitions:
   basis_repair:
@@ -17937,10 +18081,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id608
+      supports_directions: &id609
       - long
       - short
-      supports_trigger_types: &id609
+      supports_trigger_types: &id610
       - EVENT
       operator_id: op.basis_repair
       operator_version: v1
@@ -17948,10 +18092,10 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: &id610
+      compatible_families: &id611
       - INFORMATION_DESYNC
-      default_conditioning: &id611 {}
-      risk_metrics_required: &id612 []
+      default_conditioning: &id612 {}
+      risk_metrics_required: &id613 []
       template_kind: filter_template
       feature: basis_zscore
       operator: '>'
@@ -17973,10 +18117,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id613
+      supports_directions: &id614
       - long
       - short
-      supports_trigger_types: &id614
+      supports_trigger_types: &id615
       - EVENT
       - SEQUENCE
       operator_id: op.breakout_followthrough
@@ -17985,7 +18129,7 @@ template_operator_definitions:
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id615
+      compatible_families: &id616
       - TREND_STRUCTURE
       - VOLATILITY_TRANSITION
       - LIQUIDITY_DISLOCATION
@@ -17997,8 +18141,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id616 {}
-      risk_metrics_required: &id617 []
+      default_conditioning: &id617 {}
+      risk_metrics_required: &id618 []
       template_kind: execution_template
   continuation:
     template_id: continuation
@@ -18020,10 +18164,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id618
+      supports_directions: &id619
       - long
       - short
-      supports_trigger_types: &id619
+      supports_trigger_types: &id620
       - EVENT
       - STATE
       - SEQUENCE
@@ -18034,7 +18178,7 @@ template_operator_definitions:
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id620
+      compatible_families: &id621
       - LIQUIDITY_DISLOCATION
       - POSITIONING_EXTREMES
       - REGIME_TRANSITION
@@ -18049,8 +18193,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id621 {}
-      risk_metrics_required: &id622 []
+      default_conditioning: &id622 {}
+      risk_metrics_required: &id623 []
       template_kind: execution_template
   convergence:
     template_id: convergence
@@ -18059,10 +18203,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id623
+      supports_directions: &id624
       - long
       - short
-      supports_trigger_types: &id624
+      supports_trigger_types: &id625
       - EVENT
       operator_id: op.convergence
       operator_version: v1
@@ -18070,10 +18214,10 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: &id625
+      compatible_families: &id626
       - INFORMATION_DESYNC
-      default_conditioning: &id626 {}
-      risk_metrics_required: &id627 []
+      default_conditioning: &id627 {}
+      risk_metrics_required: &id628 []
       template_kind: execution_template
   convexity_capture:
     template_id: convexity_capture
@@ -18082,10 +18226,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id628
+      supports_directions: &id629
       - long
       - short
-      supports_trigger_types: &id629
+      supports_trigger_types: &id630
       - EVENT
       operator_id: op.convexity_capture
       operator_version: v1
@@ -18093,10 +18237,10 @@ template_operator_definitions:
       side_policy: both
       label_target: mfe_h
       test_spec: upper_quantile_gt_0
-      compatible_families: &id630
+      compatible_families: &id631
       - POSITIONING_EXTREMES
-      default_conditioning: &id631 {}
-      risk_metrics_required: &id632
+      default_conditioning: &id632 {}
+      risk_metrics_required: &id633
       - tail_risk_avoid
       template_kind: filter_template
       feature: oi_delta_1h
@@ -18109,10 +18253,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id633
+      supports_directions: &id634
       - long
       - short
-      supports_trigger_types: &id634
+      supports_trigger_types: &id635
       - EVENT
       operator_id: op.desync_repair
       operator_version: v1
@@ -18120,10 +18264,10 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: &id635
+      compatible_families: &id636
       - INFORMATION_DESYNC
-      default_conditioning: &id636 {}
-      risk_metrics_required: &id637 []
+      default_conditioning: &id637 {}
+      risk_metrics_required: &id638 []
       template_kind: filter_template
       feature: cross_exchange_spread_z
       operator: '>'
@@ -18136,10 +18280,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id638
+      supports_directions: &id639
       - long
       - short
-      supports_trigger_types: &id639
+      supports_trigger_types: &id640
       - EVENT
       operator_id: op.divergence_continuation
       operator_version: v1
@@ -18147,11 +18291,11 @@ template_operator_definitions:
       side_policy: directional
       label_target: basis_repair_h
       test_spec: hit_rate_gt_threshold
-      compatible_families: &id640
+      compatible_families: &id641
       - INFORMATION_DESYNC
       - REGIME_TRANSITION
-      default_conditioning: &id641 {}
-      risk_metrics_required: &id642
+      default_conditioning: &id642 {}
+      risk_metrics_required: &id643
       - tail_risk_avoid
       template_kind: filter_template
       feature: cross_exchange_spread_z
@@ -18165,10 +18309,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id643
+      supports_directions: &id644
       - long
       - short
-      supports_trigger_types: &id644
+      supports_trigger_types: &id645
       - EVENT
       - STATE
       operator_id: op.drawdown_filter
@@ -18177,11 +18321,11 @@ template_operator_definitions:
       side_policy: both
       label_target: path_class_h
       test_spec: drawdown_lt_threshold
-      compatible_families: &id645
+      compatible_families: &id646
       - FORCED_FLOW_AND_EXHAUSTION
       - REGIME_TRANSITION
-      default_conditioning: &id646 {}
-      risk_metrics_required: &id647 []
+      default_conditioning: &id647 {}
+      risk_metrics_required: &id648 []
       template_kind: filter_template
       feature: logret_1
       operator: <
@@ -18194,10 +18338,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id648
+      supports_directions: &id649
       - long
       - short
-      supports_trigger_types: &id649
+      supports_trigger_types: &id650
       - EVENT
       - SEQUENCE
       operator_id: op.exhaustion_reversal
@@ -18206,11 +18350,11 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id650
+      compatible_families: &id651
       - FORCED_FLOW_AND_EXHAUSTION
       - POSITIONING_EXTREMES
-      default_conditioning: &id651 {}
-      risk_metrics_required: &id652
+      default_conditioning: &id652 {}
+      risk_metrics_required: &id653
       - drawdown_filter
       template_kind: filter_template
       feature: rv_pct_17280
@@ -18231,10 +18375,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id653
+      supports_directions: &id654
       - long
       - short
-      supports_trigger_types: &id654
+      supports_trigger_types: &id655
       - EVENT
       operator_id: op.false_breakout_reversal
       operator_version: v1
@@ -18242,7 +18386,7 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id655
+      compatible_families: &id656
       - TREND_STRUCTURE
       - ABSORPTION_PROXY
       - DEPTH_STRESS_PROXY
@@ -18252,8 +18396,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id656 {}
-      risk_metrics_required: &id657 []
+      default_conditioning: &id657 {}
+      risk_metrics_required: &id658 []
       template_kind: execution_template
   lead_lag_follow:
     template_id: lead_lag_follow
@@ -18262,10 +18406,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id658
+      supports_directions: &id659
       - long
       - short
-      supports_trigger_types: &id659
+      supports_trigger_types: &id660
       - EVENT
       - SEQUENCE
       operator_id: op.lead_lag_follow
@@ -18274,10 +18418,10 @@ template_operator_definitions:
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id660
+      compatible_families: &id661
       - INFORMATION_DESYNC
-      default_conditioning: &id661 {}
-      risk_metrics_required: &id662 []
+      default_conditioning: &id662 {}
+      risk_metrics_required: &id663 []
       template_kind: execution_template
   mean_reversion:
     template_id: mean_reversion
@@ -18300,10 +18444,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id663
+      supports_directions: &id664
       - long
       - short
-      supports_trigger_types: &id664
+      supports_trigger_types: &id665
       - EVENT
       - STATE
       - SEQUENCE
@@ -18314,7 +18458,7 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id665
+      compatible_families: &id666
       - FORCED_FLOW_AND_EXHAUSTION
       - LIQUIDITY_DISLOCATION
       - POSITIONING_EXTREMES
@@ -18330,8 +18474,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id666 {}
-      risk_metrics_required: &id667
+      default_conditioning: &id667 {}
+      risk_metrics_required: &id668
       - tail_risk_avoid
       template_kind: execution_template
   momentum_fade:
@@ -18342,10 +18486,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id668
+      supports_directions: &id669
       - long
       - short
-      supports_trigger_types: &id669
+      supports_trigger_types: &id670
       - EVENT
       operator_id: op.momentum_fade
       operator_version: v1
@@ -18353,11 +18497,11 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id670
+      compatible_families: &id671
       - FORCED_FLOW_AND_EXHAUSTION
       - TREND_STRUCTURE
-      default_conditioning: &id671 {}
-      risk_metrics_required: &id672 []
+      default_conditioning: &id672 {}
+      risk_metrics_required: &id673 []
       template_kind: filter_template
       feature: logret_1
       operator: <
@@ -18369,10 +18513,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id673
+      supports_directions: &id674
       - long
       - short
-      supports_trigger_types: &id674
+      supports_trigger_types: &id675
       - EVENT
       - STATE
       operator_id: op.only_if_funding
@@ -18381,10 +18525,10 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id675
+      compatible_families: &id676
       - POSITIONING_EXTREMES
-      default_conditioning: &id676 {}
-      risk_metrics_required: &id677 []
+      default_conditioning: &id677 {}
+      risk_metrics_required: &id678 []
       template_kind: filter_template
       feature: funding_rate
       operator: '>'
@@ -18396,10 +18540,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id678
+      supports_directions: &id679
       - long
       - short
-      supports_trigger_types: &id679
+      supports_trigger_types: &id680
       - EVENT
       - STATE
       operator_id: op.only_if_liquidity
@@ -18408,10 +18552,10 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id680
+      compatible_families: &id681
       - LIQUIDITY_DISLOCATION
-      default_conditioning: &id681 {}
-      risk_metrics_required: &id682 []
+      default_conditioning: &id682 {}
+      risk_metrics_required: &id683 []
       template_kind: filter_template
       feature: liquidation_count
       operator: '>'
@@ -18423,10 +18567,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id683
+      supports_directions: &id684
       - long
       - short
-      supports_trigger_types: &id684
+      supports_trigger_types: &id685
       - EVENT
       - STATE
       operator_id: op.only_if_no_news_window
@@ -18435,10 +18579,10 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id685
+      compatible_families: &id686
       - TEMPORAL_STRUCTURE
-      default_conditioning: &id686 {}
-      risk_metrics_required: &id687 []
+      default_conditioning: &id687 {}
+      risk_metrics_required: &id688 []
       template_kind: filter_template
       feature: calendar_event
       operator: ==
@@ -18450,10 +18594,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id688
+      supports_directions: &id689
       - long
       - short
-      supports_trigger_types: &id689
+      supports_trigger_types: &id690
       - EVENT
       - STATE
       operator_id: op.only_if_oi
@@ -18462,10 +18606,10 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id690
+      compatible_families: &id691
       - POSITIONING_EXTREMES
-      default_conditioning: &id691 {}
-      risk_metrics_required: &id692 []
+      default_conditioning: &id692 {}
+      risk_metrics_required: &id693 []
       template_kind: filter_template
       feature: oi_delta_1h
       operator: '>'
@@ -18478,10 +18622,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id693
+      supports_directions: &id694
       - long
       - short
-      supports_trigger_types: &id694
+      supports_trigger_types: &id695
       - EVENT
       - STATE
       operator_id: op.only_if_regime
@@ -18490,11 +18634,11 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id695
+      compatible_families: &id696
       - REGIME_TRANSITION
       - VOLATILITY_TRANSITION
-      default_conditioning: &id696 {}
-      risk_metrics_required: &id697 []
+      default_conditioning: &id697 {}
+      risk_metrics_required: &id698 []
       template_kind: filter_template
       feature: rv_pct_17280
       operator: '>'
@@ -18507,10 +18651,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id698
+      supports_directions: &id699
       - long
       - short
-      supports_trigger_types: &id699
+      supports_trigger_types: &id700
       - EVENT
       - STATE
       operator_id: op.only_if_trend
@@ -18519,11 +18663,11 @@ template_operator_definitions:
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: &id700
+      compatible_families: &id701
       - FORCED_FLOW_AND_EXHAUSTION
       - TREND_STRUCTURE
-      default_conditioning: &id701 {}
-      risk_metrics_required: &id702 []
+      default_conditioning: &id702 {}
+      risk_metrics_required: &id703 []
       template_kind: filter_template
       feature: logret_1
       operator: '>'
@@ -18544,10 +18688,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id703
+      supports_directions: &id704
       - long
       - short
-      supports_trigger_types: &id704
+      supports_trigger_types: &id705
       - EVENT
       operator_id: op.overshoot_repair
       operator_version: v1
@@ -18555,7 +18699,7 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id705
+      compatible_families: &id706
       - LIQUIDITY_DISLOCATION
       - STATISTICAL_DISLOCATION
       - ABSORPTION_PROXY
@@ -18566,8 +18710,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id706 {}
-      risk_metrics_required: &id707
+      default_conditioning: &id707 {}
+      risk_metrics_required: &id708
       - tail_risk_avoid
       template_kind: filter_template
       feature: basis_zscore
@@ -18590,10 +18734,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id708
+      supports_directions: &id709
       - long
       - short
-      supports_trigger_types: &id709
+      supports_trigger_types: &id710
       - EVENT
       - STATE
       operator_id: op.pullback_entry
@@ -18602,7 +18746,7 @@ template_operator_definitions:
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id710
+      compatible_families: &id711
       - TREND_STRUCTURE
       - VOLATILITY_TRANSITION
       - LIQUIDITY_DISLOCATION
@@ -18614,8 +18758,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id711 {}
-      risk_metrics_required: &id712
+      default_conditioning: &id712 {}
+      risk_metrics_required: &id713
       - drawdown_filter
       template_kind: execution_template
   range_reversion:
@@ -18626,10 +18770,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id713
+      supports_directions: &id714
       - long
       - short
-      supports_trigger_types: &id714
+      supports_trigger_types: &id715
       - EVENT
       - STATE
       operator_id: op.range_reversion
@@ -18638,11 +18782,11 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id715
+      compatible_families: &id716
       - FORCED_FLOW_AND_EXHAUSTION
       - STATISTICAL_DISLOCATION
-      default_conditioning: &id716 {}
-      risk_metrics_required: &id717 []
+      default_conditioning: &id717 {}
+      risk_metrics_required: &id718 []
       template_kind: filter_template
       feature: basis_zscore
       operator: '>'
@@ -18654,10 +18798,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id718
+      supports_directions: &id719
       - long
       - short
-      supports_trigger_types: &id719
+      supports_trigger_types: &id720
       - EVENT
       - SEQUENCE
       operator_id: op.reversal_or_squeeze
@@ -18666,10 +18810,10 @@ template_operator_definitions:
       side_policy: both
       label_target: fwd_return_h
       test_spec: mean_gt_0_or_tail_positive
-      compatible_families: &id720
+      compatible_families: &id721
       - POSITIONING_EXTREMES
-      default_conditioning: &id721 {}
-      risk_metrics_required: &id722
+      default_conditioning: &id722 {}
+      risk_metrics_required: &id723
       - tail_risk_avoid
       template_kind: filter_template
       feature: funding_rate_scaled
@@ -18683,10 +18827,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id723
+      supports_directions: &id724
       - long
       - short
-      supports_trigger_types: &id724
+      supports_trigger_types: &id725
       - EVENT
       operator_id: op.slippage_aware_filter
       operator_version: v1
@@ -18694,11 +18838,11 @@ template_operator_definitions:
       side_policy: both
       label_target: path_class_h
       test_spec: cost_ratio_lt_threshold
-      compatible_families: &id725
+      compatible_families: &id726
       - LIQUIDITY_DISLOCATION
       - EXECUTION_FRICTION
-      default_conditioning: &id726 {}
-      risk_metrics_required: &id727 []
+      default_conditioning: &id727 {}
+      risk_metrics_required: &id728 []
       template_kind: filter_template
       feature: spread_zscore
       operator: '>'
@@ -18710,10 +18854,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id728
+      supports_directions: &id729
       - long
       - short
-      supports_trigger_types: &id729
+      supports_trigger_types: &id730
       - EVENT
       operator_id: op.stop_run_repair
       operator_version: v1
@@ -18721,10 +18865,10 @@ template_operator_definitions:
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id730
+      compatible_families: &id731
       - LIQUIDITY_DISLOCATION
-      default_conditioning: &id731 {}
-      risk_metrics_required: &id732
+      default_conditioning: &id732 {}
+      risk_metrics_required: &id733
       - slippage_aware_filter
       template_kind: filter_template
       feature: liquidation_count
@@ -18740,10 +18884,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id733
+      supports_directions: &id734
       - long
       - short
-      supports_trigger_types: &id734
+      supports_trigger_types: &id735
       - EVENT
       - STATE
       operator_id: op.tail_risk_avoid
@@ -18752,13 +18896,13 @@ template_operator_definitions:
       side_policy: both
       label_target: path_class_h
       test_spec: tail_loss_lt_threshold
-      compatible_families: &id735
+      compatible_families: &id736
       - EXECUTION_FRICTION
       - POSITIONING_EXTREMES
       - REGIME_TRANSITION
       - STATISTICAL_DISLOCATION
-      default_conditioning: &id736 {}
-      risk_metrics_required: &id737
+      default_conditioning: &id737 {}
+      risk_metrics_required: &id738
       - drawdown_filter
       template_kind: filter_template
       feature: rv_pct_17280
@@ -18781,10 +18925,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id738
+      supports_directions: &id739
       - long
       - short
-      supports_trigger_types: &id739
+      supports_trigger_types: &id740
       - EVENT
       - STATE
       - SEQUENCE
@@ -18794,7 +18938,7 @@ template_operator_definitions:
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: &id740
+      compatible_families: &id741
       - TREND_STRUCTURE
       - VOLATILITY_TRANSITION
       - LIQUIDITY_DISLOCATION
@@ -18806,8 +18950,8 @@ template_operator_definitions:
       - PRICE_VOL_IMBALANCE_PROXY
       - WICK_REVERSAL_PROXY
       - LIQUIDATION_EXHAUSTION_REVERSAL
-      default_conditioning: &id741 {}
-      risk_metrics_required: &id742
+      default_conditioning: &id742 {}
+      risk_metrics_required: &id743
       - drawdown_filter
       template_kind: execution_template
   volatility_expansion_follow:
@@ -18817,10 +18961,10 @@ template_operator_definitions:
     raw:
       enabled: true
       supports_contexts: true
-      supports_directions: &id743
+      supports_directions: &id744
       - long
       - short
-      supports_trigger_types: &id744
+      supports_trigger_types: &id745
       - EVENT
       operator_id: op.volatility_expansion_follow
       operator_version: v1
@@ -18828,15 +18972,475 @@ template_operator_definitions:
       side_policy: directional
       label_target: path_class_h
       test_spec: hit_rate_gt_threshold
-      compatible_families: &id745
+      compatible_families: &id746
       - VOLATILITY_TRANSITION
-      default_conditioning: &id746 {}
-      risk_metrics_required: &id747
+      default_conditioning: &id747 {}
+      risk_metrics_required: &id748
       - drawdown_filter
       template_kind: filter_template
       feature: rv_96
       operator: '>'
       threshold: 0.0
+regime_definitions:
+  BASIS_FUNDING_DISLOCATION:
+    canonical_regime: BASIS_FUNDING_DISLOCATION
+    bucket: trade_generating
+    eligible_templates:
+    - basis_repair
+    - convergence
+    - mean_reversion
+    forbidden_templates:
+    - tail_risk_avoid
+    risk_posture: moderate
+    execution_style: patient_cross_venue
+    holding_horizon_profile: intraday_to_swing
+    stop_logic_profile: dislocation_normalization_fail
+    profit_taking_profile: basis_compression_ladder
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - basis_repair
+      - convergence
+      - mean_reversion
+      forbidden_templates:
+      - tail_risk_avoid
+      risk_posture: moderate
+      execution_style: patient_cross_venue
+      holding_horizon_profile: intraday_to_swing
+      stop_logic_profile: dislocation_normalization_fail
+      profit_taking_profile: basis_compression_ladder
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  CROSS_ASSET_DESYNCHRONIZATION:
+    canonical_regime: CROSS_ASSET_DESYNCHRONIZATION
+    bucket: trade_generating
+    eligible_templates:
+    - convergence
+    - desync_repair
+    - lead_lag_follow
+    forbidden_templates:
+    - tail_risk_avoid
+    risk_posture: moderate
+    execution_style: hedge_first
+    holding_horizon_profile: intraday
+    stop_logic_profile: resync_failure
+    profit_taking_profile: spread_recompression
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - convergence
+      - desync_repair
+      - lead_lag_follow
+      forbidden_templates:
+      - tail_risk_avoid
+      risk_posture: moderate
+      execution_style: hedge_first
+      holding_horizon_profile: intraday
+      stop_logic_profile: resync_failure
+      profit_taking_profile: spread_recompression
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  EXECUTION_FRICTION:
+    canonical_regime: EXECUTION_FRICTION
+    bucket: trade_filtering
+    eligible_templates:
+    - slippage_aware_filter
+    - tail_risk_avoid
+    forbidden_templates:
+    - breakout_followthrough
+    - mean_reversion
+    risk_posture: defensive
+    execution_style: reduce_size_or_wait
+    holding_horizon_profile: gate_only
+    stop_logic_profile: execution_quality_breach
+    profit_taking_profile: not_applicable
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_filtering
+      eligible_templates:
+      - slippage_aware_filter
+      - tail_risk_avoid
+      forbidden_templates:
+      - breakout_followthrough
+      - mean_reversion
+      risk_posture: defensive
+      execution_style: reduce_size_or_wait
+      holding_horizon_profile: gate_only
+      stop_logic_profile: execution_quality_breach
+      profit_taking_profile: not_applicable
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  LIQUIDATION_CASCADE:
+    canonical_regime: LIQUIDATION_CASCADE
+    bucket: trade_generating
+    eligible_templates:
+    - exhaustion_reversal
+    - reversal_or_squeeze
+    - convexity_capture
+    forbidden_templates:
+    - trend_continuation
+    risk_posture: aggressive_but_capped
+    execution_style: wait_for_recovery_confirmation
+    holding_horizon_profile: short_horizon
+    stop_logic_profile: cascade_reacceleration
+    profit_taking_profile: liquidity_snapback
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - exhaustion_reversal
+      - reversal_or_squeeze
+      - convexity_capture
+      forbidden_templates:
+      - trend_continuation
+      risk_posture: aggressive_but_capped
+      execution_style: wait_for_recovery_confirmation
+      holding_horizon_profile: short_horizon
+      stop_logic_profile: cascade_reacceleration
+      profit_taking_profile: liquidity_snapback
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  LIQUIDITY_STRESS:
+    canonical_regime: LIQUIDITY_STRESS
+    bucket: trade_generating
+    eligible_templates:
+    - stop_run_repair
+    - mean_reversion
+    forbidden_templates:
+    - range_reversion
+    risk_posture: reduced_size
+    execution_style: spread_aware
+    holding_horizon_profile: short_horizon
+    stop_logic_profile: spread_depth_failure
+    profit_taking_profile: liquidity_normalization
+    overrides:
+      evidence_mode: &id593
+        proxy:
+          risk_posture: reduced_size_high_confirmation
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - stop_run_repair
+      - mean_reversion
+      forbidden_templates:
+      - range_reversion
+      risk_posture: reduced_size
+      execution_style: spread_aware
+      holding_horizon_profile: short_horizon
+      stop_logic_profile: spread_depth_failure
+      profit_taking_profile: liquidity_normalization
+      overrides:
+        evidence_mode: *id593
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  POSITIONING_EXPANSION:
+    canonical_regime: POSITIONING_EXPANSION
+    bucket: trade_generating
+    eligible_templates:
+    - continuation
+    - convexity_capture
+    - reversal_or_squeeze
+    forbidden_templates:
+    - exhaustion_reversal
+    risk_posture: moderate
+    execution_style: momentum_confirmed
+    holding_horizon_profile: intraday
+    stop_logic_profile: expansion_failure
+    profit_taking_profile: trend_follow_trail
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - continuation
+      - convexity_capture
+      - reversal_or_squeeze
+      forbidden_templates:
+      - exhaustion_reversal
+      risk_posture: moderate
+      execution_style: momentum_confirmed
+      holding_horizon_profile: intraday
+      stop_logic_profile: expansion_failure
+      profit_taking_profile: trend_follow_trail
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  POSITIONING_UNWIND_DELEVERAGING:
+    canonical_regime: POSITIONING_UNWIND_DELEVERAGING
+    bucket: trade_generating
+    eligible_templates:
+    - exhaustion_reversal
+    - mean_reversion
+    - reversal_or_squeeze
+    forbidden_templates:
+    - trend_continuation
+    risk_posture: reduced_size
+    execution_style: staged_reentry
+    holding_horizon_profile: short_horizon
+    stop_logic_profile: unwind_reacceleration
+    profit_taking_profile: post_flush_rebound
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - exhaustion_reversal
+      - mean_reversion
+      - reversal_or_squeeze
+      forbidden_templates:
+      - trend_continuation
+      risk_posture: reduced_size
+      execution_style: staged_reentry
+      holding_horizon_profile: short_horizon
+      stop_logic_profile: unwind_reacceleration
+      profit_taking_profile: post_flush_rebound
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  REGIME_TRANSITION:
+    canonical_regime: REGIME_TRANSITION
+    bucket: trade_generating
+    eligible_templates:
+    - continuation
+    - only_if_regime
+    - drawdown_filter
+    forbidden_templates:
+    - range_reversion
+    risk_posture: moderate
+    execution_style: transition_confirmed
+    holding_horizon_profile: intraday_to_swing
+    stop_logic_profile: transition_reversal
+    profit_taking_profile: regime_follow_trail
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - continuation
+      - only_if_regime
+      - drawdown_filter
+      forbidden_templates:
+      - range_reversion
+      risk_posture: moderate
+      execution_style: transition_confirmed
+      holding_horizon_profile: intraday_to_swing
+      stop_logic_profile: transition_reversal
+      profit_taking_profile: regime_follow_trail
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  STATISTICAL_STRETCH_OVERSHOOT:
+    canonical_regime: STATISTICAL_STRETCH_OVERSHOOT
+    bucket: trade_generating
+    eligible_templates:
+    - overshoot_repair
+    - mean_reversion
+    forbidden_templates:
+    - trend_continuation
+    risk_posture: moderate
+    execution_style: fade_extremes
+    holding_horizon_profile: short_horizon
+    stop_logic_profile: stretch_extension
+    profit_taking_profile: mean_reversion_recenter
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - overshoot_repair
+      - mean_reversion
+      forbidden_templates:
+      - trend_continuation
+      risk_posture: moderate
+      execution_style: fade_extremes
+      holding_horizon_profile: short_horizon
+      stop_logic_profile: stretch_extension
+      profit_taking_profile: mean_reversion_recenter
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  TREND_CONTINUATION:
+    canonical_regime: TREND_CONTINUATION
+    bucket: trade_generating
+    eligible_templates:
+    - trend_continuation
+    - breakout_followthrough
+    - pullback_entry
+    forbidden_templates:
+    - exhaustion_reversal
+    risk_posture: moderate
+    execution_style: follow_through
+    holding_horizon_profile: intraday_to_swing
+    stop_logic_profile: continuation_failure
+    profit_taking_profile: trailing_follow
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - trend_continuation
+      - breakout_followthrough
+      - pullback_entry
+      forbidden_templates:
+      - exhaustion_reversal
+      risk_posture: moderate
+      execution_style: follow_through
+      holding_horizon_profile: intraday_to_swing
+      stop_logic_profile: continuation_failure
+      profit_taking_profile: trailing_follow
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  TREND_FAILURE_EXHAUSTION:
+    canonical_regime: TREND_FAILURE_EXHAUSTION
+    bucket: trade_filtering
+    eligible_templates:
+    - exhaustion_reversal
+    - false_breakout_reversal
+    - momentum_fade
+    - mean_reversion
+    forbidden_templates:
+    - trend_continuation
+    risk_posture: reduced_size_high_confirmation
+    execution_style: wait_for_reclaim
+    holding_horizon_profile: short_horizon
+    stop_logic_profile: failure_invalidation
+    profit_taking_profile: reclaim_then_scale
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_filtering
+      eligible_templates:
+      - exhaustion_reversal
+      - false_breakout_reversal
+      - momentum_fade
+      - mean_reversion
+      forbidden_templates:
+      - trend_continuation
+      risk_posture: reduced_size_high_confirmation
+      execution_style: wait_for_reclaim
+      holding_horizon_profile: short_horizon
+      stop_logic_profile: failure_invalidation
+      profit_taking_profile: reclaim_then_scale
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  VOLATILITY_EXPANSION:
+    canonical_regime: VOLATILITY_EXPANSION
+    bucket: trade_generating
+    eligible_templates:
+    - volatility_expansion_follow
+    - trend_continuation
+    forbidden_templates:
+    - mean_reversion
+    risk_posture: moderate
+    execution_style: fast_follow
+    holding_horizon_profile: intraday
+    stop_logic_profile: expansion_reversal
+    profit_taking_profile: volatility_trail
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - volatility_expansion_follow
+      - trend_continuation
+      forbidden_templates:
+      - mean_reversion
+      risk_posture: moderate
+      execution_style: fast_follow
+      holding_horizon_profile: intraday
+      stop_logic_profile: expansion_reversal
+      profit_taking_profile: volatility_trail
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  VOLATILITY_RELAXATION_COMPRESSION_RELEASE:
+    canonical_regime: VOLATILITY_RELAXATION_COMPRESSION_RELEASE
+    bucket: trade_filtering
+    eligible_templates:
+    - pullback_entry
+    forbidden_templates:
+    - tail_risk_avoid
+    risk_posture: selective
+    execution_style: await_break_confirmation
+    holding_horizon_profile: short_to_intraday
+    stop_logic_profile: failed_release
+    profit_taking_profile: breakout_extension
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_filtering
+      eligible_templates:
+      - pullback_entry
+      forbidden_templates:
+      - tail_risk_avoid
+      risk_posture: selective
+      execution_style: await_break_confirmation
+      holding_horizon_profile: short_to_intraday
+      stop_logic_profile: failed_release
+      profit_taking_profile: breakout_extension
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
+  VOLATILITY_TRANSITION:
+    canonical_regime: VOLATILITY_TRANSITION
+    bucket: trade_generating
+    eligible_templates:
+    - mean_reversion
+    - continuation
+    - trend_continuation
+    forbidden_templates:
+    - tail_risk_avoid
+    risk_posture: selective
+    execution_style: normalization_confirmed
+    holding_horizon_profile: short_to_intraday
+    stop_logic_profile: volatility_reexpansion
+    profit_taking_profile: normalization_decay
+    overrides: {}
+    routing_profile_id: regime_routing
+    scorecard_version: ''
+    scorecard_source_run: ''
+    raw:
+      bucket: trade_generating
+      eligible_templates:
+      - mean_reversion
+      - continuation
+      - trend_continuation
+      forbidden_templates:
+      - tail_risk_avoid
+      risk_posture: selective
+      execution_style: normalization_confirmed
+      holding_horizon_profile: short_to_intraday
+      stop_logic_profile: volatility_reexpansion
+      profit_taking_profile: normalization_decay
+    spec_path: /home/irene/Edge/spec/regimes/registry.yaml
+    source_kind: regime_registry
 thesis_definitions:
   THESIS_LIQUIDATION_CASCADE:
     thesis_id: THESIS_LIQUIDATION_CASCADE
@@ -18870,16 +19474,16 @@ thesis_definitions:
       mode: symbol_set
     detection:
       detector_kind: liquidation_cascade
-      symbols: &id593
+      symbols: &id594
       - BTCUSDT
       - ETHUSDT
-      horizons: &id594
+      horizons: &id595
       - 8
       - 16
       - 24
       payoff_mode: absolute_return
       fees_bps: 6.0
-      params: &id595
+      params: &id596
         shock_quantile: 0.975
         shock_window: 288
         oi_window: 12
@@ -18914,11 +19518,11 @@ thesis_definitions:
         response_class: forced_flow_aftershock
       detection:
         detector_kind: liquidation_cascade
-        symbols: *id593
-        horizons: *id594
+        symbols: *id594
+        horizons: *id595
         payoff_mode: absolute_return
         fees_bps: 6.0
-        params: *id595
+        params: *id596
       notes: Raw-data evidence uses a forced-flow proxy requiring an extreme return
         shock, large open-interest drop, and concurrent funding stretch.
     spec_path: /home/irene/Edge/spec/theses/thesis_registry.yaml
@@ -18955,16 +19559,16 @@ thesis_definitions:
       mode: symbol_set
     detection:
       detector_kind: liquidity_vacuum
-      symbols: &id596
+      symbols: &id597
       - BTCUSDT
       - ETHUSDT
-      horizons: &id597
+      horizons: &id598
       - 8
       - 16
       - 24
       payoff_mode: absolute_return
       fees_bps: 6.0
-      params: &id598
+      params: &id599
         shock_quantile: 0.95
         shock_window: 288
         volume_window: 36
@@ -19000,11 +19604,11 @@ thesis_definitions:
         response_class: liquidity_stress_continuation
       detection:
         detector_kind: liquidity_vacuum
-        symbols: *id596
-        horizons: *id597
+        symbols: *id597
+        horizons: *id598
         payoff_mode: absolute_return
         fees_bps: 6.0
-        params: *id598
+        params: *id599
       notes: Raw-data evidence uses post-event absolute move after low-volume, wide-range
         continuation bars following the initiating shock.
     spec_path: /home/irene/Edge/spec/theses/thesis_registry.yaml
@@ -19043,16 +19647,16 @@ thesis_definitions:
       mode: symbol_set
     detection:
       detector_kind: paired_confirmation
-      symbols: &id599
+      symbols: &id600
       - BTCUSDT
       - ETHUSDT
-      horizons: &id600
+      horizons: &id601
       - 24
       - 32
       - 48
       payoff_mode: absolute_return
       fees_bps: 6.0
-      params: &id601
+      params: &id602
         confirmation_window_bars: 24
         require_confirmation_after_trigger: false
         trigger_kind: liquidity_vacuum
@@ -19104,11 +19708,11 @@ thesis_definitions:
         response_class: liquidity_stress_forced_flow_confirmation
       detection:
         detector_kind: paired_confirmation
-        symbols: *id599
-        horizons: *id600
+        symbols: *id600
+        horizons: *id601
         payoff_mode: absolute_return
         fees_bps: 6.0
-        params: *id601
+        params: *id602
       notes: Raw-data evidence requires LIQUIDITY_VACUUM to appear in the same local
         stress window as LIQUIDATION_CASCADE, producing a stronger forced-flow/liquidity-stress
         setup than either event alone.
@@ -19146,16 +19750,16 @@ thesis_definitions:
       mode: symbol_set
     detection:
       detector_kind: vol_shock
-      symbols: &id602
+      symbols: &id603
       - BTCUSDT
       - ETHUSDT
-      horizons: &id603
+      horizons: &id604
       - 8
       - 16
       - 24
       payoff_mode: absolute_return
       fees_bps: 6.0
-      params: &id604
+      params: &id605
         rv_window: 12
         baseline_window: 288
         shock_quantile: 0.95
@@ -19187,11 +19791,11 @@ thesis_definitions:
         response_class: volatility_expansion
       detection:
         detector_kind: vol_shock
-        symbols: *id602
-        horizons: *id603
+        symbols: *id603
+        horizons: *id604
         payoff_mode: absolute_return
         fees_bps: 6.0
-        params: *id604
+        params: *id605
       notes: Raw-data evidence uses absolute post-shock move, which matches the contract's
         volatility-expansion semantics better than directional continuation.
     spec_path: /home/irene/Edge/spec/theses/thesis_registry.yaml
@@ -19230,16 +19834,16 @@ thesis_definitions:
       mode: symbol_set
     detection:
       detector_kind: vol_shock_liquidity_confirm
-      symbols: &id605
+      symbols: &id606
       - BTCUSDT
       - ETHUSDT
-      horizons: &id606
+      horizons: &id607
       - 8
       - 16
       - 24
       payoff_mode: absolute_return
       fees_bps: 6.0
-      params: &id607
+      params: &id608
         confirmation_window_bars: 3
         require_confirmation_after_trigger: true
         trigger_kind: vol_shock
@@ -19288,11 +19892,11 @@ thesis_definitions:
         response_class: confirmation_strengthens_volatility_thesis
       detection:
         detector_kind: vol_shock_liquidity_confirm
-        symbols: *id605
-        horizons: *id606
+        symbols: *id606
+        horizons: *id607
         payoff_mode: absolute_return
         fees_bps: 6.0
-        params: *id607
+        params: *id608
       notes: Raw-data evidence requires a VOL_SHOCK trigger with a nearby LIQUIDITY_VACUUM
         confirmation, producing a stronger post-shock move thesis than either event
         alone.
@@ -19486,11 +20090,15 @@ template_registry_payload:
   kind: event_template_registry
   metadata:
     status: authoritative
+    generated_views:
+    - spec/templates/event_template_registry.yaml
+    - spec/ontology/templates/template_registry.yaml
+    - project/configs/registries/templates.yaml
     legacy_specs_read_only:
     - spec/multiplicity/families.yaml
     - spec/multiplicity/taxonomy.yaml
-    notes: Legacy template specs are retained temporarily for drift checks during
-      cutover.
+    notes: Canonical authored template source. Generated runtime and ontology template
+      registries are rebuilt from this file.
   defaults:
     templates:
     - mean_reversion
@@ -20552,17 +21160,17 @@ template_registry_payload:
     basis_repair:
       enabled: true
       supports_contexts: true
-      supports_directions: *id608
-      supports_trigger_types: *id609
+      supports_directions: *id609
+      supports_trigger_types: *id610
       operator_id: op.basis_repair
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: *id610
-      default_conditioning: *id611
-      risk_metrics_required: *id612
+      compatible_families: *id611
+      default_conditioning: *id612
+      risk_metrics_required: *id613
       template_kind: filter_template
       feature: basis_zscore
       operator: '>'
@@ -20570,62 +21178,62 @@ template_registry_payload:
     breakout_followthrough:
       enabled: true
       supports_contexts: true
-      supports_directions: *id613
-      supports_trigger_types: *id614
+      supports_directions: *id614
+      supports_trigger_types: *id615
       operator_id: op.breakout_followthrough
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id615
-      default_conditioning: *id616
-      risk_metrics_required: *id617
+      compatible_families: *id616
+      default_conditioning: *id617
+      risk_metrics_required: *id618
       template_kind: execution_template
     continuation:
       enabled: true
       supports_contexts: true
-      supports_directions: *id618
-      supports_trigger_types: *id619
+      supports_directions: *id619
+      supports_trigger_types: *id620
       operator_id: op.continuation
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id620
-      default_conditioning: *id621
-      risk_metrics_required: *id622
+      compatible_families: *id621
+      default_conditioning: *id622
+      risk_metrics_required: *id623
       template_kind: execution_template
     convergence:
       enabled: true
       supports_contexts: true
-      supports_directions: *id623
-      supports_trigger_types: *id624
+      supports_directions: *id624
+      supports_trigger_types: *id625
       operator_id: op.convergence
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: *id625
-      default_conditioning: *id626
-      risk_metrics_required: *id627
+      compatible_families: *id626
+      default_conditioning: *id627
+      risk_metrics_required: *id628
       template_kind: execution_template
     convexity_capture:
       enabled: true
       supports_contexts: true
-      supports_directions: *id628
-      supports_trigger_types: *id629
+      supports_directions: *id629
+      supports_trigger_types: *id630
       operator_id: op.convexity_capture
       operator_version: v1
       requires_direction: true
       side_policy: both
       label_target: mfe_h
       test_spec: upper_quantile_gt_0
-      compatible_families: *id630
-      default_conditioning: *id631
-      risk_metrics_required: *id632
+      compatible_families: *id631
+      default_conditioning: *id632
+      risk_metrics_required: *id633
       template_kind: filter_template
       feature: oi_delta_1h
       operator: <
@@ -20633,17 +21241,17 @@ template_registry_payload:
     desync_repair:
       enabled: true
       supports_contexts: true
-      supports_directions: *id633
-      supports_trigger_types: *id634
+      supports_directions: *id634
+      supports_trigger_types: *id635
       operator_id: op.desync_repair
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: basis_repair_h
       test_spec: mean_gt_0
-      compatible_families: *id635
-      default_conditioning: *id636
-      risk_metrics_required: *id637
+      compatible_families: *id636
+      default_conditioning: *id637
+      risk_metrics_required: *id638
       template_kind: filter_template
       feature: cross_exchange_spread_z
       operator: '>'
@@ -20651,17 +21259,17 @@ template_registry_payload:
     divergence_continuation:
       enabled: true
       supports_contexts: true
-      supports_directions: *id638
-      supports_trigger_types: *id639
+      supports_directions: *id639
+      supports_trigger_types: *id640
       operator_id: op.divergence_continuation
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: basis_repair_h
       test_spec: hit_rate_gt_threshold
-      compatible_families: *id640
-      default_conditioning: *id641
-      risk_metrics_required: *id642
+      compatible_families: *id641
+      default_conditioning: *id642
+      risk_metrics_required: *id643
       template_kind: filter_template
       feature: cross_exchange_spread_z
       operator: '>'
@@ -20669,17 +21277,17 @@ template_registry_payload:
     drawdown_filter:
       enabled: true
       supports_contexts: true
-      supports_directions: *id643
-      supports_trigger_types: *id644
+      supports_directions: *id644
+      supports_trigger_types: *id645
       operator_id: op.drawdown_filter
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: path_class_h
       test_spec: drawdown_lt_threshold
-      compatible_families: *id645
-      default_conditioning: *id646
-      risk_metrics_required: *id647
+      compatible_families: *id646
+      default_conditioning: *id647
+      risk_metrics_required: *id648
       template_kind: filter_template
       feature: logret_1
       operator: <
@@ -20687,17 +21295,17 @@ template_registry_payload:
     exhaustion_reversal:
       enabled: true
       supports_contexts: true
-      supports_directions: *id648
-      supports_trigger_types: *id649
+      supports_directions: *id649
+      supports_trigger_types: *id650
       operator_id: op.exhaustion_reversal
       operator_version: v1
       requires_direction: true
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id650
-      default_conditioning: *id651
-      risk_metrics_required: *id652
+      compatible_families: *id651
+      default_conditioning: *id652
+      risk_metrics_required: *id653
       template_kind: filter_template
       feature: rv_pct_17280
       operator: '>'
@@ -20705,62 +21313,62 @@ template_registry_payload:
     false_breakout_reversal:
       enabled: true
       supports_contexts: true
-      supports_directions: *id653
-      supports_trigger_types: *id654
+      supports_directions: *id654
+      supports_trigger_types: *id655
       operator_id: op.false_breakout_reversal
       operator_version: v1
       requires_direction: true
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id655
-      default_conditioning: *id656
-      risk_metrics_required: *id657
+      compatible_families: *id656
+      default_conditioning: *id657
+      risk_metrics_required: *id658
       template_kind: execution_template
     lead_lag_follow:
       enabled: true
       supports_contexts: true
-      supports_directions: *id658
-      supports_trigger_types: *id659
+      supports_directions: *id659
+      supports_trigger_types: *id660
       operator_id: op.lead_lag_follow
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id660
-      default_conditioning: *id661
-      risk_metrics_required: *id662
+      compatible_families: *id661
+      default_conditioning: *id662
+      risk_metrics_required: *id663
       template_kind: execution_template
     mean_reversion:
       enabled: true
       supports_contexts: true
-      supports_directions: *id663
-      supports_trigger_types: *id664
+      supports_directions: *id664
+      supports_trigger_types: *id665
       operator_id: op.mean_reversion
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id665
-      default_conditioning: *id666
-      risk_metrics_required: *id667
+      compatible_families: *id666
+      default_conditioning: *id667
+      risk_metrics_required: *id668
       template_kind: execution_template
     momentum_fade:
       enabled: true
       supports_contexts: true
-      supports_directions: *id668
-      supports_trigger_types: *id669
+      supports_directions: *id669
+      supports_trigger_types: *id670
       operator_id: op.momentum_fade
       operator_version: v1
       requires_direction: true
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id670
-      default_conditioning: *id671
-      risk_metrics_required: *id672
+      compatible_families: *id671
+      default_conditioning: *id672
+      risk_metrics_required: *id673
       template_kind: filter_template
       feature: logret_1
       operator: <
@@ -20768,17 +21376,17 @@ template_registry_payload:
     only_if_funding:
       enabled: true
       supports_contexts: true
-      supports_directions: *id673
-      supports_trigger_types: *id674
+      supports_directions: *id674
+      supports_trigger_types: *id675
       operator_id: op.only_if_funding
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id675
-      default_conditioning: *id676
-      risk_metrics_required: *id677
+      compatible_families: *id676
+      default_conditioning: *id677
+      risk_metrics_required: *id678
       template_kind: filter_template
       feature: funding_rate
       operator: '>'
@@ -20786,17 +21394,17 @@ template_registry_payload:
     only_if_liquidity:
       enabled: true
       supports_contexts: true
-      supports_directions: *id678
-      supports_trigger_types: *id679
+      supports_directions: *id679
+      supports_trigger_types: *id680
       operator_id: op.only_if_liquidity
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id680
-      default_conditioning: *id681
-      risk_metrics_required: *id682
+      compatible_families: *id681
+      default_conditioning: *id682
+      risk_metrics_required: *id683
       template_kind: filter_template
       feature: liquidation_count
       operator: '>'
@@ -20804,17 +21412,17 @@ template_registry_payload:
     only_if_no_news_window:
       enabled: true
       supports_contexts: true
-      supports_directions: *id683
-      supports_trigger_types: *id684
+      supports_directions: *id684
+      supports_trigger_types: *id685
       operator_id: op.only_if_no_news_window
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id685
-      default_conditioning: *id686
-      risk_metrics_required: *id687
+      compatible_families: *id686
+      default_conditioning: *id687
+      risk_metrics_required: *id688
       template_kind: filter_template
       feature: calendar_event
       operator: ==
@@ -20822,17 +21430,17 @@ template_registry_payload:
     only_if_oi:
       enabled: true
       supports_contexts: true
-      supports_directions: *id688
-      supports_trigger_types: *id689
+      supports_directions: *id689
+      supports_trigger_types: *id690
       operator_id: op.only_if_oi
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id690
-      default_conditioning: *id691
-      risk_metrics_required: *id692
+      compatible_families: *id691
+      default_conditioning: *id692
+      risk_metrics_required: *id693
       template_kind: filter_template
       feature: oi_delta_1h
       operator: '>'
@@ -20840,17 +21448,17 @@ template_registry_payload:
     only_if_regime:
       enabled: true
       supports_contexts: true
-      supports_directions: *id693
-      supports_trigger_types: *id694
+      supports_directions: *id694
+      supports_trigger_types: *id695
       operator_id: op.only_if_regime
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id695
-      default_conditioning: *id696
-      risk_metrics_required: *id697
+      compatible_families: *id696
+      default_conditioning: *id697
+      risk_metrics_required: *id698
       template_kind: filter_template
       feature: rv_pct_17280
       operator: '>'
@@ -20858,17 +21466,17 @@ template_registry_payload:
     only_if_trend:
       enabled: true
       supports_contexts: true
-      supports_directions: *id698
-      supports_trigger_types: *id699
+      supports_directions: *id699
+      supports_trigger_types: *id700
       operator_id: op.only_if_trend
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: gate
       test_spec: binary_gate
-      compatible_families: *id700
-      default_conditioning: *id701
-      risk_metrics_required: *id702
+      compatible_families: *id701
+      default_conditioning: *id702
+      risk_metrics_required: *id703
       template_kind: filter_template
       feature: logret_1
       operator: '>'
@@ -20876,17 +21484,17 @@ template_registry_payload:
     overshoot_repair:
       enabled: true
       supports_contexts: true
-      supports_directions: *id703
-      supports_trigger_types: *id704
+      supports_directions: *id704
+      supports_trigger_types: *id705
       operator_id: op.overshoot_repair
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id705
-      default_conditioning: *id706
-      risk_metrics_required: *id707
+      compatible_families: *id706
+      default_conditioning: *id707
+      risk_metrics_required: *id708
       template_kind: filter_template
       feature: basis_zscore
       operator: '>'
@@ -20894,32 +21502,32 @@ template_registry_payload:
     pullback_entry:
       enabled: true
       supports_contexts: true
-      supports_directions: *id708
-      supports_trigger_types: *id709
+      supports_directions: *id709
+      supports_trigger_types: *id710
       operator_id: op.pullback_entry
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id710
-      default_conditioning: *id711
-      risk_metrics_required: *id712
+      compatible_families: *id711
+      default_conditioning: *id712
+      risk_metrics_required: *id713
       template_kind: execution_template
     range_reversion:
       enabled: true
       supports_contexts: true
-      supports_directions: *id713
-      supports_trigger_types: *id714
+      supports_directions: *id714
+      supports_trigger_types: *id715
       operator_id: op.range_reversion
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id715
-      default_conditioning: *id716
-      risk_metrics_required: *id717
+      compatible_families: *id716
+      default_conditioning: *id717
+      risk_metrics_required: *id718
       template_kind: filter_template
       feature: basis_zscore
       operator: '>'
@@ -20927,17 +21535,17 @@ template_registry_payload:
     reversal_or_squeeze:
       enabled: true
       supports_contexts: true
-      supports_directions: *id718
-      supports_trigger_types: *id719
+      supports_directions: *id719
+      supports_trigger_types: *id720
       operator_id: op.reversal_or_squeeze
       operator_version: v1
       requires_direction: true
       side_policy: both
       label_target: fwd_return_h
       test_spec: mean_gt_0_or_tail_positive
-      compatible_families: *id720
-      default_conditioning: *id721
-      risk_metrics_required: *id722
+      compatible_families: *id721
+      default_conditioning: *id722
+      risk_metrics_required: *id723
       template_kind: filter_template
       feature: funding_rate_scaled
       operator: '>'
@@ -20945,17 +21553,17 @@ template_registry_payload:
     slippage_aware_filter:
       enabled: true
       supports_contexts: true
-      supports_directions: *id723
-      supports_trigger_types: *id724
+      supports_directions: *id724
+      supports_trigger_types: *id725
       operator_id: op.slippage_aware_filter
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: path_class_h
       test_spec: cost_ratio_lt_threshold
-      compatible_families: *id725
-      default_conditioning: *id726
-      risk_metrics_required: *id727
+      compatible_families: *id726
+      default_conditioning: *id727
+      risk_metrics_required: *id728
       template_kind: filter_template
       feature: spread_zscore
       operator: '>'
@@ -20963,17 +21571,17 @@ template_registry_payload:
     stop_run_repair:
       enabled: true
       supports_contexts: true
-      supports_directions: *id728
-      supports_trigger_types: *id729
+      supports_directions: *id729
+      supports_trigger_types: *id730
       operator_id: op.stop_run_repair
       operator_version: v1
       requires_direction: false
       side_policy: contrarian
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id730
-      default_conditioning: *id731
-      risk_metrics_required: *id732
+      compatible_families: *id731
+      default_conditioning: *id732
+      risk_metrics_required: *id733
       template_kind: filter_template
       feature: liquidation_count
       operator: '>'
@@ -20981,17 +21589,17 @@ template_registry_payload:
     tail_risk_avoid:
       enabled: true
       supports_contexts: true
-      supports_directions: *id733
-      supports_trigger_types: *id734
+      supports_directions: *id734
+      supports_trigger_types: *id735
       operator_id: op.tail_risk_avoid
       operator_version: v1
       requires_direction: false
       side_policy: both
       label_target: path_class_h
       test_spec: tail_loss_lt_threshold
-      compatible_families: *id735
-      default_conditioning: *id736
-      risk_metrics_required: *id737
+      compatible_families: *id736
+      default_conditioning: *id737
+      risk_metrics_required: *id738
       template_kind: filter_template
       feature: rv_pct_17280
       operator: <
@@ -20999,32 +21607,32 @@ template_registry_payload:
     trend_continuation:
       enabled: true
       supports_contexts: true
-      supports_directions: *id738
-      supports_trigger_types: *id739
+      supports_directions: *id739
+      supports_trigger_types: *id740
       operator_id: op.trend_continuation
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: fwd_return_h
       test_spec: mean_gt_0
-      compatible_families: *id740
-      default_conditioning: *id741
-      risk_metrics_required: *id742
+      compatible_families: *id741
+      default_conditioning: *id742
+      risk_metrics_required: *id743
       template_kind: execution_template
     volatility_expansion_follow:
       enabled: true
       supports_contexts: true
-      supports_directions: *id743
-      supports_trigger_types: *id744
+      supports_directions: *id744
+      supports_trigger_types: *id745
       operator_id: op.volatility_expansion_follow
       operator_version: v1
       requires_direction: true
       side_policy: directional
       label_target: path_class_h
       test_spec: hit_rate_gt_threshold
-      compatible_families: *id745
-      default_conditioning: *id746
-      risk_metrics_required: *id747
+      compatible_families: *id746
+      default_conditioning: *id747
+      risk_metrics_required: *id748
       template_kind: filter_template
       feature: rv_96
       operator: '>'

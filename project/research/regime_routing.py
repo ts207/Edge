@@ -10,6 +10,7 @@ import yaml
 
 from project import PROJECT_ROOT
 from project.domain.compiled_registry import get_domain_registry
+from project.spec_registry import load_regime_registry
 
 ALLOWED_BUCKETS = ("trade_generating", "trade_filtering", "context_only")
 _ROUTING_SPEC_PATH = PROJECT_ROOT.parent / "spec" / "events" / "regime_routing.yaml"
@@ -55,8 +56,11 @@ def recommended_bucket_for_regime(canonical_regime: str) -> str:
 
 @lru_cache(maxsize=4)
 def load_regime_routing_spec(path: Path | None = None) -> Dict[str, Any]:
-    resolved = path or routing_spec_path()
-    payload = yaml.safe_load(resolved.read_text(encoding="utf-8")) or {}
+    if path is None:
+        payload = load_regime_registry()
+    else:
+        resolved = path
+        payload = yaml.safe_load(resolved.read_text(encoding="utf-8")) or {}
     if not isinstance(payload, dict):
         raise ValueError("regime routing spec must be a mapping")
     return payload
@@ -166,7 +170,13 @@ def validate_regime_routing_spec(path: Path | None = None) -> Dict[str, Any]:
             eligible_templates_without_event_support[regime] = unsupported_templates
         if regime_event_support and not any(regime_event_support.values()):
             empty_intersection_regimes.append(regime)
-    is_valid = not missing and not unexpected and not invalid_templates and not non_routable_entries
+    is_valid = (
+        not missing
+        and not unexpected
+        and not invalid_templates
+        and not non_routable_entries
+        and not bucket_mismatches
+    )
     return {
         "is_valid": is_valid,
         "routing_profile_id": next(iter(routing.values())).routing_profile_id if routing else "",

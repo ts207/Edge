@@ -11,6 +11,13 @@ from project.live.scoring import DecisionScore, build_decision_score
 from project.live.thesis_store import ThesisStore
 
 
+def _thesis_canonical_regime(thesis) -> str:
+    return str(
+        thesis.canonical_regime
+        or (thesis.supportive_context or {}).get("canonical_regime", "")
+    ).strip().upper()
+
+
 @dataclass(frozen=True)
 class DecisionOutcome:
     context: LiveTradeContext
@@ -44,8 +51,14 @@ def decide_trade_intent(
             reasons_for=[],
             reasons_against=["no_matching_thesis"],
             metadata={
-                "active_event_families": list(context.active_event_families),
+                "primary_event_id": str(context.primary_event_id or context.event_family),
+                "canonical_regime": str(
+                    context.canonical_regime or context.regime_snapshot.get("canonical_regime", "")
+                ),
+                "active_event_ids": list(context.active_event_ids),
+                "compat_active_event_families": list(context.active_event_families),
                 "active_episode_ids": list(context.active_episode_ids),
+                "compat_event_family": str(context.event_family),
             },
         )
         return DecisionOutcome(
@@ -70,8 +83,14 @@ def decide_trade_intent(
             reasons_for=list(top_match.reasons_for),
             reasons_against=list(top_match.reasons_against),
             metadata={
-                "active_event_families": list(context.active_event_families),
+                "primary_event_id": str(context.primary_event_id or context.event_family),
+                "canonical_regime": str(
+                    context.canonical_regime or context.regime_snapshot.get("canonical_regime", "")
+                ),
+                "active_event_ids": list(context.active_event_ids),
+                "compat_active_event_families": list(context.active_event_families),
                 "active_episode_ids": list(context.active_episode_ids),
+                "compat_event_family": str(context.event_family),
             },
         )
         return DecisionOutcome(
@@ -110,7 +129,19 @@ def decide_trade_intent(
                 "governance_tier": str(top_match.thesis.governance.tier or ""),
                 "operational_role": str(top_match.thesis.governance.operational_role or ""),
                 "active_episode_ids": list(context.active_episode_ids),
-                "thesis_event_family": str(top_match.thesis.event_family or ""),
+                "active_event_ids": list(context.active_event_ids),
+                "primary_event_id": str(context.primary_event_id or context.event_family),
+                "canonical_regime": str(
+                    _thesis_canonical_regime(top_match.thesis)
+                    or context.canonical_regime
+                    or context.regime_snapshot.get("canonical_regime", "")
+                ),
+                "compat_active_event_families": list(context.active_event_families),
+                "compat_event_family": str(context.event_family),
+                "compat_thesis_event_family": str(
+                    top_match.thesis.event_family or top_match.thesis.primary_event_id or ""
+                ),
+                "thesis_canonical_regime": _thesis_canonical_regime(top_match.thesis),
                 "meta_rank_score": float(top_match.thesis.evidence.rank_score or 0.0),
             }
         }

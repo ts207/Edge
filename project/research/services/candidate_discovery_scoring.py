@@ -756,15 +756,19 @@ def apply_validation_multiple_testing(candidates_df: pd.DataFrame) -> pd.DataFra
         return candidates_df.copy()
     out = candidates_df.copy()
     source_events = out.get("canonical_event_type", out.get("event_type", pd.Series("", index=out.index)))
+    out["primary_event_id"] = source_events.astype(str).str.strip().str.upper()
     out["event_family"] = source_events.map(_canonical_grouping_for_event)
+    out["compat_event_family"] = (
+        out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip().str.upper()
+    )
     out["correction_frontier_id"] = (
-        out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip()
+        out.get("primary_event_id", pd.Series("", index=out.index)).astype(str).str.strip()
         + "::"
         + out.get("horizon", pd.Series("", index=out.index)).astype(str).str.strip()
     )
     out = assign_test_families(
         out,
-        family_cols=["event_family", "horizon"],
+        family_cols=["primary_event_id", "horizon"],
         out_col="correction_family_id",
     )
     out = apply_multiple_testing(
@@ -868,9 +872,18 @@ def apply_historical_frontier_multiple_testing(
             "canonical_event_type", out.get("event_type", pd.Series("", index=out.index))
         )
         out["event_family"] = source_events.map(_canonical_grouping_for_event)
+    if "primary_event_id" not in out.columns:
+        source_events = out.get(
+            "canonical_event_type", out.get("event_type", pd.Series("", index=out.index))
+        )
+        out["primary_event_id"] = source_events.astype(str).str.strip().str.upper()
+    if "compat_event_family" not in out.columns:
+        out["compat_event_family"] = (
+            out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip().str.upper()
+        )
     if "correction_frontier_id" not in out.columns:
         out["correction_frontier_id"] = (
-            out.get("event_family", pd.Series("", index=out.index)).astype(str).str.strip()
+            out.get("primary_event_id", pd.Series("", index=out.index)).astype(str).str.strip()
             + "::"
             + out.get("horizon", pd.Series("", index=out.index)).astype(str).str.strip()
         )
@@ -891,8 +904,13 @@ def apply_historical_frontier_multiple_testing(
                 "canonical_event_type", hist.get("event_type", pd.Series("", index=hist.index))
             )
             hist["event_family"] = source_events.map(_canonical_grouping_for_event)
+        if "primary_event_id" not in hist.columns:
+            source_events = hist.get(
+                "canonical_event_type", hist.get("event_type", pd.Series("", index=hist.index))
+            )
+            hist["primary_event_id"] = source_events.astype(str).str.strip().str.upper()
         hist["correction_frontier_id"] = (
-            hist.get("event_family", pd.Series("", index=hist.index)).astype(str).str.strip()
+            hist.get("primary_event_id", pd.Series("", index=hist.index)).astype(str).str.strip()
             + "::"
             + hist.get("horizon", pd.Series("", index=hist.index)).astype(str).str.strip()
         )

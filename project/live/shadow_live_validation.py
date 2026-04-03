@@ -39,14 +39,14 @@ def _ensure_dir(path: Path) -> Path:
 def _active_events_in_window(event_masks: Mapping[str, pd.Series], idx: int, window_bars: int) -> list[str]:
     lo = max(0, idx - window_bars)
     active: list[str] = []
-    for event_family, mask in event_masks.items():
+    for event_id, mask in event_masks.items():
         if bool(mask.iloc[lo: idx + 1].any()):
-            active.append(event_family)
+            active.append(event_id)
     return active
 
 
 def _current_bar_events(event_masks: Mapping[str, pd.Series], idx: int) -> list[str]:
-    return [event_family for event_family, mask in event_masks.items() if bool(mask.iloc[idx])]
+    return [event_id for event_id, mask in event_masks.items() if bool(mask.iloc[idx])]
 
 
 def _approx_execution_features(bars: pd.DataFrame, idx: int) -> dict[str, float]:
@@ -105,7 +105,7 @@ def _contexts_for_symbol(
         active_events = _active_events_in_window(event_masks, idx, context_window_bars)
         if not current_events and len(active_events) < 2:
             continue
-        current_event_family = current_events[0] if current_events else active_events[0]
+        current_event_id = current_events[0] if current_events else active_events[0]
         rv_value = float(realized_vol.iloc[idx]) if pd.notna(realized_vol.iloc[idx]) else None
         live_features = {
             **_approx_execution_features(bars, idx),
@@ -116,7 +116,11 @@ def _contexts_for_symbol(
                 timestamp=str(bars.iloc[idx]["timestamp"]),
                 symbol=symbol,
                 timeframe="5m",
-                event_family=current_event_family,
+                primary_event_id=current_event_id,
+                event_family=current_event_id,
+                canonical_regime=(
+                    "HIGH_VOL" if rv_value is not None and rv_value >= vol_median else "LOW_VOL"
+                ),
                 event_side="both",
                 live_features=live_features,
                 regime_snapshot={
@@ -125,8 +129,10 @@ def _contexts_for_symbol(
                 execution_env={"runtime_mode": "monitor_only"},
                 portfolio_state={},
                 active_event_families=active_events,
+                active_event_ids=active_events,
                 active_episode_ids=[],
                 contradiction_event_families=[],
+                contradiction_event_ids=[],
                 episode_snapshot={},
             )
         )
@@ -175,7 +181,13 @@ def _trace_row(context: LiveTradeContext, outcome: Any) -> dict[str, Any]:
         "timestamp": context.timestamp,
         "symbol": context.symbol,
         "timeframe": context.timeframe,
-        "active_events": list(context.active_event_families),
+        "primary_event_id": str(context.primary_event_id or context.event_family),
+        "canonical_regime": str(
+            context.canonical_regime or context.regime_snapshot.get("canonical_regime", "")
+        ),
+        "active_event_ids": list(context.active_event_ids),
+        "compat_event_family": str(context.event_family),
+        "compat_active_event_families": list(context.active_event_families),
         "active_episodes": list(context.active_episode_ids),
         "retrieved_theses": retrieved,
         "matched_clauses": sorted(set(matched_clauses)),

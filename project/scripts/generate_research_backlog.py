@@ -29,7 +29,7 @@ from project.spec_registry import resolve_relative_spec_path
 
 ATLAS_PATH = PROJECT_ROOT.parent / "knowledge_atlas.json"
 OUTPUT_PATH = PROJECT_ROOT.parent / "research_backlog.csv"
-TEMPLATE_REGISTRY_PATH = resolve_relative_spec_path("spec/templates/event_template_registry.yaml")
+TEMPLATE_REGISTRY_PATH = resolve_relative_spec_path("spec/templates/registry.yaml")
 
 # ---------------------------------------------------------------------------
 # Concept → candidate_type mapping

@@ -10,6 +10,7 @@ def test_domain_graph_payload_contains_core_domain_sections() -> None:
     assert "event_definitions" in payload
     assert "state_definitions" in payload
     assert "template_operator_definitions" in payload
+    assert "regime_definitions" in payload
     assert "thesis_definitions" in payload
     assert "context_state_map" in payload
     assert "sequence_definitions" in payload
@@ -41,6 +42,7 @@ def test_domain_graph_payload_carries_runtime_and_state_metadata() -> None:
         "SEQUENCE",
         "INTERACTION",
     ]
+    assert payload["regime_definitions"]["LIQUIDITY_STRESS"]["execution_style"] == "spread_aware"
     assert payload["thesis_definitions"]["THESIS_VOL_SHOCK"]["trigger_events"] == [
         "VOL_SHOCK"
     ]

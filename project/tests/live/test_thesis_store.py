@@ -33,6 +33,7 @@ def _write_store_fixture(root: Path, run_id: str) -> None:
                         },
                         "timeframe": "5m",
                         "event_family": "VOL_SHOCK",
+                        "canonical_regime": "VOLATILITY_TRANSITION",
                         "event_side": "long",
                         "required_context": {"symbol": "BTCUSDT"},
                         "supportive_context": {},
@@ -73,6 +74,7 @@ def _write_store_fixture(root: Path, run_id: str) -> None:
                         },
                         "timeframe": "15m",
                         "event_family": "OI_FLUSH",
+                        "canonical_regime": "POSITIONING_EXPANSION",
                         "event_side": "short",
                         "required_context": {"symbol": "ETHUSDT"},
                         "supportive_context": {},
@@ -131,14 +133,24 @@ def _write_store_fixture(root: Path, run_id: str) -> None:
     )
 
 
-def test_thesis_store_filters_active_by_symbol_and_family(tmp_path: Path) -> None:
+def test_thesis_store_filters_active_by_symbol_and_event_id(tmp_path: Path) -> None:
     _write_store_fixture(tmp_path, "run_1")
 
     store = ThesisStore.from_run_id("run_1", data_root=tmp_path)
-    active = store.active_theses(symbol="BTCUSDT", timeframe="5m", event_family="VOL_SHOCK")
+    active = store.active_theses(symbol="BTCUSDT", timeframe="5m", event_id="VOL_SHOCK")
 
     assert len(active) == 1
     assert active[0].lineage.blueprint_id == "bp_1"
+
+
+def test_thesis_store_filters_active_by_canonical_regime(tmp_path: Path) -> None:
+    _write_store_fixture(tmp_path, "run_1")
+
+    store = ThesisStore.from_run_id("run_1", data_root=tmp_path)
+    active = store.active_theses(symbol="BTCUSDT", timeframe="5m", canonical_regime="VOLATILITY_TRANSITION")
+
+    assert len(active) == 1
+    assert active[0].canonical_regime == "VOLATILITY_TRANSITION"
 
 
 def test_thesis_store_loads_latest_index(tmp_path: Path) -> None:

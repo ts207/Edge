@@ -62,5 +62,7 @@ def test_export_promoted_theses_includes_governance_and_source(tmp_path: Path) -
     assert result.contract_json_path.exists()
     assert result.contract_md_path.exists()
     contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert contract_payload["contracts"][0]["primary_event_id"] == "VOL_SHOCK"
+    assert contract_payload["contracts"][0]["compat_event_family"] == "VOL_SHOCK"
     assert contract_payload["contracts"][0]["source_campaign_id"] == "camp_1"
     assert contract_payload["contracts"][0]["trade_trigger_eligible"] is True

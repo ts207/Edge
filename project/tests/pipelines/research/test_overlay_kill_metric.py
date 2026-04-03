@@ -53,7 +53,7 @@ def test_overlay_kill_count_from_bridge_fail_reasons(tmp_path, monkeypatch):
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["LIQUIDITY_VACUUM"]
+    family = payload["by_primary_event_id"]["LIQUIDITY_VACUUM"]
     assert family["overlay_kill_by_missing_base_count"] == 2
 
 
@@ -88,7 +88,7 @@ def test_overlay_kill_count_from_bridge_eval_status(tmp_path, monkeypatch):
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["VOL_SHOCK"]
+    family = payload["by_primary_event_id"]["VOL_SHOCK"]
     assert family["overlay_kill_by_missing_base_count"] == 1
 
 
@@ -123,5 +123,5 @@ def test_overlay_kill_count_zero_when_none(tmp_path, monkeypatch):
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["VOL_SHOCK"]
+    family = payload["by_primary_event_id"]["VOL_SHOCK"]
     assert family["overlay_kill_by_missing_base_count"] == 0

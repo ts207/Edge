@@ -154,11 +154,20 @@ def effective_sample_size(values: np.ndarray, max_lag: int) -> Tuple[float, int]
 
 
 def multiplicity_penalty(
-    *, multiplicity_k: float, num_tests_event_family: int, ess_effective: float
+    *,
+    multiplicity_k: float,
+    num_tests_primary_event_id: int | None = None,
+    num_tests_event_family: int | None = None,
+    ess_effective: float,
 ) -> float:
+    num_tests = (
+        int(num_tests_primary_event_id)
+        if num_tests_primary_event_id is not None
+        else int(num_tests_event_family or 0)
+    )
     return float(
         float(multiplicity_k)
-        * np.sqrt(np.log(max(1.0, float(num_tests_event_family))) / max(1.0, float(ess_effective)))
+        * np.sqrt(np.log(max(1.0, float(num_tests))) / max(1.0, float(ess_effective)))
     )
 
 
@@ -175,6 +184,7 @@ def apply_multiplicity_adjustments(
     out["multiplicity_penalty"] = out.apply(
         lambda r: multiplicity_penalty(
             multiplicity_k=multiplicity_k,
+            num_tests_primary_event_id=int(r.get("num_tests_primary_event_id", 0)),
             num_tests_event_family=int(r.get("num_tests_event_family", 0)),
             ess_effective=float(r.get("ess_effective", 0.0)),
         ),

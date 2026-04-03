@@ -11,7 +11,7 @@ def test_detect_live_event_supports_liquidation_cascade_when_market_features_pre
             "open_interest_delta_fraction": -0.08,
             "funding_rate": 0.0012,
         },
-        supported_event_families=["LIQUIDATION_CASCADE"],
+        supported_event_ids=["LIQUIDATION_CASCADE"],
         detector_config={
             "liquidation_cascade_min_abs_move_bps": 300.0,
             "liquidation_cascade_min_abs_oi_drop_fraction": 0.03,
@@ -19,7 +19,9 @@ def test_detect_live_event_supports_liquidation_cascade_when_market_features_pre
         },
     )
     assert event is not None
+    assert event.event_id == "LIQUIDATION_CASCADE"
     assert event.event_family == "LIQUIDATION_CASCADE"
+    assert event.canonical_regime == "LIQUIDATION_CASCADE"
     assert event.event_side == "long"
     assert event.features["open_interest_delta_fraction"] == -0.08
 
@@ -34,7 +36,7 @@ def test_detect_live_event_skips_liquidation_cascade_without_forced_flow_confirm
             "open_interest_delta_fraction": -0.01,
             "funding_rate": 0.0001,
         },
-        supported_event_families=["LIQUIDATION_CASCADE"],
+        supported_event_ids=["LIQUIDATION_CASCADE"],
         detector_config={
             "liquidation_cascade_min_abs_move_bps": 300.0,
             "liquidation_cascade_min_abs_oi_drop_fraction": 0.03,

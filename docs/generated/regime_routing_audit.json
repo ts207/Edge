@@ -327,8 +327,8 @@
     "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
     "VOLATILITY_TRANSITION"
   ],
-  "routing_profile_id": "regime_routing_v1",
-  "scorecard_source_run": "authored_baseline",
-  "scorecard_version": "regime_effectiveness_v1",
+  "routing_profile_id": "regime_routing",
+  "scorecard_source_run": "",
+  "scorecard_version": "",
   "unexpected_regimes": []
 }

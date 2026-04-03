@@ -33,7 +33,8 @@ def thesis_overlap_signature(thesis: PromotedThesis) -> dict[str, Any]:
     tier = str(thesis.governance.tier or "").strip().upper()
     return {
         "thesis_id": thesis.thesis_id,
-        "event_family": str(thesis.event_family).strip().upper(),
+        "primary_event_id": str(thesis.primary_event_id or thesis.event_family).strip().upper(),
+        "compat_event_family": str(thesis.event_family).strip().upper(),
         "event_contract_ids": event_contract_ids,
         "episode_contract_ids": episode_contract_ids,
         "required_episodes": required_episodes,
@@ -51,15 +52,15 @@ def overlap_group_id_for_thesis(thesis: PromotedThesis) -> str:
     primary_episode = (sig["episode_contract_ids"] or sig["required_episodes"] or [""])[0]
     regime = sig["canonical_regime"] or "ANY"
     role = sig["operational_role"] or "unknown"
-    family = sig["event_family"] or "UNKNOWN"
-    return f"{family}::{primary_episode or 'NO_EPISODE'}::{regime}::{role}"
+    primary_event_id = sig["primary_event_id"] or "UNKNOWN"
+    return f"{primary_event_id}::{primary_episode or 'NO_EPISODE'}::{regime}::{role}"
 
 
 def _edge_dimensions(left: dict[str, Any], right: dict[str, Any]) -> tuple[float, list[str]]:
     shared: list[str] = []
     score = 0.0
-    if left["event_family"] and left["event_family"] == right["event_family"]:
-        shared.append(f"event_family:{left['event_family']}")
+    if left["primary_event_id"] and left["primary_event_id"] == right["primary_event_id"]:
+        shared.append(f"primary_event_id:{left['primary_event_id']}")
         score += 0.35
     shared_events = set(left["event_contract_ids"]).intersection(right["event_contract_ids"])
     if shared_events:
@@ -92,7 +93,8 @@ def build_thesis_overlap_graph(theses: Iterable[PromotedThesis]) -> dict[str, An
         nodes.append(
             {
                 "thesis_id": thesis.thesis_id,
-                "event_family": sig["event_family"],
+                "primary_event_id": sig["primary_event_id"],
+                "compat_event_family": sig["compat_event_family"],
                 "event_contract_ids": sig["event_contract_ids"],
                 "episode_contract_ids": sig["episode_contract_ids"],
                 "canonical_regime": sig["canonical_regime"],

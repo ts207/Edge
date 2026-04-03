@@ -4,13 +4,36 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping
 
 from project.core.coercion import safe_float
+from project.domain.compiled_registry import get_domain_registry
 
 
 @dataclass(frozen=True)
 class DetectedEvent:
+    event_id: str
     event_family: str
+    canonical_regime: str
     event_side: str
     features: Dict[str, Any]
+
+
+def _build_detected_event(
+    *,
+    event_id: str,
+    event_side: str,
+    features: Mapping[str, Any],
+) -> DetectedEvent:
+    normalized_event_id = str(event_id).strip().upper()
+    spec = get_domain_registry().get_event(normalized_event_id)
+    canonical_regime = ""
+    if spec is not None:
+        canonical_regime = str(spec.canonical_regime or spec.canonical_family).strip().upper()
+    return DetectedEvent(
+        event_id=normalized_event_id,
+        event_family=normalized_event_id,
+        canonical_regime=canonical_regime,
+        event_side=str(event_side).strip().lower(),
+        features=dict(features),
+    )
 
 
 def _move_bps(current_close: float, previous_close: float | None) -> float | None:
@@ -26,8 +49,8 @@ def _detect_vol_shock(*, symbol: str, timeframe: str, move_bps: float | None, vo
     if abs(move_bps) < min_abs_move_bps:
         return None
     event_side = "long" if move_bps > 0.0 else "short"
-    return DetectedEvent(
-        event_family="VOL_SHOCK",
+    return _build_detected_event(
+        event_id="VOL_SHOCK",
         event_side=event_side,
         features={
             "symbol": str(symbol).upper(),
@@ -47,8 +70,8 @@ def _detect_vol_spike(*, symbol: str, timeframe: str, move_bps: float | None, vo
     if abs(move_bps) < min_abs_move_bps or volume < min_volume:
         return None
     event_side = "long" if move_bps > 0.0 else "short"
-    return DetectedEvent(
-        event_family="VOL_SPIKE",
+    return _build_detected_event(
+        event_id="VOL_SPIKE",
         event_side=event_side,
         features={
             "symbol": str(symbol).upper(),
@@ -69,8 +92,8 @@ def _detect_liquidity_vacuum(*, symbol: str, timeframe: str, move_bps: float | N
         return None
     signed_move = float(move_bps or 0.0)
     event_side = "long" if signed_move > 0.0 else "short" if signed_move < 0.0 else "conditional"
-    return DetectedEvent(
-        event_family="LIQUIDITY_VACUUM",
+    return _build_detected_event(
+        event_id="LIQUIDITY_VACUUM",
         event_side=event_side,
         features={
             "symbol": str(symbol).upper(),
@@ -104,8 +127,8 @@ def _detect_liquidation_cascade(*, symbol: str, timeframe: str, move_bps: float 
         + abs(oi_delta_fraction) / max(min_abs_oi_drop_fraction, 1e-9)
         + abs(funding_rate) / max(min_abs_funding_rate, 1e-9)
     )
-    return DetectedEvent(
-        event_family="LIQUIDATION_CASCADE",
+    return _build_detected_event(
+        event_id="LIQUIDATION_CASCADE",
         event_side=event_side,
         features={
             "symbol": str(symbol).upper(),
@@ -126,10 +149,18 @@ def detect_live_event(
     previous_close: float | None,
     volume: float | None = None,
     market_features: Mapping[str, Any] | None = None,
+    supported_event_ids: List[str] | None = None,
     supported_event_families: List[str] | None = None,
     detector_config: Mapping[str, Any] | None = None,
 ) -> DetectedEvent | None:
-    supported = [str(item).strip().upper() for item in list(supported_event_families or ["VOL_SHOCK"]) if str(item).strip()]
+    configured_supported = supported_event_ids
+    if configured_supported is None:
+        configured_supported = supported_event_families
+    supported = [
+        str(item).strip().upper()
+        for item in list(configured_supported or ["VOL_SHOCK"])
+        if str(item).strip()
+    ]
     if not supported:
         supported = ["VOL_SHOCK"]
 

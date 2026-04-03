@@ -150,6 +150,7 @@ def build_evidence_bundle(
     has_realized_oos_path = bool(len(returns_oos_combined) >= 10)
     bundle = EvidenceBundle(
         candidate_id=candidate_id,
+        primary_event_id=event_type,
         event_family=_event_family(event_type),
         event_type=event_type,
         run_id=run_id,

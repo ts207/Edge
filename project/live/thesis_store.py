@@ -90,7 +90,9 @@ class ThesisStore:
         status: str | None = None,
         symbol: str | None = None,
         timeframe: str | None = None,
+        event_id: str | None = None,
         event_family: str | None = None,
+        canonical_regime: str | None = None,
     ) -> List[PromotedThesis]:
         filtered = self._theses
         if status is not None:
@@ -103,12 +105,19 @@ class ThesisStore:
             filtered = [
                 thesis for thesis in filtered if thesis.timeframe.strip().lower() == timeframe_token
             ]
-        if event_family is not None:
-            family_token = str(event_family).strip().upper()
+        event_token = str(event_id if event_id is not None else event_family or "").strip().upper()
+        if event_token:
             filtered = [
                 thesis
                 for thesis in filtered
-                if thesis.event_family.strip().upper() == family_token
+                if thesis.event_family.strip().upper() == event_token
+            ]
+        if canonical_regime is not None:
+            regime_token = str(canonical_regime).strip().upper()
+            filtered = [
+                thesis
+                for thesis in filtered
+                if thesis.canonical_regime.strip().upper() == regime_token
             ]
         return list(filtered)
 
@@ -117,11 +126,15 @@ class ThesisStore:
         *,
         symbol: str | None = None,
         timeframe: str | None = None,
+        event_id: str | None = None,
         event_family: str | None = None,
+        canonical_regime: str | None = None,
     ) -> List[PromotedThesis]:
         return self.filter(
             status="active",
             symbol=symbol,
             timeframe=timeframe,
+            event_id=event_id,
             event_family=event_family,
+            canonical_regime=canonical_regime,
         )

@@ -61,6 +61,8 @@ def test_empirical_seed_pass_promotes_candidate_with_valid_bundle(tmp_path: Path
 
     rows = json.loads(out['json'].read_text(encoding='utf-8'))
     vol = next(row for row in rows if row['candidate_id'] == 'THESIS_VOL_SHOCK')
+    assert vol['primary_event_id'] == 'VOL_SHOCK'
+    assert vol['compat_event_family'] == 'VOL_SHOCK'
     assert vol['matched_bundle_count'] == 1
     assert vol['empirical_decision'] in {'seed_promote', 'paper_candidate'}
     assert int(vol['holdout_quality']) >= 4
@@ -102,6 +104,8 @@ def test_empirical_seed_pass_caps_derived_confirmation_to_seed_promote(tmp_path:
     out = run_empirical_seed_pass(docs_dir=docs, inventory_path=docs / 'promotion_seed_inventory.csv', data_root=data_root)
     rows = json.loads(out['json'].read_text(encoding='utf-8'))
     confirm = next(row for row in rows if row['candidate_id'] == 'THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM')
+    assert confirm['primary_event_id'] == 'VOL_SHOCK_LIQUIDITY_CONFIRM'
+    assert confirm['compat_event_family'] == 'VOL_SHOCK'
     assert confirm['matched_bundle_count'] == 1
     assert confirm['empirical_decision'] == 'seed_promote'
     assert 'direct_pair_event_study_missing' in confirm['evidence_gap_summary']

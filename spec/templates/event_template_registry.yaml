@@ -1,11 +1,17 @@
 version: 2
 kind: event_template_registry
 metadata:
-  status: authoritative
+  status: generated
+  generated_views:
+  - spec/templates/event_template_registry.yaml
+  - spec/ontology/templates/template_registry.yaml
+  - project/configs/registries/templates.yaml
   legacy_specs_read_only:
   - spec/multiplicity/families.yaml
   - spec/multiplicity/taxonomy.yaml
-  notes: Legacy template specs are retained temporarily for drift checks during cutover.
+  notes: Canonical authored template source. Generated runtime and ontology template
+    registries are rebuilt from this file.
+  authored_source: spec/templates/registry.yaml
 defaults:
   templates:
   - mean_reversion

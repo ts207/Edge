@@ -1,9 +1,21 @@
 from __future__ import annotations
 
+from project.spec_registry import load_template_registry
 from project.scripts.build_template_registry_sidecars import (
+    build_template_registry_compat_payload,
     build_ontology_template_registry_payload,
     build_runtime_template_registry_payload,
 )
+
+
+def test_template_registry_compat_payload_is_generated_from_canonical_source() -> None:
+    canonical = load_template_registry()
+    compat = build_template_registry_compat_payload()
+
+    assert canonical["metadata"]["status"] == "authoritative"
+    assert compat["metadata"]["status"] == "generated"
+    assert compat["metadata"]["authored_source"] == "spec/templates/registry.yaml"
+    assert compat["operators"]["continuation"]["supports_trigger_types"] == canonical["operators"]["continuation"]["supports_trigger_types"]
 
 
 def test_runtime_template_registry_payload_uses_canonical_operator_runtime_fields() -> None:

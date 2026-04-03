@@ -50,7 +50,7 @@ def test_build_summary_uses_phase2_final_for_family_and_global_pass_counts(tmp_p
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["LIQUIDITY_VACUUM"]
+    family = payload["by_primary_event_id"]["LIQUIDITY_VACUUM"]
     assert family["phase2_candidates"] == 3
     assert family["gate_pass_count"] == 1
     assert family["phase2_gate_all_pass"] == 1
@@ -78,7 +78,7 @@ def test_build_summary_reads_nested_timeframe_phase2_outputs(tmp_path, monkeypat
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["LIQUIDITY_VACUUM"]
+    family = payload["by_primary_event_id"]["LIQUIDITY_VACUUM"]
     assert family["phase2_candidates"] == 2
     assert family["gate_pass_count"] == 1
 
@@ -120,9 +120,9 @@ def test_build_summary_includes_search_engine_event_types(tmp_path, monkeypatch)
         top_fail_reasons=5,
     )
 
-    assert payload["by_event_family"]["STATE_AFTERSHOCK_STATE"]["phase2_candidates"] == 2
-    assert payload["by_event_family"]["STATE_AFTERSHOCK_STATE"]["gate_pass_count"] == 1
-    assert payload["by_event_family"]["STATE_CROWDING_STATE"]["phase2_candidates"] == 1
+    assert payload["by_primary_event_id"]["STATE_AFTERSHOCK_STATE"]["phase2_candidates"] == 2
+    assert payload["by_primary_event_id"]["STATE_AFTERSHOCK_STATE"]["gate_pass_count"] == 1
+    assert payload["by_primary_event_id"]["STATE_CROWDING_STATE"]["phase2_candidates"] == 1
     assert payload["total_candidates"] == 3
 
 
@@ -159,7 +159,7 @@ def test_build_summary_counts_embedded_search_engine_bridge_results(tmp_path, mo
         top_fail_reasons=5,
     )
 
-    family = payload["by_event_family"]["STATE_AFTERSHOCK_STATE"]
+    family = payload["by_primary_event_id"]["STATE_AFTERSHOCK_STATE"]
     assert family["phase2_candidates"] == 2
     assert family["bridge_evaluable"] == 2
     assert family["bridge_pass_val"] == 1
@@ -195,8 +195,9 @@ def test_build_summary_falls_back_to_flat_hypothesis_audits(tmp_path, monkeypatc
         top_fail_reasons=5,
     )
 
+    assert payload["primary_event_ids"] == ["RANGE_BREAKOUT", "VOL_SHOCK"]
     assert payload["event_families"] == ["RANGE_BREAKOUT", "VOL_SHOCK"]
-    assert payload["by_event_family"]["VOL_SHOCK"]["total_candidates"] == 2
-    assert payload["by_event_family"]["VOL_SHOCK"]["gate_pass_count"] == 1
-    assert payload["by_event_family"]["RANGE_BREAKOUT"]["total_candidates"] == 1
+    assert payload["by_primary_event_id"]["VOL_SHOCK"]["total_candidates"] == 2
+    assert payload["by_primary_event_id"]["VOL_SHOCK"]["gate_pass_count"] == 1
+    assert payload["by_primary_event_id"]["RANGE_BREAKOUT"]["total_candidates"] == 1
     assert payload["top_fail_reasons"] == [{"reason": "min_t_stat", "count": 2}]

@@ -9,7 +9,7 @@ import pytest
 
 from project.domain.compiled_registry import get_domain_registry, refresh_domain_registry
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec, TriggerType
-from project.domain.models import DomainRegistry, EventDefinition, StateDefinition, TemplateOperatorDefinition
+from project.domain.models import DomainRegistry, EventDefinition, RegimeDefinition, StateDefinition, TemplateOperatorDefinition
 from project.events.event_aliases import EVENT_ALIASES, resolve_event_alias
 from project.spec_registry.loaders import clear_caches
 
@@ -116,6 +116,7 @@ def test_domain_registry_helpers_work_on_small_synthetic_registry():
                 canonical_family="FAM",
                 canonical_regime="FAM",
                 legacy_family="",
+                event_kind="market_event",
                 reports_dir="reports",
                 events_file="e1.parquet",
                 signal_column="sig1",
@@ -128,6 +129,7 @@ def test_domain_registry_helpers_work_on_small_synthetic_registry():
                 canonical_family="FAM",
                 canonical_regime="FAM",
                 legacy_family="",
+                event_kind="market_event",
                 reports_dir="reports",
                 events_file="e2.parquet",
                 signal_column="sig2",
@@ -142,6 +144,9 @@ def test_domain_registry_helpers_work_on_small_synthetic_registry():
         },
         template_operator_definitions={
             "templ": TemplateOperatorDefinition("templ", ("FAM",), {"a": 1}),
+        },
+        regime_definitions={
+            "FAM": RegimeDefinition(canonical_regime="FAM", bucket="trade_generating"),
         },
         gates_spec={"gate": 1},
         unified_registry_path="spec/events/event_registry_unified.yaml",
@@ -200,6 +205,7 @@ def test_refresh_domain_registry_clears_caches(monkeypatch):
             event_definitions={},
             state_definitions={},
             template_operator_definitions={},
+            regime_definitions={},
             gates_spec={},
             unified_registry_path="x",
         )

@@ -15,6 +15,9 @@ PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_template_regis
 echo "[states] Regenerating state registry sidecars..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_state_registry_sidecars.py"
 
+echo "[regimes] Regenerating regime registry sidecars..."
+PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_regime_registry_sidecars.py"
+
 echo "[domain] Rebuilding compiled domain graph..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_domain_graph.py"
 

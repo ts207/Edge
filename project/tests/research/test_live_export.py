@@ -85,6 +85,8 @@ def test_export_promoted_theses_pending_then_active_with_blueprint(tmp_path: Pat
     assert payload["theses"][0]["invalidation"] == {}
     assert contract_payload["contracts"][0]["thesis_id"] == "thesis::run_1::cand_1"
     assert contract_payload["contracts"][0]["authored_contract_linked"] is False
+    assert contract_payload["contracts"][0]["primary_event_id"] == "VOL_SHOCK"
+    assert contract_payload["contracts"][0]["compat_event_family"] == "VOL_SHOCK"
 
     second = export_promoted_theses_for_run(
         "run_1",
@@ -177,6 +179,7 @@ def test_export_promoted_theses_uses_authored_thesis_definition_from_lineage(tmp
 
     thesis = json.loads(result.output_path.read_text(encoding="utf-8"))["theses"][0]
     contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert thesis["primary_event_id"] == "VOL_SHOCK"
     assert thesis["event_family"] == "VOL_SHOCK"
     assert thesis["requirements"]["trigger_events"] == ["VOL_SHOCK"]
     assert thesis["requirements"]["confirmation_events"] == ["LIQUIDITY_VACUUM"]
@@ -216,6 +219,7 @@ def test_export_promoted_theses_derives_multi_clause_requirements_from_metadata(
 
     thesis = json.loads(result.output_path.read_text(encoding="utf-8"))["theses"][0]
     contract_payload = json.loads(result.contract_json_path.read_text(encoding="utf-8"))
+    assert thesis["primary_event_id"] == "VOL_SHOCK"
     assert thesis["requirements"]["trigger_events"] == ["VOL_SHOCK"]
     assert thesis["requirements"]["confirmation_events"] == ["LIQUIDITY_VACUUM"]
     assert thesis["requirements"]["required_episodes"] == ["EP_LIQUIDITY_SHOCK"]

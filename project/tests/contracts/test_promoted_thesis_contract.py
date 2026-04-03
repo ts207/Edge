@@ -13,7 +13,9 @@ def test_promoted_thesis_contract_model_dump() -> None:
             "candidate_symbol": "BTCUSDT",
         },
         timeframe="5m",
+        primary_event_id="VOL_SHOCK",
         event_family="VOL_SHOCK",
+        canonical_regime="volatility_transition",
         event_side="long",
         required_context={"symbol": "BTCUSDT", "event_type": "VOL_SHOCK"},
         supportive_context={"canonical_regime": "VOLATILITY"},
@@ -52,5 +54,8 @@ def test_promoted_thesis_contract_model_dump() -> None:
     assert payload["evidence_gaps"] == []
     assert payload["status"] == "active"
     assert payload["timeframe"] == "5m"
+    assert payload["primary_event_id"] == "VOL_SHOCK"
+    assert payload["event_family"] == "VOL_SHOCK"
+    assert payload["canonical_regime"] == "VOLATILITY_TRANSITION"
     assert payload["evidence"]["net_expectancy_bps"] == 9.0
     assert payload["lineage"]["blueprint_id"] == "bp_1"

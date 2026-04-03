@@ -136,6 +136,7 @@ def apply_multiplicity_controls(
     ]:
         out[col] = False
     out["family_cluster_id"] = ""
+    out["num_tests_primary_event_id"] = 0
     out["num_tests_event_family"] = 0
 
     eligible_mask = pd.Series(True, index=out.index)
@@ -215,6 +216,7 @@ def apply_multiplicity_controls(
 
     # 5. Metadata
     family_counts = out.groupby("family_id").size().to_dict()
+    out["num_tests_primary_event_id"] = out["family_id"].map(family_counts).fillna(0).astype(int)
     out["num_tests_event_family"] = out["family_id"].map(family_counts).fillna(0).astype(int)
 
     out["gate_multiplicity"] = out["is_discovery"].astype(bool)

@@ -1,9 +1,9 @@
 # Regime Routing Audit
 
 - valid: True
-- routing_profile_id: regime_routing_v1
-- scorecard_version: regime_effectiveness_v1
-- scorecard_source_run: authored_baseline
+- routing_profile_id: regime_routing
+- scorecard_version: 
+- scorecard_source_run: 
 - executable_regimes: 14
 - routed_regimes: 14
 

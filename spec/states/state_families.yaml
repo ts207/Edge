@@ -1,5 +1,63 @@
-state_registry_ref: "spec/states/state_registry.yaml"
-
+version: 1
+kind: state_family_registry
+defaults:
+  state_scope: source_only
+  min_events: 200
+  runtime:
+    enabled: true
+    instrument_classes:
+    - crypto
+    tags: []
+context_dimensions:
+  vol_regime:
+    allowed_values:
+    - low
+    - high
+    mapping:
+      high: HIGH_VOL_REGIME
+      low: LOW_VOL_REGIME
+  carry_state:
+    allowed_values:
+    - funding_pos
+    - funding_neg
+    mapping:
+      funding_pos: FUNDING_POSITIVE
+      funding_neg: FUNDING_NEGATIVE
+  ms_trend_state:
+    allowed_values:
+    - trend
+    - chop
+    mapping:
+      trend: TREND_ACTIVE
+      chop: CHOP_ACTIVE
+  ms_spread_state:
+    allowed_values:
+    - tight
+    - wide
+    mapping:
+      tight: SPREAD_TIGHT
+      wide: SPREAD_WIDE
+  liquidity_regime:
+    allowed_values:
+    - low
+    - refill
+    mapping:
+      low: LOW_LIQUIDITY_STATE
+      refill: REFILL_LAG_STATE
+  funding_regime:
+    allowed_values:
+    - crowded
+    - normalizing
+    mapping:
+      crowded: CROWDING_STATE
+      normalizing: FUNDING_NORMALIZATION_STATE
+  trend_structure:
+    allowed_values:
+    - trend
+    - chop
+    mapping:
+      trend: TRENDING_STATE
+      chop: CHOP_STATE
 state_families:
   - name: vol_regime
     allowed_values: [low, mid, high]

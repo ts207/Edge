@@ -20,6 +20,7 @@ def _thesis(thesis_id: str, *, event_family: str = "VOL_SHOCK", episode: str = "
         status="active",
         symbol_scope={"mode": "single_symbol", "symbols": ["BTCUSDT"], "candidate_symbol": "BTCUSDT"},
         timeframe="5m",
+        primary_event_id=event_family,
         event_family=event_family,
         event_side="long",
         required_context={"symbol": "BTCUSDT"},
@@ -54,3 +55,5 @@ def test_build_thesis_overlap_graph_emits_edges_and_groups() -> None:
     assert payload["overlap_group_count"] >= 2
     assert any(edge["source"] == "thesis::1" and edge["target"] == "thesis::2" for edge in payload["edges"])
     assert all(node["overlap_group_id"] for node in payload["nodes"])
+    assert payload["nodes"][0]["primary_event_id"] in {"LIQUIDITY_VACUUM", "VOL_SHOCK"}
+    assert "compat_event_family" in payload["nodes"][0]

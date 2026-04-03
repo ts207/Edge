@@ -265,7 +265,17 @@ def _build_thesis(
             "candidate_symbol": symbols[0] if len(symbols) == 1 else "",
         },
         timeframe=str(thesis_def.timeframe).strip() if thesis_def is not None and str(thesis_def.timeframe).strip() else _timeframe_for_candidate(bundles),
+        primary_event_id=(
+            str(thesis_def.event_family).strip().upper()
+            if thesis_def is not None and str(thesis_def.event_family).strip()
+            else (primary_event or candidate_id).strip().upper()
+        ),
         event_family=(str(thesis_def.event_family).strip().upper() if thesis_def is not None and str(thesis_def.event_family).strip() else (primary_event or candidate_id).strip().upper()),
+        canonical_regime=(
+            str((thesis_def.supportive_context or {}).get("canonical_regime", "")).strip().upper()
+            if thesis_def is not None
+            else str(governance_meta.get("canonical_regime", "")).strip().upper()
+        ),
         event_side=(str(thesis_def.event_side).strip().lower() if thesis_def is not None and str(thesis_def.event_side).strip() else _event_side(inventory_row)),
         required_context={
             **(dict(thesis_def.required_context) if thesis_def is not None else {}),
@@ -426,7 +436,8 @@ def _render_card(thesis: PromotedThesis, inventory_row: Mapping[str, str], bundl
         "",
         f"- Promotion class: `{thesis.promotion_class}`",
         f"- Deployment state: `{thesis.deployment_state}`",
-        f"- Event family: `{thesis.event_family}`",
+        f"- Primary event id: `{thesis.primary_event_id}`",
+        f"- Compatibility event family: `{thesis.event_family}`",
         f"- Tier / role: `{thesis.governance.tier}` / `{thesis.governance.operational_role}`",
         f"- Symbols: {symbols or '_none_'}",
         f"- Timeframe: `{thesis.timeframe}`",
@@ -445,7 +456,7 @@ def _render_card(thesis: PromotedThesis, inventory_row: Mapping[str, str], bundl
         "",
         "## Trigger",
         "",
-        ", ".join(thesis.source.event_contract_ids) if thesis.source.event_contract_ids else thesis.event_family,
+        ", ".join(thesis.source.event_contract_ids) if thesis.source.event_contract_ids else thesis.primary_event_id,
         "",
         "## Invalidation",
         "",
@@ -563,16 +574,16 @@ def package_seed_promoted_theses(
     catalog_lines = [
         "# Seed thesis catalog",
         "",
-        "| Thesis | Promotion class | Deployment state | Event family | Overlap group | Card |",
-        "|---|---|---|---|---|---|",
+        "| Thesis | Promotion class | Deployment state | Primary event id | Compat event family | Overlap group | Card |",
+        "|---|---|---|---|---|---|---|",
     ]
     for thesis in theses:
         card_rel = f"{SEED_CARD_DIRNAME}/{thesis.thesis_id}.md"
         catalog_lines.append(
-            f"| `{thesis.thesis_id}` | `{thesis.promotion_class}` | `{thesis.deployment_state}` | `{thesis.event_family}` | `{thesis.governance.overlap_group_id}` | `{card_rel}` |"
+            f"| `{thesis.thesis_id}` | `{thesis.promotion_class}` | `{thesis.deployment_state}` | `{thesis.primary_event_id}` | `{thesis.event_family}` | `{thesis.governance.overlap_group_id}` | `{card_rel}` |"
         )
     if not theses:
-        catalog_lines.append("| _none_ |  |  |  |  |  |")
+        catalog_lines.append("| _none_ |  |  |  |  |  |  |")
     catalog_md.write_text("\n".join(catalog_lines).rstrip() + "\n", encoding="utf-8")
 
     return {

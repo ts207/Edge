@@ -20,7 +20,9 @@ def _canonical_confirm_thesis() -> PromotedThesis:
             "candidate_symbol": "BTCUSDT",
         },
         timeframe="5m",
+        primary_event_id="VOL_SHOCK",
         event_family="IGNORED_FALLBACK",
+        canonical_regime="VOLATILITY_TRANSITION",
         event_side="both",
         required_context={},
         supportive_context={"has_realized_oos_path": True},
@@ -50,13 +52,16 @@ def test_retriever_uses_canonical_confirmation_clause_when_present() -> None:
         timestamp="2026-04-02T00:00:00Z",
         symbol="BTCUSDT",
         timeframe="5m",
+        primary_event_id="VOL_SHOCK",
         event_family="VOL_SHOCK",
+        canonical_regime="VOLATILITY_TRANSITION",
         event_side="long",
         live_features={},
         regime_snapshot={"canonical_regime": "VOLATILITY_TRANSITION"},
         execution_env={},
         portfolio_state={},
         active_event_families=["VOL_SHOCK"],
+        active_event_ids=["VOL_SHOCK"],
         active_episode_ids=[],
     )
 
@@ -64,6 +69,7 @@ def test_retriever_uses_canonical_confirmation_clause_when_present() -> None:
 
     assert match.eligibility_passed is True
     assert "trigger_clause_match:VOL_SHOCK" in match.reasons_for
+    assert "canonical_regime_match:VOLATILITY_TRANSITION" in match.reasons_for
     assert "confirmation_missing:LIQUIDITY_VACUUM" in match.reasons_against
 
 
@@ -73,13 +79,16 @@ def test_retriever_prefers_canonical_thesis_clauses_over_packaged_event_family()
         timestamp="2026-04-02T00:00:00Z",
         symbol="BTCUSDT",
         timeframe="5m",
+        primary_event_id="VOL_SHOCK",
         event_family="VOL_SHOCK",
+        canonical_regime="VOLATILITY_TRANSITION",
         event_side="long",
         live_features={},
         regime_snapshot={"canonical_regime": "VOLATILITY_TRANSITION"},
         execution_env={},
         portfolio_state={},
         active_event_families=["VOL_SHOCK", "LIQUIDITY_VACUUM"],
+        active_event_ids=["VOL_SHOCK", "LIQUIDITY_VACUUM"],
         active_episode_ids=[],
     )
 

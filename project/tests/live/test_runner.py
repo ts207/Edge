@@ -977,6 +977,7 @@ def test_live_runner_monitor_only_processes_thesis_runtime_events(tmp_path) -> N
                         },
                         "timeframe": "5m",
                         "event_family": "VOL_SHOCK",
+                        "canonical_regime": "VOLATILITY",
                         "event_side": "long",
                         "required_context": {"symbol": "BTCUSDT", "event_type": "VOL_SHOCK"},
                         "supportive_context": {
@@ -1026,7 +1027,7 @@ def test_live_runner_monitor_only_processes_thesis_runtime_events(tmp_path) -> N
             "thesis_path": str(thesis_dir / "promoted_theses.json"),
             "include_pending_theses": False,
             "auto_submit": False,
-            "supported_event_families": ["VOL_SHOCK"],
+            "supported_event_ids": ["VOL_SHOCK"],
             "memory_root": str(tmp_path / "memory"),
         },
     )
@@ -1087,7 +1088,7 @@ def test_live_runner_refreshes_runtime_market_features_and_computes_open_interes
         data_manager=_DummyDataManager(),
         strategy_runtime={
             "implemented": True,
-            "supported_event_families": ["LIQUIDATION_CASCADE"],
+            "supported_event_ids": ["LIQUIDATION_CASCADE"],
         },
         market_feature_fetcher=_fetch_market_features,
     )
@@ -1203,7 +1204,7 @@ def test_live_runner_persists_runtime_metrics_snapshot_with_market_state_and_dec
             "thesis_path": str(thesis_dir / "promoted_theses.json"),
             "include_pending_theses": False,
             "auto_submit": False,
-            "supported_event_families": ["VOL_SHOCK", "LIQUIDATION_CASCADE"],
+            "supported_event_ids": ["VOL_SHOCK", "LIQUIDATION_CASCADE"],
             "memory_root": str(tmp_path / "memory"),
         },
         market_feature_fetcher=_fetch_market_features,
@@ -1257,4 +1258,7 @@ def test_live_runner_persists_runtime_metrics_snapshot_with_market_state_and_dec
     assert payload["decision_counts"]["recent_window"] == 1
     assert payload["decision_counts"]["by_action"]
     assert payload["recent_decisions"][0]["symbol"] == "BTCUSDT"
-    assert payload["recent_decisions"][0]["event_family"] == "VOL_SHOCK"
+    assert payload["recent_decisions"][0]["primary_event_id"] == "VOL_SHOCK"
+    assert payload["recent_decisions"][0]["canonical_regime"] == "VOLATILITY"
+    assert payload["recent_decisions"][0]["compat_event_family"] == "VOL_SHOCK"
+    assert payload["recent_decisions"][0]["thesis_canonical_regime"] == "VOLATILITY"

@@ -7,13 +7,16 @@ from project import PROJECT_ROOT
 from project.domain.models import (
     DomainRegistry,
     EventDefinition,
+    RegimeDefinition,
     StateDefinition,
     ThesisDefinition,
     TemplateOperatorDefinition,
 )
 from project.spec_registry import (
     load_gates_spec,
+    load_regime_registry,
     load_state_registry,
+    load_template_registry,
     load_thesis_registry,
     load_unified_event_registry,
     load_yaml_relative,
@@ -158,6 +161,11 @@ def _load_states() -> Dict[str, StateDefinition]:
         state_id = str(row.get("state_id", "")).strip().upper()
         if not state_id:
             continue
+        spec_path = str(
+            resolve_relative_spec_path(
+                f"spec/states/{state_id}.yaml", repo_root=PROJECT_ROOT.parent
+            )
+        )
         runtime = row.get("runtime", {})
         if not isinstance(runtime, dict):
             runtime = {}
@@ -206,7 +214,7 @@ def _load_states() -> Dict[str, StateDefinition]:
             context_family=str(context.get("family", "")).strip(),
             context_label=str(context.get("label", "")).strip(),
             raw=dict(row),
-            spec_path=str(resolve_relative_spec_path("spec/states/state_registry.yaml", repo_root=PROJECT_ROOT.parent)),
+            spec_path=spec_path,
             source_kind="state_registry",
         )
     return out
@@ -338,7 +346,7 @@ def _load_interaction_definitions() -> tuple[Dict[str, Any], ...]:
 
 def _load_operators(unified: Dict[str, Any]) -> Dict[str, TemplateOperatorDefinition]:
     del unified
-    template_registry = load_yaml_relative("spec/templates/event_template_registry.yaml")
+    template_registry = load_template_registry()
     operators = template_registry.get("operators", {})
     out: Dict[str, TemplateOperatorDefinition] = {}
     if not isinstance(operators, dict):
@@ -352,6 +360,54 @@ def _load_operators(unified: Dict[str, Any]) -> Dict[str, TemplateOperatorDefini
                 str(x).strip().upper() for x in row.get("compatible_families", []) or []
             ),
             raw=dict(row),
+        )
+    return out
+
+
+def _load_regimes() -> Dict[str, RegimeDefinition]:
+    payload = load_regime_registry()
+    metadata = payload.get("metadata", {}) if isinstance(payload, dict) else {}
+    regimes = payload.get("regimes", {}) if isinstance(payload, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(regimes, dict):
+        return {}
+    routing_profile_id = str(metadata.get("routing_profile_id", "regime_routing")).strip()
+    scorecard_version = str(metadata.get("scorecard_version", "")).strip()
+    scorecard_source_run = str(metadata.get("scorecard_source_run", "")).strip()
+    spec_path = str(resolve_relative_spec_path("spec/regimes/registry.yaml", repo_root=PROJECT_ROOT.parent))
+    out: Dict[str, RegimeDefinition] = {}
+    for canonical_regime, row in sorted(regimes.items()):
+        if not isinstance(row, dict):
+            continue
+        normalized = str(canonical_regime).strip().upper()
+        if not normalized:
+            continue
+        out[normalized] = RegimeDefinition(
+            canonical_regime=normalized,
+            bucket=str(row.get("bucket", "")).strip(),
+            eligible_templates=tuple(
+                str(item).strip()
+                for item in row.get("eligible_templates", [])
+                if str(item).strip()
+            ),
+            forbidden_templates=tuple(
+                str(item).strip()
+                for item in row.get("forbidden_templates", [])
+                if str(item).strip()
+            ),
+            risk_posture=str(row.get("risk_posture", "")).strip(),
+            execution_style=str(row.get("execution_style", "")).strip(),
+            holding_horizon_profile=str(row.get("holding_horizon_profile", "")).strip(),
+            stop_logic_profile=str(row.get("stop_logic_profile", "")).strip(),
+            profit_taking_profile=str(row.get("profit_taking_profile", "")).strip(),
+            overrides=dict(row.get("overrides", {}) or {}),
+            routing_profile_id=routing_profile_id,
+            scorecard_version=scorecard_version,
+            scorecard_source_run=scorecard_source_run,
+            raw=dict(row),
+            spec_path=spec_path,
+            source_kind="regime_registry",
         )
     return out
 
@@ -457,11 +513,12 @@ def _build_domain_registry_from_sources() -> DomainRegistry:
     unified = load_unified_event_registry()
     if not unified:
         raise FileNotFoundError("Unified event registry is missing or empty")
-    template_registry_payload = load_yaml_relative("spec/templates/event_template_registry.yaml")
+    template_registry_payload = load_template_registry()
     family_registry_payload = load_yaml_relative("spec/grammar/family_registry.yaml")
     event_definitions = _merge_event_rows(unified)
     state_definitions = _load_states()
     template_operator_definitions = _load_operators(unified)
+    regime_definitions = _load_regimes()
     thesis_definitions = _load_theses()
     context_state_map = _load_context_state_map()
     state_aliases = _load_state_aliases()
@@ -475,6 +532,7 @@ def _build_domain_registry_from_sources() -> DomainRegistry:
         event_definitions=event_definitions,
         state_definitions=state_definitions,
         template_operator_definitions=template_operator_definitions,
+        regime_definitions=regime_definitions,
         gates_spec=dict(load_gates_spec()),
         unified_registry_path=str(
             resolve_relative_spec_path(
@@ -583,6 +641,27 @@ def _operator_definition_payload(spec: TemplateOperatorDefinition) -> Dict[str, 
     }
 
 
+def _regime_definition_payload(spec: RegimeDefinition) -> Dict[str, Any]:
+    return {
+        "canonical_regime": spec.canonical_regime,
+        "bucket": spec.bucket,
+        "eligible_templates": list(spec.eligible_templates),
+        "forbidden_templates": list(spec.forbidden_templates),
+        "risk_posture": spec.risk_posture,
+        "execution_style": spec.execution_style,
+        "holding_horizon_profile": spec.holding_horizon_profile,
+        "stop_logic_profile": spec.stop_logic_profile,
+        "profit_taking_profile": spec.profit_taking_profile,
+        "overrides": dict(spec.overrides),
+        "routing_profile_id": spec.routing_profile_id,
+        "scorecard_version": spec.scorecard_version,
+        "scorecard_source_run": spec.scorecard_source_run,
+        "raw": dict(spec.raw),
+        "spec_path": spec.spec_path,
+        "source_kind": spec.source_kind,
+    }
+
+
 def _thesis_definition_payload(spec: ThesisDefinition) -> Dict[str, Any]:
     return {
         "thesis_id": spec.thesis_id,
@@ -633,6 +712,10 @@ def _domain_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
             template_id: _operator_definition_payload(spec)
             for template_id, spec in sorted(registry.template_operator_definitions.items())
         },
+        "regime_definitions": {
+            canonical_regime: _regime_definition_payload(spec)
+            for canonical_regime, spec in sorted(registry.regime_definitions.items())
+        },
         "thesis_definitions": {
             thesis_id: _thesis_definition_payload(spec)
             for thesis_id, spec in sorted(registry.thesis_definitions.items())
@@ -657,6 +740,10 @@ def _domain_registry_payload(registry: DomainRegistry) -> Dict[str, Any]:
 
 def build_domain_graph_payload() -> Dict[str, Any]:
     return _domain_registry_payload(_build_domain_registry_from_sources())
+
+
+def compile_domain_registry_from_sources() -> DomainRegistry:
+    return _build_domain_registry_from_sources()
 
 
 def _event_definition_from_payload(row: Dict[str, Any]) -> EventDefinition:
@@ -782,6 +869,31 @@ def _thesis_definition_from_payload(row: Dict[str, Any]) -> ThesisDefinition:
     )
 
 
+def _regime_definition_from_payload(row: Dict[str, Any]) -> RegimeDefinition:
+    return RegimeDefinition(
+        canonical_regime=str(row.get("canonical_regime", "")).strip().upper(),
+        bucket=str(row.get("bucket", "")).strip(),
+        eligible_templates=tuple(
+            str(item).strip() for item in row.get("eligible_templates", []) if str(item).strip()
+        ),
+        forbidden_templates=tuple(
+            str(item).strip() for item in row.get("forbidden_templates", []) if str(item).strip()
+        ),
+        risk_posture=str(row.get("risk_posture", "")).strip(),
+        execution_style=str(row.get("execution_style", "")).strip(),
+        holding_horizon_profile=str(row.get("holding_horizon_profile", "")).strip(),
+        stop_logic_profile=str(row.get("stop_logic_profile", "")).strip(),
+        profit_taking_profile=str(row.get("profit_taking_profile", "")).strip(),
+        overrides=dict(row.get("overrides", {})) if isinstance(row.get("overrides"), dict) else {},
+        routing_profile_id=str(row.get("routing_profile_id", "")).strip(),
+        scorecard_version=str(row.get("scorecard_version", "")).strip(),
+        scorecard_source_run=str(row.get("scorecard_source_run", "")).strip(),
+        raw=dict(row.get("raw", {})) if isinstance(row.get("raw"), dict) else {},
+        spec_path=str(row.get("spec_path", "")).strip(),
+        source_kind=str(row.get("source_kind", "regime_registry")).strip() or "regime_registry",
+    )
+
+
 def _context_state_map_from_payload(rows: Any) -> Dict[tuple[str, str], str]:
     out: Dict[tuple[str, str], str] = {}
     if not isinstance(rows, list):
@@ -809,8 +921,9 @@ def _load_domain_registry_from_graph() -> DomainRegistry | None:
     event_rows = payload.get("event_definitions", {})
     state_rows = payload.get("state_definitions", {})
     operator_rows = payload.get("template_operator_definitions", {})
+    regime_rows = payload.get("regime_definitions", {})
     thesis_rows = payload.get("thesis_definitions", {})
-    if not isinstance(event_rows, dict) or not isinstance(state_rows, dict) or not isinstance(operator_rows, dict) or not isinstance(thesis_rows, dict):
+    if not isinstance(event_rows, dict) or not isinstance(state_rows, dict) or not isinstance(operator_rows, dict) or not isinstance(regime_rows, dict) or not isinstance(thesis_rows, dict):
         return None
     return DomainRegistry(
         unified_payload=dict(payload.get("unified_payload", {})) if isinstance(payload.get("unified_payload"), dict) else {},
@@ -827,6 +940,11 @@ def _load_domain_registry_from_graph() -> DomainRegistry | None:
         template_operator_definitions={
             template_id: _operator_definition_from_payload(dict(row))
             for template_id, row in sorted(operator_rows.items())
+            if isinstance(row, dict)
+        },
+        regime_definitions={
+            canonical_regime: _regime_definition_from_payload(dict(row))
+            for canonical_regime, row in sorted(regime_rows.items())
             if isinstance(row, dict)
         },
         thesis_definitions={
@@ -867,8 +985,14 @@ def _load_domain_registry_from_graph() -> DomainRegistry | None:
     )
 
 
-def compile_domain_registry() -> DomainRegistry:
+def compile_domain_registry(*, allow_source_fallback: bool = False) -> DomainRegistry:
     graph = _load_domain_registry_from_graph()
     if graph is not None:
         return graph
-    return _build_domain_registry_from_sources()
+    if allow_source_fallback:
+        return _build_domain_registry_from_sources()
+    path = domain_graph_path()
+    raise FileNotFoundError(
+        "Compiled domain graph is missing or invalid at "
+        f"{path}. Rebuild it with `python3 project/scripts/build_domain_graph.py`."
+    )

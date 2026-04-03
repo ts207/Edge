@@ -153,11 +153,14 @@ def _write_ontology_specs(ontology_specs: Dict[str, Dict[str, Any]]) -> None:
 
 
 def main() -> int:
+    registry_path = resolve_relative_spec_path("spec/states/state_registry.yaml", repo_root=PROJECT_ROOT.parent)
     runtime_path = PROJECT_ROOT / "configs" / "registries" / "states.yaml"
     grammar_path = resolve_relative_spec_path("spec/grammar/state_registry.yaml", repo_root=PROJECT_ROOT.parent)
+    _write_yaml(registry_path, _state_registry_payload())
     _write_yaml(runtime_path, build_runtime_state_registry_payload())
     _write_yaml(grammar_path, build_state_grammar_payload())
     _write_ontology_specs(build_state_ontology_specs())
+    print(f"Wrote {registry_path}")
     print(f"Wrote {runtime_path}")
     print(f"Wrote {grammar_path}")
     return 0

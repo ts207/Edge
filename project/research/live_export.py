@@ -517,7 +517,8 @@ def _contract_row(thesis: PromotedThesis) -> dict[str, Any]:
         "status": thesis.status,
         "promotion_class": thesis.promotion_class,
         "deployment_state": thesis.deployment_state,
-        "event_family": str(thesis.event_family or "").strip().upper(),
+        "primary_event_id": str(thesis.primary_event_id or thesis.event_family or "").strip().upper(),
+        "compat_event_family": str(thesis.event_family or "").strip().upper(),
         "timeframe": str(thesis.timeframe or "").strip(),
         "trigger_events": list(thesis.requirements.trigger_events),
         "confirmation_events": list(thesis.requirements.confirmation_events),
@@ -553,20 +554,20 @@ def _render_contract_markdown(*, run_id: str, rows: Sequence[Mapping[str, Any]])
         return "\n".join(lines).rstrip() + "\n"
     lines.extend(
         [
-            "| thesis_id | authored_contract | event_family | triggers | confirmations | episodes | overlap_group |",
+            "| thesis_id | authored_contract | primary_event_id | triggers | confirmations | episodes | overlap_group |",
             "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for row in rows:
         lines.append(
-            "| {thesis_id} | {authored} | {event_family} | {triggers} | {confirmations} | {episodes} | {overlap} |".format(
+            "| {thesis_id} | {authored} | {primary_event_id} | {triggers} | {confirmations} | {episodes} | {overlap} |".format(
                 thesis_id=f"`{row.get('thesis_id', '')}`",
                 authored=(
                     f"`{row.get('authored_contract_id', '')}`"
                     if row.get("authored_contract_id")
                     else "`unlinked`"
                 ),
-                event_family=f"`{row.get('event_family', '')}`",
+                primary_event_id=f"`{row.get('primary_event_id', '')}`",
                 triggers=f"`{', '.join(row.get('trigger_events', []))}`",
                 confirmations=f"`{', '.join(row.get('confirmation_events', []))}`",
                 episodes=f"`{', '.join(row.get('required_episodes', []))}`",
@@ -673,7 +674,17 @@ def _build_thesis(
         status=status,
         symbol_scope=_coerce_symbol_scope(symbol, blueprint),
         timeframe=str(getattr(authored_def, "timeframe", "")).strip() or timeframe,
+        primary_event_id=str(getattr(authored_def, "event_family", "")).strip() or event_family,
         event_family=str(getattr(authored_def, "event_family", "")).strip() or event_family,
+        canonical_regime=(
+            str(
+                getattr(authored_def, "supportive_context", {}).get("canonical_regime", "")
+                if authored_def is not None
+                else promoted_row.get("canonical_regime", "")
+            )
+            .strip()
+            .upper()
+        ),
         event_side=event_side,
         required_context=_build_required_context(symbol=symbol, timeframe=timeframe, bundle=bundle),
         supportive_context=_build_supportive_context(bundle=bundle, promoted_row=promoted_row),

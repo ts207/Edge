@@ -7,12 +7,24 @@ from typing import Any, Dict
 import yaml
 
 from project import PROJECT_ROOT
-from project.spec_registry import load_yaml_relative, resolve_relative_spec_path
+from project.spec_registry import load_template_registry, resolve_relative_spec_path
 
 
 def _canonical_template_registry() -> Dict[str, Any]:
-    payload = load_yaml_relative("spec/templates/event_template_registry.yaml")
+    payload = load_template_registry()
     return payload if isinstance(payload, dict) else {}
+
+
+def build_template_registry_compat_payload() -> Dict[str, Any]:
+    canonical = _canonical_template_registry()
+    payload = dict(canonical)
+    metadata = canonical.get("metadata", {})
+    payload["metadata"] = {
+        **(dict(metadata) if isinstance(metadata, dict) else {}),
+        "status": "generated",
+        "authored_source": "spec/templates/registry.yaml",
+    }
+    return payload
 
 
 def build_runtime_template_registry_payload() -> Dict[str, Any]:
@@ -102,13 +114,19 @@ def _write_yaml(path: Path, payload: Dict[str, Any]) -> None:
 
 
 def main() -> int:
+    compat_path = resolve_relative_spec_path(
+        "spec/templates/event_template_registry.yaml",
+        repo_root=PROJECT_ROOT.parent,
+    )
     runtime_path = PROJECT_ROOT / "configs" / "registries" / "templates.yaml"
     ontology_path = resolve_relative_spec_path(
         "spec/ontology/templates/template_registry.yaml",
         repo_root=PROJECT_ROOT.parent,
     )
+    _write_yaml(compat_path, build_template_registry_compat_payload())
     _write_yaml(runtime_path, build_runtime_template_registry_payload())
     _write_yaml(ontology_path, build_ontology_template_registry_payload())
+    print(f"Wrote {compat_path}")
     print(f"Wrote {runtime_path}")
     print(f"Wrote {ontology_path}")
     return 0
