@@ -16,7 +16,8 @@ ENABLE_CROSS_VENUE_SPOT_PIPELINE ?= 0
 CHANGED_BASE ?= origin/main
 CHANGED_HEAD ?= HEAD
 
-.PHONY: help discover export package validate review run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance
+.PHONY: help discover export package validate review run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance \
+	advanced-discover-triggers-parameter advanced-discover-triggers-cluster
 
 help:
 	@echo "Operator actions:"
@@ -51,6 +52,10 @@ help:
 	@echo "  benchmark-maintenance - Full production execution of the benchmark governance cycle"
 	@echo "  clean-all-data     - Wipe all data/lake and reports"
 	@echo "  minimum-green-gate - Required baseline for platform stabilization"
+	@echo ""
+	@echo "Advanced/Internal trigger discovery (Proposal-only):"
+	@echo "  advanced-discover-triggers-parameter - Run parameter sweep over detector family"
+	@echo "  advanced-discover-triggers-cluster   - Mine recurring feature excursions"
 
 benchmark-maintenance-smoke:
 	@echo "Running benchmark maintenance dry-run..."
@@ -133,15 +138,15 @@ legacy-validate:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.run_researcher_verification --mode contracts
 	$(MAKE) minimum-green-gate
 
-review:
-	@if [ "$(REVIEW_ACTION)" = "compare" ]; then \
-		if [ -z "$(RUN_IDS)" ]; then echo "Usage: make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"; exit 2; fi; \
-		PYTHONPATH=. $(PYTHON) -m project.cli catalog compare --run_id_a $$(echo $(RUN_IDS) | cut -d, -f1) --run_id_b $$(echo $(RUN_IDS) | cut -d, -f2) --stage validate; \
-	else \
-		if [ -z "$(RUN_ID)" ]; then echo "Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|report"; exit 2; fi; \
-		if [ "$(REVIEW_ACTION)" != "diagnose" ] && [ "$(REVIEW_ACTION)" != "report" ]; then echo "REVIEW_ACTION must be one of: diagnose, report, compare"; exit 2; fi; \
-		PYTHONPATH=. $(PYTHON) -m project.cli validate $(REVIEW_ACTION) --run_id $(RUN_ID); \
 	fi
+
+# Advanced/Internal trigger discovery (Proposal-generating only)
+# Manual review required before registry adoption.
+advanced-discover-triggers-parameter:
+	PYTHONPATH=. $(PYTHON) -m project.cli discover triggers parameter-sweep --family $(or $(FAMILY),vol_shock) --symbol $(or $(SYMBOLS),BTCUSDT)
+
+advanced-discover-triggers-cluster:
+	PYTHONPATH=. $(PYTHON) -m project.cli discover triggers feature-cluster --symbol $(or $(SYMBOLS),BTCUSDT)
 TIMEFRAMES ?= 5m
 CONCEPT ?= 
 

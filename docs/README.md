@@ -30,6 +30,7 @@ Read these first, in order:
 - [90_architecture.md](90_architecture.md) — High-level architecture decisions
 - [91_advanced_research.md](91_advanced_research.md) — Advanced topics (Internal maintenance lane)
 - [92_assurance_and_benchmarks.md](92_assurance_and_benchmarks.md) — Maintenance checks and tests
+- [93_trigger_discovery.md](93_trigger_discovery.md) — Advanced Trigger Discovery (Internal research lane)
 - [ARCHITECTURE_SURFACE_INVENTORY.md](ARCHITECTURE_SURFACE_INVENTORY.md) — Surface API boundaries
 
 ## Generated docs

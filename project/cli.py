@@ -61,6 +61,48 @@ def _build_parser() -> argparse.ArgumentParser:
     discover_artifacts.add_argument("--run_id", required=True)
     discover_artifacts.add_argument("--data_root", default=None)
 
+    # --- ADVANCED/INTERNAL TRIGGER DISCOVERY ---
+    # Proposal-generating only. No runtime effect. Manual review required.
+    triggers_parser = discover_sub.add_parser(
+        "triggers",
+        help="Advanced: Mining and proposing new trigger candidate definitions (internal research lane).",
+        description="Advanced/Internal trigger discovery lane.\nProposal-generating only. No runtime effect. Manual review required before registry adoption.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    triggers_sub = triggers_parser.add_subparsers(dest="trigger_command")
+
+    sweep_parser = triggers_sub.add_parser(
+        "parameter-sweep",
+        help="Run parameter sweep over a detector family (e.g. vol_shock) to propose candidate triggers."
+    )
+    sweep_parser.add_argument("--family", default="vol_shock")
+    sweep_parser.add_argument("--symbol", default="BTCUSDT")
+    sweep_parser.add_argument("--timeframe", default="5m")
+    sweep_parser.add_argument("--data_root", default=None)
+    sweep_parser.add_argument("--out_dir", default=None)
+
+    cluster_parser = triggers_sub.add_parser(
+        "feature-cluster",
+        help="Mine recurring feature excursions to propose new trigger interaction families."
+    )
+    cluster_parser.add_argument("--symbol", default="BTCUSDT")
+    cluster_parser.add_argument("--timeframe", default="5m")
+    cluster_parser.add_argument("--data_root", default=None)
+    cluster_parser.add_argument("--out_dir", default=None)
+
+    report_parser = triggers_sub.add_parser(
+        "report",
+        help="Inspect generated candidate trigger proposals and registry novelty scores."
+    )
+    report_parser.add_argument("--proposal_dir", required=True)
+
+    payload_parser = triggers_sub.add_parser(
+        "emit-registry-payload",
+        help="Generate a registry YAML snippet for a given candidate trigger ID."
+    )
+    payload_parser.add_argument("--candidate_id", required=True)
+    payload_parser.add_argument("--proposal_dir", required=True)
+
     # 2. VALIDATE
     validate_parser = subparsers.add_parser("validate", help="Stage 2: Truth-testing and robustness.")
     validate_sub = validate_parser.add_subparsers(dest="subcommand")
@@ -294,6 +336,44 @@ def main() -> int:
             if not found:
                 print(f"No discovery artifacts found for run {args.run_id}")
             return 0
+
+        if args.subcommand == "triggers":
+            # Direct dispatch to trigger discovery orchestrator
+            from project.research.discover_triggers import main as trigger_main
+            # We must map the CLI args back to the orchestrator's expectations
+            # discover_triggers.py expects --mode choices: [parameter_sweep, feature_cluster]
+            
+            if args.trigger_command == "emit-registry-payload":
+                # Special helper for registry payload emission
+                from project.research.trigger_discovery.proposal_emission import generate_suggested_registry_payload
+                import pandas as pd
+                parquet_path = Path(args.proposal_dir) / "candidate_trigger_scored.parquet"
+                if not parquet_path.exists():
+                    print(f"Error: Missing {parquet_path}")
+                    return 1
+                df = pd.read_parquet(parquet_path)
+                match = df[df["candidate_trigger_id"] == args.candidate_id]
+                if match.empty:
+                    print(f"Error: Candidate {args.candidate_id} not found in {parquet_path}")
+                    return 1
+                payload = generate_suggested_registry_payload(match.iloc[0])
+                import yaml
+                print(yaml.dump(payload, sort_keys=False))
+                return 0
+
+            # Normal discovery dispatch
+            sys.argv = [sys.argv[0]]
+            if args.trigger_command == "parameter-sweep":
+                sys.argv.extend(["--mode", "parameter_sweep", "--family", args.family])
+            elif args.trigger_command == "feature-cluster":
+                sys.argv.extend(["--mode", "feature_cluster"])
+            
+            if getattr(args, "symbol", None): sys.argv.extend(["--symbol", args.symbol])
+            if getattr(args, "timeframe", None): sys.argv.extend(["--timeframe", args.timeframe])
+            if getattr(args, "data_root", None): sys.argv.extend(["--data_root", args.data_root])
+            if getattr(args, "out_dir", None): sys.argv.extend(["--out_dir", args.out_dir])
+            
+            return int(trigger_main() or 0)
 
     if args.command == "validate":
         from project import validate
