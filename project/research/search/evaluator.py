@@ -84,6 +84,22 @@ METRICS_COLUMNS = [
     "stress_score",
     "kill_switch_count",
     "capacity_proxy",
+    "placebo_shift_effect",
+    "placebo_random_entry_effect",
+    "direction_reversal_effect",
+    "regime_support_ratio",
+    "null_strength_ratio",
+    "after_cost_expectancy_bps",
+    "cost_survival_ratio",
+    "coverage_ratio",
+    "turnover_proxy",
+    "microstructure_stress_proxy",
+    "event_family_key",
+    "template_family_key",
+    "direction_key",
+    "horizon_bucket",
+    "context_signature",
+    "symbol_timeframe_key",
     "valid",
     "invalid_reason",
 ]
@@ -138,6 +154,22 @@ def _null_row(spec: HypothesisSpec, n: int, reason: str = "unknown") -> Dict[str
             "stress_score": 0.0,
             "kill_switch_count": 0,
             "capacity_proxy": 0.0,
+            "placebo_shift_effect": np.nan,
+            "placebo_random_entry_effect": np.nan,
+            "direction_reversal_effect": np.nan,
+            "regime_support_ratio": np.nan,
+            "null_strength_ratio": np.nan,
+            "after_cost_expectancy_bps": np.nan,
+            "cost_survival_ratio": np.nan,
+            "coverage_ratio": np.nan,
+            "turnover_proxy": np.nan,
+            "microstructure_stress_proxy": np.nan,
+            "event_family_key": "UNKNOWN",
+            "template_family_key": "UNKNOWN",
+            "direction_key": "UNKNOWN",
+            "horizon_bucket": "UNKNOWN",
+            "context_signature": "UNKNOWN",
+            "symbol_timeframe_key": "UNKNOWN",
         },
     )
     row = evaluated.to_record()
@@ -192,6 +224,7 @@ def evaluate_hypothesis_batch(
     annualisation_factor: Optional[float] = None,
     time_decay_tau_days: Optional[float] = 60.0,
     use_context_quality: bool = True,
+    folds: list[Any] | None = None,
 ) -> pd.DataFrame:
     """
     Evaluate a batch of HypothesisSpec with rich metrics.
@@ -255,6 +288,7 @@ def evaluate_hypothesis_batch(
 
     rows: List[Dict[str, Any]] = []
     regime_rows: List[Dict[str, Any]] = []  # Phase 4.2 — per-hypothesis regime breakdown
+    fold_detail_rows: List[Dict[str, Any]] = []
 
     for spec in hypotheses:
         profiles_supported, profile_reason = _is_supported_profile(spec)
@@ -501,8 +535,55 @@ def evaluate_hypothesis_batch(
                 "capacity_proxy": capacity,
             },
         )
+        
         row = evaluated.to_record()
-        rows.append({column: row.get(column) for column in METRICS_COLUMNS})
+        
+        try:
+            from project.research.validation.discovery_prechecks import compute_discovery_prechecks
+            prechecks = compute_discovery_prechecks(
+                spec=spec,
+                features=features,
+                mask=mask,
+                fwd=fwd,
+                event_weights=event_weights,
+                signed=signed,
+                regime_evals=regime_evals,
+                n=n,
+                cost_bps=cost_bps,
+                mean_bps=mean_bps,
+                t_stat=t_stat
+            )
+            for k, v in prechecks.items():
+                row[k] = v
+        except Exception as e:
+            log.warning(f"Failed to inject prechecks: {e}")
+            for k in METRICS_COLUMNS:
+                if k not in row:
+                    row[k] = np.nan
+        
+        if folds:
+            fold_details, fold_aggs = evaluate_candidate_across_folds(
+                signed_returns=signed,
+                event_weights=event_weights,
+                folds=folds,
+                cost_bps=cost_bps
+            )
+            for k, v in fold_aggs.items():
+                row[k] = v
+            
+            # Store detail rows independently to write them in phase2 engine
+            if fold_details:
+                h_id = row.get("hypothesis_id", "")
+                trigger = row.get("trigger_key", "")
+                for fd in fold_details:
+                    fd["hypothesis_id"] = h_id
+                    fd["trigger_key"] = trigger
+                    fold_detail_rows.append(fd)
+        
+        rows.append({column: row.get(column, np.nan) for column in METRICS_COLUMNS if column in row})
+        for c in METRICS_COLUMNS:
+            if c not in rows[-1]:
+                rows[-1][c] = np.nan
 
         # Phase 4.2 — Accumulate per-regime breakdown for every evaluated hypothesis.
         # The full regime_evals DataFrame is richer than the scalar robustness_score:
@@ -527,6 +608,18 @@ def evaluate_hypothesis_batch(
                     })
 
     df = pd.DataFrame(rows, columns=METRICS_COLUMNS)
+    
+    # Incorporate fold agg columns that we dynamically added to `rows` output above
+    if folds and rows:
+        fold_keys = [
+            "fold_count", "fold_valid_count", "fold_sign_consistency", 
+            "fold_median_oos_expectancy", "fold_worst_oos_expectancy", 
+            "fold_median_after_cost_expectancy", "fold_median_t_stat", 
+            "fold_fail_ratio"
+        ]
+        for c in fold_keys:
+            if c not in df.columns:
+                df[c] = pd.Series([r.get(c, np.nan) for r in rows], dtype=float)
 
     # Attach per-regime rows as a metadata attribute so callers can persist it
     # without changing the public return type.  run_hypothesis_search.py reads
@@ -536,6 +629,11 @@ def evaluate_hypothesis_batch(
             columns=["hypothesis_id", "trigger_key", "template_id", "direction",
                      "horizon", "regime", "n", "mean_return_bps", "t_stat", "hit_rate"]
         )
+    )
+    
+    # Attach per-fold breakdown rows as metadata attribute similarly over candidates.
+    df.attrs["fold_breakdown"] = (
+        pd.DataFrame(fold_detail_rows) if fold_detail_rows else pd.DataFrame()
     )
 
     invalid_reason_counts = (
@@ -559,3 +657,96 @@ def evaluate_hypothesis_batch(
         invalid_summary,
     )
     return df
+
+def evaluate_candidate_across_folds(
+    signed_returns: pd.Series,
+    event_weights: pd.Series,
+    folds: list[Any],
+    cost_bps: float
+) -> tuple[list[dict], dict]:
+    fold_metrics = []
+    
+    for fold in folds:
+        test_start = fold.test_split.start
+        test_end = fold.test_split.end
+        
+        mask = (signed_returns.index >= test_start) & (signed_returns.index <= test_end)
+        
+        fold_n = mask.sum()
+        if fold_n < 3:
+            fold_metrics.append({
+                "fold_id": fold.fold_id,
+                "valid": False,
+                "n": int(fold_n)
+            })
+            continue
+            
+        fold_signed = signed_returns[mask]
+        fold_w = event_weights[mask]
+        w_sum = fold_w.sum()
+        if w_sum <= 0:
+            fold_metrics.append({"fold_id": fold.fold_id, "valid": False, "n": int(fold_n)})
+            continue
+            
+        w_mean = float((fold_signed * fold_w).sum() / w_sum)
+        
+        # Simple weighted std for t-stat proxy
+        v1 = w_sum
+        v2 = (fold_w**2).sum()
+        denom = v1 - (v2 / v1)
+        if denom > 0:
+            w_var = ((fold_w * (fold_signed - w_mean)**2).sum()) / denom
+            w_std = np.sqrt(max(0.0, float(w_var)))
+            n_eff = float((fold_w.sum()**2) / (fold_w**2).sum())
+            t_stat = w_mean / (w_std / np.sqrt(max(1.0, n_eff))) if w_std > 1e-10 else 0.0
+        else:
+            t_stat = 0.0
+            
+        fold_metrics.append({
+            "fold_id": fold.fold_id,
+            "valid": True,
+            "n": int(fold_n),
+            "oos_expectancy_bps": w_mean,
+            "after_cost_expectancy_bps": w_mean - cost_bps,
+            "t_stat": t_stat,
+            "sign": 1 if w_mean > 0 else (-1 if w_mean < 0 else 0)
+        })
+        
+    valid_folds = [m for m in fold_metrics if m.get("valid", False)]
+    fold_count = len(folds)
+    valid_count = len(valid_folds)
+    
+    if valid_count == 0:
+        return fold_metrics, {
+            "fold_count": fold_count,
+            "fold_valid_count": 0,
+            "fold_sign_consistency": 0.0,
+            "fold_median_oos_expectancy": 0.0,
+            "fold_worst_oos_expectancy": 0.0,
+            "fold_median_after_cost_expectancy": 0.0,
+            "fold_median_t_stat": 0.0,
+            "fold_fail_ratio": 1.0,
+        }
+        
+    oos_list = [m["oos_expectancy_bps"] for m in valid_folds]
+    after_cost_list = [m["after_cost_expectancy_bps"] for m in valid_folds]
+    t_stat_list = [m["t_stat"] for m in valid_folds]
+    
+    pos_count = sum(1 for m in valid_folds if m["sign"] > 0)
+    neg_count = sum(1 for m in valid_folds if m["sign"] < 0)
+    dom_sign_count = max(pos_count, neg_count)
+    
+    fail_count = sum(1 for m in valid_folds if m["oos_expectancy_bps"] <= 0) if pos_count >= neg_count else sum(1 for m in valid_folds if m["oos_expectancy_bps"] >= 0)
+    
+    agg = {
+        "fold_count": fold_count,
+        "fold_valid_count": valid_count,
+        "fold_sign_consistency": float(dom_sign_count / valid_count),
+        "fold_median_oos_expectancy": float(np.median(oos_list)),
+        "fold_worst_oos_expectancy": float(min(oos_list) if np.median(oos_list) > 0 else max(oos_list)),
+        "fold_median_after_cost_expectancy": float(np.median(after_cost_list)),
+        "fold_median_t_stat": float(np.median(t_stat_list)),
+        "fold_fail_ratio": float(fail_count / valid_count),
+    }
+    
+    return fold_metrics, agg

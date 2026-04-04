@@ -27,7 +27,7 @@ The deployment stage is responsible for:
 * **Live Trading**: Executing with real capital on exchange.
 
 ## Risk & Governance
-* **Deployment State**: Theses can be `monitor_only`, `paper_only`, or `live_enabled`.
+* **Deployment State**: Operator-facing trade eligibility is enforced exclusively via `deployment_state`. A thesis can be explicitly limited to `monitor_only`, `paper_only`, or successfully promoted to `live_enabled`. This flag must pass gate validation prior to engine startup.
 * **Kill Switch**: Sessions can be disabled immediately if risk thresholds are breached.
 
 ---

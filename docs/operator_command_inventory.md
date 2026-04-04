@@ -1,5 +1,9 @@
 # Operator command inventory
 
+> [!WARNING]
+> **Legacy Compatibility Surface**
+> This inventory focuses on deprecated operator facades. Consider discover, validate, promote, and deploy directly.
+
 Generated from `project/cli.py` and `Makefile`. Update this file with `python -m project.scripts.generate_operator_surface_inventory`.
 
 ## Preferred front door

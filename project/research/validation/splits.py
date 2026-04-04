@@ -204,3 +204,108 @@ def assign_split_labels(
 
 def serialize_splits(splits: Iterable[ValidationSplit]) -> list[dict]:
     return [split.to_dict() for split in splits]
+
+def build_repeated_walkforward_splits(
+    timestamps: pd.Series | pd.DatetimeIndex | list,
+    *,
+    train_bars: int,
+    validation_bars: int,
+    test_bars: int,
+    step_bars: int,
+    min_folds: int,
+    max_folds: int | None,
+    purge_bars: int = 0,
+    embargo_bars: int = 0,
+    bar_duration_minutes: int = DEFAULT_BAR_DURATION_MINUTES,
+) -> List[Any]: # using List[Any] temporarily, FoldDefinition fetched inside
+    ts = pd.to_datetime(timestamps).sort_values()
+    if len(ts) == 0:
+        return []
+
+    from project.research.validation.schemas import FoldDefinition, ValidationSplit
+
+    folds: List[FoldDefinition] = []
+    
+    total_bars = len(ts)
+    if total_bars == 0:
+        return folds
+
+    embargo_delta = bars_to_timedelta(embargo_bars, bar_duration_minutes=bar_duration_minutes)
+    purge_delta = bars_to_timedelta(purge_bars, bar_duration_minutes=bar_duration_minutes)
+
+    fold_size = train_bars + validation_bars + test_bars
+    start_idx = 0
+    fold_id = 1
+    
+    while True:
+        if start_idx + fold_size > total_bars:
+            break
+            
+        train_start_ts = ts.iloc[start_idx]
+        train_end_nominal_idx = start_idx + train_bars - 1
+        train_end_nominal_ts = ts.iloc[train_end_nominal_idx]
+        
+        valid_start_idx = train_end_nominal_idx + 1
+        valid_end_nominal_idx = valid_start_idx + validation_bars - 1
+        valid_start_ts = ts.iloc[valid_start_idx]
+        valid_end_nominal_ts = ts.iloc[valid_end_nominal_idx]
+        
+        test_start_idx = valid_end_nominal_idx + 1
+        test_end_nominal_idx = test_start_idx + test_bars - 1
+        test_start_ts = ts.iloc[test_start_idx]
+        test_end_ts = ts.iloc[test_end_nominal_idx]
+        
+        train_end_ts = train_end_nominal_ts - purge_delta
+        adjusted_valid_start = max(valid_start_ts, train_end_nominal_ts + embargo_delta)
+        adjusted_valid_end = valid_end_nominal_ts - purge_delta
+        adjusted_test_start = max(test_start_ts, valid_end_nominal_ts + embargo_delta)
+        
+        if train_end_ts < train_start_ts or adjusted_valid_end < adjusted_valid_start or test_end_ts < adjusted_test_start:
+            start_idx += step_bars
+            continue
+            
+        t_split = ValidationSplit(
+            label="train",
+            start=normalize_timestamp(train_start_ts),
+            end=normalize_timestamp(train_end_ts),
+            purge_bars=int(purge_bars),
+            embargo_bars=int(embargo_bars),
+            bar_duration_minutes=int(bar_duration_minutes)
+        )
+        
+        v_split = ValidationSplit(
+            label="validation",
+            start=normalize_timestamp(adjusted_valid_start),
+            end=normalize_timestamp(adjusted_valid_end),
+            purge_bars=int(purge_bars),
+            embargo_bars=int(embargo_bars),
+            bar_duration_minutes=int(bar_duration_minutes)
+        )
+        
+        test_split = ValidationSplit(
+            label="test",
+            start=normalize_timestamp(adjusted_test_start),
+            end=normalize_timestamp(test_end_ts),
+            purge_bars=int(purge_bars),
+            embargo_bars=int(embargo_bars),
+            bar_duration_minutes=int(bar_duration_minutes)
+        )
+        
+        folds.append(FoldDefinition(
+            fold_id=fold_id,
+            train_split=t_split,
+            validation_split=v_split,
+            test_split=test_split
+        ))
+        
+        fold_id += 1
+        start_idx += step_bars
+        
+        if max_folds is not None and len(folds) >= max_folds:
+            break
+            
+    if len(folds) < min_folds:
+        return []
+        
+    return folds
+

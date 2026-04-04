@@ -3,7 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-THESIS_RUN_ID="${THESIS_RUN_ID:-seed_founding_batch_v1}"
+# This script is an internal maintenance tool, not part of canonical runtime pipelines.
+INTERNAL_BOOTSTRAP_THESIS_RUN_ID="${INTERNAL_BOOTSTRAP_THESIS_RUN_ID:-seed_founding_batch_v1}"
+THESIS_RUN_ID="${THESIS_RUN_ID:-$INTERNAL_BOOTSTRAP_THESIS_RUN_ID}"
 
 echo "Regenerating repository artifacts..."
 

@@ -399,7 +399,8 @@ def main() -> int:
                 print(f"Thesis Inspection: {args.run_id}")
                 print(f"  - Thesis Count: {len(store.all())}")
                 for t in store.all():
-                    print(f"  - [{t.thesis_id}] Status: {t.status}, Class: {t.promotion_class}")
+                    deployment_state = getattr(t, 'deployment_state', 'N/A')
+                    print(f"  - [{t.thesis_id}] Status: {t.status}, Deployment State: {deployment_state}, Class: {t.promotion_class}")
                 return 0
 
             if args.subcommand == "paper":
@@ -414,6 +415,12 @@ def main() -> int:
                     if hasattr(t, 'symbols') and t.symbols:
                         symbols.update(t.symbols)
                 symbol_list = list(symbols) or ["BTCUSDT"]
+
+                # Enforce deploy permission via deployment_state
+                if not any(getattr(t, 'deployment_state', None) in ("paper_only", "live_enabled") for t in store.all()):
+                    print("  - Status: BLOCKED")
+                    print("  - Reason: Batch does not contain any theses with deployment_state 'paper_only' or 'live_enabled'.")
+                    return 1
 
                 # Configure for paper mode using explicit lineage
                 live_runner.LiveEngineRunner(
@@ -438,9 +445,9 @@ def main() -> int:
                 from project.live.thesis_store import ThesisStore
                 store = ThesisStore.from_path(path)
                 print(f"Live Deployment for {args.run_id}:")
-                if not any(t.promotion_class == "production_promoted" for t in store.all()):
+                if not any(getattr(t, 'deployment_state', None) == "live_enabled" for t in store.all()):
                     print("  - Status: BLOCKED")
-                    print("  - Reason: Batch does not contain any production_promoted theses.")
+                    print("  - Reason: Batch does not contain any theses with deployment_state 'live_enabled'.")
                     return 1
                 print("  - Status: ACTIVE (Sprint 6 hardening execution)")
                 return 0

@@ -95,7 +95,7 @@ DISCOVER_ACTION ?= plan
 REVIEW_ACTION ?= diagnose
 PROPOSAL ?=
 RUN_IDS ?=
-BOOTSTRAP_THESIS_RUN_ID ?= seed_founding_batch_v1
+INTERNAL_BOOTSTRAP_THESIS_RUN_ID ?= seed_founding_batch_v1
 RUN_ID ?=
 
 discover:
@@ -126,7 +126,7 @@ package:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_founding_thesis_evidence
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_packaging_artifacts
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_structural_confirmation_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(BOOTSTRAP_THESIS_RUN_ID)
+	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(INTERNAL_BOOTSTRAP_THESIS_RUN_ID)
 	./project/scripts/regenerate_artifacts.sh
 
 legacy-validate:

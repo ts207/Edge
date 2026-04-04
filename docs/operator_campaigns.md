@@ -1,5 +1,9 @@
 # Operator Campaigns
 
+> [!WARNING]
+> **Legacy Compatibility Surface**
+> This relies on the older operator facade and is not the canonical public model. See the unified 4-stage pipeline for modern orchestration.
+
 Campaigns are the repo’s bounded research-orchestration surface. They are not a shortcut around thesis lifecycle discipline.
 
 ## Current state

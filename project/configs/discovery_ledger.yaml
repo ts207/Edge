@@ -1,0 +1,36 @@
+# Discovery ledger configuration — Phase 3
+#
+# Controls the concept-lineage correction layer. Set enabled: true to
+# activate the ledger-adjusted multiplicity burden in discovery scoring.
+# When disabled (default), all legacy q_value / gate_multiplicity fields
+# are unchanged and the concept_ledger.parquet is still written (so
+# history accumulates and is ready when you enable scoring).
+
+discovery_scoring:
+  version: v3
+  ledger_adjustment:
+    # Master switch. False = legacy scoring only; ledger still written.
+    enabled: false
+
+    # How far back to look for prior test counts.
+    lookback_days: 365
+
+    # Shorter window for recent_test_count / recent_failure_count.
+    recent_window_days: 90
+
+    # Lineage key version. Only "v1" is implemented.
+    lineage_mode: v1
+
+    # Upper bound on ledger_multiplicity_penalty.
+    max_penalty: 3.0
+
+    # Minimum prior tests required before any penalty is applied.
+    # Prevents over-penalizing truly novel lineages.
+    min_prior_tests_for_penalty: 3
+
+    # Reason-code thresholds
+    crowded_lineage_threshold: 20
+    repeated_family_failure_threshold: 0.90
+    low_family_success_threshold: 0.10
+    low_family_success_min_tests: 5
+    high_recent_test_density_threshold: 10

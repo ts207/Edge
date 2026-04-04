@@ -144,9 +144,9 @@ def _slice_chunk_features(chunk: Sequence[HypothesisSpec], features: pd.DataFram
     return features[valid_cols] if valid_cols else features
 
 
-def _evaluate_chunk(args: Tuple[Sequence[HypothesisSpec], pd.DataFrame, int, bool]) -> pd.DataFrame:
+def _evaluate_chunk(args: Tuple[Sequence[HypothesisSpec], pd.DataFrame, int, bool, Optional[List[Any]]]) -> pd.DataFrame:
     """Worker function: unpack and evaluate a chunk of hypotheses."""
-    chunk, features, min_sample_size, use_context_quality = args
+    chunk, features, min_sample_size, use_context_quality, folds = args
     if features.empty:
         return pd.DataFrame(columns=METRICS_COLUMNS)
     return evaluate_hypothesis_batch(
@@ -154,6 +154,7 @@ def _evaluate_chunk(args: Tuple[Sequence[HypothesisSpec], pd.DataFrame, int, boo
         features,
         min_sample_size=min_sample_size,
         use_context_quality=use_context_quality,
+        folds=folds,
     )
 
 
@@ -165,6 +166,7 @@ def run_distributed_search(
     chunk_size: int = 256,
     min_sample_size: int = 20,
     use_context_quality: bool = True,
+    folds: list[Any] | None = None,
 ) -> pd.DataFrame:
     """
     Evaluate hypotheses against features, optionally in parallel.
@@ -194,6 +196,7 @@ def run_distributed_search(
                 features,
                 min_sample_size=min_sample_size,
                 use_context_quality=use_context_quality,
+                folds=folds,
             )
             for chunk in chunks
         ]
@@ -208,7 +211,7 @@ def run_distributed_search(
                 args_list = []
                 for chunk in chunks:
                     chunk_features = _slice_chunk_features(chunk, features)
-                    args_list.append((chunk, chunk_features, min_sample_size, use_context_quality))
+                    args_list.append((chunk, chunk_features, min_sample_size, use_context_quality, folds))
 
                 parts = pool.map(_evaluate_chunk, args_list)
         except Exception as exc:
@@ -226,6 +229,7 @@ def run_distributed_search(
                     features,
                     min_sample_size=min_sample_size,
                     use_context_quality=use_context_quality,
+                    folds=folds,
                 )
                 for chunk in chunks
             ]
@@ -235,7 +239,10 @@ def run_distributed_search(
         return pd.DataFrame(columns=METRICS_COLUMNS)
 
     normalized_parts = []
+    combined_folds = []
     for p in non_empty_parts:
+        if "fold_breakdown" in p.attrs:
+            combined_folds.append(p.attrs["fold_breakdown"])
         expected_cols = set(METRICS_COLUMNS)
         if p.columns.tolist() != list(METRICS_COLUMNS):
             for col in expected_cols - set(p.columns):
@@ -246,6 +253,9 @@ def run_distributed_search(
         normalized_parts.append(p)
 
     combined = pd.concat(normalized_parts, ignore_index=True)
+    if combined_folds:
+        combined.attrs["fold_breakdown"] = pd.concat(combined_folds, ignore_index=True)
+        
     if "hypothesis_id" in combined.columns:
         combined = combined.drop_duplicates(subset=["hypothesis_id"]).reset_index(drop=True)
     return combined

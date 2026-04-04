@@ -1,0 +1,15 @@
+version: 1
+kind: discovery_validation
+
+discovery_validation:
+  repeated_walkforward:
+    enabled: true
+    mode: rolling
+    train_bars: 2000
+    validation_bars: 500
+    test_bars: 500
+    step_bars: 500
+    min_folds: 3
+    max_folds: 6
+    purge_bars: 24
+    embargo_bars: 12

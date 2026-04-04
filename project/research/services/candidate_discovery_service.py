@@ -200,6 +200,41 @@ def _split_and_score_candidates(*args: Any, **kwargs: Any) -> pd.DataFrame:
 
 _apply_validation_multiple_testing = apply_validation_multiple_testing
 _apply_historical_frontier_multiple_testing = candidate_scoring.apply_historical_frontier_multiple_testing
+_apply_ledger_multiplicity_correction = candidate_scoring.apply_ledger_multiplicity_correction
+
+
+def _write_concept_ledger_records(
+    candidates: "pd.DataFrame",
+    *,
+    data_root: "Path",
+    run_id: str,
+    program_id: str = "",
+) -> None:
+    """Append tested concept records to the global concept ledger.
+
+    Called unconditionally after discovery scoring — history accumulates
+    regardless of whether ledger-adjusted scoring is enabled.  All
+    exceptions are caught so a ledger failure never aborts a run.
+    """
+    try:
+        from project.research.knowledge.concept_ledger import (
+            append_concept_ledger,
+            build_ledger_records,
+            default_ledger_path,
+        )
+
+        records = build_ledger_records(
+            candidates,
+            run_id=run_id,
+            program_id=program_id,
+        )
+        if not records.empty:
+            ledger_path = default_ledger_path(data_root)
+            append_concept_ledger(records, ledger_path)
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Concept ledger write failed for run %s: %s", run_id, exc
+        )
 
 
 def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDiscoveryResult:
@@ -490,6 +525,19 @@ def execute_candidate_discovery(config: CandidateDiscoveryConfig) -> CandidateDi
                 min_total_n_obs=int(sample_quality_policy["min_total_n_obs"]),
             )
             combined = annotate_regime_metadata(combined)
+            # Phase 3: ledger-adjusted multiplicity correction (additive; flag-gated)
+            combined = _apply_ledger_multiplicity_correction(
+                combined,
+                data_root=config.data_root,
+                current_run_id=config.run_id,
+            )
+            # Phase 3: write concept ledger records (unconditional — always accumulates)
+            _write_concept_ledger_records(
+                combined,
+                data_root=config.data_root,
+                run_id=config.run_id,
+                program_id=str(config.program_id or ""),
+            )
             symbol_candidates = {
                 str(symbol): sym_df.copy() for symbol, sym_df in combined.groupby("symbol")
             }

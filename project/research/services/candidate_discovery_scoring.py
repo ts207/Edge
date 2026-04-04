@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Callable, Optional
+
+import yaml
 
 import numpy as np
 import pandas as pd
@@ -954,4 +957,508 @@ def apply_historical_frontier_multiple_testing(
     out["gate_multiplicity"] = pd.Series(combined_q, index=out.index).fillna(1.0) <= 0.10
     out["is_discovery"] = out["gate_multiplicity"].astype(bool)
     out["correction_scope_policy"] = "historical_frontier_bh"
+    return out
+
+
+# --- Phase 2 V2 Scoring Components ---
+
+def score_falsification_precheck(row: pd.Series) -> tuple[float, list[str]]:
+    penalty = 0.0
+    flags = []
+    
+    mean_bps = row.get("mean_return_bps", np.nan)
+    placebo_shift = row.get("placebo_shift_effect", np.nan)
+    null_ratio = row.get("null_strength_ratio", np.nan)
+    
+    if pd.notna(mean_bps) and pd.notna(placebo_shift):
+        if abs(placebo_shift) > abs(mean_bps):
+            penalty += 2.0
+            flags.append("placebo_exceeds_main")
+        elif pd.notna(null_ratio) and null_ratio < 2.0:
+            penalty += 1.0
+            flags.append("weak_null_strength")
+            
+    reversal = row.get("direction_reversal_effect", np.nan)
+    if pd.notna(reversal) and pd.notna(mean_bps):
+        if np.sign(reversal) == np.sign(mean_bps):
+            penalty += 1.5
+            flags.append("asymmetric_reversal_failure")
+            
+    return penalty, flags
+
+
+def score_tradability_precheck(row: pd.Series, config: dict) -> tuple[float, list[str]]:
+    score = 0.0
+    flags = []
+    
+    survival_ratio = row.get("cost_survival_ratio", np.nan)
+    if pd.notna(survival_ratio):
+        if survival_ratio < 0.5:
+            score -= 1.0
+            flags.append("poor_cost_survival")
+        elif survival_ratio > 1.5:
+            score += 1.0
+            
+    turnover = row.get("turnover_proxy", np.nan)
+    turnover_threshold = config.get("default_turnover_penalty_thresh", 0.8)
+    if pd.notna(turnover) and turnover > turnover_threshold:
+        score -= 1.0
+        flags.append("high_turnover_penalty")
+        
+    coverage = row.get("coverage_ratio", np.nan)
+    coverage_threshold = config.get("default_coverage_thresh", 0.01)
+    if pd.notna(coverage) and coverage < coverage_threshold:
+        score -= 0.5
+        flags.append("low_coverage_penalty")
+        
+    return score, flags
+
+
+def score_novelty_precheck(row: pd.Series, overlap_context: dict) -> tuple[float, float, str, list[str]]:
+    key = (
+        str(row.get("event_family_key", "")),
+        str(row.get("template_family_key", "")),
+        str(row.get("direction_key", "")),
+        str(row.get("horizon_bucket", ""))
+    )
+    cluster_id = "|".join(key)
+    
+    counts = overlap_context.get(cluster_id, 1)
+    
+    overlap_penalty = 0.0
+    novelty_score = 1.0
+    flags = []
+    
+    if counts > 3:
+        overlap_penalty = 2.0
+        novelty_score = 0.0
+        flags.append("high_structural_overlap")
+    elif counts > 1:
+        overlap_penalty = 0.5
+        novelty_score = 0.5
+        flags.append("structural_duplicate_present")
+        
+    return novelty_score, overlap_penalty, cluster_id, flags
+
+
+def score_support_component(row: pd.Series, config: dict) -> tuple[float, list[str]]:
+    score = 0.0
+    flags = []
+    
+    regime_support = row.get("regime_support_ratio", np.nan)
+    min_support = config.get("min_acceptable_regime_support_ratio", 0.5)
+    
+    if pd.notna(regime_support):
+        if regime_support < min_support:
+            score -= 1.0
+            flags.append("fragile_regime_support")
+        else:
+            score += regime_support 
+    
+    return score, flags
+
+
+def score_significance_component(row: pd.Series) -> float:
+    t_stat = row.get("t_stat", np.nan)
+    if pd.isna(t_stat):
+        return 0.0
+    return float(np.clip(abs(t_stat) / 2.0, 0.0, 3.0))
+
+def score_fold_stability_precheck(row: pd.Series, config: dict) -> tuple[float, float, list[str]]:
+    flags = []
+    stability_penalty = 0.0
+    evidence_bonus = 0.0
+    
+    if "fold_valid_count" not in row or pd.isna(row["fold_valid_count"]) or row["fold_valid_count"] < 1:
+        return 0.0, 0.0, []
+        
+    valid_folds = int(row["fold_valid_count"])
+    sign_consistency = float(row.get("fold_sign_consistency", 0.0))
+    fail_ratio = float(row.get("fold_fail_ratio", 1.0))
+    worst_oos = float(row.get("fold_worst_oos_expectancy", 0.0))
+    
+    # 1. Sign Consistency (Bonus)
+    if sign_consistency >= 0.8:
+        evidence_bonus += 1.0
+    elif sign_consistency < 0.5:
+        stability_penalty += 1.0
+        flags.append("unstable_sign_across_folds")
+        
+    # 2. Fail Ratio Penalty
+    if fail_ratio >= 0.5:
+        stability_penalty += 1.5
+        flags.append("high_fold_fail_ratio")
+        
+    # 3. Validation Fold Concentration Check
+    if valid_folds < 3:
+        flags.append("insufficient_valid_folds")
+        
+    return evidence_bonus, stability_penalty, flags
+
+
+def build_discovery_quality_score(row: pd.Series, overlap_context: dict, config: dict) -> dict:
+    falsification_penalty, falsification_flags = score_falsification_precheck(row)
+    tradability_score, tradability_flags = score_tradability_precheck(row, config)
+    novelty_score, overlap_penalty, cluster_id, overlap_flags = score_novelty_precheck(row, overlap_context)
+    support_score, support_flags = score_support_component(row, config)
+    significance_score = score_significance_component(row)
+    fold_bonus, fold_penalty, fold_flags = score_fold_stability_precheck(row, config)
+    
+    f_weight = config.get("falsification_weight", 1.0)
+    t_weight = config.get("tradability_weight", 1.0)
+    n_weight = config.get("novelty_weight", 1.0)
+    o_weight = config.get("overlap_penalty_weight", 1.0)
+    s_weight = config.get("fragility_penalty_weight", 1.0)
+    
+    fragility_penalty = 0.0
+    if "fragile_regime_support" in support_flags:
+        fragility_penalty = 1.0
+        
+    combined_score = (
+        significance_score
+        + support_score
+        + fold_bonus
+        + (tradability_score * t_weight)
+        + (novelty_score * n_weight)
+        - (falsification_penalty * f_weight)
+        - (overlap_penalty * o_weight)
+        - (fragility_penalty * s_weight)
+        - fold_penalty
+    )
+    
+    demotion_reasons = falsification_flags + tradability_flags + overlap_flags + support_flags + fold_flags
+    rank_primary_reason = demotion_reasons[0] if demotion_reasons else "strong_baseline"
+    if combined_score > 2.0 and not demotion_reasons:
+        rank_primary_reason = "high_quality_discovery"
+        
+    return {
+        "falsification_component": falsification_penalty,
+        "tradability_component": tradability_score,
+        "novelty_component": novelty_score,
+        "support_component": support_score,
+        "significance_component": significance_score,
+        "overlap_penalty": overlap_penalty,
+        "fragility_penalty": fragility_penalty,
+        "discovery_quality_score": float(combined_score),
+        "overlap_cluster_id": cluster_id,
+        "duplicate_like_flag": overlap_penalty > 0,
+        "falsification_reason": "|".join(falsification_flags),
+        "tradability_reason": "|".join(tradability_flags),
+        "overlap_reason": "|".join(overlap_flags),
+        "rank_primary_reason": rank_primary_reason,
+        "demotion_reason_codes": "|".join(demotion_reasons)
+    }
+
+def annotate_discovery_v2_scores(candidates: pd.DataFrame, config: dict) -> pd.DataFrame:
+    if candidates.empty:
+        return candidates
+        
+    out = candidates.copy()
+    
+    overlap_context = {}
+    for idx, row in out.iterrows():
+        key = (
+            str(row.get("event_family_key", "")),
+            str(row.get("template_family_key", "")),
+            str(row.get("direction_key", "")),
+            str(row.get("horizon_bucket", ""))
+        )
+        cluster_id = "|".join(key)
+        overlap_context[cluster_id] = overlap_context.get(cluster_id, 0) + 1
+        
+    v2_metrics = []
+    for idx, row in out.iterrows():
+        v2_metrics.append(build_discovery_quality_score(row, overlap_context, config))
+        
+    v2_df = pd.DataFrame(v2_metrics, index=out.index)
+    
+    for col in v2_df.columns:
+        out[col] = v2_df[col]
+        
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — Concept-Ledger Aware Multiplicity Correction
+# ---------------------------------------------------------------------------
+
+_log = logging.getLogger(__name__)
+
+_DEFAULT_LEDGER_CONFIG: dict = {
+    "enabled": False,
+    "lookback_days": 365,
+    "recent_window_days": 90,
+    "lineage_mode": "v1",
+    "max_penalty": 3.0,
+    "min_prior_tests_for_penalty": 3,
+    "crowded_lineage_threshold": 20,
+    "repeated_family_failure_threshold": 0.90,
+    "low_family_success_threshold": 0.10,
+    "low_family_success_min_tests": 5,
+    "high_recent_test_density_threshold": 10,
+}
+
+
+def load_ledger_config(data_root: Path | None = None) -> dict:
+    """Load Phase 3 ledger config from ``project/configs/discovery_ledger.yaml``.
+
+    Falls back to :data:`_DEFAULT_LEDGER_CONFIG` when the file is absent or
+    cannot be parsed.  Always returns a complete dict (every key present).
+    """
+    config = dict(_DEFAULT_LEDGER_CONFIG)
+    try:
+        if data_root is not None:
+            # Try repo-relative config first
+            candidate_paths = [
+                Path(data_root).parent / "project" / "configs" / "discovery_ledger.yaml",
+                Path(data_root) / "project" / "configs" / "discovery_ledger.yaml",
+            ]
+        else:
+            candidate_paths = []
+
+        # Also try path relative to this file's repo root
+        _this_dir = Path(__file__).resolve().parent
+        repo_candidate = _this_dir.parent.parent.parent / "project" / "configs" / "discovery_ledger.yaml"
+        candidate_paths.append(repo_candidate)
+
+        for cfg_path in candidate_paths:
+            if cfg_path.exists():
+                with cfg_path.open("r", encoding="utf-8") as fh:
+                    raw = yaml.safe_load(fh)
+                if isinstance(raw, dict):
+                    inner = raw.get("discovery_scoring", {}).get("ledger_adjustment", {})
+                    if isinstance(inner, dict):
+                        config.update(inner)
+                break
+    except Exception as exc:
+        _log.debug("Could not load discovery_ledger.yaml: %s", exc)
+
+    return config
+
+
+def is_ledger_scoring_enabled(data_root: Path | None = None) -> bool:
+    """Return True when ledger-adjusted scoring is enabled in config."""
+    return bool(load_ledger_config(data_root).get("enabled", False))
+
+
+def attach_ledger_lineage_keys(candidates_df: pd.DataFrame) -> pd.DataFrame:
+    """Add ``concept_lineage_key`` column to *candidates_df*.
+
+    Purely additive — does not modify any existing column.  Safe to call
+    on an empty DataFrame.
+    """
+    if candidates_df is None or candidates_df.empty:
+        return candidates_df.copy() if candidates_df is not None else pd.DataFrame()
+
+    from project.research.knowledge.concept_ledger import build_concept_lineage_key
+
+    out = candidates_df.copy()
+    # Use any pre-computed event_family column to improve key quality
+    if "event_family" not in out.columns:
+        if "canonical_event_type" in out.columns or "event_type" in out.columns:
+            source = out.get(
+                "canonical_event_type",
+                out.get("event_type", pd.Series("", index=out.index)),
+            )
+            out["event_family"] = source.map(_canonical_grouping_for_event)
+
+    keys = []
+    for _, row in out.iterrows():
+        keys.append(build_concept_lineage_key(dict(row)))
+    out["concept_lineage_key"] = keys
+    return out
+
+
+def apply_ledger_multiplicity_correction(
+    candidates_df: pd.DataFrame,
+    *,
+    data_root: Path,
+    current_run_id: str,
+    config: dict | None = None,
+) -> pd.DataFrame:
+    """Attach ledger-derived burden fields and compute ledger-adjusted scores.
+
+    When the ledger adjustment is disabled (default), returns *candidates_df*
+    unchanged except that ``concept_lineage_key`` is always attached (ledger
+    writes need it).
+
+    When enabled, appends these columns (all prefixed ``ledger_``):
+        ledger_prior_test_count, ledger_prior_discovery_count,
+        ledger_prior_promotion_count, ledger_recent_test_count,
+        ledger_recent_failure_count, ledger_empirical_success_rate,
+        ledger_family_density, ledger_multiplicity_penalty,
+        ledger_adjusted_q_value, ledger_evidence_score,
+        discovery_quality_score_v3.
+
+    Existing ``q_value`` and ``gate_multiplicity`` are never overwritten.
+    """
+    if candidates_df is None or candidates_df.empty:
+        return candidates_df.copy() if candidates_df is not None else pd.DataFrame()
+
+    resolved_config = config if config is not None else load_ledger_config(data_root)
+    enabled = bool(resolved_config.get("enabled", False))
+
+    # Always attach lineage keys so ledger writes work regardless of flag
+    out = attach_ledger_lineage_keys(candidates_df)
+
+    if not enabled:
+        return out
+
+    from project.research.knowledge.concept_ledger import (
+        default_ledger_path,
+        load_concept_ledger,
+        summarize_lineage_history,
+    )
+
+    ledger_path = default_ledger_path(data_root)
+    ledger = load_concept_ledger(ledger_path)
+
+    # Filter out records from the *current* run so we don't count ourselves
+    if not ledger.empty and "run_id" in ledger.columns:
+        ledger = ledger[ledger["run_id"].astype(str) != str(current_run_id)].copy()
+
+    lookback_days = int(resolved_config.get("lookback_days", 365))
+    recent_window_days = int(resolved_config.get("recent_window_days", 90))
+    max_penalty = float(resolved_config.get("max_penalty", 3.0))
+    min_prior = int(resolved_config.get("min_prior_tests_for_penalty", 3))
+    crowded_threshold = int(resolved_config.get("crowded_lineage_threshold", 20))
+    fail_threshold = float(resolved_config.get("repeated_family_failure_threshold", 0.90))
+    low_success_thr = float(resolved_config.get("low_family_success_threshold", 0.10))
+    low_success_min = int(resolved_config.get("low_family_success_min_tests", 5))
+    high_recent_thr = int(resolved_config.get("high_recent_test_density_threshold", 10))
+
+    unique_keys = list(out["concept_lineage_key"].dropna().unique())
+    summary = summarize_lineage_history(
+        ledger,
+        unique_keys,
+        lookback_days=lookback_days,
+        recent_window_days=recent_window_days,
+    )
+    summary_map: dict[str, dict] = {
+        row["concept_lineage_key"]: row
+        for row in summary.to_dict(orient="records")
+    }
+
+    # Descriptor columns
+    desc_cols = [
+        "ledger_prior_test_count",
+        "ledger_prior_discovery_count",
+        "ledger_prior_promotion_count",
+        "ledger_recent_test_count",
+        "ledger_recent_failure_count",
+        "ledger_empirical_success_rate",
+        "ledger_family_density",
+    ]
+    for col in desc_cols:
+        out[col] = 0
+
+    for col in desc_cols:
+        if col == "ledger_empirical_success_rate":
+            out[col] = out[col].astype(float)
+
+    for col in desc_cols:
+        out[col] = out["concept_lineage_key"].map(
+            lambda k, col=col: summary_map.get(str(k), {}).get(col, 0)
+        )
+
+    # Scoring columns
+    penalties: list[float] = []
+    adj_q_vals: list[float] = []
+    evidence_scores: list[float] = []
+    v3_scores: list[float] = []
+
+    for _, row in out.iterrows():
+        prior_count = int(row.get("ledger_prior_test_count", 0) or 0)
+        prior_disc = int(row.get("ledger_prior_discovery_count", 0) or 0)
+        recent_count = int(row.get("ledger_recent_test_count", 0) or 0)
+        recent_fail = int(row.get("ledger_recent_failure_count", 0) or 0)
+        success_rate = float(row.get("ledger_empirical_success_rate", 0.0) or 0.0)
+
+        # Compute penalty
+        if prior_count < min_prior:
+            penalty = 0.0
+        else:
+            empirical_fail_rate = 1.0 - success_rate
+            recent_pressure = (
+                float(recent_fail) / float(max(recent_count, 1))
+            )
+            raw_penalty = (
+                0.3 * float(np.log1p(prior_count))
+                + 0.5 * empirical_fail_rate
+                + 0.3 * recent_pressure
+                - 0.2 * success_rate
+            )
+            penalty = float(np.clip(raw_penalty, 0.0, max_penalty))
+
+        # Adjusted q-value
+        q_raw = pd.to_numeric(row.get("q_value", np.nan), errors="coerce")
+        if pd.notna(q_raw):
+            adj_q = float(np.clip(float(q_raw) * (1.0 + penalty), 0.0, 1.0))
+        else:
+            adj_q = float("nan")
+
+        # Evidence score (v3)
+        base_score = pd.to_numeric(
+            row.get("discovery_quality_score", np.nan), errors="coerce"
+        )
+        if pd.notna(base_score):
+            ev_score = float(base_score) - penalty
+            v3 = ev_score
+        else:
+            ev_score = float("nan")
+            v3 = float("nan")
+
+        penalties.append(penalty)
+        adj_q_vals.append(adj_q)
+        evidence_scores.append(ev_score)
+        v3_scores.append(v3)
+
+    out["ledger_multiplicity_penalty"] = penalties
+    out["ledger_adjusted_q_value"] = adj_q_vals
+    out["ledger_evidence_score"] = evidence_scores
+    out["discovery_quality_score_v3"] = v3_scores
+
+    # Reason codes — append ledger codes to existing demotion_reason_codes
+    ledger_reason_parts: list[str] = []
+    for idx, row in out.iterrows():
+        prior_count = int(row.get("ledger_prior_test_count", 0) or 0)
+        recent_count = int(row.get("ledger_recent_test_count", 0) or 0)
+        success_rate = float(row.get("ledger_empirical_success_rate", 0.0) or 0.0)
+        empirical_fail_rate = 1.0 - success_rate
+        penalty = float(row.get("ledger_multiplicity_penalty", 0.0) or 0.0)
+
+        codes: list[str] = []
+        if prior_count >= crowded_threshold:
+            codes.append("crowded_lineage")
+        if empirical_fail_rate >= fail_threshold and prior_count >= min_prior:
+            codes.append("repeated_family_failure")
+        if (
+            success_rate < low_success_thr
+            and prior_count >= low_success_min
+            and prior_count >= min_prior
+        ):
+            codes.append("low_empirical_family_success")
+        if recent_count > high_recent_thr:
+            codes.append("high_recent_test_density")
+        if penalty > 0.0:
+            codes.append("ledger_penalty_applied")
+
+        ledger_reason_parts.append("|".join(codes))
+
+    # Merge into existing demotion_reason_codes column if present
+    if "demotion_reason_codes" in out.columns:
+        existing_codes = out["demotion_reason_codes"].fillna("").astype(str)
+        merged = []
+        for existing, new in zip(existing_codes.tolist(), ledger_reason_parts):
+            parts = [p for p in [existing.strip(), new.strip()] if p]
+            merged.append("|".join(parts))
+        out["demotion_reason_codes"] = merged
+    else:
+        out["demotion_reason_codes"] = ledger_reason_parts
+
+    _log.info(
+        "Ledger correction applied: %d candidates, %d with non-zero penalty",
+        len(out),
+        int((out["ledger_multiplicity_penalty"] > 0).sum()),
+    )
     return out

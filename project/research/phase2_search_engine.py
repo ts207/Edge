@@ -830,6 +830,7 @@ def run(
     experiment_config: Optional[str] = None,
     registry_root: str | Path = "project/configs/registries",
     use_context_quality: bool = True,
+    enable_discovery_v2_scoring: bool = True,
     phase2_event_type: str = "",
 ) -> int:
     """
@@ -874,6 +875,7 @@ def run(
 
     # 1. Load data and evaluate symbols
     all_candidates = []
+    all_fold_breakdowns = []
     regime_conditional_inputs = []
     symbol_diagnostics = []
     metrics_frames = []
@@ -1070,6 +1072,31 @@ def run(
             )
             continue
 
+        # 2.5 Walk-Forward Folds config
+        folds = None
+        try:
+            import yaml
+            val_config_path = PROJECT_ROOT.parent / "project" / "configs" / "discovery_validation.yaml"
+            if val_config_path.exists():
+                with val_config_path.open() as f:
+                    vconfig = yaml.safe_load(f)
+                    rw = vconfig.get("discovery_validation", {}).get("repeated_walkforward", {})
+                    if rw.get("enabled"):
+                        from project.research.validation.splits import build_repeated_walkforward_splits
+                        folds = build_repeated_walkforward_splits(
+                            features["timestamp"],
+                            train_bars=rw.get("train_bars", 2000),
+                            validation_bars=rw.get("validation_bars", 500),
+                            test_bars=rw.get("test_bars", 500),
+                            step_bars=rw.get("step_bars", 500),
+                            min_folds=rw.get("min_folds", 3),
+                            max_folds=rw.get("max_folds", None),
+                            purge_bars=rw.get("purge_bars", 0),
+                            embargo_bars=rw.get("embargo_bars", 0),
+                        )
+        except Exception as e:
+            log.warning(f"Failed to build folds: {e}")
+
         # 3. Evaluate in chunks
         log.info("Evaluating hypotheses batch for %s (chunk_size=%d)...", symbol, chunk_size)
         metrics = run_distributed_search(
@@ -1078,7 +1105,11 @@ def run(
             chunk_size=chunk_size,
             min_sample_size=resolved_min_n,
             use_context_quality=use_context_quality,
+            folds=folds,
         )
+
+        if "fold_breakdown" in metrics.attrs and not metrics.attrs["fold_breakdown"].empty:
+            all_fold_breakdowns.append(metrics.attrs["fold_breakdown"].copy())
 
         if metrics.empty:
             log.warning("No metrics returned for %s", symbol)
@@ -1312,6 +1343,60 @@ def run(
     final_df = _attach_candidate_run_lineage(final_df, run_id=run_id)
     final_df = _annotate_promotion_gate_fields(final_df)
 
+    if not final_df.empty and enable_discovery_v2_scoring:
+        try:
+            import yaml
+            from project.research.services.candidate_discovery_scoring import annotate_discovery_v2_scores
+            config = {
+                "default_turnover_penalty_thresh": 0.8,
+                "default_coverage_thresh": 0.01,
+                "min_acceptable_regime_support_ratio": 0.4
+            }
+            config_path = PROJECT_ROOT.parent / "project" / "configs" / "discovery_scoring_v2.yaml"
+            if config_path.exists():
+                try:
+                    with config_path.open("r") as f:
+                        yaml_data = yaml.safe_load(f)
+                        if yaml_data and "v2_scoring" in yaml_data:
+                            config.update(yaml_data["v2_scoring"])
+                except Exception as e:
+                    log.warning(f"Failed to load V2 scoring config: {e}")
+                    
+            final_df = annotate_discovery_v2_scores(final_df, config)
+            if "discovery_quality_score" in final_df.columns:
+                if "is_discovery" in final_df.columns:
+                    final_df = final_df.sort_values(
+                        ["is_discovery", "discovery_quality_score"], ascending=[False, False]
+                    ).reset_index(drop=True)
+                else:
+                    final_df = final_df.sort_values("discovery_quality_score", ascending=False).reset_index(drop=True)
+            log.info("Applied Discovery V2 candidate scoring components")
+        except Exception as e:
+            log.error("Failed to apply Discovery V2 scoring: %s", e)
+
+    # Phase 3 — Write concept ledger records (unconditional; always accumulates history)
+    if not final_df.empty:
+        try:
+            from project.research.knowledge.concept_ledger import (
+                append_concept_ledger,
+                build_ledger_records,
+                default_ledger_path,
+            )
+
+            ledger_records = build_ledger_records(
+                final_df,
+                run_id=run_id,
+                program_id="",  # program_id not available in search engine path
+                timeframe=timeframe,
+            )
+            if not ledger_records.empty:
+                append_concept_ledger(ledger_records, default_ledger_path(data_root))
+                log.info(
+                    "Phase 3: wrote %d concept ledger records", len(ledger_records)
+                )
+        except Exception as _ledger_exc:
+            log.warning("Phase 3 ledger write failed: %s", _ledger_exc)
+
     # 6. Write output
     write_parquet(final_df, output_path)
 
@@ -1330,6 +1415,11 @@ def run(
         else pd.DataFrame()
     )
     _write_regime_conditional_candidates(regime_conditional_df, out_dir)
+
+    # Phase 2 — Write fold_breakdown if computed
+    if all_fold_breakdowns:
+        fold_df = pd.concat(all_fold_breakdowns, ignore_index=True)
+        write_parquet(fold_df, out_dir / "phase2_candidate_fold_metrics.parquet")
 
     main_diag = build_search_engine_diagnostics(
         run_id=run_id,
@@ -1404,6 +1494,7 @@ def main(argv=None) -> int:
     parser.add_argument("--min_n", type=int, default=30)
     parser.add_argument("--search_budget", type=int, default=None)
     parser.add_argument("--use_context_quality", type=int, default=1)
+    parser.add_argument("--enable_discovery_v2_scoring", type=int, default=1)
     parser.add_argument(
         "--experiment_config", default=None, help="Path to experiment config for tracking."
     )
@@ -1454,6 +1545,7 @@ def main(argv=None) -> int:
             min_n=args.min_n,
             search_budget=args.search_budget,
             use_context_quality=bool(int(args.use_context_quality)),
+            enable_discovery_v2_scoring=bool(int(args.enable_discovery_v2_scoring)),
             experiment_config=args.experiment_config,
             registry_root=args.registry_root,
             phase2_event_type=args.phase2_event_type,

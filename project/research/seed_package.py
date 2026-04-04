@@ -30,7 +30,8 @@ from project.research.seed_bootstrap import DOCS_GENERATED
 from project.research.seed_empirical import _load_empirical_bundles
 
 SEED_CARD_DIRNAME = "seed_thesis_cards"
-DEFAULT_PACKAGE_RUN_ID = "seed_founding_batch_v1"
+# Used exclusively for deep-maintenance rehydration scenarios
+INTERNAL_MAINTENANCE_PACKAGE_RUN_ID = "seed_founding_batch_v1"
 ELIGIBLE_DECISIONS = {"seed_promote", "paper_candidate"}
 
 

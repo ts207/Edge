@@ -33,6 +33,20 @@ class ValidationSplit:
         payload["end"] = self.end.isoformat()
         return payload
 
+@dataclass(frozen=True)
+class FoldDefinition:
+    fold_id: int
+    train_split: ValidationSplit
+    validation_split: ValidationSplit
+    test_split: ValidationSplit
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "fold_id": self.fold_id,
+            "train_split": self.train_split.to_dict(),
+            "validation_split": self.validation_split.to_dict(),
+            "test_split": self.test_split.to_dict(),
+        }
 
 @dataclass(frozen=True)
 class EffectEstimate:
