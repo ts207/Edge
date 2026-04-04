@@ -40,6 +40,7 @@ def build_promotion_parser() -> argparse.ArgumentParser:
         choices=["auto", "research", "deploy"],
         default="auto",
     )
+    parser.add_argument("--use_compatibility_bridge", type=int, default=0)
     return parser
 
 
@@ -68,6 +69,7 @@ def promotion_config_from_namespace(args: argparse.Namespace) -> PromotionConfig
         objective_spec=str(args.objective_spec) if args.objective_spec else None,
         retail_profiles_spec=str(args.retail_profiles_spec) if args.retail_profiles_spec else None,
         promotion_profile=str(args.promotion_profile),
+        use_compatibility_bridge=bool(args.use_compatibility_bridge),
     )
 
 

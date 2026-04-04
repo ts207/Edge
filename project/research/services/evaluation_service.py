@@ -197,7 +197,7 @@ class ValidationService:
             anchor_summary=str(row.get("anchor_summary", "")),
             template_id=str(row.get("rule_template", row.get("template_id", ""))),
             direction=str(row.get("direction", "")),
-            horizon_bars=int(row.get("horizon", row.get("horizon_bars", 0))),
+            horizon_bars=int(str(row.get("horizon", row.get("horizon_bars", 0))).replace("b", "")),
             validation_stage_version="v1"
         )
 

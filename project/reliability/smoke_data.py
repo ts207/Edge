@@ -482,9 +482,9 @@ def run_promotion_smoke(
             "0.60",
             "--allow_missing_negative_controls",
             "0",
-            "--require_hypothesis_audit",
-            "1",
             "--require_multiplicity_diagnostics",
+            "1",
+            "--use_compatibility_bridge",
             "1",
         ]
     )

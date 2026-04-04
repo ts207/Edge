@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.io.utils import write_parquet
 from project.research.validation.contracts import (
     ValidationBundle,
     ValidatedCandidateRecord,
@@ -84,7 +85,7 @@ def write_validated_candidate_tables(bundle: ValidationBundle, base_dir: Optiona
             flat_df = pd.DataFrame(flat_data)
             
         path = base_dir / f"{name}.parquet"
-        flat_df.to_parquet(path)
+        write_parquet(flat_df, path)
         paths[name] = path
         
     return paths

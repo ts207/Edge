@@ -1,0 +1,13 @@
+{
+  "name": "edge-local",
+  "owner": {
+    "name": "irene"
+  },
+  "plugins": [
+    {
+      "name": "edge-agents",
+      "source": "./edge-agents",
+      "description": "Specialist agent pipeline for the Edge crypto research engine: analyst, mechanism_hypothesis, and compiler subagents plus coordinator and repo skills."
+    }
+  ]
+}

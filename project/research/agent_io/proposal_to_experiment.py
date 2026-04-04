@@ -143,11 +143,12 @@ def translate_and_validate_proposal(
     registry_root: Path,
     out_dir: Path | None = None,
     config_path: Path | None = None,
+    legacy_compatibility: bool = False,
 ) -> Dict[str, Any]:
     proposal = (
         proposal_or_path
         if isinstance(proposal_or_path, AgentProposal)
-        else load_operator_proposal(proposal_or_path)
+        else load_operator_proposal(proposal_or_path, legacy_compatibility=legacy_compatibility)
     )
     experiment_config = proposal_to_experiment_config(proposal, registry_root=registry_root)
     resolved_config_path = config_path
