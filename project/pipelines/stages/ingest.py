@@ -13,10 +13,60 @@ def build_ingest_stages(
     force_flag: str,
     run_spot_pipeline: bool,
     project_root: Path,
+    venue: str = "bybit",
 ) -> List[Tuple[str, Path, List[str]]]:
     stages: List[Tuple[str, Path, List[str]]] = []
     timeframes = parse_timeframes(getattr(args, "timeframes", "5m"))
+    venue = str(getattr(args, "venue", venue) or venue).lower()
 
+    if venue == "bybit":
+        if not args.skip_ingest_ohlcv:
+            for tf in timeframes:
+                script = project_root / "pipelines" / "ingest" / "ingest_bybit_derivatives_ohlcv.py"
+                stage_args = [
+                    "--run_id", run_id,
+                    "--symbols", symbols,
+                    "--start", start,
+                    "--end", end,
+                    "--force", force_flag,
+                    "--timeframe", tf,
+                    "--data_type", "ohlcv",
+                ]
+                stages.append((f"ingest_bybit_derivatives_ohlcv_{tf}", script, stage_args))
+
+        if not args.skip_ingest_funding:
+            stages.append(
+                (
+                    "ingest_bybit_derivatives_funding",
+                    project_root / "pipelines" / "ingest" / "ingest_bybit_derivatives_funding.py",
+                    [
+                        "--run_id", run_id,
+                        "--symbols", symbols,
+                        "--start", start,
+                        "--end", end,
+                        "--force", force_flag,
+                    ],
+                )
+            )
+            
+        if int(args.run_ingest_open_interest_hist):
+            stages.append(
+                (
+                    "ingest_bybit_derivatives_oi",
+                    project_root / "pipelines" / "ingest" / "ingest_bybit_derivatives_open_interest.py",
+                    [
+                        "--run_id", run_id,
+                        "--symbols", symbols,
+                        "--start", start,
+                        "--end", end,
+                        "--interval", "5min",
+                        "--force", force_flag,
+                    ],
+                )
+            )
+        return stages
+
+    # Fallback to Binance logic
     if not args.skip_ingest_ohlcv:
         for tf in timeframes:
             script = project_root / "pipelines" / "ingest" / "ingest_binance_um_ohlcv.py"

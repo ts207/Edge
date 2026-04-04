@@ -62,6 +62,14 @@ def two_sided_p_from_t(t_stat: float, df: int) -> float:
     are gated correctly in the research pipeline. Large negative t-stats will now
     receive high p-values (approaching 1.0) rather than low p-values.
     """
+    import warnings
+    warnings.warn(
+        "two_sided_p_from_t is deprecated; use one_sided_p_from_t for directional hypotheses. "
+        "Results produced before this function was aliased may have incorrectly passed gating "
+        "on strongly negative t-stats.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return one_sided_p_from_t(t_stat, df=df)
 
 

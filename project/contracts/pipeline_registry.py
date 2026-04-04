@@ -107,12 +107,29 @@ def make_build_features_spot_contract(timeframe: str) -> StageArtifactContract:
     )
 
 
+def make_ingest_bybit_derivatives_ohlcv_contract(timeframe: str) -> StageArtifactContract:
+    return StageArtifactContract(
+        stage_patterns=(f"ingest_bybit_derivatives_ohlcv_{timeframe}",),
+        outputs=(make_ohlcv_artifact_token(timeframe),),
+    )
+
+
+def make_ingest_bybit_derivatives_funding_contract(timeframe: str) -> StageArtifactContract:
+    return StageArtifactContract(
+        stage_patterns=("ingest_bybit_derivatives_funding",),
+        outputs=(make_funding_artifact_token(timeframe),),
+    )
+
+
 def get_timeframe_aware_contracts(timeframes: List[str]) -> List[StageArtifactContract]:
     contracts: List[StageArtifactContract] = []
     for tf in timeframes:
         contracts.extend(
             [
                 make_ingest_ohlcv_contract(tf),
+                make_ingest_bybit_derivatives_ohlcv_contract(tf),
+                # ingest_bybit_derivatives_funding is not per-timeframe; it is registered
+                # once in build_timeframe_artifact_contracts and STAGE_ARTIFACT_REGISTRY.
                 make_ingest_spot_ohlcv_contract(tf),
                 make_build_cleaned_contract(tf),
                 make_build_cleaned_spot_contract(tf),
@@ -132,6 +149,9 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "ingest_binance_spot_ohlcv_*",
             "ingest_binance_um_liquidation_snapshot",
             "ingest_binance_um_open_interest_hist",
+            "ingest_bybit_derivatives_ohlcv_*",
+            "ingest_bybit_derivatives_funding",
+            "ingest_bybit_derivatives_oi",
         ),
         script_patterns=(
             "pipelines/ingest/ingest_binance_um_ohlcv*.py",
@@ -139,6 +159,9 @@ STAGE_FAMILY_REGISTRY: tuple[StageFamilyContract, ...] = (
             "pipelines/ingest/ingest_binance_spot_ohlcv*.py",
             "pipelines/ingest/ingest_binance_um_liquidation_snapshot.py",
             "pipelines/ingest/ingest_binance_um_open_interest_hist.py",
+            "pipelines/ingest/ingest_bybit_derivatives_ohlcv.py",
+            "pipelines/ingest/ingest_bybit_derivatives_funding.py",
+            "pipelines/ingest/ingest_bybit_derivatives_open_interest.py",
         ),
     ),
     StageFamilyContract(
@@ -263,6 +286,9 @@ STAGE_ARTIFACT_REGISTRY: tuple[StageArtifactContract, ...] = (
         stage_patterns=("ingest_binance_um_funding",), outputs=("raw.perp.funding_5m",)
     ),
     StageArtifactContract(
+        stage_patterns=("ingest_bybit_derivatives_funding",), outputs=("raw.perp.funding_5m",)
+    ),
+    StageArtifactContract(
         stage_patterns=("ingest_binance_um_liquidation_snapshot",),
         outputs=("raw.perp.liquidations",),
     ),
@@ -271,7 +297,14 @@ STAGE_ARTIFACT_REGISTRY: tuple[StageArtifactContract, ...] = (
         outputs=("raw.perp.open_interest",),
     ),
     StageArtifactContract(
+        stage_patterns=("ingest_bybit_derivatives_oi",),
+        outputs=("raw.perp.open_interest",),
+    ),
+    StageArtifactContract(
         stage_patterns=("ingest_binance_um_ohlcv_{tf}",), outputs=("raw.perp.ohlcv_{tf}",)
+    ),
+    StageArtifactContract(
+        stage_patterns=("ingest_bybit_derivatives_ohlcv_{tf}",), outputs=("raw.perp.ohlcv_{tf}",)
     ),
     StageArtifactContract(
         stage_patterns=("ingest_binance_spot_ohlcv_{tf}",), outputs=("raw.spot.ohlcv_{tf}",)
@@ -503,6 +536,9 @@ def build_timeframe_artifact_contracts(
     contracts = [
         StageArtifactContract(
             stage_patterns=("ingest_binance_um_funding",), outputs=("raw.perp.funding_5m",)
+        ),
+        StageArtifactContract(
+            stage_patterns=("ingest_bybit_derivatives_funding",), outputs=("raw.perp.funding_5m",)
         ),
     ]
     contracts.extend(get_timeframe_aware_contracts(timeframes))

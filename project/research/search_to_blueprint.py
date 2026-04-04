@@ -89,10 +89,10 @@ def run_alpha_pipeline(
     # 5. Multiplicity Gating (FDR Control)
     log.info("Applying multiplicity gating...")
     # Add p-values if missing (simplified from t-stat)
-    from project.research.gating import two_sided_p_from_t
+    from project.research.gating import one_sided_p_from_t
 
     candidates["p_value"] = [
-        two_sided_p_from_t(row["t_stat"], row["n"] - 1) for _, row in candidates.iterrows()
+        one_sided_p_from_t(row["t_stat"], row["n"] - 1) for _, row in candidates.iterrows()
     ]
     candidates = apply_multiplicity_controls(candidates, max_q=0.05, mode="research")
 

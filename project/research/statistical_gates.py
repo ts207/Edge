@@ -19,7 +19,7 @@ except ModuleNotFoundError:
 
 from project.core.coercion import safe_float, safe_int, as_bool
 from project.core.stats import subsample_non_overlapping_positions as subsample_non_overlapping_timestamps
-from project.research.gating import two_sided_p_from_t
+from project.research.gating import one_sided_p_from_t
 
 NUMERIC_CONDITION_PATTERN = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|<=|==|>|<)\s*(-?\d+(?:\.\d+)?)\s*$"

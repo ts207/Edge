@@ -111,7 +111,7 @@ def raw_dataset_dir_candidates(
     symbol: str,
     dataset: str,
     run_id: str | None = None,
-    venue: str = "binance",
+    venue: str = "bybit",
     aliases: Sequence[str] = (),
 ) -> List[Path]:
     """
@@ -153,7 +153,7 @@ def resolve_raw_dataset_dir(
     symbol: str,
     dataset: str,
     run_id: str | None = None,
-    venue: str = "binance",
+    venue: str = "bybit",
     aliases: Sequence[str] = (),
 ) -> Path | None:
     return choose_partition_dir(

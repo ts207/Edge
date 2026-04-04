@@ -166,7 +166,10 @@ def reconcile_promoted_candidates(
 
 def validate_promotion_artifacts(root: Path | str) -> dict[str, Any]:
     root = Path(root)
+    # Accept both names: promotion_audit (current) and promotion_statistical_audit (legacy)
     audit_path = next(iter(sorted(root.glob("promotion_statistical_audit.*"))), None)
+    if audit_path is None:
+        audit_path = next(iter(sorted(root.glob("promotion_audit.*"))), None)
     promoted_path = next(iter(sorted(root.glob("promoted_candidates.*"))), None)
     bundle_summary_path = next(iter(sorted(root.glob("evidence_bundle_summary.*"))), None)
     decisions_path = next(iter(sorted(root.glob("promotion_decisions.*"))), None)

@@ -67,6 +67,12 @@ class KillSwitchSnapshot:
     recovery_streak: int = 0
 
 
+def _write_snapshot_blocking(target: Path, payload: str) -> None:
+    """Write snapshot payload to disk. Runs in a thread pool via asyncio.to_thread."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(payload, encoding="utf-8")
+
+
 class LiveStateStore:
     """Thread-safe store for live account state and persisted snapshots."""
 
@@ -328,6 +334,19 @@ class LiveStateStore:
         target.write_text(
             json.dumps(self.to_snapshot(), indent=2, sort_keys=True), encoding="utf-8"
         )
+        return target
+
+    async def save_snapshot_async(self, path: str | Path) -> Path:
+        """Non-blocking snapshot write for use inside async tasks (e.g. kill-switch handler).
+
+        Delegates the blocking file I/O to a thread pool so the event loop is not
+        stalled during the write.
+        """
+        import asyncio
+
+        target = Path(path)
+        payload = json.dumps(self.to_snapshot(), indent=2, sort_keys=True)
+        await asyncio.to_thread(_write_snapshot_blocking, target, payload)
         return target
 
     @classmethod

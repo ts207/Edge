@@ -196,8 +196,8 @@ def validate_live_runtime_environment(
 
     if edge_environment != environment_name:
         errors.append(f"EDGE_ENVIRONMENT must be '{environment_name}'")
-    if edge_venue != "binance":
-        errors.append("EDGE_VENUE must be 'binance'")
+    if edge_venue not in {"binance", "bybit"}:
+        errors.append("EDGE_VENUE must be 'binance' or 'bybit'")
     if not edge_live_config:
         errors.append("EDGE_LIVE_CONFIG must be set")
     elif not _path_matches_expected(edge_live_config, config_path):
@@ -207,18 +207,20 @@ def validate_live_runtime_environment(
     elif resolved_snapshot_path and not _path_matches_expected(
         edge_live_snapshot_path, resolved_snapshot_path
     ):
-        errors.append(f"EDGE_LIVE_SNAPSHOT_PATH must point to {resolved_snapshot_path}")
-
+        errors.append(
+            f"EDGE_LIVE_SNAPSHOT_PATH must point to {resolved_snapshot_path}"
+        )
     if environment_name == "paper":
-        if not str(env.get("EDGE_BINANCE_PAPER_API_KEY", "")).strip():
-            errors.append("EDGE_BINANCE_PAPER_API_KEY must be set")
-        if not str(env.get("EDGE_BINANCE_PAPER_API_SECRET", "")).strip():
-            errors.append("EDGE_BINANCE_PAPER_API_SECRET must be set")
+        if not (str(env.get("EDGE_BINANCE_PAPER_API_KEY", "")).strip() or str(env.get("EDGE_API_KEY", "")).strip()):
+            errors.append("EDGE_API_KEY (or EDGE_BINANCE_PAPER_API_KEY) must be set")
+        if not (str(env.get("EDGE_BINANCE_PAPER_API_SECRET", "")).strip() or str(env.get("EDGE_API_SECRET", "")).strip()):
+            errors.append("EDGE_API_SECRET (or EDGE_BINANCE_PAPER_API_SECRET) must be set")
     if environment_name == "production":
-        if not str(env.get("EDGE_BINANCE_API_KEY", "")).strip():
-            errors.append("EDGE_BINANCE_API_KEY must be set")
-        if not str(env.get("EDGE_BINANCE_API_SECRET", "")).strip():
-            errors.append("EDGE_BINANCE_API_SECRET must be set")
+        if not (str(env.get("EDGE_BINANCE_API_KEY", "")).strip() or str(env.get("EDGE_API_KEY", "")).strip()):
+            errors.append("EDGE_API_KEY must be set")
+        if not (str(env.get("EDGE_BINANCE_API_SECRET", "")).strip() or str(env.get("EDGE_API_SECRET", "")).strip()):
+            errors.append("EDGE_API_SECRET must be set")
+
 
     if errors:
         raise LiveRuntimeConfigError("; ".join(errors))

@@ -136,7 +136,7 @@ gate_v1_bridge:
   edge_cost_k: 2.0
   stressed_cost_multiplier: 1.5
   min_validation_trades: 20
-  search_bridge_min_t_stat: 2.0
+  search_bridge_min_t_stat: 1.5
   search_bridge_min_robustness_score: 0.7
   search_bridge_min_regime_stability_score: 0.6
   search_bridge_min_stress_survival: 0.5

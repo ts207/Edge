@@ -57,6 +57,18 @@ if pa is not None:
             return df["high"].isna() | (df["high"] >= df["low"])
 
         @pa.dataframe_check
+        def check_high_gte_open_close(cls, df: DataFrame) -> Series[bool]:
+            h, o, c = df["high"], df["open"], df["close"]
+            both_present = h.notna() & o.notna() & c.notna()
+            return ~both_present | ((h >= o) & (h >= c))
+
+        @pa.dataframe_check
+        def check_low_lte_open_close(cls, df: DataFrame) -> Series[bool]:
+            lv, o, c = df["low"], df["open"], df["close"]
+            both_present = lv.notna() & o.notna() & c.notna()
+            return ~both_present | ((lv <= o) & (lv <= c))
+
+        @pa.dataframe_check
         def check_timestamp_utc(cls, df: DataFrame) -> Series[bool]:
             ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
             # Strictly require parseable UTC timestamps without NaT.

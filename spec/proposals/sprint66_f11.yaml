@@ -1,16 +1,16 @@
-# Sprint 6.6 — F4: OVERSHOOT_AFTER_SHOCK + overshoot_repair + short
-# Shock-driven upside overshoots repair downward.
-# Shocks push price past equilibrium; short the reversal.
-program_id: sprint66_matrix_f4
+# spec/proposals/sprint66_f11.yaml
+program_id: sprint66_matrix_f11
+strategy_family: MeanReversion
+
+symbols: ["BTCUSDT"]
+timeframe: "5m"
 start: "2021-01-01"
 end: "2024-10-31"
-symbols:
-  - BTCUSDT
-timeframe: 5m
+
 hypothesis:
   anchor:
     type: event
-    event_id: OVERSHOOT_AFTER_SHOCK
+    event_id: ZSCORE_STRETCH
   filters:
     states: []
     regimes: []
@@ -21,8 +21,8 @@ hypothesis:
     entry_lag_bars: 1
     overlap_policy: suppress
   template:
-    id: overshoot_repair
-  direction: short
+    id: mean_reversion
+  direction: long
   horizon_bars: 12
 instrument_classes:
   - crypto

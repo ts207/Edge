@@ -39,7 +39,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # 1. DISCOVER
     discover_parser = subparsers.add_parser("discover", help="Stage 1: Broad candidate generation.")
     discover_sub = discover_parser.add_subparsers(dest="subcommand")
-    
+
     discover_run = discover_sub.add_parser("run", help="Execute discovery for a proposal.")
     discover_run.add_argument("--proposal", required=True)
     discover_run.add_argument("--registry_root", default="project/configs/registries")
@@ -64,7 +64,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # 2. VALIDATE
     validate_parser = subparsers.add_parser("validate", help="Stage 2: Truth-testing and robustness.")
     validate_sub = validate_parser.add_subparsers(dest="subcommand")
-    
+
     validate_run = validate_sub.add_parser("run", help="Run formal validation on a discovery run.")
     validate_run.add_argument("--run_id", required=True)
     validate_run.add_argument("--data_root", default=None)
@@ -85,7 +85,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # 3. PROMOTE
     promote_parser = subparsers.add_parser("promote", help="Stage 3: Packaging and governance.")
     promote_sub = promote_parser.add_subparsers(dest="subcommand")
-    
+
     promote_run = promote_sub.add_parser("run", help="Promote validated candidates to theses.")
     promote_run.add_argument("--run_id", required=True)
     promote_run.add_argument("--symbols", required=True)
@@ -104,7 +104,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # 4. DEPLOY
     deploy_parser = subparsers.add_parser("deploy", help="Stage 4: Runtime execution.")
     deploy_sub = deploy_parser.add_subparsers(dest="subcommand")
-    
+
     deploy_list = deploy_sub.add_parser("list-theses", help="List available promoted theses.")
     deploy_list.add_argument("--data_root", default=None)
 
@@ -115,10 +115,12 @@ def _build_parser() -> argparse.ArgumentParser:
     deploy_paper = deploy_sub.add_parser("paper", help="[DRY-RUN] Plan paper trading session.")
     deploy_paper.add_argument("--run_id", required=True)
     deploy_paper.add_argument("--data_root", default=None)
+    deploy_paper.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
 
     deploy_live = deploy_sub.add_parser("live", help="[GATED] Live deployment (Sprint 6).")
     deploy_live.add_argument("--run_id", required=True)
     deploy_live.add_argument("--data_root", default=None)
+    deploy_live.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
 
     deploy_status = deploy_sub.add_parser("status", help="Show status of deployed theses.")
     deploy_status.add_argument("--data_root", default=None)
@@ -204,6 +206,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Timeframe to ingest, e.g. 1m, 5m. Only minute-based intervals are valid.",
     )
     ingest_parser.add_argument(
+        "--exchange",
+        default="binance",
+        choices=["binance", "bybit"],
+        help="Exchange to ingest from (binance or bybit)",
+    )
+    ingest_parser.add_argument(
+        "--data_type",
+        default="ohlcv",
+        choices=["ohlcv", "funding", "oi", "mark_price", "index_price"],
+        help="Type of data to ingest",
+    )
+    ingest_parser.add_argument(
         "--out_root",
         default=None,
         help="Output root directory for ingested Parquet files. Defaults to data root",
@@ -219,7 +233,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # 5. CATALOG (Sprint 7)
     catalog_parser = subparsers.add_parser("catalog", help="Research operations and artifact intelligence.")
     catalog_sub = catalog_parser.add_subparsers(dest="subcommand")
-    
+
     catalog_list = catalog_sub.add_parser("list", help="List runs with artifact manifests.")
     catalog_list.add_argument("--stage", choices=["discover", "validate", "promote", "deploy"])
     catalog_list.add_argument("--data_root", default=None)
@@ -261,7 +275,7 @@ def main() -> int:
             )
             print(json.dumps(result, indent=2, sort_keys=True))
             return 0 if int(result.get("execution", {}).get("returncode", 0)) == 0 else int(result["execution"]["returncode"])
-        
+
         if args.subcommand == "list-artifacts":
             from project.core.config import get_data_root
             data_root = Path(args.data_root) if args.data_root else get_data_root()
@@ -378,7 +392,7 @@ def main() -> int:
                 print(f"Error: No promoted thesis found for run {args.run_id}")
                 print("Deploy stage requires a completed 'promote' stage.")
                 return 1
-            
+
             if args.subcommand == "inspect-thesis":
                 from project.live.thesis_store import ThesisStore
                 store = ThesisStore.from_path(path)
@@ -389,15 +403,14 @@ def main() -> int:
                 return 0
 
             if args.subcommand == "paper":
-                print(f"Launching Paper Deployment for {args.run_id}...")
+                print(f"Launching Paper Deployment for {args.run_id} on {args.exchange}...")
                 from project.live import runner as live_runner
-                import asyncio
 
                 # Configure for paper mode
                 symbols = ["BTCUSDT"] # Should ideally come from thesis store scope
-                runner_instance = live_runner.LiveEngineRunner(
-
+                live_runner.LiveEngineRunner(
                     symbols=symbols,
+                    exchange=args.exchange,
                     runtime_mode="monitor_only", # Paper mode is monitor_only in this engine
                     strategy_runtime={
                         "implemented": True,
@@ -405,12 +418,12 @@ def main() -> int:
                         "auto_submit": False # Dry run
                     }
                 )
-                
+
                 print("  - Artifacts: VALIDATED")
                 print("  - Admission Control: PASS")
                 print("  - Risk Caps: INITIALIZED")
                 print("  - Decay Monitor: ACTIVE")
-                
+
                 # In a real CLI we might start the asyncio loop
                 # but for Sprint 6 we just prove it can initialize and verify
                 print("Paper deployment initialized successfully.")
@@ -521,14 +534,39 @@ def main() -> int:
         return int(run_all.main())
 
     if args.command == "ingest":
-        from project.pipelines.ingest import ingest_binance_um_ohlcv as _ingest_ohlcv
+        if args.exchange == "binance":
+            if args.data_type == "ohlcv":
+                from project.pipelines.ingest import ingest_binance_um_ohlcv as _ingest_ohlcv
+                ingest_script = "ingest_binance_um_ohlcv.py"
+            else:
+                # We could add more binance types here if needed, but for now focusing on bybit
+                raise ValueError(f"Binance ingestion for {args.data_type} not yet integrated in this unified command")
+        elif args.exchange == "bybit":
+            if args.data_type in ["ohlcv", "mark_price", "index_price"]:
+                from project.pipelines.ingest import ingest_bybit_derivatives_ohlcv as _ingest_ohlcv
+                ingest_script = "ingest_bybit_derivatives_ohlcv.py"
+            elif args.data_type == "funding":
+                from project.pipelines.ingest import ingest_bybit_derivatives_funding as _ingest_ohlcv
+                ingest_script = "ingest_bybit_derivatives_funding.py"
+            elif args.data_type == "oi":
+                from project.pipelines.ingest import ingest_bybit_derivatives_open_interest as _ingest_ohlcv
+                ingest_script = "ingest_bybit_derivatives_open_interest.py"
+            else:
+                raise ValueError(f"Unsupported data_type: {args.data_type}")
+
+
+
+        else:
+            raise ValueError(f"Unsupported exchange: {args.exchange}")
+
         ingest_argv = [
-            "ingest_binance_um_ohlcv.py",
+            ingest_script,
             f"--run_id={args.run_id}",
             f"--symbols={args.symbols}",
             f"--start={args.start}",
             f"--end={args.end}",
             f"--timeframe={args.timeframe}",
+            f"--data_type={args.data_type}",
             f"--concurrency={args.concurrency}",
             f"--max_retries={args.max_retries}",
             f"--retry_backoff_sec={args.retry_backoff_sec}",

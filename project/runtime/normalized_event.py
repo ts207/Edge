@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 _DEFAULT_LANE_ID = "alpha_5s"
-_DEFAULT_VENUE_ID = "binance"
+_DEFAULT_VENUE_ID = "bybit"
 _DEFAULT_ROLE = "alpha"
 _DEFAULT_PROVENANCE = "market"
 _MAX_ISSUE_EXAMPLES = 20
@@ -201,7 +201,7 @@ def normalized_events_from_frame(
                 event_time_us=int(getattr(row, "event_time_us", 0) or 0),
                 recv_time_us=int(getattr(row, "recv_time_us", 0) or 0),
                 instrument_id=str(getattr(row, "instrument_id", "") or "UNKNOWN"),
-                venue_id=str(getattr(row, "venue_id", "") or "binance"),
+                venue_id=str(getattr(row, "venue_id", "") or _DEFAULT_VENUE_ID),
                 role=str(getattr(row, "role", "") or "alpha"),
                 provenance=str(getattr(row, "provenance", "") or "market"),
                 order_id=str(getattr(row, "order_id", "") or ""),

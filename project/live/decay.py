@@ -57,10 +57,13 @@ class DecayMonitor:
         actions = []
         reasons = []
         
+        realized_slippage = float(realized_metrics.get("avg_realized_slippage_bps", 0.0))
+        payoff_ratio = float(realized_metrics.get("payoff_ratio", 0.0))
+
         for rule in self.rules:
             if sample_count < rule.window_samples:
                 continue
-                
+
             triggered = False
             if rule.metric == "edge":
                 if realized_edge < rule.threshold * expected_edge:
@@ -68,7 +71,15 @@ class DecayMonitor:
             elif rule.metric == "hit_rate":
                 if realized_hit_rate < rule.threshold:
                     triggered = True
-            
+            elif rule.metric == "slippage":
+                # Trigger when realized slippage exceeds threshold bps (cost drag)
+                if realized_slippage > rule.threshold:
+                    triggered = True
+            elif rule.metric == "payoff":
+                # Trigger when payoff ratio (avg_win / avg_loss) falls below threshold
+                if payoff_ratio > 0.0 and payoff_ratio < rule.threshold:
+                    triggered = True
+
             if triggered:
                 reasons.append(f"decay_{rule.metric}")
                 if rule.action == "disable":

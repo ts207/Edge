@@ -83,12 +83,12 @@ def dataset_path_candidates(
     if resolved.kind == "funding":
         return [
             run_scoped_lake_path(
-                data_root, run_id, "raw", "binance", resolved.market, symbol, resolved.dataset_name
+                data_root, run_id, "raw", "bybit", resolved.market, symbol, resolved.dataset_name
             ),
             data_root
             / "lake"
             / "raw"
-            / "binance"
+            / "bybit"
             / resolved.market
             / symbol
             / resolved.dataset_name,

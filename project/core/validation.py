@@ -8,7 +8,7 @@ import pandas as pd
 # Consts for funding and state validation
 FUNDING_MAX_ABS = 0.05
 FUNDING_SCALE_CANDIDATES = (1.0, 0.01, 0.0001)
-_KNOWN_DECIMAL_FUNDING_SOURCES = {"archive_monthly", "archive_daily", "api"}
+_KNOWN_DECIMAL_FUNDING_SOURCES = {"archive_monthly", "archive_daily", "api", "bybit_v5"}
 FUNDING_SCALE_NAME_TO_MULTIPLIER = {
     "decimal": 1.0,
     "percent": 0.01,
@@ -48,6 +48,72 @@ def assert_ohlcv_schema(df: pd.DataFrame) -> None:
     for col in ["open", "high", "low", "close", "volume"]:
         if not pd.api.types.is_numeric_dtype(df[col]):
             raise ValueError(f"{col} must be numeric")
+
+
+def assert_ohlcv_geometry(df: pd.DataFrame) -> None:
+    """
+    Validate OHLCV geometric constraints on non-null rows:
+    - All prices must be > 0
+    - high >= open, high >= close, high >= low
+    - low <= open, low <= close
+    Raises ValueError on the first violation found.
+    """
+    price_cols = ["open", "high", "low", "close"]
+    validate_columns(df, price_cols)
+
+    o = pd.to_numeric(df["open"], errors="coerce")
+    h = pd.to_numeric(df["high"], errors="coerce")
+    l = pd.to_numeric(df["low"], errors="coerce")
+    c = pd.to_numeric(df["close"], errors="coerce")
+
+    for name, series in [("open", o), ("high", h), ("low", l), ("close", c)]:
+        non_null = series.dropna()
+        if (non_null <= 0).any():
+            raise ValueError(f"{name} contains non-positive values")
+
+    checks = [
+        (h.notna() & o.notna() & (h < o), "high < open"),
+        (h.notna() & c.notna() & (h < c), "high < close"),
+        (h.notna() & l.notna() & (h < l), "high < low"),
+        (l.notna() & o.notna() & (l > o), "low > open"),
+        (l.notna() & c.notna() & (l > c), "low > close"),
+    ]
+    for mask, label in checks:
+        count = int(mask.sum())
+        if count:
+            raise ValueError(f"OHLCV geometry violation: {label} in {count} row(s)")
+
+
+def filter_ohlcv_geometry_violations(
+    df: pd.DataFrame, label: str = ""
+) -> Tuple[pd.DataFrame, int]:
+    """
+    Drop rows that violate OHLCV geometric constraints or have non-positive prices.
+    Returns (clean_df, dropped_count). Intended for ingest-time soft filtering.
+    """
+    price_cols = [c for c in ["open", "high", "low", "close"] if c in df.columns]
+    if not price_cols:
+        return df, 0
+
+    valid = pd.Series(True, index=df.index)
+
+    for col in price_cols:
+        s = pd.to_numeric(df[col], errors="coerce")
+        valid &= s.isna() | (s > 0)
+
+    if all(c in df.columns for c in ["open", "high", "low", "close"]):
+        o = pd.to_numeric(df["open"], errors="coerce")
+        h = pd.to_numeric(df["high"], errors="coerce")
+        lv = pd.to_numeric(df["low"], errors="coerce")
+        c = pd.to_numeric(df["close"], errors="coerce")
+        valid &= h.isna() | o.isna() | (h >= o)
+        valid &= h.isna() | c.isna() | (h >= c)
+        valid &= h.isna() | lv.isna() | (h >= lv)
+        valid &= lv.isna() | o.isna() | (lv <= o)
+        valid &= lv.isna() | c.isna() | (lv <= c)
+
+    dropped = int((~valid).sum())
+    return df[valid].copy(), dropped
 
 
 def assert_monotonic_utc_timestamp(df: pd.DataFrame, col: str = "timestamp") -> None:

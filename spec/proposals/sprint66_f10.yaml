@@ -16,13 +16,14 @@ hypothesis:
     states: []
     regimes: []
     feature_predicates: []
-    contexts: {}
+    contexts:
+      vol_regime: "high"
   sampling_policy:
     mode: episodic
     entry_lag_bars: 1
     overlap_policy: suppress
   template:
-    id: basis_repair
+    id: mean_reversion
   direction: long
   horizon_bars: 12
 instrument_classes:
@@ -30,3 +31,6 @@ instrument_classes:
   - futures
 objective_name: retail_profitability
 promotion_profile: research
+knobs:
+  - funding_scale=decimal
+  - enable_cross_venue_spot_pipeline=0

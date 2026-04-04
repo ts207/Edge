@@ -36,6 +36,7 @@ def test_build_ingest_stages_uses_generic_um_ohlcv_entrypoint_for_all_timeframes
         force_flag="0",
         run_spot_pipeline=False,
         project_root=PROJECT_ROOT,
+        venue="binance",  # explicit: test covers Binance code path
     )
 
     assert [stage_name for stage_name, _script, _args in stages] == [

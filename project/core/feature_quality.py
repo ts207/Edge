@@ -79,15 +79,21 @@ def summarize_feature_quality(
             if len(non_null) >= 10 and len(baseline_series) >= 10:
                 stat, p_value = ks_2samp(non_null.values, baseline_series.values)
                 median_delta = float(non_null.median() - baseline_series.median())
+                # Flag drift only when both statistically significant (p < 0.05) and
+                # practically meaningful (KS statistic >= 0.1). This avoids noise from
+                # large-sample effects where tiny distributional shifts are detectable.
+                drift_flagged = float(p_value) < 0.05 and float(stat) >= 0.1
                 per_feature[col]["baseline_ks_statistic"] = float(stat)
                 per_feature[col]["baseline_p_value"] = float(p_value)
                 per_feature[col]["baseline_median_delta"] = median_delta
-                if float(p_value) < 0.05:
+                per_feature[col]["baseline_drift_flagged"] = drift_flagged
+                if drift_flagged:
                     drift_flag_count += 1
             else:
                 per_feature[col]["baseline_ks_statistic"] = None
                 per_feature[col]["baseline_p_value"] = None
                 per_feature[col]["baseline_median_delta"] = None
+                per_feature[col]["baseline_drift_flagged"] = None
 
     payload = {
         "feature_count": len(numeric_cols),

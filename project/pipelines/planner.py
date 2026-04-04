@@ -39,9 +39,8 @@ def _upsert_cli_flag(base_args: List[str], flag: str, value: str) -> None:
 # Legacy per-event phase-2 stage names remain only for compatibility with
 # historical artifacts, replay tooling, and old tests.
 DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
-    ("build_cleaned_{tf}", ["ingest_binance_um_ohlcv_{tf}"]),
-    ("build_cleaned_{tf}_spot", ["ingest_binance_spot_ohlcv_{tf}"]),
-    ("build_features_{tf}", ["build_cleaned_{tf}", "ingest_binance_um_funding"]),
+    ("build_cleaned_{tf}", ["@OHLCV_INGEST_STAGES"]),
+    ("build_features_{tf}", ["build_cleaned_{tf}", "@FUNDING_INGEST_STAGES"]),
     ("build_features_{tf}_spot", ["build_cleaned_{tf}_spot"]),
     ("build_universe_snapshots", ["@CLEANED_STAGES"]),
     ("build_market_context_{tf}", ["build_features_{tf}"]),
@@ -183,6 +182,17 @@ def _resolve_dependencies(name: str, all_stage_names: List[str]) -> List[str]:
                         if n.startswith("analyze_") and f"_{event_part}_" in n
                     ]
                 )
+        elif d == "@OHLCV_INGEST_STAGES":
+            resolved.extend([
+                n for n in all_stage_names 
+                if (n.startswith("ingest_binance_um_ohlcv_") or n.startswith("ingest_bybit_derivatives_ohlcv_"))
+                and n.endswith(f"_{tf}")
+            ])
+        elif d == "@FUNDING_INGEST_STAGES":
+            resolved.extend([
+                n for n in all_stage_names 
+                if n.startswith("ingest_binance_um_funding") or n.startswith("ingest_bybit_derivatives_funding")
+            ])
         elif d == "@FIRST_OHLCV_STAGE":
             ohlcv_stages = sorted(
                 [n for n in all_stage_names if n.startswith("ingest_binance_um_ohlcv_")]

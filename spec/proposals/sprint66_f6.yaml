@@ -30,3 +30,5 @@ instrument_classes:
   - futures
 objective_name: retail_profitability
 promotion_profile: research
+knobs:
+  - funding_scale=decimal

@@ -33,6 +33,7 @@ from project.core.validation import (
     assert_funding_event_grid,
     assert_funding_sane,
     assert_monotonic_utc_timestamp,
+    assert_ohlcv_geometry,
     assert_ohlcv_schema,
     coerce_timestamps_to_hour,
     infer_and_apply_funding_scale,
@@ -264,7 +265,7 @@ def main() -> int:
         "end": args.end,
         "force": int(args.force),
         "funding_scale": str(args.funding_scale),
-        "source_vendor": "binance",
+        "source_vendor": "bybit",
     }
     inputs: List[Dict[str, object]] = []
     outputs: List[Dict[str, object]] = []
@@ -314,6 +315,7 @@ def main() -> int:
                 logging.warning("No raw OHLCV %s data for %s", timeframe, symbol)
                 continue
             assert_ohlcv_schema(raw)
+            assert_ohlcv_geometry(raw)
 
             raw["timestamp"] = pd.to_datetime(raw["timestamp"], utc=True)
             raw = (
@@ -341,8 +343,8 @@ def main() -> int:
                     "start_ts": raw["timestamp"].min().isoformat(),
                     "end_ts": raw["timestamp"].max().isoformat(),
                     "provenance": {
-                        "vendor": "binance",
-                        "exchange": "binance",
+                        "vendor": "bybit",
+                        "exchange": "bybit",
                         "schema_version": f"raw_ohlcv_{timeframe}_v1",
                         "schema_hash": schema_hash_from_columns(raw.columns.tolist()),
                         "extraction_start": raw["timestamp"].min().isoformat(),
@@ -433,8 +435,8 @@ def main() -> int:
                         if not funding.empty
                         else funding_raw_end.isoformat(),
                         "provenance": {
-                            "vendor": "binance",
-                            "exchange": "binance",
+                            "vendor": "bybit",
+                            "exchange": "bybit",
                             "schema_version": "raw_funding_v1",
                             "schema_hash": schema_hash_from_columns(funding.columns.tolist()),
                             "extraction_start": funding["timestamp"].min().isoformat()

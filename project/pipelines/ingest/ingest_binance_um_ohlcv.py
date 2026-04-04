@@ -56,7 +56,7 @@ from project.io.http_utils import download_with_retries  # retained for backward
 from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.io.url_utils import join_url
-from project.core.validation import ensure_utc_timestamp
+from project.core.validation import ensure_utc_timestamp, filter_ohlcv_geometry_violations
 
 ARCHIVE_BASE = "https://data.binance.vision/data/futures/um"
 EARLIEST_UM_FUTURES = datetime(2019, 9, 1, tzinfo=timezone.utc)
@@ -185,6 +185,11 @@ def _read_ohlcv_from_zip(path: Path, symbol: str, source: str) -> pd.DataFrame:
     df["symbol"] = symbol
     df["source"] = source
     ensure_utc_timestamp(df["timestamp"], "timestamp")
+    df, dropped = filter_ohlcv_geometry_violations(df, label=str(path))
+    if dropped:
+        logging.warning(
+            "Dropped %d row(s) with OHLCV geometry violations from %s", dropped, path
+        )
     return df
 
 
@@ -342,6 +347,15 @@ async def _process_month(
         ensure_dir(out_dir)
         write_parquet(df, out_path)
         bars_written = len(df)
+        if bars_written < expected_rows:
+            logging.warning(
+                "Bar count shortfall for %s: expected=%d actual=%d (%.1f%% missing) archive=%s",
+                symbol,
+                expected_rows,
+                bars_written,
+                (expected_rows - bars_written) / expected_rows * 100,
+                monthly_url,
+            )
         return {"status": "written", "partition": str(out_path), "bars": bars_written}
 
 

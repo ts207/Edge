@@ -8,41 +8,60 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Mapping
 
-from project.live.context_builder import build_live_trade_context
-from project.live.decision import DecisionOutcome, decide_trade_intent
-from project.live.kill_switch import KillSwitchManager, KillSwitchReason
-from project.live.memory import append_live_episode
-from project.live.oms import (
-    LiveOrder,
-    OrderManager,
-    OrderType,
-    OrderStatus,
-    OrderSubmissionFailed,
-    build_live_order_from_strategy_result,
-)
-from project.live.order_planner import build_order_plan
-from project.live.event_detector import detect_live_event
-from project.live.thesis_store import ThesisStore
-from project.live.binance_client import BinanceFuturesClient
-from project.live.state import LiveStateStore
-from project.live.execution_attribution import summarize_execution_attribution_by
-from project.live.health_checks import DataHealthMonitor
-from project.portfolio.incubation import IncubationLedger
 from project import PROJECT_ROOT
-
-from project.live.risk import RiskEnforcer, RuntimeRiskCaps
-from project.live.decay import DecayMonitor, DecayRule
-from project.live.thesis_state import ThesisStateManager
 from project.live.audit_log import (
     AuditLog,
     KillSwitchEvent,
-    OperatorActionEvent,
     OrderIntentEvent,
-    ThesisStateChangeEvent,
 )
-from project.artifacts import promoted_theses_path
+from project.live.binance_client import BinanceFuturesClient
+from project.live.bybit_client import BybitDerivativesClient
+from project.live.context_builder import build_live_trade_context
+from project.live.decay import DecayMonitor, DecayRule
+from project.live.decision import DecisionOutcome, decide_trade_intent
+from project.live.event_detector import detect_live_event
+from project.live.execution_attribution import summarize_execution_attribution_by
+from project.live.health_checks import DataHealthMonitor
+from project.live.kill_switch import KillSwitchManager, KillSwitchReason
+from project.live.memory import append_live_episode
+from project.live.oms import (
+    OrderManager,
+    OrderStatus,
+    OrderSubmissionFailed,
+    OrderType,
+    build_live_order_from_strategy_result,
+)
+from project.live.order_planner import build_order_plan
+from project.live.risk import RiskEnforcer, RuntimeRiskCaps
+from project.live.state import LiveStateStore
+from project.live.thesis_state import ThesisStateManager
+from project.live.thesis_store import ThesisStore
+from project.portfolio.incubation import IncubationLedger
 
 _LOG = logging.getLogger(__name__)
+
+
+def _classify_canonical_regime(move_bps: float) -> str:
+    """
+    Map a single-bar move in bps to one of the four canonical regimes.
+
+    This is a bar-level approximation; the research pipeline uses a rolling
+    volatility-percentile + trend-state machine.  The 4-regime output ensures
+    that theses tagged with LOW_VOL, BULL_TREND or BEAR_TREND can receive the
+    regime-alignment scoring bonus in the live decision model.
+
+    Thresholds:
+      |move| >= 80 bps  → HIGH_VOL   (shock-onset bar)
+      |move| <  20 bps  → LOW_VOL    (quiet bar)
+      move   >= 20 bps  → BULL_TREND (moderate positive move)
+      move   <= -20 bps → BEAR_TREND (moderate negative move)
+    """
+    abs_move = abs(move_bps)
+    if abs_move >= 80.0:
+        return "HIGH_VOL"
+    if abs_move < 20.0:
+        return "LOW_VOL"
+    return "BULL_TREND" if move_bps >= 0.0 else "BEAR_TREND"
 
 
 class LiveEngineRunner:
@@ -50,6 +69,9 @@ class LiveEngineRunner:
         self,
         symbols: List[str],
         *,
+        exchange: str = "binance",
+        api_key: str = "",
+        api_secret: str = "",
         snapshot_path: str | Path | None = None,
         microstructure_recovery_streak: int = 3,
         account_sync_interval_seconds: float = 30.0,
@@ -72,11 +94,21 @@ class LiveEngineRunner:
         risk_caps: RuntimeRiskCaps | None = None,
         decay_rules: List[DecayRule] | None = None,
     ):
+        self.exchange = exchange.lower()
+
         # Phase 3: Native REST Client for Initialization & Recovery
-        self.rest_client = BinanceFuturesClient(
-            api_key="",  # To be provided by environment/caller
-            api_secret="",
-        )
+        if self.exchange == "binance":
+            self.rest_client = BinanceFuturesClient(
+                api_key=api_key,
+                api_secret=api_secret,
+            )
+        elif self.exchange == "bybit":
+            self.rest_client = BybitDerivativesClient(
+                api_key=api_key,
+                api_secret=api_secret,
+            )
+        else:
+            raise ValueError(f"Unsupported exchange: {self.exchange}")
 
         self.symbols = symbols
         self.state_store = LiveStateStore(snapshot_path=snapshot_path)
@@ -90,18 +122,19 @@ class LiveEngineRunner:
 
             data_manager = LiveDataManager(
                 symbols,
+                exchange=self.exchange,
                 on_reconnect_exhausted=self._on_ws_reconnect_exhausted,
                 rest_client=self.rest_client,
             )
         self.data_manager = data_manager
-        self.order_manager = order_manager or OrderManager(exchange_client=self.rest_client)
         self.runtime_mode = str(runtime_mode or "monitor_only").strip().lower()
+        if order_manager is not None:
+            self.order_manager = order_manager
+        elif self.runtime_mode == "trading":
+            self.order_manager = OrderManager(exchange_client=self.rest_client)
+        else:
+            self.order_manager = OrderManager()
         self.strategy_runtime = dict(strategy_runtime or {})
-
-        # Sprint 6: Risk and Decay components
-        self.risk_enforcer = RiskEnforcer(risk_caps or RuntimeRiskCaps())
-        self.decay_monitor = DecayMonitor(decay_rules or [])
-        self.thesis_manager = ThesisStateManager()
 
         self.execution_quality_report_path = (
             Path(execution_quality_report_path)
@@ -134,9 +167,6 @@ class LiveEngineRunner:
             5.0,
             float(self.strategy_runtime.get("market_feature_poll_interval_seconds", 30.0) or 30.0),
         )
-        if order_manager is None and self.runtime_mode != "trading":
-            self.order_manager = OrderManager()
-
         # Keep the default ledger under the canonical project live directory.
         self.incubation_ledger = IncubationLedger(PROJECT_ROOT / "live" / "incubation_ledger.json")
 
@@ -401,6 +431,13 @@ class LiveEngineRunner:
                     promotion_class=t.promotion_class,
                     deployment_mode=t.deployment_state,
                 )
+                # A promoted thesis has already passed the full research + DeploymentApproval
+                # pipeline. Graduate it immediately so the incubation gate doesn't block
+                # live order submission. The 30-day incubation period applies to
+                # DSL-blueprint strategies, not to thesis-promoted strategies.
+                if not self.incubation_ledger.is_graduated(t.thesis_id):
+                    self.incubation_ledger.graduate(t.thesis_id)
+                    _LOG.info("Graduated promoted thesis %s in incubation ledger.", t.thesis_id)
 
     def _load_thesis_store(self) -> ThesisStore | None:
         thesis_path = str(self.strategy_runtime.get("thesis_path", "")).strip()
@@ -731,6 +768,12 @@ class LiveEngineRunner:
         configured = self.strategy_runtime.get("allowed_actions")
         if isinstance(configured, list) and configured:
             return {str(item).strip() for item in configured if str(item).strip()}
+        # Default: only partial-size actions. To enable full-size live trades, set
+        # strategy_runtime.allowed_actions = ["probe", "trade_small", "trade_normal"]
+        _LOG.debug(
+            "allowed_actions not configured; defaulting to probe+trade_small. "
+            "trade_normal (100%% size) requires explicit strategy_runtime.allowed_actions config."
+        )
         return {"probe", "trade_small"}
 
     def _build_execution_env_snapshot(self) -> Dict[str, Any]:
@@ -903,7 +946,7 @@ class LiveEngineRunner:
                 self.strategy_runtime.get("default_depth_usd", 50_000.0) or 50_000.0
             ),
             "tob_coverage": float(self.strategy_runtime.get("default_tob_coverage", 0.95) or 0.95),
-            "canonical_regime": "VOLATILITY" if abs(move_bps) >= 80.0 else "TRANSITION",
+            "canonical_regime": _classify_canonical_regime(move_bps),
             "microstructure_regime": "healthy" if spread_bps <= 5.0 else "degraded",
             "expected_cost_bps": float(
                 self.strategy_runtime.get("default_expected_cost_bps", 3.0) or 3.0
@@ -916,6 +959,11 @@ class LiveEngineRunner:
             ),
             "open_interest_timestamp": str(
                 runtime_features.get("open_interest_timestamp", "") or ""
+            ),
+            "liquidation_notional_usd": float(
+                self.data_manager.get_liquidation_notional(normalized_symbol)
+                if hasattr(self.data_manager, "get_liquidation_notional")
+                else runtime_features.get("liquidation_notional_usd", 0.0)
             ),
         }
 
@@ -1006,11 +1054,15 @@ class LiveEngineRunner:
 
         # Apply Risk Caps to the generated order
         attempted_notional = float(plan.order.quantity * mid_price)
-        active_thesis_ids = [
+        # Unique thesis IDs with at least one filled order this session.
+        # Deduplication prevents the cap from firing prematurely when a single
+        # thesis has multiple fills (each fill would otherwise inflate the count).
+        active_thesis_ids = list({
             str(o.metadata.get("thesis_id", ""))
             for o in self.order_manager.order_history
             if o.status == OrderStatus.FILLED
-        ]  # Simplified
+            and str(o.metadata.get("thesis_id", ""))
+        })
 
         effective_notional, breach = self.risk_enforcer.check_and_apply_caps(
             thesis_id=outcome.trade_intent.thesis_id,
@@ -1170,14 +1222,29 @@ class LiveEngineRunner:
             if str(r.metadata.get("thesis_id", "")) == thesis_id
         ]
         if not records:
-            return {"sample_count": 0, "avg_realized_net_edge_bps": 0.0, "hit_rate": 0.0}
+            return {
+                "sample_count": 0,
+                "avg_realized_net_edge_bps": 0.0,
+                "hit_rate": 0.0,
+                "avg_realized_slippage_bps": 0.0,
+                "payoff_ratio": 0.0,
+            }
 
-        edge = sum(float(r.realized_net_edge_bps) for r in records) / len(records)
-        # Simplified hit rate: sign match between realized and side
+        n = len(records)
+        edge = sum(float(r.realized_net_edge_bps) for r in records) / n
+        slippage = sum(float(r.realized_slippage_bps) for r in records) / n
+        hit_rate = sum(1 for r in records if r.realized_net_edge_bps > 0.0) / n
+        wins = [float(r.realized_net_edge_bps) for r in records if r.realized_net_edge_bps > 0.0]
+        losses = [-float(r.realized_net_edge_bps) for r in records if r.realized_net_edge_bps < 0.0]
+        avg_win = sum(wins) / len(wins) if wins else 0.0
+        avg_loss = sum(losses) / len(losses) if losses else 0.0
+        payoff_ratio = avg_win / avg_loss if avg_loss > 0.0 else 0.0
         return {
-            "sample_count": len(records),
+            "sample_count": n,
             "avg_realized_net_edge_bps": edge,
-            "hit_rate": 0.5,  # Placeholder
+            "hit_rate": hit_rate,
+            "avg_realized_slippage_bps": slippage,
+            "payoff_ratio": payoff_ratio,
         }
 
     def on_order_fill(self, client_order_id: str, fill_qty: float, fill_price: float) -> None:

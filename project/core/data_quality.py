@@ -95,6 +95,7 @@ def summarize_frame_quality(
     expected_freq: str | None = None,
     expected_minutes: int | None = None,
     coerced_value_count: int = 0,
+    z_threshold: float = 10.0,
 ) -> DataQualitySummary:
     rows = int(len(frame))
     numeric_columns = _safe_numeric_columns(frame, numeric_cols)
@@ -126,7 +127,7 @@ def summarize_frame_quality(
     return DataQualitySummary(
         rows=rows,
         missing_ratio=missing_ratio,
-        outlier_ratio=_outlier_ratio(frame, numeric_columns),
+        outlier_ratio=_outlier_ratio(frame, numeric_columns, z_threshold=z_threshold),
         duplicate_timestamp_count=duplicate_timestamp_count,
         timestamp_gap_count=timestamp_gap_count,
         max_timestamp_gap_bars=max_timestamp_gap_bars,

@@ -2,10 +2,10 @@
 PnL and returns computation utilities.
 
 Funding Convention:
-The system assumes 'longs_pay_positive' (Binance standard).
+The system assumes 'longs_pay_positive' (Bybit/Binance standard).
 - Longs pay funding when rate > 0.
 - Shorts receive funding when rate > 0.
-Source: Binance API Documentation - Funding Rate
+Source: Bybit API Documentation - Funding Rate
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-# Standard funding convention for Binance perps (ISC-17, ISC-18)
+# Standard funding convention for Bybit perps
 FUNDING_CONVENTION = "longs_pay_positive"
 
 

@@ -1197,7 +1197,7 @@ def run(
             symbol=symbol,
             min_t_stat=resolved_min_t_stat,
             min_n=resolved_min_n,
-            bridge_min_t_stat=float(bridge_gates.get("search_bridge_min_t_stat", 2.0)),
+            bridge_min_t_stat=resolved_min_t_stat,
             bridge_min_robustness_score=float(
                 bridge_gates.get("search_bridge_min_robustness_score", 0.7)
             ),

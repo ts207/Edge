@@ -236,7 +236,7 @@ def _next_month_key(value: date) -> str:
 
 
 def _list_symbol_funding_months(data_root: Path, symbol: str) -> List[str]:
-    funding_root = data_root / "lake" / "raw" / "binance" / "perp" / symbol / "funding"
+    funding_root = data_root / "lake" / "raw" / "bybit" / "perp" / symbol / "funding"
     months: set[str] = set()
     for path in funding_root.glob("year=*/month=*"):
         try:
