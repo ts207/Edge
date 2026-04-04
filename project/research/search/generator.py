@@ -484,3 +484,328 @@ def generate_hypotheses(
         search_space_path=search_space_path,
     )
     return hypotheses
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 — Hierarchical stage generators
+#
+# All four functions delegate to the existing _build_hypotheses() primitive
+# with deliberately constrained parameter lists.  No new generation logic —
+# just bounded sub-slices of the full flat search space.
+# ---------------------------------------------------------------------------
+
+def _first_n(items: list, n: int) -> list:
+    """Return the first n items of a list (or all if len < n)."""
+    return items[:max(1, int(n))]
+
+
+def _canonical_templates_for_event(
+    event_id: str,
+    *,
+    fallback_templates: List[str],
+    registry,
+) -> List[str]:
+    """Return templates for an event, falling back to spec templates."""
+    return _event_default_templates(
+        event_id, registry=registry, fallback_templates=fallback_templates
+    )
+
+
+def generate_trigger_probe_candidates(
+    events: List[str],
+    search_spec_doc: dict,
+    hierarchical_config: dict,
+    *,
+    features=None,
+) -> List[HypothesisSpec]:
+    """Stage A — Generate a minimal canonical probe set per trigger.
+
+    Per event: one canonical template, one canonical horizon, one entry lag.
+    Directions: both if ``allow_both_directions=True`` (default), else ["long"].
+    No context expansion.
+    """
+    stage_cfg = hierarchical_config.get("trigger_viability", {})
+    max_horizons = int(stage_cfg.get("max_horizons", 1))
+    max_entry_lags = int(stage_cfg.get("max_entry_lags", 1))
+    allow_both = bool(stage_cfg.get("allow_both_directions", True))
+
+    horizons_all = [str(h) for h in search_spec_doc.get("horizons", ["24b"])]
+    entry_lags_all = resolve_entry_lags(search_spec_doc)
+    directions_all = [str(d) for d in search_spec_doc.get("directions", ["long", "short"])]
+    templates_all = resolve_templates(search_spec_doc)
+
+    probe_horizons = _first_n(horizons_all, max_horizons)
+    probe_lags = _first_n(entry_lags_all, max_entry_lags)
+    probe_directions = directions_all if allow_both else [directions_all[0]]
+    # No context for Stage A
+    probe_contexts: List[Optional[Dict[str, Any]]] = [None]
+
+    registry = get_domain_registry()
+    hypotheses: List[HypothesisSpec] = []
+    seen_ids: set = set()
+
+    for event_id in events:
+        # One canonical template per trigger
+        event_templates = _canonical_templates_for_event(
+            event_id, fallback_templates=templates_all, registry=registry
+        )
+        probe_templates = _first_n(event_templates, 1)
+
+        for spec in _build_hypotheses(
+            TriggerType.EVENT,
+            [event_id],
+            probe_horizons,
+            probe_directions,
+            probe_lags,
+            probe_contexts,
+            probe_templates,
+        ):
+            errors = validate_hypothesis_spec(spec)
+            if errors:
+                continue
+            feasibility = check_hypothesis_feasibility(spec, features=features)
+            if not feasibility.valid:
+                continue
+            hid = spec.hypothesis_id()
+            if hid in seen_ids:
+                continue
+            seen_ids.add(hid)
+            hypotheses.append(spec)
+
+    log.info(
+        "Stage A probes: %d hypotheses from %d triggers (no context, 1 template each)",
+        len(hypotheses),
+        len(events),
+    )
+    return hypotheses
+
+
+def generate_template_refinement_candidates(
+    surviving_trigger_events: List[str],
+    search_spec_doc: dict,
+    hierarchical_config: dict,
+    *,
+    features=None,
+) -> List[HypothesisSpec]:
+    """Stage B — Expand templates for surviving triggers only.
+
+    Uses canonical horizon and canonical lag (Stage A anchors).
+    No context expansion.
+    """
+    if not surviving_trigger_events:
+        return []
+
+    stage_cfg = hierarchical_config.get("template_refinement", {})
+    top_k_templates = int(stage_cfg.get("top_k_templates_per_trigger", 3))
+    max_horizons = 1  # Stay at canonical anchor
+    max_entry_lags = 1
+
+    horizons_all = [str(h) for h in search_spec_doc.get("horizons", ["24b"])]
+    entry_lags_all = resolve_entry_lags(search_spec_doc)
+    directions_all = [str(d) for d in search_spec_doc.get("directions", ["long", "short"])]
+    templates_all = resolve_templates(search_spec_doc)
+
+    probe_horizons = _first_n(horizons_all, max_horizons)
+    probe_lags = _first_n(entry_lags_all, max_entry_lags)
+    probe_contexts: List[Optional[Dict[str, Any]]] = [None]
+
+    registry = get_domain_registry()
+    hypotheses: List[HypothesisSpec] = []
+    seen_ids: set = set()
+
+    for event_id in surviving_trigger_events:
+        event_templates = _canonical_templates_for_event(
+            event_id, fallback_templates=templates_all, registry=registry
+        )
+        # Respect top_k_templates cap
+        probe_templates = _first_n(event_templates, top_k_templates)
+
+        for spec in _build_hypotheses(
+            TriggerType.EVENT,
+            [event_id],
+            probe_horizons,
+            directions_all,
+            probe_lags,
+            probe_contexts,
+            probe_templates,
+        ):
+            errors = validate_hypothesis_spec(spec)
+            if errors:
+                continue
+            feasibility = check_hypothesis_feasibility(spec, features=features)
+            if not feasibility.valid:
+                continue
+            hid = spec.hypothesis_id()
+            if hid in seen_ids:
+                continue
+            seen_ids.add(hid)
+            hypotheses.append(spec)
+
+    log.info(
+        "Stage B: %d hypotheses from %d surviving triggers (top %d templates each)",
+        len(hypotheses),
+        len(surviving_trigger_events),
+        top_k_templates,
+    )
+    return hypotheses
+
+
+def generate_execution_refinement_candidates(
+    surviving_trigger_templates: List[Tuple[str, str]],
+    search_spec_doc: dict,
+    hierarchical_config: dict,
+    *,
+    features=None,
+) -> List[HypothesisSpec]:
+    """Stage C — Refine execution shape (direction × lag) for surviving pairs.
+
+    Input: list of (event_id, template_id) tuples.
+    Expands: all directions × all spec lags × first 2 horizons.
+    No context expansion.
+    """
+    if not surviving_trigger_templates:
+        return []
+
+    horizons_all = [str(h) for h in search_spec_doc.get("horizons", ["24b"])]
+    entry_lags_all = resolve_entry_lags(search_spec_doc)
+    directions_all = [str(d) for d in search_spec_doc.get("directions", ["long", "short"])]
+
+    # At most first 2 horizon variants; all lags; all directions
+    exec_horizons = _first_n(horizons_all, 2)
+    exec_contexts: List[Optional[Dict[str, Any]]] = [None]
+
+    hypotheses: List[HypothesisSpec] = []
+    seen_ids: set = set()
+
+    for event_id, template_id in surviving_trigger_templates:
+        for spec in _build_hypotheses(
+            TriggerType.EVENT,
+            [event_id],
+            exec_horizons,
+            directions_all,
+            entry_lags_all,
+            exec_contexts,
+            [template_id],
+        ):
+            errors = validate_hypothesis_spec(spec)
+            if errors:
+                continue
+            feasibility = check_hypothesis_feasibility(spec, features=features)
+            if not feasibility.valid:
+                continue
+            hid = spec.hypothesis_id()
+            if hid in seen_ids:
+                continue
+            seen_ids.add(hid)
+            hypotheses.append(spec)
+
+    log.info(
+        "Stage C: %d hypotheses from %d trigger-template pairs (dir=%d, lags=%d, horizons=%d)",
+        len(hypotheses),
+        len(surviving_trigger_templates),
+        len(directions_all),
+        len(entry_lags_all),
+        len(exec_horizons),
+    )
+    return hypotheses
+
+
+def generate_context_refinement_candidates(
+    surviving_specs: List[HypothesisSpec],
+    search_spec_doc: dict,
+    hierarchical_config: dict,
+    *,
+    features=None,
+) -> Tuple[List[HypothesisSpec], List[HypothesisSpec]]:
+    """Stage D — Sparse context refinement for surviving execution shapes.
+
+    Returns (baseline_specs, context_specs) where baseline_specs are the
+    same specs with no context (unconditional anchor) and context_specs are
+    one-dimensional context variants.
+
+    Hard constraint: max_context_dims=1, no conjunctions.
+    """
+    if not surviving_specs:
+        return [], []
+
+    stage_cfg = hierarchical_config.get("context_refinement", {})
+    max_context_dims = int(stage_cfg.get("max_context_dims", 1))  # always 1 in v1
+    top_k_contexts = int(stage_cfg.get("top_k_contexts_per_candidate", 2))
+
+    raw_contexts = search_spec_doc.get("contexts", {})
+    # Expand only single-dimension context variants
+    all_1d_contexts: List[Dict[str, str]] = []
+    registry = get_domain_registry()
+    for family, value in raw_contexts.items():
+        labels = []
+        if value == "*":
+            labels = list(registry.context_labels_for_family(family))
+        elif isinstance(value, list):
+            labels = [str(v) for v in value]
+        else:
+            labels = [str(value)]
+        for label in labels:
+            all_1d_contexts.append({str(family): str(label)})
+
+    # Hard cap: enforce max_context_dims=1 (no multi-dim conjunctions)
+    if max_context_dims < 1:
+        all_1d_contexts = []
+
+    # Apply top_k cap per parent spec
+    capped_contexts = _first_n(all_1d_contexts, top_k_contexts)
+
+    seen_ids: set = set()
+    baseline_specs: List[HypothesisSpec] = []
+    context_specs: List[HypothesisSpec] = []
+
+    for parent_spec in surviving_specs:
+        # Baseline: same spec, no context
+        baseline = HypothesisSpec(
+            trigger=parent_spec.trigger,
+            direction=parent_spec.direction,
+            horizon=parent_spec.horizon,
+            template_id=parent_spec.template_id,
+            context=None,
+            entry_lag=parent_spec.entry_lag,
+        )
+        bid = baseline.hypothesis_id()
+        if bid not in seen_ids:
+            errors = validate_hypothesis_spec(baseline)
+            if not errors:
+                feasibility = check_hypothesis_feasibility(baseline, features=features)
+                if feasibility.valid:
+                    seen_ids.add(bid)
+                    baseline_specs.append(baseline)
+
+        # Context variants
+        for ctx in capped_contexts:
+            spec = HypothesisSpec(
+                trigger=parent_spec.trigger,
+                direction=parent_spec.direction,
+                horizon=parent_spec.horizon,
+                template_id=parent_spec.template_id,
+                context=ctx,
+                entry_lag=parent_spec.entry_lag,
+            )
+            sid = spec.hypothesis_id()
+            if sid in seen_ids:
+                continue
+            errors = validate_hypothesis_spec(spec)
+            if errors:
+                continue
+            feasibility = check_hypothesis_feasibility(spec, features=features)
+            if not feasibility.valid:
+                continue
+            seen_ids.add(sid)
+            context_specs.append(spec)
+
+    log.info(
+        "Stage D: %d baseline + %d context variants from %d surviving specs "
+        "(max_context_dims=%d, top_k=%d)",
+        len(baseline_specs),
+        len(context_specs),
+        len(surviving_specs),
+        max_context_dims,
+        top_k_contexts,
+    )
+    return baseline_specs, context_specs

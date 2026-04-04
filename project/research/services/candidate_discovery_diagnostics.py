@@ -419,3 +419,145 @@ def build_ledger_diagnostics(combined: pd.DataFrame) -> dict[str, Any]:
         "ledger_coverage_rate": round(coverage_rate, 4),
     }
 
+
+# ---------------------------------------------------------------------------
+# Phase 4 — Hierarchical stage diagnostics
+# ---------------------------------------------------------------------------
+
+def build_hierarchical_stage_diagnostics(
+    stage_artifacts: "dict[str, pd.DataFrame]",
+    *,
+    flat_mode_equivalent_count: int = 0,
+) -> "dict[str, Any]":
+    """Build a diagnostics dict summarising hierarchical stage progression.
+
+    Args:
+        stage_artifacts: Dict keyed by stage name (e.g. "trigger_viability")
+                         mapping to the full-stage candidate DataFrame (pass+fail rows).
+        flat_mode_equivalent_count: Estimated number of hypotheses that flat
+                                    mode would have evaluated.
+
+    Returns a dict suitable for inclusion in the main diagnostics JSON report.
+    """
+    STAGE_ORDER = [
+        "trigger_viability",
+        "template_refinement",
+        "execution_refinement",
+        "context_refinement",
+    ]
+    REASON_CODES = {
+        "failed_trigger_viability",
+        "failed_template_refinement",
+        "failed_execution_refinement",
+        "failed_context_gain",
+        "support_too_small_after_refinement",
+        "context_overconditioning_penalty",
+        "ledger_burden_exceeded",
+    }
+
+    if not stage_artifacts:
+        return {
+            "search_mode": "hierarchical",
+            "stages": {},
+            "flat_mode_equivalent_count": flat_mode_equivalent_count,
+            "hierarchical_evaluated_count": 0,
+            "pruning_efficiency": 0.0,
+            "pruned_by_stage": {},
+        }
+
+    stage_diags: dict[str, dict[str, Any]] = {}
+    total_evaluated = 0
+    pruned_by_stage: dict[str, int] = {}
+
+    for stage in STAGE_ORDER:
+        df = stage_artifacts.get(stage)
+        if df is None or df.empty:
+            stage_diags[stage] = {
+                "candidates_evaluated": 0,
+                "survivors": 0,
+                "drop_rate": 0.0,
+                "top_triggers": [],
+                "dropped_triggers": [],
+                "drop_reasons": {},
+            }
+            pruned_by_stage[stage] = 0
+            continue
+
+        evaluated = len(df)
+        total_evaluated += evaluated
+
+        pass_col = df.get("stage_pass", pd.Series(False, index=df.index)).fillna(False).astype(bool)
+        survivors = int(pass_col.sum())
+        pruned = evaluated - survivors
+        drop_rate = round(pruned / max(evaluated, 1), 4)
+        pruned_by_stage[stage] = pruned
+
+        # Top and dropped triggers
+        event_col = "canonical_event_type" if "canonical_event_type" in df.columns else "event_type"
+        top_triggers: list[str] = []
+        dropped_triggers: list[str] = []
+        if event_col in df.columns:
+            top_triggers = (
+                df.loc[pass_col, event_col].dropna().astype(str).unique().tolist()[:10]
+            )
+            dropped_triggers = (
+                df.loc[~pass_col, event_col].dropna().astype(str).unique().tolist()[:10]
+            )
+
+        # Reason code breakdown (only Phase 4 codes)
+        reason_col = df.get("stage_reason_code", pd.Series("", index=df.index)).fillna("")
+        drop_reasons: dict[str, int] = {}
+        for raw_reason in reason_col[~pass_col]:
+            for code in str(raw_reason).split("|"):
+                code = code.strip()
+                if code and code in REASON_CODES:
+                    drop_reasons[code] = drop_reasons.get(code, 0) + 1
+
+        stage_body: dict[str, Any] = {
+            "candidates_evaluated": evaluated,
+            "survivors": survivors,
+            "pruned": pruned,
+            "drop_rate": drop_rate,
+            "top_triggers": top_triggers,
+            "dropped_triggers": dropped_triggers,
+            "drop_reasons": drop_reasons,
+        }
+
+        # Context stage extras
+        if stage == "context_refinement" and "context_gain_score" in df.columns:
+            gain = pd.to_numeric(df.get("context_gain_score", 0), errors="coerce").fillna(0)
+            ctx_mask = df.get("context", pd.Series("", index=df.index)).apply(
+                lambda v: bool(v) and isinstance(v, dict) and len(v) > 0
+            )
+            baseline_mask = ~ctx_mask
+            stage_body["survivors_with_context"] = int(
+                (pass_col & ctx_mask).sum()
+            )
+            stage_body["baseline_survivors"] = int(
+                (pass_col & baseline_mask).sum()
+            )
+            stage_body["context_gains"] = [
+                {
+                    "candidate_id": str(row.get("candidate_id", "")),
+                    "context_gain_score": float(row.get("context_gain_score", 0.0)),
+                    "search_stage": str(row.get("search_stage", "context_refinement")),
+                }
+                for _, row in df[pass_col & ctx_mask].head(10).iterrows()
+            ]
+
+        stage_diags[stage] = stage_body
+
+    hierarchical_evaluated_count = total_evaluated
+    pruning_efficiency = round(
+        1.0 - (hierarchical_evaluated_count / max(flat_mode_equivalent_count, 1)),
+        4,
+    ) if flat_mode_equivalent_count > 0 else 0.0
+
+    return {
+        "search_mode": "hierarchical",
+        "stages": stage_diags,
+        "flat_mode_equivalent_count": flat_mode_equivalent_count,
+        "hierarchical_evaluated_count": hierarchical_evaluated_count,
+        "pruning_efficiency": pruning_efficiency,
+        "pruned_by_stage": pruned_by_stage,
+    }

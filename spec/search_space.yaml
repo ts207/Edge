@@ -67,3 +67,35 @@ filter_templates: []
 execution_templates: []
 include_sequences: false
 include_interactions: false
+
+# Phase 4 — Hierarchical discovery mode
+# Set mode: hierarchical to enable staged candidate refinement.
+# Flat mode is the default and is unchanged by this block.
+discovery_search:
+  mode: flat   # "flat" | "hierarchical"
+
+  trigger_viability:
+    enabled: true
+    max_templates: 1           # One canonical probe template per trigger
+    max_horizons: 1            # First horizon in list only
+    max_entry_lags: 1          # First entry lag only
+    allow_both_directions: true
+    top_k_triggers: null       # null = all viable triggers advance
+    min_stage_score: 0.0
+
+  template_refinement:
+    enabled: true
+    top_k_templates_per_trigger: 3
+    min_stage_score: 0.0
+
+  execution_refinement:
+    enabled: true
+    top_k_shapes_per_template: 3
+    min_stage_score: 0.0
+
+  context_refinement:
+    enabled: true
+    max_context_dims: 1        # Hard cap: no conjunctions in v1
+    top_k_contexts_per_candidate: 2
+    require_unconditional_baseline: true
+    min_context_gain: 0.0      # Context must not hurt baseline score

@@ -813,6 +813,38 @@ def _write_hypothesis_registry(candidates: pd.DataFrame, out_dir: Path) -> None:
         log.info("Wrote hypothesis_registry.parquet (%d rows) to %s", len(rows), out_dir)
 
 
+def _load_hierarchical_config(search_spec_doc: dict) -> dict | None:
+    """Return the hierarchical config block if mode=hierarchical, else None."""
+    block = (search_spec_doc or {}).get("discovery_search", {})
+    if not isinstance(block, dict):
+        return None
+    if str(block.get("mode", "flat")).strip().lower() != "hierarchical":
+        return None
+    return block
+
+
+def _write_hierarchical_stage_artifacts(
+    stage_artifacts: dict[str, "pd.DataFrame"],
+    out_dir: Path,
+    symbol: str,
+) -> None:
+    """Write per-symbol stage artifact parquets (non-fatal)."""
+    name_map = {
+        "trigger_viability": "phase2_trigger_probes",
+        "template_refinement": "phase2_template_refinement",
+        "execution_refinement": "phase2_execution_refinement",
+        "context_refinement": "phase2_context_refinement",
+    }
+    for stage, df in stage_artifacts.items():
+        if df is None or df.empty:
+            continue
+        stem = name_map.get(stage, f"phase2_stage_{stage}")
+        try:
+            write_parquet(df, out_dir / f"{stem}__{symbol}.parquet")
+        except Exception as exc:
+            log.warning("Stage artifact write failed (%s / %s): %s", stage, symbol, exc)
+
+
 def run(
     run_id: str,
     symbols: str,
@@ -1097,6 +1129,106 @@ def run(
         except Exception as e:
             log.warning(f"Failed to build folds: {e}")
 
+        # ── Phase 4: hierarchical vs flat mode selection ────────────────────────
+        # Load search spec doc once so we can check for hierarchical config.
+        # The spec has already been resolved above (resolved_search_spec).
+        _h_spec_doc: dict = {}
+        try:
+            _h_spec_doc = _load_search_spec_doc(resolved_search_spec)
+        except Exception:
+            pass
+        _h_config = _load_hierarchical_config(_h_spec_doc) if not experiment_plan else None
+
+        if _h_config is not None:
+            # ── HIERARCHICAL MODE ────────────────────────────────────────────
+            log.info(
+                "Phase 4 hierarchical search mode active for %s", symbol
+            )
+            from project.research.search.bridge_adapter import hypotheses_to_bridge_candidates
+            from project.research.search.hierarchical_search import run_hierarchical_search
+            from project.spec_validation import expand_triggers
+
+            _h_expanded = expand_triggers(_h_spec_doc)
+            _h_events = _h_expanded.get("events", [])
+
+            h_result = run_hierarchical_search(
+                run_id=run_id,
+                symbol=symbol,
+                events=_h_events,
+                features=features,
+                search_spec_doc=_h_spec_doc,
+                hierarchical_config=_h_config,
+                chunk_size=chunk_size,
+                min_n=resolved_min_n,
+                min_t_stat=resolved_min_t_stat,
+                use_context_quality=use_context_quality,
+                folds=folds,
+                bridge_gates=dict(bridge_gates),
+                data_root=data_root,
+                out_dir=out_dir,
+            )
+
+            candidates = h_result.final_candidates
+            if not candidates.empty:
+                if "candidate_id" in candidates.columns:
+                    candidates = candidates.copy()
+                    candidates["candidate_id"] = symbol + "::" + candidates["candidate_id"].astype(str)
+                all_candidates.append(candidates)
+
+            total_metrics_rows += h_result.candidates_evaluated_total
+            total_feasible_hypotheses += h_result.candidates_evaluated_total
+            total_bridge_candidates_rows += len(candidates)
+
+            # Accumulate stage artifacts for combined write after the loop
+            if not hasattr(run, "_h_stage_artifacts"):
+                run._h_stage_artifacts = {}  # type: ignore[attr-defined]
+            for stage_name, stage_df in h_result.stage_artifacts.items():
+                if not stage_df.empty:
+                    existing = run._h_stage_artifacts.get(stage_name, pd.DataFrame())  # type: ignore[attr-defined]
+                    run._h_stage_artifacts[stage_name] = pd.concat(  # type: ignore[attr-defined]
+                        [existing, stage_df], ignore_index=True
+                    ) if not existing.empty else stage_df.copy()
+
+            symbol_diagnostics.append(
+                build_search_engine_diagnostics(
+                    run_id=run_id,
+                    discovery_profile=str(search_profile["discovery_profile"]),
+                    search_spec=resolved_search_spec,
+                    timeframe=timeframe,
+                    symbols_requested=symbols_requested,
+                    primary_symbol=symbol,
+                    feature_rows=int(len(features)),
+                    feature_columns=int(len(features.columns)),
+                    event_flag_rows=int(len(sym_flags)),
+                    event_flag_columns_merged=int(len(sym_flags.columns)),
+                    hypotheses_generated=h_result.candidates_evaluated_total,
+                    feasible_hypotheses=h_result.candidates_evaluated_total,
+                    rejected_hypotheses=0,
+                    rejection_reason_counts={},
+                    metrics_rows=h_result.candidates_evaluated_total,
+                    valid_metrics_rows=len(candidates),
+                    rejected_invalid_metrics=0,
+                    rejected_by_min_n=0,
+                    rejected_by_min_t_stat=0,
+                    bridge_candidates_rows=len(candidates),
+                    multiplicity_discoveries=0,
+                    min_t_stat=resolved_min_t_stat,
+                    min_n=resolved_min_n,
+                    search_budget=search_budget,
+                    use_context_quality=use_context_quality,
+                    gate_funnel=_build_gate_funnel(
+                        hypotheses_generated=h_result.candidates_evaluated_total,
+                        feasible_hypotheses=h_result.candidates_evaluated_total,
+                        metrics=pd.DataFrame(),
+                        candidate_universe=pd.DataFrame(),
+                        written_candidates=candidates,
+                        min_n=resolved_min_n,
+                    ),
+                )
+            )
+            continue  # Skip the flat-mode steps below for this symbol
+
+        # ── FLAT MODE (unchanged) ────────────────────────────────────────────
         # 3. Evaluate in chunks
         log.info("Evaluating hypotheses batch for %s (chunk_size=%d)...", symbol, chunk_size)
         metrics = run_distributed_search(
@@ -1420,6 +1552,26 @@ def run(
     if all_fold_breakdowns:
         fold_df = pd.concat(all_fold_breakdowns, ignore_index=True)
         write_parquet(fold_df, out_dir / "phase2_candidate_fold_metrics.parquet")
+
+    # Phase 4 — Write merged hierarchical stage artifacts (if any)
+    _combined_stage_artifacts = getattr(run, "_h_stage_artifacts", {})
+    stage_artifact_name_map = {
+        "trigger_viability": "phase2_trigger_probes.parquet",
+        "template_refinement": "phase2_template_refinement.parquet",
+        "execution_refinement": "phase2_execution_refinement.parquet",
+        "context_refinement": "phase2_context_refinement.parquet",
+    }
+    for stage_name, merged_df in _combined_stage_artifacts.items():
+        artifact_name = stage_artifact_name_map.get(stage_name, f"phase2_stage_{stage_name}.parquet")
+        if not merged_df.empty:
+            try:
+                write_parquet(merged_df, out_dir / artifact_name)
+                log.info("Phase 4: wrote %s (%d rows)", artifact_name, len(merged_df))
+            except Exception as exc:
+                log.warning("Phase 4 stage artifact write failed (%s): %s", artifact_name, exc)
+    # Clean up function-level accumulator
+    if hasattr(run, "_h_stage_artifacts"):
+        del run._h_stage_artifacts  # type: ignore[attr-defined]
 
     main_diag = build_search_engine_diagnostics(
         run_id=run_id,
