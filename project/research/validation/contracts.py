@@ -89,6 +89,7 @@ class ValidationBundle:
     inconclusive_candidates: List[ValidatedCandidateRecord] = field(default_factory=list)
     program_id: Optional[str] = None
     summary_stats: Dict[str, Any] = field(default_factory=dict)
+    effect_stability_report: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -99,6 +100,7 @@ class ValidationBundle:
             "rejected_candidates": [c.to_dict() for c in self.rejected_candidates],
             "inconclusive_candidates": [c.to_dict() for c in self.inconclusive_candidates],
             "summary_stats": self.summary_stats,
+            "effect_stability_report": self.effect_stability_report,
         }
 
 

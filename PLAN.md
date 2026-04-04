@@ -1,832 +1,614 @@
-Assuming Sprint 4 exits with a hardened **validate → promote** boundary, Sprint 5 should be the **surface-area consolidation sprint**: make the repo legible and operable through the four-stage model without changing core research semantics. That matches the original execution order in .
+Sprint 6 should be the **runtime hardening sprint**. In the roadmap, Sprint 6 is explicitly: **paper deploy hardening, decay monitor, simple caps, end-to-end golden runs**. It also says the deploy phase should stay **simple, explicit, and safe**, keep thesis store / retriever / explicit thesis selection / deployment state / paper-live modes / overlap checks / runtime logging, and add early: **decay monitor**, **max gross exposure**, **per-symbol cap**, **per-family cap**, and **max active theses**. It also explicitly says **do not prioritize** a full portfolio orchestrator, complex correlation optimizer, multi-venue routing, or on-chain integration yet.  
 
-# Sprint 5 — Surface Area Consolidation
+## Sprint 6 objective
 
-Make the repo present and behave as:
+Make deploy operationally safe enough for repeatable paper trading under the new stage model:
+
 **discover → validate → promote → deploy**
-for both humans and tooling, while preserving one migration cycle of backward compatibility.
 
-## Sprint 5 objective
-Collapse the public interface onto the four-stage model and establish canonical terminology for the entire public surface.
+with one hard rule preserved from the overhaul: **only promoted theses can reach deployment**. The acceptance target for deploy is:
 
-## Known deferred items
-
-### 1. Deferred runtime integration
-`edge deploy` is interface-complete in Sprint 5, but execution integration with the live session runner is deferred to Sprint 6 runtime hardening. Commands like `edge deploy paper` will operate as dry-run/eligibility checks.
-
-### 2. Deferred internal terminology cleanup
-Sprint 5 guarantees canonical public terminology (README, docs, CLI, schemas). Internal legacy comments and private variable names may persist temporarily where they do not affect external semantics.
-
-## Definition of done
-* `edge discover`, `edge validate`, `edge promote`, `edge deploy` are the canonical top-level verbs.
-* README and top-level docs explain the four-stage model consistently.
-* Public vocabulary is canonical (`anchor`, `filter`, `sampling_policy`, `candidate`, `thesis`).
-* Compatibility aliases exist and warn clearly.
-* `edge deploy` exposes a truthful deploy interface (inspect/dry-run/status).
-* deploy commands reject raw research candidates and accept only promoted theses.
-* Internal legacy terminology is allowed only where private and non-contradictory.
+* paper deployment works from promoted thesis batch only
+* live deployment requires explicit opt-in and risk caps
+* runtime can auto-flag decay and downsize/disable 
 
 ---
 
-# Sprint 5 workstreams
+## What Sprint 6 is for
 
-## Workstream 1 — Public CLI redesign
+Sprint 6 is where you stop reshaping research semantics and start enforcing runtime discipline.
+
+It is for:
+
+* hardening deploy entry conditions
+* adding minimal risk caps
+* adding a decay monitor with explicit disable/downsize behavior
+* proving the whole system with golden end-to-end runs
+* ensuring runtime stays subordinate to validated/promoted artifacts
+
+It is not for:
+
+* portfolio optimizer sophistication
+* dynamic cross-thesis correlation control
+* execution venue expansion
+* on-chain integration
+* regime forecasting
+* self-calibration
+* institutional reporting
+* advanced runtime assurance as a feature family  
+
+---
+
+## Core Sprint 6 outcome
+
+By the end of Sprint 6, you should be able to:
+
+1. select a promoted thesis batch
+2. launch a paper deployment only from those promoted artifacts
+3. enforce simple portfolio/risk caps at runtime
+4. monitor thesis decay against explicit rules
+5. automatically downsize or disable degraded theses
+6. run a full golden pipeline from discover to deploy(paper) and verify artifact lineage and stage boundaries  
+
+---
+
+# Sprint 6 workstreams
+
+## Workstream 1 — deploy admission control
 
 ### Goal
 
-Expose four first-class verbs exactly as planned:
+Make deployment reject anything that is not a promoted thesis artifact.
 
-* `edge discover`
-* `edge validate`
-* `edge promote`
-* `edge deploy`
+This is the most important runtime boundary. The overhaul success criteria say runtime clarity means **only promoted theses can reach deployment**, and the stage-boundary tests say deploy must not accept raw research candidates.  
 
-This is explicitly called out in the overhaul plan. 
+### Required rules
 
-### Deliverables
+Deployment input must include:
 
-* top-level CLI command group with the four verbs
-* stable help text for each verb
-* compatibility aliases for old commands
-* deprecation warnings with migration guidance
-* command examples in help output
+* `promoted_theses.json` or equivalent canonical promoted bundle
+* promotion metadata
+* validation lineage
+* deployment-state default
 
-### Design rules
+Deployment must reject:
 
-Each verb must map to one stage only.
+* discovery candidate tables
+* validated-only candidates not yet promoted
+* ad hoc proposal specs
+* research candidate rows loaded directly from validation or search artifacts
 
-* `discover` produces candidate artifacts only
-* `validate` produces validation artifacts only
-* `promote` consumes validated candidates only
-* `deploy` consumes promoted theses only
+### Concrete implementation
 
-No command should blur boundaries.
+Touch first:
 
-### Recommended subcommands
+* `project/live/*`
+* `project/portfolio/*`
+* live config layer 
 
-#### `edge discover`
+Add:
 
-* `run`
-* `resume`
-* `inspect`
-* `list-artifacts`
-
-#### `edge validate`
-
-* `run`
-* `inspect`
-* `report`
-* `list-artifacts`
-
-#### `edge promote`
-
-* `run`
-* `inspect`
-* `export`
-* `list-artifacts`
-
-#### `edge deploy`
-
-* `paper`
-* `live`
-* `status`
-* `disable`
-* `list-theses`
-
-### Compatibility aliases
-
-Map old commands for one migration cycle:
-
-* old research/discovery/search commands → `edge discover ...`
-* old evaluation/preflight/diagnostic commands → `edge validate ...`
-* old export/promote commands → `edge promote ...`
-* old live runtime selectors/launchers → `edge deploy ...`
-
-### Required behavior
-
-Every alias must:
-
-* still work
-* print the new canonical command
-* identify sunset version/date
-* not silently change semantics
+* deployment artifact loader that validates promoted-thesis schema
+* runtime guard: `assert_promoted_input(...)`
+* promotion-lineage validator
+* failure messages that explicitly name missing stage
 
 ### Exit criteria
 
-* a new user can discover the four verbs from `edge --help`
-* each verb has stage-specific help with examples
-* aliases are tested and logged
+* deploy fails fast on non-promoted input
+* paper deploy requires promoted thesis batch ID
+* runtime state records promotion + validation lineage
 
 ---
 
-## Workstream 2 — README rewrite
+## Workstream 2 — minimal risk caps
 
 ### Goal
 
-Replace the repo’s front page identity with the four-stage operating model.
+Add the simple caps the roadmap names, without drifting into portfolio-system complexity.
 
-The roadmap explicitly says to overhaul README and demote internal mechanics from front-page identity. 
+Required early caps are:
 
-### Recommended README structure
+* max gross exposure
+* per-symbol cap
+* per-family cap
+* max active theses 
 
-## 1. One-sentence definition
+### Strong recommendation
 
-Example:
-“This repo discovers crypto alpha candidates, validates them, promotes the few robust ideas into theses, and deploys approved theses in paper/live mode.”
+Implement these as **deterministic pre-trade guards**, not optimization outputs.
 
-## 2. Core workflow diagram
+### Cap definitions
 
-Use a compact diagram:
+#### 1. max gross exposure
 
-`discover → validate → promote → deploy`
+Global ceiling across all active positions.
 
-with one-line descriptions.
+Use as:
 
-## 3. What each stage does
+* sum of absolute target exposures cannot exceed configured threshold
+* new signals beyond threshold are clipped or rejected
 
-* Discover: broad candidate generation
-* Validate: falsification and robustness testing
-* Promote: inventory/readiness decision
-* Deploy: explicit runtime execution of promoted theses
+#### 2. per-symbol cap
 
-## 4. Core concepts
+Prevents thesis crowding on one instrument.
 
-* anchor
-* filters
-* sampling_policy
-* template
-* validated candidate
-* promoted thesis
+Use as:
 
-## 5. Quickstart
+* total exposure on one symbol cannot exceed threshold
+* multiple theses on same symbol share the cap
 
-Minimal end-to-end example:
+#### 3. per-family cap
 
-* run discover
-* run validate
-* run promote
-* run deploy paper
+Controls concentration by thesis family, template family, or strategy family.
 
-## 6. Repo map
+Use as:
 
-High-level pointers only:
+* all theses tagged with same family cannot exceed threshold
 
-* docs/
-* project/research/
-* project/live/
-* tests/
+#### 4. max active theses
 
-## 7. Compatibility note
+Hard count cap on concurrently active deployed theses.
 
-Explain old commands/specs are still supported temporarily.
+Use as:
 
-## 8. What this repo is not
+* new thesis activation rejected once count is reached
+* prioritization is simple and deterministic
 
-Useful for preventing confusion:
+### Concrete implementation choices
 
-* not auto-trading every research idea
-* not promotion-by-backtest
-* not portfolio optimizer first
-* not on-chain execution framework first
+Add a single runtime policy object, for example:
 
-### README anti-patterns to remove
+* `RuntimeRiskCaps`
 
-* long theory before workflow
-* operator internals near top
-* proposal grammar as front-door identity
-* benchmarking/certification dominating overview
-* mixed terminology for trigger/state/transition/anchor
+  * `max_gross_exposure`
+  * `max_symbol_exposure`
+  * `max_family_exposure`
+  * `max_active_theses`
+
+Add one enforcement layer before order generation / target issuance.
+
+### Decision rules
+
+Prefer this order:
+
+1. reject thesis if not promoted
+2. reject if thesis is disabled/decayed
+3. apply active-thesis count cap
+4. apply symbol cap
+5. apply family cap
+6. apply gross cap
+7. clip only if policy explicitly allows clipping; otherwise reject
 
 ### Exit criteria
 
-* README first screen explains the system without referencing internals
-* quickstart uses only the new verbs
-* terminology is consistent with the new schema
+* every paper deployment enforces all configured caps
+* cap breach behavior is explicit and logged
+* no hidden optimizer is introduced
 
 ---
 
-## Workstream 3 — Full docs rewrite
+## Workstream 3 — thesis decay monitor
 
 ### Goal
 
-Rebuild docs around the planned documentation surface. The roadmap already specifies the desired docs set. 
+Add a minimal but real decay monitor that can downsize or disable a promoted thesis during runtime.
 
-### Target docs tree
+The roadmap explicitly says deploy should add a decay monitor early and that runtime should be able to auto-flag decay and downsize/disable. 
 
-* `docs/00_overview.md`
-* `docs/01_discover.md`
-* `docs/02_validate.md`
-* `docs/03_promote.md`
-* `docs/04_deploy.md`
-* `docs/05_data_foundation.md`
-* `docs/06_core_concepts.md`
-* `docs/90_architecture.md`
-* `docs/91_advanced_research.md`
-* `docs/92_assurance_and_benchmarks.md`
+### Design principle
 
-### What each doc should cover
+Keep it narrow. This is not a full online model governance platform.
 
-#### `00_overview.md`
+### Required outputs
 
-Purpose:
+For each active thesis:
 
-* explain the repo as a staged system
-* define lifecycle and artifact lineage
-* link to all stage docs
+* current health state
+* last decay check timestamp
+* decay reason codes
+* action taken: none / warn / downsize / disable
 
-Must include:
+### Recommended first-pass decay signals
 
-* stage diagram
-* artifact flow
-* minimal end-to-end lifecycle
-* boundaries between stages
+Use a compact set of interpretable signals:
 
-#### `01_discover.md`
+#### Signal group A — realized-vs-expected edge deterioration
 
-Purpose:
+* rolling realized edge materially below validation expectation
+* edge sign inversion over sustained window
 
-* explain discovery as candidate generation, not promotion
+#### Signal group B — hit-rate / payoff deterioration
 
-Must include:
+* realized hit-rate below threshold
+* realized payoff ratio collapse
 
-* discovery inputs
-* candidate outputs
-* ranking and metadata
-* anchor/filter/sampling usage in discovery
-* common failure modes
+#### Signal group C — cost drag deterioration
 
-Must not imply:
+* realized slippage/fees materially exceed modeled assumptions
 
-* discovery equals truth
-* top candidate equals deployable
+#### Signal group D — inactivity / sample starvation
 
-#### `02_validate.md`
+* thesis not triggering enough to assess health
+* effective live sample too low for confidence
 
-Purpose:
+### Simple health states
 
-* position validation as the truth-testing stage
+Use four states:
 
-Must include:
+* `healthy`
+* `watch`
+* `degraded`
+* `disabled`
 
-* required validation checks
-* validation artifacts
-* rejection reasons
-* robustness/falsification/stability interpretation
-* what qualifies a candidate for promotion
+### Action policy
 
-#### `03_promote.md`
+Suggested default:
 
-Purpose:
+* `healthy` → normal sizing
+* `watch` → keep size, log warning
+* `degraded` → downsize to configured fraction
+* `disabled` → stop new entries and optionally unwind by policy
 
-* explain promotion as packaging/governance/inventory
+### Important boundary
 
-Must include:
+Decay monitor must not silently re-validate research semantics. It is a runtime health layer, not a replacement for validation.
 
-* validated input requirement
-* readiness classes
-* maturity classes
-* promotion audit outputs
-* promoted thesis structure
+### Concrete implementation
 
-Must explicitly say:
+Add:
 
-* promotion is not major re-validation
+* `ThesisHealthSnapshot`
+* `DecayRuleEngine`
+* `RuntimeThesisState`
+* `DecayAction`
 
-#### `04_deploy.md`
+Persist:
 
-Purpose:
-
-* explain explicit deployment of promoted theses only
-
-Must include:
-
-* paper vs live
-* thesis selection
-* deployment state
-* minimal caps and controls
-* runtime monitoring/decay handling if already present
-
-#### `05_data_foundation.md`
-
-Purpose:
-
-* explain datasets, feature pipelines, artifacts, storage, lineage
-
-Must include:
-
-* source datasets
-* artifact naming
-* lineage expectations across stages
-* retention and reproducibility rules
-
-#### `06_core_concepts.md`
-
-Purpose:
-
-* become the canonical semantic glossary
-
-Must include:
-
-* anchor
-* event
-* transition
-* sequence
-* feature_crossing
-* filter
-* regime
-* state
-* sampling_policy
-* template
-* hypothesis/candidate/thesis
-* validation vs promotion
-
-This is the most important semantics doc.
-
-#### `90_architecture.md`
-
-Purpose:
-
-* explain package structure and internal flow for maintainers
-
-Must include:
-
-* module map
-* stage wrapper vs internal implementation
-* artifact boundaries
-* adapters/normalizers
-* compatibility layer
-
-#### `91_advanced_research.md`
-
-Purpose:
-
-* deeper material that should not dominate the front door
-
-Examples:
-
-* search generation internals
-* ontology/grammar
-* synthetic truth tools
-* advanced diagnostics
-
-#### `92_assurance_and_benchmarks.md`
-
-Purpose:
-
-* keep assurance content, but demoted
-
-Examples:
-
-* benchmark methodology
-* certification-like checks
-* regression suites
-* audit philosophy
-
-### Documentation rules
-
-* every page starts with stage purpose
-* every page has “inputs / outputs / artifacts / failure modes”
-* every page uses the new terms only
-* old terms appear only in migration notes
+* runtime health log
+* thesis disable events
+* size adjustment events
 
 ### Exit criteria
 
-* docs navigation mirrors the four-stage model
-* no top-level doc contradicts the contract model
-* internal/advanced material is moved out of front-door flow
+* runtime can flag thesis deterioration from live/paper outcomes
+* action mapping is deterministic
+* degraded theses are visibly downsized/disabled
 
 ---
 
-## Workstream 4 — Canonical glossary and terminology migration
+## Workstream 4 — deployment state machine
 
 ### Goal
 
-Eliminate mixed vocabulary across code comments, docs, CLI help, and artifacts.
+Formalize runtime states so caps and decay actions operate cleanly.
 
-This is necessary because the overhaul explicitly centers semantic clarity around `anchor`, `filter`, and `sampling_policy`. 
+### Recommended states
 
-### Canonical terms
+For each thesis:
 
-Use these as source of truth:
+* `eligible`
+* `active`
+* `paused`
+* `degraded`
+* `disabled`
 
-* **anchor**: event, transition, sequence, feature_crossing
-* **filters**: state/regime/context predicates
-* **sampling_policy**: episodic/once_per_episode/every_n_bars/etc.
-* **candidate**: output of discovery
-* **validated candidate**: output of validation
-* **promoted thesis**: output of promotion
-* **deployment**: runtime use of promoted theses
+Transitions:
 
-### Terms to demote
-
-* `trigger` as public master abstraction
-* `state` as anchor
-* overloaded `proposal` where `candidate` or `thesis` is more accurate
-* promotion as “certification” unless that is a strict formal subsystem
-
-### Concrete tasks
-
-* grep repo for old public-facing terms
-* update CLI help
-* update README/docs/examples
-* update comments/docstrings in public modules
-* add migration glossary section:
-
-  * trigger → anchor + filters + sampling_policy
-  * legacy proposal → structured hypothesis
-  * promoted strategy → promoted thesis, if that is the intended term
-
-### Exit criteria
-
-* public docs no longer depend on legacy terminology
-* help text and examples are semantically consistent
-* migration table exists for old users
-
----
-
-## Workstream 5 — Example flows and artifact lineage
-
-### Goal
-
-Give users executable examples that match the new product model.
-
-### Required examples
-
-#### Example A — minimal research loop
-
-* discover one candidate set
-* validate top candidate(s)
-* promote one validated candidate
-* deploy in paper mode
-
-#### Example B — validation failure path
-
-* show candidate rejection reasons
-* demonstrate no promotion possible
-
-#### Example C — compatibility path
-
-* run old alias
-* show mapped canonical command
-* show resulting equivalent artifacts
-
-### Artifact lineage spec
-
-Every example should show:
-
-* discovery run ID
-* validation run ID
-* promotion run ID
-* deploy session / thesis selection
-
-### Deliverables
-
-* `examples/` directory or `docs/examples/`
-* shell snippets
-* expected output samples
-* artifact tree samples
-
-### Exit criteria
-
-* a user can follow one example without inspecting internals
-* every example reflects true artifact boundaries
-
----
-
-## Workstream 6 — Compatibility and deprecation framework
-
-### Goal
-
-Preserve stability while pushing users to the new surface.
-
-The roadmap explicitly calls for compatibility aliases for one migration cycle. 
-
-### Required compatibility behavior
-
-For commands:
-
-* old command works
-* warning prints once per invocation
-* warning includes canonical replacement
-* warning includes deprecation phase
-
-For specs:
-
-* old spec still normalizes
-* normalization warnings are human-readable
-* docs explain when support ends
-
-### Recommended deprecation phases
-
-* **Phase 1**: supported + warned
-* **Phase 2**: supported + noisy warning + docs marked legacy
-* **Phase 3**: disabled by default behind compatibility flag
-* **Phase 4**: removed
-
-### Suggested output format
-
-Use structured deprecation messages:
-
-* legacy command/spec used
-* replacement
-* current support level
-* target removal version
-
-### Exit criteria
-
-* users are never surprised by silently remapped behavior
-* all compatibility paths are explicit and test-covered
-
----
-
-## Workstream 7 — Package façade and navigation cleanup
-
-### Goal
-
-Make the repository navigable according to stages even if internal modules remain where they are.
-
-This follows the roadmap guidance to use façade packages before deeper file migration. 
-
-### Recommended façades
-
-Conceptually expose:
-
-* `project/discover/`
-* `project/validate/`
-* `project/promote/`
-* `project/deploy/`
-
-These can initially re-export existing internals.
-
-### What façades should contain
-
-* stable service entrypoints
-* thin adapters
-* public data models if appropriate
-* minimal docstrings
-* no deep logic duplication
+* `eligible -> active`
+* `active -> degraded`
+* `degraded -> paused`
+* `degraded -> disabled`
+* `paused -> active` only by explicit policy/review
+* `disabled` should not auto-reactivate by default
 
 ### Why this matters
 
-It aligns:
+Without an explicit state machine, caps and decay logic become scattered conditionals.
 
-* CLI verbs
-* docs
-* architecture docs
-* import surface
+### Required metadata
 
-without forcing a large code move.
+Each thesis runtime state should track:
+
+* thesis ID
+* promotion class
+* deployment mode
+* current size scalar
+* disable reason
+* last health update
+* cap breach history
 
 ### Exit criteria
 
-* maintainers can identify stage entrypoints quickly
-* docs and imports point to consistent top-level stage packages
+* runtime actions are explainable from state transitions
+* disable/downsize behavior is audit-friendly
 
 ---
 
-## Workstream 8 — Test plan for Sprint 5
+## Workstream 5 — explicit paper vs live gate
 
 ### Goal
 
-Test the product surface, not just internal logic.
+Keep live mode harder to access than paper mode.
 
-### Test groups
+The roadmap says paper deployment should work from promoted thesis batch only, while live deployment requires explicit opt-in and risk caps. 
 
-#### 1. CLI contract tests
+### Required behavior
 
-Verify:
+#### Paper mode
 
-* `edge --help` shows four canonical verbs
-* each verb has valid help text
-* each alias maps correctly
-* deprecation messages appear correctly
+Allowed when:
 
-#### 2. Documentation consistency tests
+* promoted thesis batch present
+* caps configured
+* runtime logging enabled
 
-Optional but high value:
+#### Live mode
 
-* link check
-* artifact-name consistency scan
-* forbidden-term scan for front-door docs
-* example command smoke validation
+Allowed only when:
 
-#### 3. Compatibility tests
+* explicit live enable flag present
+* caps configured
+* promoted thesis batch present
+* optional approval marker / operator confirmation / live-ready readiness class
 
-Verify:
+### Strong recommendation
 
-* old commands still produce equivalent results
-* old specs normalize with explicit warnings
-* compatibility flag behavior is correct
-
-#### 4. Stage-boundary smoke tests
-
-Run:
-
-* discover example
-* validate example
-* promote example
-* deploy paper example
-
-using the new command surface
+Even if live exists, Sprint 6 should optimize for **paper-first reliability**, not live feature breadth.
 
 ### Exit criteria
 
-* user-facing surface is test-covered
-* migration paths are test-covered
-* docs examples do not rot immediately
+* paper is the default and easiest mode
+* live has additional gating and explicit opt-in
+* same thesis cannot silently cross from paper assumptions to live without config boundary
 
 ---
 
-# Sprint 5 structure by week or tranche
+## Workstream 6 — runtime observability and artifact logging
 
-## Tranche 1 — vocabulary and interface lock
+### Goal
 
-Do first:
+Make deploy runs inspectable enough to support golden tests and operational debugging.
 
-* freeze canonical terms
-* define CLI verbs/subcommands/options
-* define docs outline
-* define alias/deprecation rules
+The deploy phase explicitly keeps runtime logging. End-to-end golden runs require confirming artifact lineage and stage transitions.  
 
-Output:
+### Required deploy artifacts
 
-* Sprint 5 interface spec
+At minimum:
 
-## Tranche 2 — CLI implementation
+* `deploy_run_summary.json`
+* `active_thesis_state.parquet`
+* `cap_breach_events.parquet`
+* `decay_events.parquet`
+* `runtime_actions.parquet`
 
-Do next:
+### Required summary fields
 
-* implement top-level command groups
-* wire aliases
-* standardize help text
-* add smoke tests
+* deploy run ID
+* promoted batch ID
+* promotion artifact path
+* validation run IDs referenced
+* deploy mode: paper/live
+* caps config hash
+* thesis count loaded
+* thesis count activated
+* thesis count downsized
+* thesis count disabled
+* symbols traded
+* time window
 
-Output:
+### Exit criteria
 
-* usable new command surface
+* every deploy run has auditable runtime artifacts
+* decay and cap decisions are reconstructible
 
-## Tranche 3 — README and stage docs
+---
 
-Do next:
+## Workstream 7 — golden end-to-end runs
 
-* rewrite README
-* add `00`–`06` docs
-* move advanced material to `90+` docs
-* add migration glossary
+### Goal
 
-Output:
+Prove the full stage model with deterministic examples.
 
-* coherent documentation portal
+The roadmap explicitly names the third testing layer as end-to-end golden tests that run:
 
-## Tranche 4 — examples and compatibility docs
+* discover
+* validate
+* promote
+* deploy (paper mode)
 
-Do next:
+and confirm artifact lineage and stage transitions.  
 
-* add end-to-end examples
-* add old→new migration pages
-* add artifact lineage examples
+### Required golden scenarios
 
-Output:
+#### Golden A — happy path
 
-* adoption support
+* discover yields candidates
+* validate yields validated subset
+* promote yields promoted theses
+* deploy paper activates promoted theses
+* runtime artifacts created
+* no stage leakage
 
-## Tranche 5 — cleanup and hardening
+#### Golden B — empty promotion path
 
-Do last:
+* discover yields candidates
+* validate rejects all
+* promote emits none
+* deploy refuses to start
 
-* terminology sweep
-* docstring/help consistency
-* link check
-* example smoke tests
-* release notes / changelog entry
+#### Golden C — cap breach path
 
-Output:
+* promoted batch valid
+* deploy attempts over-concentrated set
+* caps reject or clip deterministically
+* events logged
 
-* stable release candidate
+#### Golden D — decay disable path
+
+* promoted thesis starts active
+* synthetic or controlled degraded runtime metrics trigger decay
+* thesis is downsized or disabled
+* state transition logged
+
+### Important testing property
+
+These tests should validate **lineage**, not just numerical results.
+
+They should prove:
+
+* discovery outputs candidates only
+* validation outputs validated candidates and rejection reasons
+* promotion outputs promoted theses only
+* deploy accepts promoted theses only 
+
+### Exit criteria
+
+* golden runs are reproducible
+* failures isolate the broken stage boundary quickly
+
+---
+
+## Workstream 8 — config simplification
+
+### Goal
+
+Prevent runtime from becoming configuration-chaotic.
+
+### Recommended config split
+
+#### Global deploy config
+
+* mode
+* max gross exposure
+* max active theses
+* log paths
+* decay policy toggle
+
+#### Symbol/family caps config
+
+* per-symbol cap map
+* per-family cap map
+
+#### Thesis runtime overrides
+
+* allowed only for:
+
+  * size scalar
+  * enabled/disabled state
+  * review status
+
+### Avoid in Sprint 6
+
+Do not add:
+
+* multi-layer optimizer configs
+* dynamic correlation models
+* venue routing policy matrices
+* adaptive execution families
+
+### Exit criteria
+
+* configs are short and explainable
+* cap/decay policies are visible in one place
 
 ---
 
 # Concrete tickets
 
-## CLI
+## Deploy boundary
 
-* create top-level stage command groups
-* add subcommands per stage
-* centralize common run/artifact options
-* add deprecation alias registry
-* standardize help formatter
-* add stage-specific examples to `--help`
+* add promoted-thesis-only loader
+* reject raw candidate / validated-only artifacts
+* add deployment lineage validation
+* add clear stage-boundary error messages
 
-## Docs
+## Caps
 
-* rewrite README
-* add overview doc
-* add discover/validate/promote/deploy docs
-* add data foundation doc
-* add core concepts doc
-* add architecture doc
-* add advanced research doc
-* add assurance/benchmarks doc
-* add migration guide
+* implement `RuntimeRiskCaps`
+* enforce gross, symbol, family, active-thesis caps
+* log cap violations
+* decide reject-vs-clip policy
 
-## Examples
+## Decay
 
-* minimal full pipeline example
-* rejected candidate example
-* compatibility alias example
+* add thesis health model
+* implement rolling health checks
+* map health to actions
+* persist downsize/disable events
 
-## Terminology
+## Runtime state
 
-* replace public `trigger` master usage
-* replace ambiguous `proposal` usage where needed
-* add glossary
-* add old→new term mapping table
+* add thesis runtime state machine
+* add state transition logger
+* block auto-reactivation by default
 
-## Tests
+## Modes
 
-* CLI help tests
-* alias/deprecation tests
-* docs link checks
-* example smoke tests
-* terminology lint checks for front-door docs
+* enforce stronger gate for live than paper
+* make paper default
+* validate caps presence before start
+
+## Artifacts
+
+* emit deploy summary
+* emit cap breach events
+* emit decay events
+* emit active thesis state snapshots
+
+## Testing
+
+* happy path golden run
+* all-rejected path
+* cap-breach path
+* decay-disable path
 
 ---
 
-# Risks and how to control them
+# Suggested implementation order
 
-## Risk 1 — Sprint 5 turns into a hidden architecture rewrite
+1. **Deploy admission control**
 
-Control:
+   * make deploy accept promoted theses only
 
-* use façades and aliases
-* do not move deep internals unless required
+2. **Simple caps**
 
-## Risk 2 — docs get ahead of actual behavior
+   * add deterministic runtime guards
 
-Control:
+3. **Decay monitor**
 
-* every example must be executable
-* write docs from real command outputs
-* add smoke tests for examples
+   * add health states and downsize/disable actions
 
-## Risk 3 — compatibility layer becomes permanent
+4. **Deploy artifacts/logging**
 
-Control:
+   * make actions inspectable
 
-* attach explicit deprecation phases
-* mark all legacy docs as temporary
-* add removal target in changelog
+5. **Golden end-to-end runs**
 
-## Risk 4 — terminology drift persists
+   * prove the pipeline
 
-Control:
-
-* create one canonical glossary first
-* run terminology sweep after README/docs rewrite
-* add simple lint/search checks
-
-## Risk 5 — help text and artifacts still expose old mental models
-
-Control:
-
-* use stage-specific nouns everywhere
-* forbid mixed terms in CLI templates
-* review generated example outputs
+This order is strongest because golden tests are only useful after the runtime boundary and policy mechanics are fixed.
 
 ---
 
 # Definition of done
 
-Sprint 5 is done when all of the following are true:
+Sprint 6 is done when all of these are true:
 
-* README presents the repo through the four-stage model
-* `edge discover|validate|promote|deploy` are the canonical top-level verbs
-* stage docs exist and match real behavior
-* old commands still work through a documented compatibility layer
-* migration guidance from old terms/commands exists
-* examples run through the new surface
-* docs/help/examples use consistent concepts:
+* paper deploy loads promoted theses only
+* live mode requires explicit opt-in plus configured caps
+* runtime enforces max gross / symbol / family / active-thesis caps
+* runtime can auto-flag thesis decay and downsize/disable
+* deploy artifacts record lineage, cap events, and decay events
+* end-to-end golden tests pass from discover through deploy(paper)
+* no portfolio orchestrator or execution-complexity expansion was introduced  
 
-  * anchor
-  * filters
-  * sampling_policy
-  * candidate
-  * validated candidate
-  * promoted thesis
-  * deploy
+# Strongest recommendation
 
----
+Start Sprint 6 with a single invariant and build outward from it:
 
-# Strongest recommendation on sequencing
+**deploy only promoted theses**
 
-Start Sprint 5 with a short **interface specification document** before touching code:
+Then add **deterministic caps**, then **decay-driven downsize/disable**, then **golden runs**.
 
-1. canonical CLI verbs and subcommands
-2. canonical terminology table
-3. canonical docs tree
-4. alias/deprecation policy
-5. example artifact lineage
-
-Then implement CLI first, README/docs second, compatibility/tests third.
-
-That sequence minimizes rework because Sprint 5 is primarily a **surface contract sprint**, not a logic sprint.
+That sequence preserves the overhaul’s core runtime rule while keeping deploy simple, explicit, and safe.
