@@ -658,6 +658,22 @@ def write_confirmatory_candidate_report(
     report_dir.mkdir(parents=True, exist_ok=True)
     out_path = report_dir / "confirmatory_candidates.json"
     out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    
+    # NEW: Run Validation Stage for the target run (the confirmatory run)
+    try:
+        from project.research.services.evaluation_service import ValidationService
+        val_svc = ValidationService(data_root=data_root)
+        # Load the target candidates table
+        tables = val_svc.load_candidate_tables(target_run_id)
+        candidates_df = tables.get("phase2_candidates", pd.DataFrame())
+        if not candidates_df.empty:
+            val_svc.run_validation_stage(
+                run_id=target_run_id,
+                candidates_df=candidates_df
+            )
+    except Exception as exc:
+        logging.warning("Failed to run validation stage in confirmatory report: %s", exc)
+
     return out_path
 
 

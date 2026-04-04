@@ -265,6 +265,37 @@ def finalize_successful_run(
     semantics = classify_terminal_status(run_id=run_id, manifest=run_manifest, data_root=data_root)
     run_manifest.update({k: v for k, v in semantics.items() if k != "reflection"})
     maybe_emit_run_hash(run_manifest)
+    
+    # Run Validation Stage
+    if data_root is not None:
+        try:
+            from project.research.services.evaluation_service import ValidationService
+            
+            val_svc = ValidationService(data_root=data_root)
+            tables = val_svc.load_candidate_tables(run_id)
+            
+            # Prefer edge_candidates or promotion_audit for validation
+            candidates_df = pd.DataFrame()
+            for source in ("edge_candidates", "promotion_audit", "phase2_candidates"):
+                if not tables[source].empty:
+                    candidates_df = tables[source]
+                    break
+            
+            if not candidates_df.empty:
+                bundle = val_svc.run_validation_stage(
+                    run_id=run_id, 
+                    candidates_df=candidates_df, 
+                    program_id=str(run_manifest.get("program_id", "")) or None
+                )
+                run_manifest["validation_status"] = "completed"
+                run_manifest["validation_validated_count"] = len(bundle.validated_candidates)
+                run_manifest["validation_rejected_count"] = len(bundle.rejected_candidates)
+            else:
+                run_manifest["validation_status"] = "no_candidates"
+        except Exception as exc:
+            run_manifest["validation_status"] = "failed"
+            run_manifest["validation_error"] = str(exc)
+
     write_run_manifest(run_id, run_manifest)
     write_run_kpi_scorecard(run_id, run_manifest)
     if data_root is not None:
