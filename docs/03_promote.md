@@ -25,6 +25,6 @@ Promotion applies business constraints:
 * `promoted_theses.json`: Canonical packaged artifacts for the deployment stage.
 
 ## Maturity Classes
-* `seed_promoted`: New ideas with minimal but valid evidence.
+* `seed_promoted`: [Internal/Bootstrap only] New ideas with minimal but valid evidence.
 * `paper_promoted`: Robust ideas ready for out-of-sample paper testing.
 * `production_promoted`: Mature ideas ready for live capital deployment.

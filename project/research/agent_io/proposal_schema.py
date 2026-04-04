@@ -24,14 +24,14 @@ from project.research.agent_io.hypothesis_contract import (
 from project.research.context_labels import canonicalize_contexts
 from project.research.knowledge.knobs import build_agent_knob_rows
 
-from project.research.agent_io.compatibility import (
-    AgentProposal,
-    SingleHypothesisProposal,
-    SingleHypothesisSpec,
-    TriggerSpec,
-    LEGACY_AGENT_PROPOSAL_FIELDS,
+# Legacy fields identification
+LEGACY_AGENT_PROPOSAL_FIELDS = (
+    "trigger_space",
+    "templates",
+    "horizons_bars",
+    "directions",
+    "entry_lags",
 )
-
 
 def _as_str_list(values: Any, *, field_name: str) -> List[str]:
     if values is None:

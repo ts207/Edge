@@ -182,7 +182,7 @@ Required fields:
 
 ## 4. Exact Operator Sequence
 
-See [docs/03_OPERATOR_WORKFLOW.md](../03_OPERATOR_WORKFLOW.md) for the complete step-by-step sequence.
+See [docs/01_discover.md](../01_discover.md) for the complete sequence.
 
 Key commands:
 
@@ -191,27 +191,15 @@ Key commands:
 .venv/bin/python -m project.research.knowledge.query knobs
 .venv/bin/python -m project.research.knowledge.query memory --program_id <program_id>
 
-# Step 2: translate proposal
-.venv/bin/python -m project.research.agent_io.proposal_to_experiment \
+# Step 2: plan only
+.venv/bin/python -m project.cli discover plan \
   --proposal /abs/path/to/proposal.yaml \
-  --registry_root project/configs/registries \
-  --config_path /tmp/experiment.yaml \
-  --overrides_path /tmp/run_all_overrides.json
+  --run_id <run_id>
 
-# Step 3: plan only
-.venv/bin/python -m project.research.agent_io.execute_proposal \
+# Step 3: execute
+.venv/bin/python -m project.cli discover run \
   --proposal /abs/path/to/proposal.yaml \
-  --run_id <run_id> \
-  --registry_root project/configs/registries \
-  --out_dir data/artifacts/experiments/<program_id>/proposals/<run_id> \
-  --plan_only 1
-
-# Step 4: execute
-.venv/bin/python -m project.research.agent_io.issue_proposal \
-  --proposal /abs/path/to/proposal.yaml \
-  --registry_root project/configs/registries \
-  --run_id <run_id> \
-  --plan_only 0
+  --run_id <run_id>
 ```
 
 ---
@@ -290,8 +278,7 @@ Run:
 
 Useful maintained surfaces:
 
-- [docs/08_TESTING_AND_MAINTENANCE.md](../08_TESTING_AND_MAINTENANCE.md)
-- [docs/05_ARTIFACTS_AND_INTERPRETATION.md](../05_ARTIFACTS_AND_INTERPRETATION.md)
+- [docs/92_assurance_and_benchmarks.md](../92_assurance_and_benchmarks.md)
 
 ### Monthly or after major refactors
 

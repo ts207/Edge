@@ -12,7 +12,7 @@ In discovery, we define:
 1. **Define Structured Hypothesis**: Create a YAML spec defining the anchor and filters.
 2. **Run Discovery**:
    ```bash
-   edge discover run --proposal spec/proposals/my_alpha.yaml
+   edge discover run --proposal spec/proposals/canonical_event_hypothesis_h24.yaml
    ```
 3. **Inspect Candidates**: Review the ranked candidate set produced in `phase2_candidates.parquet`.
 

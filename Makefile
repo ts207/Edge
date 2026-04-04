@@ -20,11 +20,14 @@ CHANGED_HEAD ?= HEAD
 
 help:
 	@echo "Operator actions:"
-	@echo "  discover           - Canonical bounded research entry. Usage: make discover PROPOSAL=spec/proposals/demo_synthetic_fast.yaml DISCOVER_ACTION=preflight|plan|run"
+	@echo "  discover           - Canonical bounded research entry. Usage: make discover PROPOSAL=spec/proposals/canonical_event_hypothesis_h24.yaml DISCOVER_ACTION=plan|run"
+	@echo "  validate           - Canonical validation surface. Usage: make validate RUN_ID=<run_id>"
+	@echo "  promote            - Canonical promotion surface. Usage: make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT"
 	@echo "  export             - Canonical runtime-batch export. Usage: make export RUN_ID=<run_id>"
-	@echo "  package            - Advanced bootstrap maintenance lane, not the canonical runtime-batch path"
-	@echo "  validate           - Canonical validation surface: contracts + minimum green gate"
-	@echo "  review             - Post-run review. Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report or make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"
+	@echo "  deploy-paper       - Canonical deployment (Paper). Usage: make deploy-paper RUN_ID=<run_id>"
+	@echo "  review             - Post-run review. Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|report or make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"
+	@echo "  legacy-validate    - Legacy: contracts + minimum green gate"
+	@echo "  package            - Advanced maintenance: bootstrap packaging lane, not the canonical runtime-batch path"
 	@echo ""
 	@echo "Advanced workflow bundles:"
 	@echo "  discover-blueprints - Full research pipeline: Ingest -> Discovery -> Blueprints"
@@ -92,17 +95,29 @@ DISCOVER_ACTION ?= plan
 REVIEW_ACTION ?= diagnose
 PROPOSAL ?=
 RUN_IDS ?=
-THESIS_RUN_ID ?= seed_founding_batch_v1
+BOOTSTRAP_THESIS_RUN_ID ?= seed_founding_batch_v1
 RUN_ID ?=
 
 discover:
-	@if [ -z "$(PROPOSAL)" ]; then echo "Usage: make discover PROPOSAL=path/to/proposal.yaml DISCOVER_ACTION=preflight|plan|run"; exit 2; fi
-	@if [ "$(DISCOVER_ACTION)" != "preflight" ] && [ "$(DISCOVER_ACTION)" != "plan" ] && [ "$(DISCOVER_ACTION)" != "run" ]; then echo "DISCOVER_ACTION must be one of: preflight, plan, run"; exit 2; fi
-	PYTHONPATH=. $(PYTHON) -m project.cli operator $(DISCOVER_ACTION) --proposal $(PROPOSAL)
+	@if [ -z "$(PROPOSAL)" ]; then echo "Usage: make discover PROPOSAL=path/to/proposal.yaml DISCOVER_ACTION=plan|run"; exit 2; fi
+	@if [ "$(DISCOVER_ACTION)" != "plan" ] && [ "$(DISCOVER_ACTION)" != "run" ]; then echo "DISCOVER_ACTION must be one of: plan, run"; exit 2; fi
+	PYTHONPATH=. $(PYTHON) -m project.cli discover $(DISCOVER_ACTION) --proposal $(PROPOSAL)
+
+validate:
+	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make validate RUN_ID=<run_id>"; exit 2; fi
+	PYTHONPATH=. $(PYTHON) -m project.cli validate run --run_id $(RUN_ID)
+
+promote:
+	@if [ -z "$(RUN_ID)" ] || [ -z "$(SYMBOLS)" ]; then echo "Usage: make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT"; exit 2; fi
+	PYTHONPATH=. $(PYTHON) -m project.cli promote run --run_id $(RUN_ID) --symbols $(SYMBOLS)
 
 export:
 	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make export RUN_ID=<run_id>"; exit 2; fi
-	PYTHONPATH=. $(PYTHON) -m project.research.export_promoted_theses --run_id $(RUN_ID)
+	PYTHONPATH=. $(PYTHON) -m project.cli promote export --run_id $(RUN_ID)
+
+deploy-paper:
+	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make deploy-paper RUN_ID=<run_id>"; exit 2; fi
+	PYTHONPATH=. $(PYTHON) -m project.cli deploy paper --run_id $(RUN_ID)
 
 package:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_bootstrap_artifacts
@@ -111,21 +126,21 @@ package:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_founding_thesis_evidence
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_packaging_artifacts
 	PYTHONPATH=. $(PYTHON) -m project.scripts.build_structural_confirmation_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(THESIS_RUN_ID)
+	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(BOOTSTRAP_THESIS_RUN_ID)
 	./project/scripts/regenerate_artifacts.sh
 
-validate:
+legacy-validate:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.run_researcher_verification --mode contracts
 	$(MAKE) minimum-green-gate
 
 review:
 	@if [ "$(REVIEW_ACTION)" = "compare" ]; then \
 		if [ -z "$(RUN_IDS)" ]; then echo "Usage: make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"; exit 2; fi; \
-		PYTHONPATH=. $(PYTHON) -m project.cli operator compare --run_ids $(RUN_IDS); \
+		PYTHONPATH=. $(PYTHON) -m project.cli catalog compare --run_id_a $$(echo $(RUN_IDS) | cut -d, -f1) --run_id_b $$(echo $(RUN_IDS) | cut -d, -f2) --stage validate; \
 	else \
-		if [ -z "$(RUN_ID)" ]; then echo "Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report"; exit 2; fi; \
-		if [ "$(REVIEW_ACTION)" != "diagnose" ] && [ "$(REVIEW_ACTION)" != "regime-report" ]; then echo "REVIEW_ACTION must be one of: diagnose, regime-report, compare"; exit 2; fi; \
-		PYTHONPATH=. $(PYTHON) -m project.cli operator $(REVIEW_ACTION) --run_id $(RUN_ID); \
+		if [ -z "$(RUN_ID)" ]; then echo "Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|report"; exit 2; fi; \
+		if [ "$(REVIEW_ACTION)" != "diagnose" ] && [ "$(REVIEW_ACTION)" != "report" ]; then echo "REVIEW_ACTION must be one of: diagnose, report, compare"; exit 2; fi; \
+		PYTHONPATH=. $(PYTHON) -m project.cli validate $(REVIEW_ACTION) --run_id $(RUN_ID); \
 	fi
 TIMEFRAMES ?= 5m
 CONCEPT ?= 
