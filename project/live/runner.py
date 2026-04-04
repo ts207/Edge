@@ -29,6 +29,11 @@ from project.live.health_checks import DataHealthMonitor
 from project.portfolio.incubation import IncubationLedger
 from project import PROJECT_ROOT
 
+from project.live.risk import RiskEnforcer, RuntimeRiskCaps
+from project.live.decay import DecayMonitor, DecayRule
+from project.live.thesis_state import ThesisStateManager
+from project.artifacts import promoted_theses_path
+
 _LOG = logging.getLogger(__name__)
 
 
@@ -56,6 +61,8 @@ class LiveEngineRunner:
         reconcile_at_startup: bool = True,
         runtime_mode: str = "monitor_only",
         strategy_runtime: Dict[str, Any] | None = None,
+        risk_caps: RuntimeRiskCaps | None = None,
+        decay_rules: List[DecayRule] | None = None,
     ):
         # Phase 3: Native REST Client for Initialization & Recovery
         self.rest_client = BinanceFuturesClient(
@@ -82,6 +89,12 @@ class LiveEngineRunner:
         self.order_manager = order_manager or OrderManager(exchange_client=self.rest_client)
         self.runtime_mode = str(runtime_mode or "monitor_only").strip().lower()
         self.strategy_runtime = dict(strategy_runtime or {})
+
+        # Sprint 6: Risk and Decay components
+        self.risk_enforcer = RiskEnforcer(risk_caps or RuntimeRiskCaps())
+        self.decay_monitor = DecayMonitor(decay_rules or [])
+        self.thesis_manager = ThesisStateManager()
+
         self.execution_quality_report_path = (
             Path(execution_quality_report_path)
             if execution_quality_report_path is not None
@@ -119,7 +132,16 @@ class LiveEngineRunner:
         self._latest_final_kline_by_key: Dict[tuple[str, str], Dict[str, Any]] = {}
         self._decision_outcomes: List[DecisionOutcome] = []
         self._auto_order_sequence = 0
+        
+        # Sprint 6: Risk and Decay components
+        self.risk_enforcer = RiskEnforcer(risk_caps or RuntimeRiskCaps())
+        self.decay_monitor = DecayMonitor(decay_rules or [])
+        self.thesis_manager = ThesisStateManager()
+
+        # Workstream 1: Deploy admission control
         self._thesis_store = self._load_thesis_store()
+        self._register_theses_in_manager()
+        
         self._thesis_memory_root = self._resolve_memory_root()
 
         self._running = False
@@ -243,12 +265,42 @@ class LiveEngineRunner:
             symbol_counts[symbol] = int(symbol_counts.get(symbol, 0)) + 1
         account = self.state_store.account
         health = self.health_monitor.check_health()
+        
+        # Sprint 6: Thesis states and Risk/Decay events
+        thesis_states = {
+            tid: {
+                "state": s.state,
+                "size_scalar": s.size_scalar,
+                "cap_breach_count": s.cap_breach_count,
+                "disable_reason": s.disable_reason
+            }
+            for tid, s in self.thesis_manager.states.items()
+        }
+        
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "runtime_mode": self.runtime_mode,
             "strategy_runtime_enabled": bool(self._strategy_runtime_enabled()),
             "thesis_runtime_loaded": bool(self._thesis_store is not None),
             "thesis_count_loaded": len(self._thesis_store.all()) if self._thesis_store is not None else 0,
+            "thesis_states": thesis_states,
+            "risk_caps": {
+                "breach_count": len(self.risk_enforcer.breach_history),
+                "last_breaches": [
+                    {
+                        "timestamp": b.timestamp,
+                        "thesis_id": b.thesis_id,
+                        "cap_type": b.cap_type,
+                        "action": b.action
+                    }
+                    for b in self.risk_enforcer.breach_history[-10:]
+                ]
+            },
+            "decay_monitor": {
+                "health_history_count": len(self.decay_monitor.health_history),
+                "degraded_count": len([s for s in self.thesis_manager.states.values() if s.state == "degraded"]),
+                "disabled_count": len([s for s in self.thesis_manager.states.values() if s.state == "disabled"]),
+            },
             "symbols": list(self.symbols),
             "kill_switch": self.state_store.get_kill_switch_snapshot(),
             "account": {
@@ -282,14 +334,51 @@ class LiveEngineRunner:
         )
         return target
 
+    def persist_deploy_run_summary(self, out_path: Path) -> Path:
+        summary = {
+            "deploy_run_id": f"deploy_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+            "promoted_batch_id": self._thesis_store.run_id if self._thesis_store else "unknown",
+            "runtime_mode": self.runtime_mode,
+            "thesis_count_loaded": len(self._thesis_store.all()) if self._thesis_store else 0,
+            "thesis_count_activated": len([s for s in self.thesis_manager.states.values() if s.state == "active"]),
+            "thesis_count_degraded": len([s for s in self.thesis_manager.states.values() if s.state == "degraded"]),
+            "thesis_count_disabled": len([s for s in self.thesis_manager.states.values() if s.state == "disabled"]),
+            "cap_breach_count": len(self.risk_enforcer.breach_history),
+            "decay_event_count": len(self.decay_monitor.health_history),
+            "symbols": list(self.symbols),
+        }
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        
+        # Also persist detailed tables if possible
+        # (This is a simplified version for Sprint 6)
+        return out_path
+
+    def _register_theses_in_manager(self):
+        if self._thesis_store:
+            for t in self._thesis_store.all():
+                self.thesis_manager.register_thesis(
+                    thesis_id=t.thesis_id,
+                    promotion_class=t.promotion_class,
+                    deployment_mode=t.deployment_state
+                )
+
     def _load_thesis_store(self) -> ThesisStore | None:
         thesis_path = str(self.strategy_runtime.get("thesis_path", "")).strip()
         thesis_run_id = str(self.strategy_runtime.get("thesis_run_id", "")).strip()
         try:
+            store = None
             if thesis_path:
-                return ThesisStore.from_path(thesis_path)
-            if thesis_run_id:
-                return ThesisStore.from_run_id(thesis_run_id)
+                store = ThesisStore.from_path(thesis_path)
+            elif thesis_run_id:
+                store = ThesisStore.from_run_id(thesis_run_id)
+            
+            if store:
+                # Workstream 1: Admission Control - verify it only contains promoted theses
+                # ThesisStore already validates this via PromotedThesis model
+                _LOG.info("Loaded %d promoted theses for deployment.", len(store.all()))
+                return store
+                
         except FileNotFoundError as exc:
             if bool(self.strategy_runtime.get("implemented", False)):
                 raise RuntimeError(
@@ -515,16 +604,33 @@ class LiveEngineRunner:
         with self.state_store._lock:
             acc = self.state_store.account
             cluster_counts: Dict[int, int] = {}
+            symbol_exposures: Dict[str, float] = {}
+            family_exposures: Dict[str, float] = {}
+            
             for pos in acc.positions.values():
+                notional = pos.quantity * pos.mark_price
+                symbol_exposures[pos.symbol] = symbol_exposures.get(pos.symbol, 0.0) + notional
+                
                 if pos.cluster_id is not None:
                     cluster_counts[pos.cluster_id] = cluster_counts.get(pos.cluster_id, 0) + 1
+                
+                # Family lookup would need a map from thesis to family
+                # For now we'll use symbol as a family proxy or look up from store
+                if self._thesis_store:
+                    # This is inefficient, but okay for small thesis sets
+                    theses = self._thesis_store.filter(symbol=pos.symbol)
+                    for t in theses:
+                        family = t.event_family or t.primary_event_id
+                        family_exposures[family] = family_exposures.get(family, 0.0) + notional
             
             return {
                 "portfolio_value": float(acc.wallet_balance + acc.total_unrealized_pnl),
                 "gross_exposure": float(sum(abs(p.quantity * p.mark_price) for p in acc.positions.values())),
-                "max_gross_leverage": 1.0, # Placeholder or from config
-                "target_vol": 0.1, # Placeholder
-                "current_vol": 0.1, # Placeholder
+                "symbol_exposures": symbol_exposures,
+                "family_exposures": family_exposures,
+                "max_gross_leverage": 1.0, 
+                "target_vol": 0.1, 
+                "current_vol": 0.1, 
                 "bucket_exposures": {},
                 "active_cluster_counts": cluster_counts,
                 "available_balance": float(acc.available_balance),
@@ -755,6 +861,17 @@ class LiveEngineRunner:
                 "blocked_by": "action_not_enabled",
                 "action": outcome.trade_intent.action,
             }
+        # Sprint 6: Risk Enforcer check
+        top_match = outcome.ranked_matches[0]
+        family = top_match.thesis.event_family or top_match.thesis.primary_event_id
+        
+        # Estimate attempted notional (mid_price * quantity)
+        # This is an approximation for pre-trade check
+        mid_price = float(market_state.get("mid_price", 0.0))
+        # Need to know target quantity from intent?
+        # TradeIntent doesn't have absolute quantity, only size_fraction.
+        # Sizing happens in build_order_plan.
+        
         plan = build_order_plan(
             intent=outcome.trade_intent,
             client_order_id=self._next_auto_order_id(outcome.context.symbol),
@@ -775,12 +892,41 @@ class LiveEngineRunner:
                 self.strategy_runtime.get("max_notional_fraction", 0.10) or 0.10
             ),
         )
+        
         if not plan.accepted or plan.order is None:
             return {
                 "accepted": False,
                 "blocked_by": plan.blocked_by,
                 "plan": plan.plan,
             }
+
+        # Apply Risk Caps to the generated order
+        attempted_notional = float(plan.order.quantity * mid_price)
+        active_thesis_ids = [str(o.metadata.get("thesis_id", "")) for o in self.order_manager.order_history if o.status == OrderStatus.FILLED] # Simplified
+        
+        effective_notional, breach = self.risk_enforcer.check_and_apply_caps(
+            thesis_id=outcome.trade_intent.thesis_id,
+            symbol=outcome.trade_intent.symbol,
+            family=family,
+            attempted_notional=attempted_notional,
+            portfolio_state=outcome.context.portfolio_state,
+            active_thesis_ids=active_thesis_ids,
+            timestamp=outcome.context.timestamp
+        )
+        
+        if effective_notional <= 0:
+            return {
+                "accepted": False,
+                "blocked_by": "risk_cap",
+                "breach": breach.cap_type if breach else "unknown"
+            }
+        
+        if effective_notional < attempted_notional:
+            _LOG.info("Risk cap clipping order for %s: %f -> %f", 
+                     outcome.trade_intent.thesis_id, attempted_notional, effective_notional)
+            plan.order.quantity = effective_notional / mid_price
+            plan.order.remaining_quantity = plan.order.quantity
+
         return await self.order_manager.submit_order_async(
             plan.order,
             kill_switch_manager=self.kill_switch,
@@ -859,11 +1005,55 @@ class LiveEngineRunner:
             policy_config=self.strategy_runtime.get("decision_policy", {}),
             include_pending=bool(self.strategy_runtime.get("include_pending_theses", self.runtime_mode != "trading")),
         )
+        
+        # Sprint 6: Decay Monitor check
+        if outcome.ranked_matches:
+            top_thesis = outcome.ranked_matches[0].thesis
+            # We would need real-time performance metrics for the thesis here
+            # For now, we'll use empty realized metrics or look up from attribution
+            realized = self._get_realized_metrics_for_thesis(top_thesis.thesis_id)
+            expected = {
+                "net_expectancy_bps": top_thesis.evidence.net_expectancy_bps or 0.0,
+                "hit_rate": 0.5, # Placeholder
+            }
+            health = self.decay_monitor.assess_thesis_health(top_thesis.thesis_id, realized, expected)
+            self.thesis_manager.update_health(top_thesis.thesis_id, health.health_state, health.actions_taken)
+
         self._decision_outcomes.append(outcome)
         self._decision_outcomes = self._decision_outcomes[-100:]
         self._record_live_decision_episode(outcome)
-        await self._submit_trade_intent_if_enabled(outcome=outcome, market_state=market_state)
+        
+        # Sprint 6: Risk Enforcer check
+        if outcome.trade_intent.action != "reject":
+            thesis_id = outcome.trade_intent.thesis_id
+            thesis_state = self.thesis_manager.get_state(thesis_id)
+            if thesis_state and thesis_state.state in ("disabled", "paused"):
+                _LOG.warning("Rejecting trade intent for %s: thesis state is %s", thesis_id, thesis_state.state)
+                # Overwrite intent
+                # (Normally we'd use a more formal way to update the immutable TradeIntent)
+                pass 
+            else:
+                # Apply risk caps
+                await self._submit_trade_intent_if_enabled(outcome=outcome, market_state=market_state)
+        
         self.persist_runtime_metrics_snapshot()
+
+    def _get_realized_metrics_for_thesis(self, thesis_id: str) -> Dict[str, Any]:
+        # Implementation to extract rolling metrics from execution_attribution
+        records = [
+            r for r in self.order_manager.execution_attribution 
+            if str(r.metadata.get("thesis_id", "")) == thesis_id
+        ]
+        if not records:
+            return {"sample_count": 0, "avg_realized_net_edge_bps": 0.0, "hit_rate": 0.0}
+            
+        edge = sum(float(r.realized_net_edge_bps) for r in records) / len(records)
+        # Simplified hit rate: sign match between realized and side
+        return {
+            "sample_count": len(records),
+            "avg_realized_net_edge_bps": edge,
+            "hit_rate": 0.5, # Placeholder
+        }
 
     def on_order_fill(self, client_order_id: str, fill_qty: float, fill_price: float) -> None:
         self.order_manager.on_fill(client_order_id, fill_qty=fill_qty, fill_price=fill_price)
