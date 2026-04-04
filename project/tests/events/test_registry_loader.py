@@ -10,6 +10,14 @@ def test_dynamic_loading():
     assert len(loaded) >= 11
 
 
+def test_compose_event_config_uses_registry_core_artifact_fields_for_vol_shock():
+    cfg = compose_event_config("VOL_SHOCK")
+
+    assert cfg.reports_dir == "vol_shock_relaxation"
+    assert cfg.events_file == "vol_shock_relaxation_events.parquet"
+    assert cfg.signal_column == "vol_shock_relaxation_event"
+
+
 def test_blank_registry_fields_fall_back_to_canonical_defaults():
     loaded = _load_event_specs()
     spec = loaded["CROSS_ASSET_DESYNC_EVENT"]

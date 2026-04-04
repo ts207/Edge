@@ -4,13 +4,14 @@ import json
 import sys
 import yaml
 from pathlib import Path
+from types import SimpleNamespace
 from project.research.campaign_controller import (
     CampaignController,
     CampaignConfig,
     CampaignSummary,
     CampaignMemoryIntegrityError,
 )
-from project.research.knowledge.memory import ensure_memory_store
+from project.research.knowledge.memory import ensure_memory_store, read_memory_table, write_memory_table
 
 
 @pytest.fixture
@@ -136,11 +137,104 @@ def test_execute_pipeline_invokes_run_all(monkeypatch, test_env, tmp_path):
     monkeypatch.setattr("project.research.campaign_controller.subprocess.run", _fake_run)
 
     config_path = tmp_path / "experiment.yaml"
-    config_path.write_text("program_id: test_campaign\n", encoding="utf-8")
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "program_id": "test_campaign",
+                "instrument_scope": {
+                    "symbols": ["BTCUSDT"],
+                    "start": "2022-01-01",
+                    "end": "2023-12-31",
+                    "timeframe": "5m",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     controller._execute_pipeline(config_path, "campaign_run_1")
 
     assert captured["cmd"][:3] == [sys.executable, "-m", "project.pipelines.run_all"]
     assert captured["check"] is True
+    assert "--symbols" in captured["cmd"]
+    assert "BTCUSDT" in captured["cmd"]
+    assert "--start" in captured["cmd"]
+    assert "2022-01-01" in captured["cmd"]
+    assert "--end" in captured["cmd"]
+    assert "2023-12-31" in captured["cmd"]
+    assert "--timeframes" in captured["cmd"]
+    assert "5m" in captured["cmd"]
+
+
+def test_run_campaign_persists_proposals_and_evidence_ledger(monkeypatch, test_env):
+    controller = test_env
+    emitted = {"count": 0}
+    request = controller._build_proposal(
+        events=["VOL_SHOCK"],
+        templates=["mean_reversion"],
+        horizons=[12],
+        description="test frontier request",
+        promotion_enabled=False,
+        date_scope=("2022-01-01", "2023-12-31"),
+    )
+
+    def _fake_next_request():
+        if emitted["count"] == 0:
+            emitted["count"] += 1
+            return request
+        return None
+
+    monkeypatch.setattr(controller, "_propose_next_request", _fake_next_request)
+    monkeypatch.setattr(
+        "project.research.campaign_controller.build_experiment_plan",
+        lambda *args, **kwargs: SimpleNamespace(
+            program_id="test_campaign",
+            estimated_hypothesis_count=1,
+            required_detectors=["VolShockRelaxationDetector"],
+            required_features=[],
+            required_states=[],
+        ),
+    )
+
+    def _fake_execute(config_path, run_id, *, command=None):
+        run_dir = controller.data_root / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "run_manifest.json").write_text(
+            json.dumps(
+                {
+                    "run_id": run_id,
+                    "program_id": "test_campaign",
+                    "status": "success",
+                    "terminal_status": "completed",
+                    "mechanical_outcome": "success",
+                    "planned_stages": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        phase2_dir = controller.data_root / "reports" / "phase2" / run_id
+        phase2_dir.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame([{"run_id": run_id}]).iloc[0:0].to_parquet(
+            phase2_dir / "phase2_candidates.parquet",
+            index=False,
+        )
+
+    monkeypatch.setattr(controller, "_execute_pipeline", _fake_execute)
+    monkeypatch.setattr(
+        controller,
+        "_update_campaign_stats",
+        lambda: CampaignSummary(program_id="test_campaign", total_generated=1),
+    )
+    monkeypatch.setattr(controller, "_should_halt", lambda summary: False)
+
+    controller.run_campaign()
+
+    proposals = read_memory_table("test_campaign", "proposals", data_root=controller.data_root)
+    evidence = read_memory_table("test_campaign", "evidence_ledger", data_root=controller.data_root)
+
+    assert len(proposals) == 1
+    assert proposals.iloc[0]["status"] == "executed"
+    assert len(evidence) == 1
+    assert evidence.iloc[0]["run_id"].startswith("run_1_")
 
 
 def test_step_repair_uses_event_from_failure_detail(test_env):
@@ -193,6 +287,65 @@ def test_context_for_proposal_uses_registry_dimensions(test_env):
         "vol_regime": ["low", "high"],
         "carry_state": ["funding_pos", "funding_neg"],
     }
+
+
+def test_step_explore_adjacent_skips_exact_tested_scope_and_preserves_scope_fields(test_env):
+    controller = test_env
+    controller.config.enable_context_conditioning = False
+    write_memory_table(
+        "test_campaign",
+        "tested_regions",
+        pd.DataFrame(
+            [
+                {
+                    "trigger_type": "EVENT",
+                    "event_type": "VOL_SHOCK",
+                    "template_id": "mean_reversion",
+                    "direction": "long",
+                    "horizon": "24b",
+                    "entry_lag": 1,
+                    "context_json": "{}",
+                }
+            ]
+        ),
+        data_root=controller.data_root,
+    )
+
+    proposal = controller._step_explore_adjacent(
+        {
+            "next_actions": {
+                "explore_adjacent": [
+                    {
+                        "proposed_scope": {
+                            "trigger_type": "EVENT",
+                            "event_type": "VOL_SHOCK",
+                            "template_id": "mean_reversion",
+                            "direction": "long",
+                            "horizon": "24b",
+                            "entry_lag": 1,
+                        }
+                    },
+                    {
+                        "proposed_scope": {
+                            "trigger_type": "EVENT",
+                            "event_type": "VOL_SHOCK",
+                            "template_id": "mean_reversion",
+                            "direction": "short",
+                            "horizon": "24b",
+                            "entry_lag": 2,
+                        }
+                    },
+                ]
+            }
+        }
+    )
+
+    assert proposal is not None
+    assert proposal["trigger_space"]["events"]["include"] == ["VOL_SHOCK"]
+    assert proposal["templates"]["include"] == ["mean_reversion"]
+    assert proposal["evaluation"]["horizons_bars"] == [24]
+    assert proposal["evaluation"]["directions"] == ["short"]
+    assert proposal["evaluation"]["entry_lags"] == [2]
 
 
 def test_read_memory_fails_closed_on_corrupted_json(tmp_path):

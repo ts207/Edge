@@ -30,6 +30,7 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
 def decide_next_action(*, run_summary: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> DecisionResult:
     diagnostics = diagnostics or {}
     terminal_status = str(run_summary.get("terminal_status", "") or "").strip().lower()
+    mechanical_outcome = str(run_summary.get("mechanical_outcome", "") or "").strip().lower()
     verdict = str(run_summary.get("verdict", "") or "").strip().upper()
     promoted_count = int(run_summary.get("promoted_count", 0) or 0)
     candidate_count = int(run_summary.get("candidate_count", 0) or 0)
@@ -45,7 +46,11 @@ def decide_next_action(*, run_summary: dict[str, Any], diagnostics: dict[str, An
             classification="pass",
         )
 
-    if terminal_status in {"failed_mechanical", "failed_data_quality", "failed_runtime_invariants", "completed_with_contract_warnings"}:
+    if (
+        terminal_status in {"failed_mechanical", "failed_data_quality", "failed_runtime_invariants"}
+        or mechanical_outcome in {"mechanical_failure", "artifact_contract_failure", "data_quality_failure"}
+        or diagnosis == "mechanical_artifact_gap"
+    ):
         return DecisionResult(
             action="REPAIR",
             reason="Run failed for mechanical or artifact-contract reasons.",

@@ -20,7 +20,7 @@ The operator-facing proposal is authored as one atomic hypothesis.
 
 Canonical example:
 
-- [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
+- [`spec/proposals/canonical_event_hypothesis.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis.yaml)
 
 The loader validates the single-hypothesis shape strictly and compiles it into legacy `AgentProposal`.
 

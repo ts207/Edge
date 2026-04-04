@@ -29,3 +29,19 @@ def test_decision_engine_returns_stop_for_weak_failure():
     )
     assert result.action == "STOP"
     assert result.classification == "fail"
+
+
+def test_decision_engine_warning_only_no_effect_stops_not_repairs():
+    result = decide_next_action(
+        run_summary={
+            "terminal_status": "completed_with_contract_warnings",
+            "mechanical_outcome": "warning_only",
+            "verdict": "KEEP_RESEARCH",
+            "promoted_count": 0,
+            "candidate_count": 0,
+            "top_candidate": {"metric_value": 0.0},
+        },
+        diagnostics={"diagnosis": "no_effect"},
+    )
+    assert result.action == "STOP"
+    assert result.classification == "fail"

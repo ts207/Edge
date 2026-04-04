@@ -141,6 +141,42 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
 
 
+def _scope_already_tested(tested_regions: pd.DataFrame, proposed_scope: Dict[str, Any]) -> bool:
+    if tested_regions.empty:
+        return False
+
+    work = tested_regions.copy()
+    checks = [
+        ("trigger_type", str(proposed_scope.get("trigger_type", "EVENT")).strip().upper()),
+        ("event_type", str(proposed_scope.get("event_type", "")).strip()),
+        ("template_id", str(proposed_scope.get("template_id", "")).strip()),
+        ("direction", str(proposed_scope.get("direction", "")).strip()),
+        ("horizon", str(proposed_scope.get("horizon", "")).strip()),
+    ]
+    for column, value in checks:
+        if value and column in work.columns:
+            work = work[work[column].astype(str).str.strip() == value]
+        if work.empty:
+            return False
+
+    entry_lag = proposed_scope.get("entry_lag")
+    if entry_lag not in (None, "") and "entry_lag" in work.columns:
+        work = work[pd.to_numeric(work["entry_lag"], errors="coerce").fillna(0).astype(int) == int(entry_lag)]
+        if work.empty:
+            return False
+
+    contexts = proposed_scope.get("contexts", {})
+    if "context_json" in work.columns:
+        target_context = canonical_json(contexts if isinstance(contexts, dict) else {})
+        work = work[
+            work["context_json"].fillna("{}").map(canonical_json) == target_context
+        ]
+        if work.empty:
+            return False
+
+    return not work.empty
+
+
 def _gate_rank(val: Any) -> int:
     """Standardized ranking for gate statuses."""
     val = str(val).strip().lower()
@@ -391,6 +427,8 @@ def _build_next_actions(
                 proposed_scope["source_hypothesis_id"] = source_hypothesis_id
             if not proposed_scope["event_type"] or not proposed_scope["template_id"]:
                 continue
+            if _scope_already_tested(tested_regions, proposed_scope):
+                continue
             scope_key = canonical_json(proposed_scope)
             if scope_key in seen_scopes:
                 continue
@@ -407,13 +445,14 @@ def _build_next_actions(
         str(recommended_experiment.get(key, "")).strip()
         for key in ("event_type", "template_id", "primary_fail_gate")
     ):
-        explore_adjacent.append(
-            {
-                "reason": str(reflection.get("recommended_next_action", "")),
-                "priority": "medium",
-                "proposed_scope": recommended_experiment,
-            }
-        )
+        if not _scope_already_tested(tested_regions, recommended_experiment):
+            explore_adjacent.append(
+                {
+                    "reason": str(reflection.get("recommended_next_action", "")),
+                    "priority": "medium",
+                    "proposed_scope": recommended_experiment,
+                }
+            )
 
     return {
         "repair": [

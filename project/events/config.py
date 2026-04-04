@@ -361,14 +361,23 @@ def compose_config(
         family=family_name,
         canonical_regime=family_name,
         legacy_family=legacy_family,
-        reports_dir=_coalesce_text(row.get("reports_dir"), normalized.lower()),
+        reports_dir=_coalesce_text(
+            row.get("reports_dir"),
+            getattr(event_def, "reports_dir", normalized.lower()),
+        ),
         events_file=_coalesce_text(
             row.get("events_file"),
-            f"{normalized.lower()}_events.parquet",
+            getattr(event_def, "events_file", f"{normalized.lower()}_events.parquet"),
         ),
         signal_column=_coalesce_text(
             row.get("signal_column"),
-            normalized.lower() if normalized.lower().endswith("_event") else f"{normalized.lower()}_event",
+            getattr(
+                event_def,
+                "signal_column",
+                normalized.lower()
+                if normalized.lower().endswith("_event")
+                else f"{normalized.lower()}_event",
+            ),
         ),
         parameters=effective_parameters,
         subtype=str(row.get("subtype", "")).strip(),

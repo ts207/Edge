@@ -197,10 +197,16 @@ def build_negative_result_diagnostics(*, run_id: str, program_id: str | None = N
     candidates = _load_candidate_table(run_id, data_root=resolved)
     top = summary.get("top_candidate", {}) or {}
     primary_fail_gate = str(summary.get("primary_fail_gate", top.get("primary_fail_gate", "")) or "")
+    terminal_status = str(summary.get("terminal_status", "") or "")
+    mechanical_outcome = str(summary.get("mechanical_outcome", "") or "")
     diagnosis = "no_effect"
     rationale = "The run finished without enough evidence to support the hypothesis."
     sample_size = None
-    if summary.get("terminal_status") in {"failed_mechanical", "failed_data_quality", "failed_runtime_invariants", "completed_with_contract_warnings"}:
+    if terminal_status in {"failed_mechanical", "failed_data_quality", "failed_runtime_invariants"} or mechanical_outcome in {
+        "mechanical_failure",
+        "artifact_contract_failure",
+        "data_quality_failure",
+    }:
         diagnosis = "mechanical_artifact_gap"
         rationale = "The main blocker is infrastructure or artifact integrity rather than the market claim itself."
     else:

@@ -17,7 +17,24 @@ def test_canonical_event_h24_frontdoor_runs_end_to_end_without_runtime_side_effe
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    proposal_path = Path("spec/proposals/canonical_event_hypothesis_h24.yaml")
+    proposal_path = tmp_path / "canonical_event_hypothesis_h24.yaml"
+    source_payload = yaml.safe_load(
+        Path("spec/proposals/canonical_event_hypothesis.yaml").read_text(encoding="utf-8")
+    )
+    proposal_payload = dict(source_payload)
+    proposal_payload["hypothesis"] = dict(source_payload["hypothesis"])
+    proposal_payload["hypothesis"]["horizon_bars"] = 24
+    proposal_payload["bounded"] = {
+        "baseline_run_id": "volshock_btc_long_12b_20260403T214050Z_38fb41d30e",
+        "experiment_type": "horizon_test",
+        "allowed_change_field": "horizons_bars",
+        "change_reason": "Extend holding horizon from 12 bars to 24 bars",
+        "compare_to_baseline": True,
+    }
+    proposal_path.write_text(
+        yaml.safe_dump(proposal_payload, sort_keys=False),
+        encoding="utf-8",
+    )
     data_root = tmp_path / "data"
     baseline_run_id = "volshock_btc_long_12b_20260403T214050Z_38fb41d30e"
 

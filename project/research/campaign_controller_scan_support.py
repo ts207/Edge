@@ -115,11 +115,20 @@ def build_proposal_from_memory_scope(
         else None
     )
     horizons = [parsed_horizon] if parsed_horizon is not None else list(default_horizons)
+    direction = str(scope.get("direction", "")).strip().lower()
+    directions = [direction] if direction else None
+    raw_entry_lag = scope.get("entry_lag", scope.get("entry_lag_bars"))
+    try:
+        entry_lags = [int(raw_entry_lag)] if raw_entry_lag not in (None, "") else None
+    except (TypeError, ValueError):
+        entry_lags = None
 
     kwargs: Dict[str, Any] = {
         "events": [],
         "templates": templates,
         "horizons": horizons,
+        "directions": directions,
+        "entry_lags": entry_lags,
         "description": description,
         "promotion_enabled": promotion_enabled,
         "date_scope": date_scope,
@@ -762,6 +771,8 @@ def build_proposal(
     events: List[str],
     templates: List[str],
     horizons: List[int],
+    directions: Optional[List[str]] = None,
+    entry_lags: Optional[List[int]] = None,
     description: str,
     promotion_enabled: bool,
     date_scope: tuple[str, str],
@@ -811,8 +822,8 @@ def build_proposal(
         "templates": {"include": templates},
         "evaluation": {
             "horizons_bars": horizons,
-            "directions": ["long", "short"],
-            "entry_lags": [1, 2],
+            "directions": directions or ["long", "short"],
+            "entry_lags": entry_lags or [1, 2],
         },
         "contexts": {"include": contexts or {}},
         "search_control": {

@@ -7,6 +7,7 @@ import logging
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Set
@@ -19,8 +20,11 @@ from project.domain.compiled_registry import get_domain_registry
 from project.research import campaign_controller_scan_support as _scan_support
 from project.research.experiment_engine import build_experiment_plan, RegistryBundle
 from project.research.campaign_contract import controller_contract_view
+from project.research.knowledge.schemas import canonical_json
+from project.research.update_campaign_memory import _scope_already_tested
 from project.research.search_intelligence import update_search_intelligence
-from project.research.knowledge.memory import memory_paths, read_memory_table
+from project.research.knowledge.memory import memory_paths, read_memory_table, write_memory_table
+from project.research.reports.operator_reporting import write_operator_outputs_for_run
 from project.spec_registry.search_space import (
     load_event_priority_weights,
     QUALITY_SCORES as _QUALITY_SCORES_MAP,
@@ -44,6 +48,15 @@ _REPAIR_STAGE_DEFAULT_EVENTS: Dict[str, str] = {
 
 class CampaignMemoryIntegrityError(RuntimeError):
     """Raised when persisted campaign memory exists but cannot be trusted."""
+
+
+def _merge_proposal_rows(existing: pd.DataFrame, incoming: pd.DataFrame) -> pd.DataFrame:
+    if existing.empty:
+        return incoming.copy()
+    if incoming.empty:
+        return existing.copy()
+    out = pd.concat([existing, incoming], ignore_index=True)
+    return out.drop_duplicates(subset=["proposal_id"], keep="last").reset_index(drop=True)
 
 def _load_event_quality_weights(search_space_path: Path) -> Dict[str, float]:
     """Backward-compatible shim for quality weight loading."""
@@ -204,6 +217,98 @@ class CampaignController:
         ).to_dict()
         self.contract_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    def _plan_payload(self, plan: Any) -> dict[str, Any]:
+        return {
+            "program_id": str(getattr(plan, "program_id", "") or ""),
+            "estimated_hypothesis_count": int(getattr(plan, "estimated_hypothesis_count", 0) or 0),
+            "required_detectors": list(getattr(plan, "required_detectors", []) or []),
+            "required_features": list(getattr(plan, "required_features", []) or []),
+            "required_states": list(getattr(plan, "required_states", []) or []),
+        }
+
+    def _pipeline_command(self, config_path: Path, run_id: str) -> list[str]:
+        payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        instrument_scope = payload.get("instrument_scope", {}) if isinstance(payload, dict) else {}
+        symbols = instrument_scope.get("symbols", []) if isinstance(instrument_scope, dict) else []
+        start = str(instrument_scope.get("start", "")).strip() if isinstance(instrument_scope, dict) else ""
+        end = str(instrument_scope.get("end", "")).strip() if isinstance(instrument_scope, dict) else ""
+        timeframe = str(instrument_scope.get("timeframe", "")).strip() if isinstance(instrument_scope, dict) else ""
+        cmd = [
+            sys.executable,
+            "-m",
+            "project.pipelines.run_all",
+            "--mode",
+            "research",
+            "--run_id",
+            run_id,
+            "--experiment_config",
+            str(config_path),
+            "--registry_root",
+            str(self.registry_root),
+            "--run_campaign_memory_update",
+            "1",
+            "--program_id",
+            self.config.program_id,
+        ]
+        if symbols:
+            cmd.extend(["--symbols", ",".join(str(symbol).strip() for symbol in symbols if str(symbol).strip())])
+        if start:
+            cmd.extend(["--start", start])
+        if end:
+            cmd.extend(["--end", end])
+        if timeframe:
+            cmd.extend(["--timeframes", timeframe])
+        return cmd
+
+    def _persist_frontier_proposal_record(
+        self,
+        *,
+        run_id: str,
+        config_path: Path,
+        plan: Any,
+        command: list[str],
+        status: str,
+        returncode: int,
+    ) -> None:
+        paths = memory_paths(self.config.program_id, data_root=self.data_root)
+        payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        instrument_scope = payload.get("instrument_scope", {}) if isinstance(payload, dict) else {}
+        promotion = payload.get("promotion", {}) if isinstance(payload, dict) else {}
+        request_copy_path = self.campaign_dir / run_id / "request.yaml"
+        proposal_path = request_copy_path if request_copy_path.exists() else config_path
+        proposal_row = {
+            "proposal_id": f"proposal::{run_id}",
+            "program_id": self.config.program_id,
+            "run_id": run_id,
+            "issued_at": datetime.now(timezone.utc).isoformat(),
+            "proposal_path": str(proposal_path),
+            "experiment_config_path": str(config_path),
+            "run_all_overrides_path": "",
+            "status": status,
+            "plan_only": False,
+            "dry_run": False,
+            "returncode": int(returncode),
+            "objective_name": str(payload.get("objective_name", "") or ""),
+            "promotion_profile": "research" if bool(promotion.get("enabled", False)) else "exploratory_only",
+            "symbols": ",".join(str(symbol).strip() for symbol in list(instrument_scope.get("symbols", []) or []) if str(symbol).strip()),
+            "command_json": canonical_json(command),
+            "validated_plan_json": canonical_json(self._plan_payload(plan)),
+            "bounded_json": "",
+            "baseline_run_id": "",
+            "experiment_type": "discovery",
+            "allowed_change_field": "",
+            "campaign_id": "",
+            "cycle_number": 0,
+            "branch_id": "",
+            "parent_run_id": "",
+            "mutation_type": "",
+            "branch_depth": 0,
+            "decision": "",
+        }
+        existing = read_memory_table(self.config.program_id, "proposals", data_root=self.data_root)
+        proposals = _merge_proposal_rows(existing, pd.DataFrame([proposal_row]))
+        write_memory_table(self.config.program_id, "proposals", proposals, data_root=self.data_root)
+
     # ------------------------------------------------------------------
     # Main loop
     # ------------------------------------------------------------------
@@ -232,7 +337,7 @@ class CampaignController:
             config_path.write_text(yaml.dump(request_dict))
 
             try:
-                build_experiment_plan(
+                plan = build_experiment_plan(
                     config_path,
                     self.registry_root,
                     out_dir=self.campaign_dir / run_id,
@@ -242,12 +347,46 @@ class CampaignController:
                 _LOG.error("Failed to build plan for %s: %s", run_id, exc)
                 continue
 
+            command = self._pipeline_command(config_path, run_id)
+            self._persist_frontier_proposal_record(
+                run_id=run_id,
+                config_path=config_path,
+                plan=plan,
+                command=command,
+                status="planned",
+                returncode=0,
+            )
+
             pipeline_failed = False
+            returncode = 0
             try:
-                self._execute_pipeline(config_path, run_id)
+                self._execute_pipeline(config_path, run_id, command=command)
+            except subprocess.CalledProcessError as exc:
+                pipeline_failed = True
+                returncode = int(exc.returncode or 1)
+                _LOG.error("Pipeline execution failed for %s: %s", run_id, exc)
             except Exception as exc:
                 pipeline_failed = True
+                returncode = 1
                 _LOG.error("Pipeline execution failed for %s: %s", run_id, exc)
+
+            self._persist_frontier_proposal_record(
+                run_id=run_id,
+                config_path=config_path,
+                plan=plan,
+                command=command,
+                status="failed" if pipeline_failed else "executed",
+                returncode=returncode,
+            )
+
+            try:
+                write_operator_outputs_for_run(
+                    run_id=run_id,
+                    program_id=self.config.program_id,
+                    data_root=self.data_root,
+                )
+            except Exception as exc:
+                _LOG.warning("write_operator_outputs_for_run failed for %s: %s", run_id, exc)
 
             summary = self._update_campaign_stats()
             if pipeline_failed:
@@ -550,41 +689,59 @@ class CampaignController:
         explore_queue: List[Dict[str, Any]] = mem["next_actions"].get("explore_adjacent", [])
         if not explore_queue:
             return None
-
-        entry = explore_queue[0]
-        try:
-            scope = entry.get("proposed_scope", {})
-            if isinstance(scope, str):
-                scope = json.loads(scope)
-        except Exception:
-            scope = {}
-
-        event_type = str(scope.get("event_type", "")).strip()
-        if not event_type:
-            return None
-
-        _LOG.info("STEP 3 EXPLORE ADJACENT: event=%s", event_type)
-
-        # Propagate any context conditioning embedded in the explore scope.
-        # Regime-conditional explore entries (from Phase 4.2 regime signal injection)
-        # carry a contexts dict so the follow-up run targets the specific regime.
-        raw_contexts = scope.get("contexts", {})
-        contexts = raw_contexts if isinstance(raw_contexts, dict) else {}
-        # Merge with config-level context conditioning (config wins on conflict)
-        if self.config.enable_context_conditioning and not contexts:
-            contexts = self._context_for_proposal()
-
-        scope["contexts"] = contexts
-        proposal = _scan_support.build_proposal_from_memory_scope(
-            self,
-            scope,
-            description=f"Explore adjacent — {event_type}",
-            promotion_enabled=False,
-            date_scope=self.config.explore_date_scope,
-            default_horizons=[6, 12, 24, 48],
+        tested_regions = read_memory_table(
+            self.config.program_id, "tested_regions", data_root=self.data_root
         )
-        if proposal is not None:
-            return proposal
+        for entry in explore_queue:
+            try:
+                scope = entry.get("proposed_scope", {})
+                if isinstance(scope, str):
+                    scope = json.loads(scope)
+            except Exception:
+                scope = {}
+            if not isinstance(scope, dict) or not scope:
+                continue
+
+            # Propagate any context conditioning embedded in the explore scope.
+            # Regime-conditional explore entries (from Phase 4.2 regime signal injection)
+            # carry a contexts dict so the follow-up run targets the specific regime.
+            raw_contexts = scope.get("contexts", {})
+            contexts = raw_contexts if isinstance(raw_contexts, dict) else {}
+            if "context_json" in scope and not contexts:
+                try:
+                    parsed_contexts = json.loads(str(scope.get("context_json", "{}")))
+                except Exception:
+                    parsed_contexts = {}
+                contexts = parsed_contexts if isinstance(parsed_contexts, dict) else {}
+            # Merge with config-level context conditioning (config wins on conflict)
+            if self.config.enable_context_conditioning and not contexts:
+                contexts = self._context_for_proposal()
+
+            scope["contexts"] = contexts
+            if _scope_already_tested(tested_regions, scope):
+                _LOG.info(
+                    "STEP 3 EXPLORE ADJACENT: skip already-tested scope %s",
+                    canonical_json(scope),
+                )
+                continue
+
+            scope_label = (
+                str(scope.get("event_type", "")).strip()
+                or str(scope.get("state_id", "")).strip()
+                or str(scope.get("trigger_type", "scope")).strip().upper()
+            )
+            _LOG.info("STEP 3 EXPLORE ADJACENT: target=%s", scope_label)
+
+            proposal = _scan_support.build_proposal_from_memory_scope(
+                self,
+                scope,
+                description=f"Explore adjacent — {scope_label}",
+                promotion_enabled=False,
+                date_scope=self.config.explore_date_scope,
+                default_horizons=[6, 12, 24, 48],
+            )
+            if proposal is not None:
+                return proposal
         return None
 
     # ------------------------------------------------------------------
@@ -682,6 +839,8 @@ class CampaignController:
         events: List[str],
         templates: List[str],
         horizons: List[int],
+        directions: Optional[List[str]] = None,
+        entry_lags: Optional[List[int]] = None,
         description: str,
         promotion_enabled: bool,
         date_scope: tuple[str, str],
@@ -705,6 +864,8 @@ class CampaignController:
             events=events,
             templates=templates,
             horizons=horizons,
+            directions=directions,
+            entry_lags=entry_lags,
             description=description,
             promotion_enabled=promotion_enabled,
             date_scope=date_scope,
@@ -769,25 +930,9 @@ class CampaignController:
         except Exception as exc:
             _LOG.warning("MI scan pre-step failed (non-fatal): %s", exc)
 
-    def _execute_pipeline(self, config_path: Path, run_id: str):
+    def _execute_pipeline(self, config_path: Path, run_id: str, *, command: list[str] | None = None):
         _LOG.info("Executing pipeline for %s...", run_id)
-        cmd = [
-            sys.executable,
-            "-m",
-            "project.pipelines.run_all",
-            "--mode",
-            "research",
-            "--run_id",
-            run_id,
-            "--experiment_config",
-            str(config_path),
-            "--registry_root",
-            str(self.registry_root),
-            "--run_campaign_memory_update",
-            "1",
-            "--program_id",
-            self.config.program_id,
-        ]
+        cmd = command or self._pipeline_command(config_path, run_id)
         _LOG.info("Command: %s", " ".join(cmd))
         subprocess.run(cmd, check=True, cwd=str(Path.cwd()))
 

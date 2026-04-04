@@ -147,3 +147,44 @@ def test_negative_result_diagnostics_detect_regime_instability(monkeypatch, tmp_
     assert diagnostics["diagnosis"] == "regime_instability"
     assert regime["classification"] == "regime_instability"
     assert Path(diagnostics["report_json_path"]).exists()
+
+
+def test_negative_result_diagnostics_warning_only_run_is_not_mechanical_gap(monkeypatch, tmp_path):
+    data_root = tmp_path / "data"
+    program_id = "btc_campaign"
+    run_id = "run_warning_only"
+    run_dir = data_root / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "program_id": program_id,
+                "status": "success",
+                "terminal_status": "completed_with_contract_warnings",
+            }
+        ),
+        encoding="utf-8",
+    )
+    phase2_dir = data_root / "reports" / "phase2" / run_id
+    phase2_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([{"run_id": run_id}]).iloc[0:0].to_parquet(phase2_dir / "phase2_candidates.parquet", index=False)
+
+    import project.research.reports.operator_reporting as reporting
+
+    monkeypatch.setattr(
+        reporting,
+        "build_run_reflection",
+        lambda run_id, data_root=None: {
+            "candidate_count": 0,
+            "promoted_count": 0,
+            "mechanical_outcome": "warning_only",
+            "statistical_outcome": "no_signal",
+            "recommended_next_action": "hold",
+        },
+    )
+
+    diagnostics = write_negative_result_diagnostics(run_id=run_id, program_id=program_id, data_root=data_root)
+
+    assert diagnostics["diagnosis"] == "no_effect"
+    assert diagnostics["recommended_next_action"] == "kill_or_reframe_hypothesis"

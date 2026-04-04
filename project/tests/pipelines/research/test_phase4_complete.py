@@ -335,6 +335,37 @@ class TestBuildNextActionsRegimeCandidates:
         assert "best_regime" not in regime_entries[0]["proposed_scope"]
         assert "contexts" not in regime_entries[0]["proposed_scope"]
 
+    def test_regime_entries_skip_already_tested_exact_scope_including_zero_entry_lag(self):
+        regime_df = pd.DataFrame([
+            {
+                "event_type": "VOL_SHOCK", "template_id": "continuation", "direction": "short",
+                "horizon": "24b", "entry_lag": 0, "trigger_key": "event:VOL_SHOCK",
+                "t_stat": 0.9, "mean_return_bps": 4.1, "robustness_score": 0.3, "context_json": "{}",
+            }
+        ])
+        tested_regions = pd.DataFrame([
+            {
+                "trigger_type": "EVENT",
+                "event_type": "VOL_SHOCK",
+                "template_id": "continuation",
+                "direction": "short",
+                "horizon": "24b",
+                "entry_lag": 0,
+                "context_json": "{}",
+            }
+        ])
+        result = _build_next_actions(
+            reflection={},
+            tested_regions=tested_regions,
+            failures=pd.DataFrame(),
+            exploit_top_k=3,
+            repair_top_k=3,
+            regime_conditional_candidates=regime_df,
+        )
+        regime_entries = [e for e in result["explore_adjacent"]
+                          if e.get("reason") == "strong regime slice despite weak aggregate result"]
+        assert regime_entries == []
+
     def test_hold_reflection_suppresses_exploit_queue(self):
         tested_regions = pd.DataFrame([
             {

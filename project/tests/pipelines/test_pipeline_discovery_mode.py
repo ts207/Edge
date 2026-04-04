@@ -301,6 +301,8 @@ def test_preflight_marks_search_engine_active_for_experiment_config(tmp_path):
         symbols="BTCUSDT",
         start="2022-11-01",
         end="2022-12-31",
+        phase2_event_type="VOL_SHOCK",
+        templates={"include": ["mean_reversion"]},
         experiment_config=str(experiment_config),
         registry_root=str(registry_root),
         objective_name="retail_profitability",
@@ -329,6 +331,8 @@ def test_preflight_marks_search_engine_active_for_experiment_config(tmp_path):
 
     assert preflight["effective_behavior"]["runs_search_engine"] is True
     assert preflight["effective_behavior"]["runs_legacy_phase2_conditional"] is False
+    assert preflight["effective_behavior"]["phase2_event_type"] == "BASIS_DISLOC"
+    assert preflight["effective_behavior"]["phase2_event_type_source"] == "experiment_config_event_pin"
 
 
 def test_preflight_auto_enables_spot_pipeline_for_basis_regime_experiment(tmp_path):

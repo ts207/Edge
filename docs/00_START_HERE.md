@@ -18,7 +18,7 @@ The bootstrap/package lane exists, but it is advanced maintenance work. A new op
 
 ## What to memorize first
 
-- the canonical example is [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
+- the canonical example is [`spec/proposals/canonical_event_hypothesis.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis.yaml)
 - operator proposals are authored as one atomic hypothesis, then normalized into `AgentProposal`
 - `make export RUN_ID=<run_id>` is the canonical bridge from a run to a runtime thesis batch
 - `deployment_state` answers whether something may monitor, paper trade, or trade live

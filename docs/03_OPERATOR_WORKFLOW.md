@@ -12,7 +12,7 @@ The operator front door is one atomic hypothesis, not an open search space.
 
 Canonical example:
 
-- [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
+- [`spec/proposals/canonical_event_hypothesis.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis.yaml)
 
 Minimal shape:
 

@@ -48,7 +48,7 @@ The operator-facing proposal is authored as one atomic hypothesis. It states:
 
 Canonical example:
 
-- [`spec/proposals/canonical_event_hypothesis_h24.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis_h24.yaml)
+- [`spec/proposals/canonical_event_hypothesis.yaml`](/home/irene/Edge/spec/proposals/canonical_event_hypothesis.yaml)
 
 ### Normalized `AgentProposal`
 

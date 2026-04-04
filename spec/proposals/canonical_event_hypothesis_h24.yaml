@@ -20,10 +20,3 @@ hypothesis:
 
 run_mode: research
 promotion_profile: research
-
-bounded:
-  baseline_run_id: volshock_btc_long_12b_20260403T214050Z_38fb41d30e
-  experiment_type: horizon_test
-  allowed_change_field: horizons_bars
-  change_reason: Extend holding horizon from 12 bars to 24 bars
-  compare_to_baseline: true

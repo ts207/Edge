@@ -408,10 +408,14 @@ def _normalized_tokens(values: Any) -> set[str]:
     }
 
 
-def _experiment_trigger_hints(args: argparse.Namespace) -> tuple[set[str], set[str]]:
+def _experiment_trigger_hints(
+    args: argparse.Namespace,
+    *,
+    include_phase2_event_type: bool = True,
+) -> tuple[set[str], set[str]]:
     events = _normalized_tokens(getattr(args, "events", None))
     phase2_event_type = str(getattr(args, "phase2_event_type", "") or "").strip().upper()
-    if phase2_event_type and phase2_event_type != "ALL":
+    if include_phase2_event_type and phase2_event_type and phase2_event_type != "ALL":
         events.add(phase2_event_type)
 
     regimes: set[str] = set()
@@ -660,16 +664,23 @@ def prepare_run_preflight(
     if str(getattr(args, "mode", "research")).strip().lower() in {"production", "certification"}:
         if not cli_flag_present("--run_phase2_conditional"):
             args.run_phase2_conditional = 1
+    hinted_events, _hinted_regimes = _experiment_trigger_hints(
+        args,
+        include_phase2_event_type=False,
+    )
     if (
         int(getattr(args, "run_phase2_conditional", 0) or 0)
         and getattr(args, "templates", None)
         and not getattr(args, "events", None)
         and not cli_flag_present("--phase2_event_type")
     ):
-        # Template-only runs should fan out over the canonical event chain unless the user
-        # explicitly pins a single event family. Otherwise the parser default of VOL_SHOCK
-        # silently narrows the run and breaks calibration parity with event-level reruns.
-        args.phase2_event_type = "all"
+        if len(hinted_events) == 1:
+            args.phase2_event_type = next(iter(hinted_events))
+        else:
+            # Template-only runs should fan out over the canonical event chain unless the user
+            # explicitly pins a single event family. Otherwise the parser default of VOL_SHOCK
+            # silently narrows the run and breaks calibration parity with event-level reruns.
+            args.phase2_event_type = "all"
 
     expectancy_script = (
         project_root / "research" / "analyze_conditional_expectancy.py"
@@ -761,6 +772,14 @@ def prepare_run_preflight(
     )
     phase2_event_type_source = "explicit" if cli_flag_present("--phase2_event_type") else "implicit"
     if (
+        not cli_flag_present("--phase2_event_type")
+        and int(getattr(args, "run_phase2_conditional", 0) or 0)
+        and getattr(args, "templates", None)
+        and not getattr(args, "events", None)
+        and len(hinted_events) == 1
+    ):
+        phase2_event_type_source = "experiment_config_event_pin"
+    elif (
         not cli_flag_present("--phase2_event_type")
         and int(getattr(args, "run_phase2_conditional", 0) or 0)
         and getattr(args, "templates", None)
