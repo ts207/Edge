@@ -1,0 +1,30 @@
+# Sprint 6.5B — Candidate E: BAND_BREAK + mean_reversion + short + 24b horizon
+# Same as candidate B but longer horizon (2h vs 1h) to allow more complete reversion.
+program_id: sprint65_matrix_e
+start: "2021-01-01"
+end: "2024-10-31"
+symbols:
+  - BTCUSDT
+timeframe: 5m
+hypothesis:
+  anchor:
+    type: event
+    event_id: BAND_BREAK
+  filters:
+    states: []
+    regimes: []
+    feature_predicates: []
+    contexts: {}
+  sampling_policy:
+    mode: episodic
+    entry_lag_bars: 1
+    overlap_policy: suppress
+  template:
+    id: mean_reversion
+  direction: short
+  horizon_bars: 24
+instrument_classes:
+  - crypto
+  - futures
+objective_name: retail_profitability
+promotion_profile: research

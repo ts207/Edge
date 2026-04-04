@@ -60,6 +60,21 @@ python -m project.scripts.build_structural_confirmation_artifacts
 python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ```
 
+## Deployment permission model (Sprint 7)
+
+Export does not equal live trading permission. When a run is exported, check `deployment_state` before answering "can this trade live?".
+
+State lifecycle: `promoted -> paper_enabled -> paper_approved -> live_eligible -> live_enabled`
+
+Legacy states (`monitor_only`, `paper_only`) are kept for backward compat.
+
+Key rules:
+- Only `live_enabled` may submit live orders (`LIVE_TRADEABLE_STATES = {"live_enabled"}`)
+- `live_eligible` and `live_enabled` both require a `DeploymentApprovalRecord` with `status='approved'`
+- `ThesisStore.from_path()` enforces `DeploymentGate` at load time — a load failure is a contract violation
+- `deployment_mode_allowed` on the thesis is the operator-set ceiling; thesis cannot exceed it
+- Kill-switch granularity: global, per-symbol, per-family, per-thesis — inspect `KillSwitchManager.is_thesis_blocked()`
+
 ## Output standard
 
 - Always state the current stage.

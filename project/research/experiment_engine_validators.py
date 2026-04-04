@@ -15,6 +15,7 @@ from project.research.experiment_engine_schema import (
     AgentExperimentRequest,
     RegistryBundle,
 )
+from project.research.search.feasibility import check_hypothesis_feasibility
 
 log = logging.getLogger(__name__)
 
@@ -398,6 +399,36 @@ def expand_hypotheses(
         elif t_type_upper == "INTERACTION":
             hypotheses.extend(_expand_interaction_triggers(request, context_slices))
 
+    # Filter hypotheses that are incompatible with the template-family contract.
+    # This catches e.g. CLIMAX_VOLUME_BAR + trend_continuation at plan time
+    # rather than letting them silently produce zero t-stat results at evaluation.
+    registry = get_domain_registry()
+    valid_hypotheses = []
+    incompatible_pairs: set[tuple[str, str]] = set()
+    for hyp in hypotheses:
+        result = check_hypothesis_feasibility(hyp, registry=registry)
+        if not result.valid and "incompatible_template_family" in result.reasons:
+            pair = (hyp.trigger.event_id or "", hyp.template_id)
+            if pair not in incompatible_pairs:
+                log.warning(
+                    "Dropping incompatible hypothesis: event=%r template=%r event_family=%r — "
+                    "template is not compatible with this event family",
+                    hyp.trigger.event_id,
+                    hyp.template_id,
+                    result.details.get("compat_event_family", "unknown"),
+                )
+                incompatible_pairs.add(pair)
+        else:
+            valid_hypotheses.append(hyp)
+    if incompatible_pairs:
+        log.warning(
+            "%d incompatible event+template combinations removed from plan (%d hypotheses dropped). "
+            "Review proposal template vs event family compatibility.",
+            len(incompatible_pairs),
+            len(hypotheses) - len(valid_hypotheses),
+        )
+    hypotheses = valid_hypotheses
+
     # Apply search budget
     max_total = request.search_control.max_hypotheses_total
     if len(hypotheses) > max_total:
@@ -606,6 +637,24 @@ def _expand_event_triggers(
         requested_events = explicit_event_specs
     else:
         requested_events = [(event_id, None) for event_id in _resolve_requested_event_ids(request, registries)]
+    # Translate first feature predicate into a feature_condition for evaluation-time filtering.
+    feature_predicates_include = request.trigger_space.feature_predicates.get("include", [])
+    feature_condition: Optional[TriggerSpec] = None
+    if feature_predicates_include:
+        if len(feature_predicates_include) > 1:
+            log.warning(
+                "Multiple feature_predicates provided; only the first will be applied as feature_condition"
+            )
+        fp = feature_predicates_include[0]
+        try:
+            feature_condition = TriggerSpec.feature_predicate(
+                feature=str(fp["feature"]),
+                operator=str(fp["operator"]),
+                threshold=float(fp["threshold"]),
+            )
+        except (KeyError, ValueError, TypeError) as exc:
+            log.warning("Could not build feature_condition from predicate %r: %s", fp, exc)
+
     for event_id, event_direction in requested_events:
         for tpl in request.templates.include:
             for horizon in request.evaluation.horizons_bars:
@@ -621,6 +670,7 @@ def _expand_event_triggers(
                                     template_id=tpl,
                                     entry_lag=lag,
                                     context=ctx,
+                                    feature_condition=feature_condition,
                                 )
                             )
     return hyps

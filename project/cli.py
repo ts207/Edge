@@ -253,11 +253,11 @@ def main() -> int:
                 args.proposal,
                 registry_root=Path(args.registry_root),
                 data_root=Path(args.data_root) if args.data_root else None,
-                run_id=args.run_id,
+                run_id=getattr(args, "run_id", None),
                 plan_only=(args.subcommand == "plan"),
                 dry_run=False,
-                check=bool(args.check),
-                legacy_compatibility=bool(args.legacy_compatibility),
+                check=bool(getattr(args, "check", False)),
+                legacy_compatibility=bool(getattr(args, "legacy_compatibility", False)),
             )
             print(json.dumps(result, indent=2, sort_keys=True))
             return 0 if int(result.get("execution", {}).get("returncode", 0)) == 0 else int(result["execution"]["returncode"])
@@ -284,8 +284,14 @@ def main() -> int:
     if args.command == "validate":
         from project import validate
         if args.subcommand == "run":
-            bundle = validate.run(args.run_id, data_root=Path(args.data_root) if args.data_root else None)
-            print(f"Validation completed. Validated: {len(bundle.validated_candidates)}, Rejected: {len(bundle.rejected_candidates)}")
+            try:
+                bundle = validate.run(args.run_id, data_root=Path(args.data_root) if args.data_root else None)
+                print(f"Validation completed. Validated: {len(bundle.validated_candidates)}, Rejected: {len(bundle.rejected_candidates)}")
+            except ValueError as exc:
+                if "No candidates found" in str(exc):
+                    print(f"Validation completed. No candidates found for run {args.run_id}. Validated: 0, Rejected: 0")
+                else:
+                    raise
             return 0
         if args.subcommand == "report":
             result = validate.report(
@@ -324,6 +330,11 @@ def main() -> int:
                 retail_profile=args.retail_profile,
                 use_compatibility_bridge=bool(args.use_compatibility_bridge)
             )
+            if result.exit_code != 0:
+                err = str(result.diagnostics.get("error", ""))
+                if "missing validation bundle" in err or "No candidates found" in err:
+                    print(f"Promotion completed. No validated candidates for run {args.run_id}. Promoted: 0")
+                    return 0
             print(f"Promotion completed with exit code: {result.exit_code}")
             return result.exit_code
         if args.subcommand == "export":

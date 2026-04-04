@@ -89,6 +89,7 @@ def issue_proposal(
         plan_only=bool(plan_only),
         dry_run=bool(dry_run),
         check=bool(check),
+        legacy_compatibility=bool(legacy_compatibility),
     )
 
     issued_at = datetime.now(timezone.utc).isoformat()

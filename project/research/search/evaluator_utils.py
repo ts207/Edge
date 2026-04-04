@@ -336,13 +336,14 @@ def signed_returns_for_spec(
         aligned = direction_series.loc[returns.index].dropna()
         if aligned.empty or len(aligned) != len(returns):
             return None, "missing_event_direction"
+        _fallback = 1 if spec.direction == "long" else -1 if spec.direction == "short" else 1
         sign_values = aligned.apply(
             lambda value: resolve_effect_sign(
                 template_verb=spec.template_id,
                 side_policy=str(semantics["side_policy"]),
                 event_direction=value,
                 label_target=str(semantics["label_target"]),
-                fallback_sign=1,
+                fallback_sign=_fallback,
             )
         ).astype(float)
         return returns * sign_values, None

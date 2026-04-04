@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Iterable, List
 
 from project.artifacts import live_thesis_index_path, promoted_theses_path
 from project.core.exceptions import DataIntegrityError
 from project.live.contracts import PromotedThesis
+from project.live.deployment import DeploymentGate
+
+_LOG = logging.getLogger(__name__)
 
 
 def _load_payload(path: Path) -> dict:
@@ -29,11 +33,7 @@ def _matches_symbol(thesis: PromotedThesis, symbol: str) -> bool:
     candidate_symbol = str(scope.get("candidate_symbol", "")).strip().upper()
     if candidate_symbol == token:
         return True
-    symbols = [
-        str(item).strip().upper()
-        for item in scope.get("symbols", [])
-        if str(item).strip()
-    ]
+    symbols = [str(item).strip().upper() for item in scope.get("symbols", []) if str(item).strip()]
     return token in symbols
 
 
@@ -52,9 +52,7 @@ def _event_ids_for_matching(thesis: PromotedThesis) -> set[str]:
         if str(item).strip()
     )
     tokens.update(
-        str(item).strip().upper()
-        for item in thesis.source.event_contract_ids
-        if str(item).strip()
+        str(item).strip().upper() for item in thesis.source.event_contract_ids if str(item).strip()
     )
     return {token for token in tokens if token}
 
@@ -81,13 +79,22 @@ class ThesisStore:
         self.generated_at_utc = str(generated_at_utc or "").strip()
 
     @classmethod
-    def from_path(cls, path: str | Path) -> "ThesisStore":
+    def from_path(
+        cls,
+        path: str | Path,
+        *,
+        strict_live_gate: bool = True,
+    ) -> "ThesisStore":
         payload = _load_payload(Path(path))
         theses = [
             PromotedThesis.model_validate(item)
             for item in payload.get("theses", [])
             if isinstance(item, dict)
         ]
+        # Enforce the live approval gate on any thesis in a live-approval-required state.
+        # Raises RuntimeError if strict_live_gate=True and violations are found.
+        gate = DeploymentGate(strict=strict_live_gate)
+        gate.validate_batch(theses)
         return cls(
             theses,
             run_id=str(payload.get("run_id", "")).strip(),
@@ -148,9 +155,7 @@ class ThesisStore:
         event_id_token = str(event_id or "").strip().upper()
         if event_id_token:
             filtered = [
-                thesis
-                for thesis in filtered
-                if event_id_token in _event_ids_for_matching(thesis)
+                thesis for thesis in filtered if event_id_token in _event_ids_for_matching(thesis)
             ]
         event_family_token = str(event_family or "").strip().upper()
         if event_family_token:

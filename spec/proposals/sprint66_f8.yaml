@@ -1,0 +1,31 @@
+# Sprint 6.6 — F8: PULLBACK_PIVOT + pullback_entry + long
+# Pullbacks in uptrends are entry points for continuation.
+# 2021 and 2024 had extended uptrends with many pullback-and-recover events.
+program_id: sprint66_matrix_f8
+start: "2021-01-01"
+end: "2024-10-31"
+symbols:
+  - BTCUSDT
+timeframe: 5m
+hypothesis:
+  anchor:
+    type: event
+    event_id: PULLBACK_PIVOT
+  filters:
+    states: []
+    regimes: []
+    feature_predicates: []
+    contexts: {}
+  sampling_policy:
+    mode: episodic
+    entry_lag_bars: 1
+    overlap_policy: suppress
+  template:
+    id: pullback_entry
+  direction: long
+  horizon_bars: 12
+instrument_classes:
+  - crypto
+  - futures
+objective_name: retail_profitability
+promotion_profile: research

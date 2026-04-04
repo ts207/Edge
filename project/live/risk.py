@@ -2,11 +2,22 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
-
 _LOG = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PerThesisCap:
+    """Per-thesis risk overrides.  Zeros mean 'use global cap'."""
+
+    thesis_id: str
+    max_notional: float = 0.0  # per-order max notional for this thesis
+    max_position_notional: float = 0.0  # maximum open position notional
+    max_daily_loss: float = 0.0  # daily loss limit (absolute USD)
+    max_active_orders: int = 0  # max simultaneous live orders
+    max_active_positions: int = 0  # max simultaneous open positions
 
 
 @dataclass(frozen=True)
@@ -15,7 +26,11 @@ class RuntimeRiskCaps:
     max_symbol_exposure: float = 250_000.0
     max_family_exposure: float = 500_000.0
     max_active_theses: int = 20
+    max_order_notional: float = 50_000.0  # hard per-order ceiling (all theses)
+    max_daily_loss: float = 0.0  # global daily loss limit (0 = no limit)
     reject_on_breach: bool = True  # If False, clip to cap
+    # Per-thesis overrides indexed by thesis_id
+    per_thesis: Dict[str, PerThesisCap] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -23,16 +38,110 @@ class CapBreachEvent:
     timestamp: str
     thesis_id: str
     symbol: str
-    cap_type: str  # gross, symbol, family, count
+    # gross|symbol|family|count|per_thesis_notional|per_thesis_daily_loss|
+    # per_thesis_positions|per_thesis_orders|order_notional|global_daily_loss
+    cap_type: str
     attempted_value: float
     cap_value: float
     action: str  # rejected, clipped
+
+
+@dataclass
+class DailyLossLedger:
+    """
+    Tracks realized + unrealized loss incurred today.
+
+    Reset at UTC midnight or explicit operator reset.
+    """
+
+    _realized_loss: float = 0.0
+    _unrealized_loss: float = 0.0
+    _date: date = field(default_factory=lambda: datetime.now(timezone.utc).date())
+    # Per-thesis realized loss today
+    _per_thesis: Dict[str, float] = field(default_factory=dict)
+
+    def _maybe_roll(self) -> None:
+        today = datetime.now(timezone.utc).date()
+        if today != self._date:
+            self._date = today
+            self._realized_loss = 0.0
+            self._unrealized_loss = 0.0
+            self._per_thesis.clear()
+
+    def record_fill_pnl(self, thesis_id: str, pnl: float) -> None:
+        """Call after each fill is attributed.  pnl < 0 = loss."""
+        self._maybe_roll()
+        if pnl < 0.0:
+            self._realized_loss += abs(pnl)
+            self._per_thesis[thesis_id] = self._per_thesis.get(thesis_id, 0.0) + abs(pnl)
+
+    def update_unrealized(self, total_unrealized_pnl: float) -> None:
+        """Call on each account snapshot.  Negative unrealized PnL contributes."""
+        self._maybe_roll()
+        self._unrealized_loss = max(0.0, -float(total_unrealized_pnl))
+
+    def global_loss_today(self) -> float:
+        self._maybe_roll()
+        return self._realized_loss + self._unrealized_loss
+
+    def thesis_loss_today(self, thesis_id: str) -> float:
+        self._maybe_roll()
+        return self._per_thesis.get(thesis_id, 0.0)
+
+    def reset(self) -> None:
+        self._realized_loss = 0.0
+        self._unrealized_loss = 0.0
+        self._per_thesis.clear()
+        self._date = datetime.now(timezone.utc).date()
 
 
 class RiskEnforcer:
     def __init__(self, caps: RuntimeRiskCaps):
         self.caps = caps
         self.breach_history: List[CapBreachEvent] = []
+        self.daily_loss = DailyLossLedger()
+
+    def _reject(
+        self,
+        timestamp: str,
+        thesis_id: str,
+        symbol: str,
+        cap_type: str,
+        attempted: float,
+        cap_val: float,
+    ) -> CapBreachEvent:
+        ev = CapBreachEvent(
+            timestamp=timestamp,
+            thesis_id=thesis_id,
+            symbol=symbol,
+            cap_type=cap_type,
+            attempted_value=attempted,
+            cap_value=cap_val,
+            action="rejected",
+        )
+        self.breach_history.append(ev)
+        return ev
+
+    def _clip(
+        self,
+        timestamp: str,
+        thesis_id: str,
+        symbol: str,
+        cap_type: str,
+        attempted: float,
+        cap_val: float,
+    ) -> CapBreachEvent:
+        ev = CapBreachEvent(
+            timestamp=timestamp,
+            thesis_id=thesis_id,
+            symbol=symbol,
+            cap_type=cap_type,
+            attempted_value=attempted,
+            cap_value=cap_val,
+            action="clipped",
+        )
+        self.breach_history.append(ev)
+        return ev
 
     def check_and_apply_caps(
         self,
@@ -44,117 +153,188 @@ class RiskEnforcer:
         portfolio_state: Dict[str, Any],
         active_thesis_ids: List[str],
         timestamp: str,
+        active_order_count_by_thesis: Optional[Dict[str, int]] = None,
+        active_position_count_by_thesis: Optional[Dict[str, int]] = None,
     ) -> tuple[float, Optional[CapBreachEvent]]:
         """
         Enforce risk caps on a single trade intent.
         Returns (effective_notional, Optional breach event).
+
+        Control hierarchy (spec §D):
+          1. per-order global ceiling
+          2. per-thesis notional cap
+          3. per-thesis daily loss
+          4. per-thesis active orders
+          5. per-thesis active positions
+          6. max active theses (count)
+          7. per-symbol cap
+          8. per-family cap
+          9. gross exposure cap
         """
-        effective_notional = attempted_notional
-        
-        # 1. Max Active Theses
+        effective_notional = float(attempted_notional)
+        per = self.caps.per_thesis.get(thesis_id)
+
+        # 1. Hard per-order ceiling (global)
+        if self.caps.max_order_notional > 0.0 and effective_notional > self.caps.max_order_notional:
+            if self.caps.reject_on_breach:
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "order_notional",
+                    effective_notional,
+                    self.caps.max_order_notional,
+                )
+            effective_notional = self.caps.max_order_notional
+            self._clip(
+                timestamp,
+                thesis_id,
+                symbol,
+                "order_notional",
+                attempted_notional,
+                self.caps.max_order_notional,
+            )
+
+        # 2. Per-thesis notional cap
+        if per and per.max_notional > 0.0 and effective_notional > per.max_notional:
+            if self.caps.reject_on_breach:
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "per_thesis_notional",
+                    effective_notional,
+                    per.max_notional,
+                )
+            effective_notional = per.max_notional
+            self._clip(
+                timestamp,
+                thesis_id,
+                symbol,
+                "per_thesis_notional",
+                attempted_notional,
+                per.max_notional,
+            )
+
+        # 3. Per-thesis daily loss
+        if per and per.max_daily_loss > 0.0:
+            loss = self.daily_loss.thesis_loss_today(thesis_id)
+            if loss >= per.max_daily_loss:
+                return 0.0, self._reject(
+                    timestamp, thesis_id, symbol, "per_thesis_daily_loss", loss, per.max_daily_loss
+                )
+
+        # 3b. Global daily loss limit
+        if self.caps.max_daily_loss > 0.0:
+            global_loss = self.daily_loss.global_loss_today()
+            if global_loss >= self.caps.max_daily_loss:
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "global_daily_loss",
+                    global_loss,
+                    self.caps.max_daily_loss,
+                )
+
+        # 4. Per-thesis active order count
+        if per and per.max_active_orders > 0 and active_order_count_by_thesis is not None:
+            current_orders = active_order_count_by_thesis.get(thesis_id, 0)
+            if current_orders >= per.max_active_orders:
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "per_thesis_orders",
+                    float(current_orders + 1),
+                    float(per.max_active_orders),
+                )
+
+        # 5. Per-thesis active position count
+        if per and per.max_active_positions > 0 and active_position_count_by_thesis is not None:
+            current_pos = active_position_count_by_thesis.get(thesis_id, 0)
+            if current_pos >= per.max_active_positions:
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "per_thesis_positions",
+                    float(current_pos + 1),
+                    float(per.max_active_positions),
+                )
+
+        # 6. Max Active Theses
         if thesis_id not in active_thesis_ids:
             if len(active_thesis_ids) >= self.caps.max_active_theses:
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="count",
-                    attempted_value=float(len(active_thesis_ids) + 1),
-                    cap_value=float(self.caps.max_active_theses),
-                    action="rejected"
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "count",
+                    float(len(active_thesis_ids) + 1),
+                    float(self.caps.max_active_theses),
                 )
-                self.breach_history.append(event)
-                return 0.0, event
 
-        # 2. Per-Symbol Cap
-        # portfolio_state["positions"] should contain current notional per symbol
+        # 7. Per-Symbol Cap
         current_symbol_notional = portfolio_state.get("symbol_exposures", {}).get(symbol, 0.0)
-        total_symbol_notional = abs(current_symbol_notional) + abs(attempted_notional)
+        total_symbol_notional = abs(current_symbol_notional) + abs(effective_notional)
         if total_symbol_notional > self.caps.max_symbol_exposure:
             available = max(0.0, self.caps.max_symbol_exposure - abs(current_symbol_notional))
             if self.caps.reject_on_breach:
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="symbol",
-                    attempted_value=total_symbol_notional,
-                    cap_value=self.caps.max_symbol_exposure,
-                    action="rejected"
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "symbol",
+                    total_symbol_notional,
+                    self.caps.max_symbol_exposure,
                 )
-                self.breach_history.append(event)
-                return 0.0, event
-            else:
-                effective_notional = available
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="symbol",
-                    attempted_value=total_symbol_notional,
-                    cap_value=self.caps.max_symbol_exposure,
-                    action="clipped"
-                )
-                self.breach_history.append(event)
+            effective_notional = available
+            self._clip(
+                timestamp,
+                thesis_id,
+                symbol,
+                "symbol",
+                total_symbol_notional,
+                self.caps.max_symbol_exposure,
+            )
 
-        # 3. Per-Family Cap
+        # 8. Per-Family Cap
         current_family_notional = portfolio_state.get("family_exposures", {}).get(family, 0.0)
         total_family_notional = abs(current_family_notional) + abs(effective_notional)
         if total_family_notional > self.caps.max_family_exposure:
             available = max(0.0, self.caps.max_family_exposure - abs(current_family_notional))
             if self.caps.reject_on_breach:
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="family",
-                    attempted_value=total_family_notional,
-                    cap_value=self.caps.max_family_exposure,
-                    action="rejected"
+                return 0.0, self._reject(
+                    timestamp,
+                    thesis_id,
+                    symbol,
+                    "family",
+                    total_family_notional,
+                    self.caps.max_family_exposure,
                 )
-                self.breach_history.append(event)
-                return 0.0, event
-            else:
-                effective_notional = available
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="family",
-                    attempted_value=total_family_notional,
-                    cap_value=self.caps.max_family_exposure,
-                    action="clipped"
-                )
-                self.breach_history.append(event)
+            effective_notional = available
+            self._clip(
+                timestamp,
+                thesis_id,
+                symbol,
+                "family",
+                total_family_notional,
+                self.caps.max_family_exposure,
+            )
 
-        # 4. Max Gross Exposure
+        # 9. Max Gross Exposure
         current_gross = portfolio_state.get("gross_exposure", 0.0)
         total_gross = current_gross + abs(effective_notional)
         if total_gross > self.caps.max_gross_exposure:
             available = max(0.0, self.caps.max_gross_exposure - current_gross)
             if self.caps.reject_on_breach:
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="gross",
-                    attempted_value=total_gross,
-                    cap_value=self.caps.max_gross_exposure,
-                    action="rejected"
+                return 0.0, self._reject(
+                    timestamp, thesis_id, symbol, "gross", total_gross, self.caps.max_gross_exposure
                 )
-                self.breach_history.append(event)
-                return 0.0, event
-            else:
-                effective_notional = available
-                event = CapBreachEvent(
-                    timestamp=timestamp,
-                    thesis_id=thesis_id,
-                    symbol=symbol,
-                    cap_type="gross",
-                    attempted_value=total_gross,
-                    cap_value=self.caps.max_gross_exposure,
-                    action="clipped"
-                )
-                self.breach_history.append(event)
+            effective_notional = available
+            self._clip(
+                timestamp, thesis_id, symbol, "gross", total_gross, self.caps.max_gross_exposure
+            )
 
         return effective_notional, None

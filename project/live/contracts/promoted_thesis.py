@@ -4,6 +4,80 @@ from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+# ---------------------------------------------------------------------------
+# Deployment lifecycle states
+#   Legacy:  monitor_only | paper_only | live_enabled | retired
+#   Sprint 7: adds richer escalation states
+# ---------------------------------------------------------------------------
+DeploymentState = Literal[
+    # Legacy states (kept for backward compat)
+    "monitor_only",
+    "paper_only",
+    # Sprint 7 lifecycle states
+    "promoted",
+    "paper_enabled",
+    "paper_approved",
+    "live_eligible",
+    "live_enabled",
+    "live_paused",
+    "live_disabled",
+    "retired",
+]
+
+# States that permit live order submission
+LIVE_TRADEABLE_STATES: frozenset[str] = frozenset({"live_enabled"})
+
+# States that require an explicit live approval record to be present and approved
+LIVE_APPROVAL_REQUIRED_STATES: frozenset[str] = frozenset({"live_eligible", "live_enabled"})
+
+
+class LiveApproval(BaseModel):
+    """Operator sign-off metadata required before a thesis can reach live_enabled."""
+
+    model_config = ConfigDict(frozen=True)
+
+    live_approval_status: Literal["pending", "approved", "rejected", "revoked", ""] = ""
+    approved_by: str = ""
+    approved_at: str = ""  # ISO-8601 UTC timestamp
+    approval_reason: str = ""
+    risk_profile_id: str = ""
+    paper_run_min_days_required: int = Field(default=0, ge=0)
+    paper_run_observed_days: int = Field(default=0, ge=0)
+    paper_run_quality_status: Literal["sufficient", "insufficient", "pending", ""] = ""
+    venue_allowlist: List[str] = Field(default_factory=list)
+    symbol_allowlist: List[str] = Field(default_factory=list)
+
+    @property
+    def is_approved(self) -> bool:
+        return self.live_approval_status == "approved"
+
+    @property
+    def paper_duration_satisfied(self) -> bool:
+        if self.paper_run_min_days_required <= 0:
+            return True
+        return self.paper_run_observed_days >= self.paper_run_min_days_required
+
+
+class ThesisCapProfile(BaseModel):
+    """Per-thesis risk cap profile, enforced at order-submission time."""
+
+    model_config = ConfigDict(frozen=True)
+
+    max_notional: float = Field(default=0.0, ge=0.0)
+    max_position_notional: float = Field(default=0.0, ge=0.0)
+    max_daily_loss: float = Field(default=0.0, ge=0.0)
+    max_active_orders: int = Field(default=0, ge=0)
+    max_active_positions: int = Field(default=0, ge=0)
+    # Scope of kill-switch triggered by this thesis's breach
+    kill_switch_scope: Literal["thesis", "symbol", "family", "global"] = "thesis"
+
+    @property
+    def is_configured(self) -> bool:
+        """True if at least one hard cap has been explicitly set."""
+        return (
+            self.max_notional > 0.0 or self.max_position_notional > 0.0 or self.max_daily_loss > 0.0
+        )
+
 
 class ThesisEvidence(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -79,8 +153,17 @@ class PromotedThesis(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     thesis_id: str = Field(min_length=1)
-    promotion_class: Literal["seed_promoted", "paper_promoted", "production_promoted"] = "paper_promoted"
-    deployment_state: Literal["monitor_only", "paper_only", "live_enabled", "retired"] = "paper_only"
+    promotion_class: Literal["seed_promoted", "paper_promoted", "production_promoted"] = (
+        "paper_promoted"
+    )
+    deployment_state: DeploymentState = "paper_only"
+    # Maximum permitted deployment mode; operator sets this ceiling.
+    # A thesis can only reach live_enabled if deployment_mode_allowed >= live_eligible.
+    deployment_mode_allowed: Literal["paper_only", "live_eligible", "live_enabled"] = "paper_only"
+    # Live approval metadata — must be present and approved for live_enabled theses
+    live_approval: LiveApproval = Field(default_factory=LiveApproval)
+    # Per-thesis risk cap profile — must be configured for live_enabled theses
+    cap_profile: ThesisCapProfile = Field(default_factory=ThesisCapProfile)
     evidence_gaps: List[str] = Field(default_factory=list)
     status: Literal["pending_blueprint", "active", "paused", "retired"] = "pending_blueprint"
     evidence_freshness_date: str = ""
@@ -113,7 +196,9 @@ class PromotedThesis(BaseModel):
     def _populate_compat_event_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
-        requirements = dict(data.get("requirements", {})) if isinstance(data.get("requirements"), dict) else {}
+        requirements = (
+            dict(data.get("requirements", {})) if isinstance(data.get("requirements"), dict) else {}
+        )
         trigger_clause = data.get("trigger_clause")
         if not requirements.get("trigger_events"):
             if isinstance(trigger_clause, dict):
@@ -138,7 +223,9 @@ class PromotedThesis(BaseModel):
             if isinstance(invalidation_clause, dict):
                 data["invalidation"] = dict(invalidation_clause)
 
-        governance = dict(data.get("governance", {})) if isinstance(data.get("governance"), dict) else {}
+        governance = (
+            dict(data.get("governance", {})) if isinstance(data.get("governance"), dict) else {}
+        )
         overlap_group_id = str(data.get("overlap_group_id", "")).strip()
         if overlap_group_id and not str(governance.get("overlap_group_id", "")).strip():
             governance["overlap_group_id"] = overlap_group_id

@@ -88,6 +88,7 @@ def execute_proposal(
     plan_only: bool = True,
     dry_run: bool = False,
     check: bool = False,
+    legacy_compatibility: bool = False,
 ) -> Dict[str, Any]:
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
     resolved_out_dir = Path(out_dir)
@@ -100,7 +101,15 @@ def execute_proposal(
         registry_root=registry_root,
         out_dir=resolved_out_dir,
         config_path=config_path,
+        legacy_compatibility=legacy_compatibility,
     )
+
+    # Staged discover runs must not run internal promote_candidates.
+    # Promotion is an explicit downstream stage: `edge validate run` then `edge promote run`.
+    # Zero surviving candidates is a valid discover outcome, not a failure.
+    if not plan_only:
+        translation["run_all_overrides"]["run_candidate_promotion"] = 0
+
     overrides_path.write_text(
         json.dumps(translation["run_all_overrides"], indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

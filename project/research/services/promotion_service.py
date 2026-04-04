@@ -1119,7 +1119,12 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         finalize_manifest(manifest, "success", stats=diagnostics)
         return PromotionServiceResult(0, out_dir, audit_df, promoted_df, diagnostics)
     except Exception as exc:
-        logging.exception("Promotion failed: %s", exc)
-        finalize_manifest(manifest, "failed", error=str(exc))
-        diagnostics["error"] = str(exc)
+        err_msg = str(exc)
+        # Known graceful cases (0-candidate discover run) → warning only, no traceback.
+        if "missing validation bundle" in err_msg or "No candidates found" in err_msg:
+            logging.warning("Promotion skipped: %s", err_msg)
+        else:
+            logging.exception("Promotion failed: %s", exc)
+        finalize_manifest(manifest, "failed", error=err_msg)
+        diagnostics["error"] = err_msg
         return PromotionServiceResult(1, out_dir, audit_df, promoted_df, diagnostics)

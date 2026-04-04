@@ -1,0 +1,31 @@
+# Sprint 6.6 — F2: FALSE_BREAKOUT + false_breakout_reversal + short
+# False breakouts above resistance → trapped longs → washout down.
+# Mirror of F1 for upside false breakouts.
+program_id: sprint66_matrix_f2
+start: "2021-01-01"
+end: "2024-10-31"
+symbols:
+  - BTCUSDT
+timeframe: 5m
+hypothesis:
+  anchor:
+    type: event
+    event_id: FALSE_BREAKOUT
+  filters:
+    states: []
+    regimes: []
+    feature_predicates: []
+    contexts: {}
+  sampling_policy:
+    mode: episodic
+    entry_lag_bars: 1
+    overlap_policy: suppress
+  template:
+    id: false_breakout_reversal
+  direction: short
+  horizon_bars: 12
+instrument_classes:
+  - crypto
+  - futures
+objective_name: retail_profitability
+promotion_profile: research

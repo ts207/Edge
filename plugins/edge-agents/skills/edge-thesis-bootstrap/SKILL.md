@@ -51,8 +51,23 @@ python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 - `docs/generated/thesis_overlap_graph.*`
 - `data/live/theses/index.json`
 
+## Deployment state lifecycle (Sprint 7)
+
+```
+promoted -> paper_enabled -> paper_approved -> live_eligible -> live_enabled
+```
+
+Legacy states `monitor_only` and `paper_only` are preserved for backward compat.
+
+- `LIVE_TRADEABLE_STATES = {"live_enabled"}` — only this state may submit live orders
+- `LIVE_APPROVAL_REQUIRED_STATES = {"live_eligible", "live_enabled"}` — both require a `DeploymentApprovalRecord`
+- `deployment_mode_allowed` is the operator-set ceiling on the thesis
+- `ThesisStore.from_path()` enforces `DeploymentGate` automatically at load time
+
 ## Hard rules
 
 - Do not describe `seed_promoted` as production-ready.
 - Regenerate overlap artifacts after packaging changes.
 - Treat bootstrap artifacts as authoritative over hand-written notes.
+- `live_eligible` and `live_enabled` both require a `DeploymentApprovalRecord` with `status='approved'` before `ThesisStore` will load them.
+- Do not manually set `deployment_state=live_enabled` without a valid approval record and configured `cap_profile`.

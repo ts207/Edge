@@ -1,0 +1,31 @@
+# Sprint 6.6 — F3: SWEEP_STOPRUN + stop_run_repair + long + 6b
+# Stop runs sweep liquidity below support and snap back fast.
+# Short 6-bar (30min) horizon captures the repair window before it fades.
+program_id: sprint66_matrix_f3
+start: "2021-01-01"
+end: "2024-10-31"
+symbols:
+  - BTCUSDT
+timeframe: 5m
+hypothesis:
+  anchor:
+    type: event
+    event_id: SWEEP_STOPRUN
+  filters:
+    states: []
+    regimes: []
+    feature_predicates: []
+    contexts: {}
+  sampling_policy:
+    mode: episodic
+    entry_lag_bars: 1
+    overlap_policy: suppress
+  template:
+    id: stop_run_repair
+  direction: long
+  horizon_bars: 6
+instrument_classes:
+  - crypto
+  - futures
+objective_name: retail_profitability
+promotion_profile: research

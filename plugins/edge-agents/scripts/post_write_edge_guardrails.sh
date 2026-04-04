@@ -25,6 +25,7 @@ contract_hits=()
 operator_hits=()
 event_registry_hits=()
 packaging_hits=()
+live_runtime_hits=()
 architecture_hits=()
 chatgpt_hits=()
 plugin_hits=()
@@ -70,8 +71,14 @@ for path in "${changed_files[@]}"; do
   esac
 
   case "$path" in
-    project/research/seed_*|project/research/thesis_evidence_runner.py|project/portfolio/thesis_overlap.py|project/live/*|docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md|docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md|data/live/theses/*)
+    project/research/seed_*|project/research/thesis_evidence_runner.py|project/portfolio/thesis_overlap.py|project/live/*|project/live/contracts/*|docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md|docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md|data/live/theses/*)
       packaging_hits+=("$path")
+      ;;
+  esac
+
+  case "$path" in
+    project/live/deployment.py|project/live/audit_log.py|project/live/kill_switch.py|project/live/risk.py|project/live/state.py|project/live/thesis_store.py|project/live/runner.py|project/live/contracts/*)
+      live_runtime_hits+=("$path")
       ;;
   esac
 
@@ -169,6 +176,23 @@ if [ "${#packaging_hits[@]}" -gt 0 ]; then
   echo "  docs/generated/thesis_overlap_graph.md"
   echo "  docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md"
   echo "  docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md"
+fi
+
+if [ "${#live_runtime_hits[@]}" -gt 0 ]; then
+  echo "[edge-hook] Live runtime contract surface changed:"
+  printf '  - %s\n' "${live_runtime_hits[@]}"
+  echo "[edge-hook] Key invariants to verify:"
+  echo "  - DeploymentGate: ThesisStore.from_path() enforces approval contract at load time"
+  echo "  - live_enabled requires: DeploymentApprovalRecord with status='approved', approved_by, approved_at, risk_profile_id, configured cap_profile"
+  echo "  - LIVE_TRADEABLE_STATES = {live_enabled} — only this state submits live orders"
+  echo "  - Kill-switch scope priority: global > symbol > family > thesis"
+  echo "[edge-hook] Run:"
+  echo "  make validate"
+  echo "[edge-hook] Review:"
+  echo "  project/live/contracts/promoted_thesis.py"
+  echo "  project/live/deployment.py"
+  echo "  project/live/contracts/deployment_approval.py"
+  echo "  project/live/audit_log.py"
 fi
 
 if [ "${#architecture_hits[@]}" -gt 0 ]; then

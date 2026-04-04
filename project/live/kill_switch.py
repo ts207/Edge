@@ -11,16 +11,22 @@ import asyncio
 import logging
 import threading
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Callable
+
+# Imported lazily to avoid a circular import (audit_log -> kill_switch -> audit_log)
+# Use TYPE_CHECKING to satisfy type checkers without causing import cycles.
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
 from project.live.health_checks import evaluate_pretrade_microstructure_gate
-from project.live.state import LiveStateStore
 from project.live.oms import LiveOrder, OrderSide, OrderType
+from project.live.state import LiveStateStore
+
+if TYPE_CHECKING:
+    from project.live.audit_log import AuditLog
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,13 +57,147 @@ class KillSwitchManager:
     PSI_ERROR_THRESHOLD = 0.50
     PSI_WARN_THRESHOLD = 0.25
 
-    def __init__(self, state_store: LiveStateStore, *, microstructure_recovery_streak: int = 3):
+    def __init__(
+        self,
+        state_store: LiveStateStore,
+        *,
+        microstructure_recovery_streak: int = 3,
+        audit_log: "AuditLog | None" = None,
+    ):
         self.state_store = state_store
         self.status = KillSwitchStatus()
         self._on_trigger_callbacks: List[Callable[[KillSwitchReason, str], None]] = []
         self.microstructure_recovery_streak = max(1, int(microstructure_recovery_streak))
         self._lock = threading.RLock()
+        self._audit_log = audit_log
         self._load_persisted_status()
+
+    # ------------------------------------------------------------------
+    # Per-entity operator controls (thesis / symbol / family)
+    # ------------------------------------------------------------------
+
+    def _now_iso(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _emit_audit(self, **kwargs: Any) -> None:
+        if self._audit_log is None:
+            return
+        try:
+            from project.live.audit_log import KillSwitchEvent as _KSEvent
+
+            self._audit_log.append(_KSEvent(**kwargs))
+        except Exception as exc:
+            LOGGER.error("Failed to write kill switch audit event: %s", exc)
+
+    def disable_thesis(
+        self, thesis_id: str, reason: str = "operator_disable", *, operator: str = ""
+    ) -> None:
+        """Disable a single thesis.  Durable across restart."""
+        LOGGER.warning("THESIS DISABLED: %s — %s", thesis_id, reason)
+        self.state_store.set_entity_disabled("thesis", thesis_id, reason=reason, at=self._now_iso())
+        self._emit_audit(
+            action="thesis_disabled",
+            scope=f"thesis:{thesis_id}",
+            reason=reason,
+            operator=operator,
+        )
+
+    def resume_thesis(self, thesis_id: str, *, operator: str = "") -> None:
+        LOGGER.info("Thesis %s re-enabled.", thesis_id)
+        self.state_store.set_entity_enabled("thesis", thesis_id)
+        self._emit_audit(
+            action="thesis_resumed",
+            scope=f"thesis:{thesis_id}",
+            reason="operator_resume",
+            operator=operator,
+        )
+
+    def disable_symbol(
+        self, symbol: str, reason: str = "operator_disable", *, operator: str = ""
+    ) -> None:
+        """Block all theses from trading a given symbol."""
+        LOGGER.warning("SYMBOL DISABLED: %s — %s", symbol, reason)
+        self.state_store.set_entity_disabled(
+            "symbol", symbol.upper(), reason=reason, at=self._now_iso()
+        )
+        self._emit_audit(
+            action="symbol_disabled",
+            scope=f"symbol:{symbol.upper()}",
+            reason=reason,
+            operator=operator,
+        )
+
+    def resume_symbol(self, symbol: str, *, operator: str = "") -> None:
+        LOGGER.info("Symbol %s re-enabled.", symbol)
+        self.state_store.set_entity_enabled("symbol", symbol.upper())
+        self._emit_audit(
+            action="symbol_resumed",
+            scope=f"symbol:{symbol.upper()}",
+            reason="operator_resume",
+            operator=operator,
+        )
+
+    def disable_family(
+        self, family: str, reason: str = "operator_disable", *, operator: str = ""
+    ) -> None:
+        """Block all theses belonging to an event family."""
+        LOGGER.warning("FAMILY DISABLED: %s — %s", family, reason)
+        self.state_store.set_entity_disabled(
+            "family", family.upper(), reason=reason, at=self._now_iso()
+        )
+        self._emit_audit(
+            action="family_disabled",
+            scope=f"family:{family.upper()}",
+            reason=reason,
+            operator=operator,
+        )
+
+    def resume_family(self, family: str, *, operator: str = "") -> None:
+        LOGGER.info("Family %s re-enabled.", family)
+        self.state_store.set_entity_enabled("family", family.upper())
+        self._emit_audit(
+            action="family_resumed",
+            scope=f"family:{family.upper()}",
+            reason="operator_resume",
+            operator=operator,
+        )
+
+    def is_thesis_blocked(
+        self,
+        thesis_id: str,
+        symbol: str,
+        family: str = "",
+    ) -> tuple[bool, str]:
+        """
+        Return (blocked: bool, reason: str).
+
+        Checks (in priority order):
+          1. Global kill switch
+          2. Symbol-level disable
+          3. Family-level disable
+          4. Per-thesis disable
+        """
+        # 1. Global
+        with self._lock:
+            if self.status.is_active:
+                reason = self.status.reason.name if self.status.reason else "GLOBAL_KILL"
+                return True, f"global_kill:{reason}"
+
+        # 2. Symbol
+        sym_key = str(symbol or "").strip().upper()
+        if sym_key and self.state_store.is_entity_disabled("symbol", sym_key):
+            return True, f"symbol_disabled:{sym_key}"
+
+        # 3. Family
+        fam_key = str(family or "").strip().upper()
+        if fam_key and self.state_store.is_entity_disabled("family", fam_key):
+            return True, f"family_disabled:{fam_key}"
+
+        # 4. Thesis
+        if self.state_store.is_entity_disabled("thesis", thesis_id):
+            return True, f"thesis_disabled:{thesis_id}"
+
+        return False, ""
 
     def register_callback(self, callback: Callable[[KillSwitchReason, str], None]):
         self._on_trigger_callbacks.append(callback)
@@ -157,7 +297,8 @@ class KillSwitchManager:
             if drawdown > max_drawdown_pct:
                 self.trigger(
                     KillSwitchReason.EXCESSIVE_DRAWDOWN,
-                    f"Drawdown {drawdown:.2%} exceeded limit {max_drawdown_pct:.2%} (Peak: {peak:.2f}, Current: {current_total_equity:.2f})",
+                    f"Drawdown {drawdown:.2%} exceeded limit {max_drawdown_pct:.2%}"
+                    f" (Peak: {peak:.2f}, Current: {current_total_equity:.2f})",
                 )
 
     def evaluate_microstructure_gate(
@@ -187,7 +328,10 @@ class KillSwitchManager:
                 gate["reasons"] = list(gate.get("reasons", [])) + ["kill_switch_active"]
                 gate["recovery_streak"] = int(self.status.recovery_streak)
                 gate["required_recovery_streak"] = int(self.microstructure_recovery_streak)
-            elif self.status.is_active and self.status.reason == KillSwitchReason.MICROSTRUCTURE_BREAKDOWN:
+            elif (
+                self.status.is_active
+                and self.status.reason == KillSwitchReason.MICROSTRUCTURE_BREAKDOWN
+            ):
                 gate["is_tradable"] = False
                 gate["reasons"] = list(gate.get("reasons", [])) + ["microstructure_cooldown"]
                 gate["recovery_streak"] = int(self.status.recovery_streak)
@@ -227,7 +371,10 @@ class KillSwitchManager:
                 return gate
 
             if not gate["is_tradable"]:
-                if self.status.is_active and self.status.reason == KillSwitchReason.MICROSTRUCTURE_BREAKDOWN:
+                if (
+                    self.status.is_active
+                    and self.status.reason == KillSwitchReason.MICROSTRUCTURE_BREAKDOWN
+                ):
                     self.status.recovery_streak = 0
                     self._persist_status()
                     gate["recovery_streak"] = 0
@@ -299,6 +446,7 @@ class KillSwitchManager:
                 continue
 
             from project.live.drift import calculate_feature_drift
+
             drift = calculate_feature_drift(
                 research_samples,
                 live_samples,

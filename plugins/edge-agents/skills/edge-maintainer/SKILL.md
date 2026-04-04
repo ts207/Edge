@@ -101,6 +101,28 @@ Then inspect:
 - `docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md`
 - `docs/generated/system_map.md`
 
+### Live runtime change (deployment gate, kill switch, audit log, approval contract)
+
+Use:
+
+```bash
+make validate
+```
+
+Then inspect:
+
+- `project/live/deployment.py` — `DeploymentGate` contract
+- `project/live/contracts/deployment_approval.py` — `DeploymentApprovalRecord` schema
+- `project/live/audit_log.py` — audit event types and JSONL writer
+- `project/live/kill_switch.py` — per-thesis/symbol/family disable/resume controls
+- `project/live/contracts/promoted_thesis.py` — `DeploymentState` lifecycle and `LIVE_TRADEABLE_STATES`
+- `data/live/audit.jsonl` — append-only live action log (if runtime has run)
+
+Key invariants:
+- `ThesisStore.from_path()` enforces `DeploymentGate` at load — violations raise `RuntimeError`
+- `live_enabled` requires: `DeploymentApprovalRecord` with `status='approved'`, `approved_by`, `approved_at`, `risk_profile_id`, and configured `cap_profile`
+- Kill-switch scope priority: global > symbol > family > thesis
+
 ### Plugin change
 
 Use:

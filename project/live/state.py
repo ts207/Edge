@@ -76,6 +76,11 @@ class LiveStateStore:
         self.kill_switch = KillSwitchSnapshot()
         self._snapshot_path = Path(snapshot_path) if snapshot_path is not None else None
         self._lock = threading.RLock()
+        # Per-entity disable state — keys are thesis_id / symbol / family
+        # Value: {"disabled": bool, "reason": str, "at": str}
+        self.thesis_disable_state: Dict[str, Dict[str, Any]] = {}
+        self.symbol_disable_state: Dict[str, Dict[str, Any]] = {}
+        self.family_disable_state: Dict[str, Dict[str, Any]] = {}
 
     def _maybe_persist(self) -> None:
         if self._snapshot_path is not None:
@@ -87,8 +92,12 @@ class LiveStateStore:
         Expected format: typical CCXT or Binance account information.
         """
         with self._lock:
-            self.account.wallet_balance = float(data.get("wallet_balance", self.account.wallet_balance))
-            self.account.margin_balance = float(data.get("margin_balance", self.account.margin_balance))
+            self.account.wallet_balance = float(
+                data.get("wallet_balance", self.account.wallet_balance)
+            )
+            self.account.margin_balance = float(
+                data.get("margin_balance", self.account.margin_balance)
+            )
             self.account.available_balance = float(
                 data.get("available_balance", self.account.available_balance)
             )
@@ -195,6 +204,43 @@ class LiveStateStore:
             "recovery_streak": int(self.kill_switch.recovery_streak),
         }
 
+    # ------------------------------------------------------------------
+    # Per-entity disable state (thesis / symbol / family)
+    # ------------------------------------------------------------------
+
+    def set_entity_disabled(self, scope: str, key: str, *, reason: str, at: str) -> None:
+        """Mark an entity (thesis/symbol/family) as disabled."""
+        with self._lock:
+            target = self._entity_store(scope)
+            target[key] = {"disabled": True, "reason": reason, "at": at}
+            self._maybe_persist()
+
+    def set_entity_enabled(self, scope: str, key: str) -> None:
+        """Re-enable a previously disabled entity."""
+        with self._lock:
+            target = self._entity_store(scope)
+            if key in target:
+                target[key] = {"disabled": False, "reason": "", "at": ""}
+                self._maybe_persist()
+
+    def is_entity_disabled(self, scope: str, key: str) -> bool:
+        with self._lock:
+            entry = self._entity_store(scope).get(key, {})
+            return bool(entry.get("disabled", False))
+
+    def get_entity_state(self, scope: str, key: str) -> Dict[str, Any]:
+        with self._lock:
+            return dict(self._entity_store(scope).get(key, {}))
+
+    def _entity_store(self, scope: str) -> Dict[str, Dict[str, Any]]:
+        if scope == "thesis":
+            return self.thesis_disable_state
+        if scope == "symbol":
+            return self.symbol_disable_state
+        if scope == "family":
+            return self.family_disable_state
+        raise ValueError(f"Unknown entity scope: {scope!r}")
+
     def to_snapshot(self) -> Dict[str, Any]:
         return {
             "account": {
@@ -222,6 +268,9 @@ class LiveStateStore:
                 ],
             },
             "kill_switch": self.get_kill_switch_snapshot(),
+            "thesis_disable_state": dict(self.thesis_disable_state),
+            "symbol_disable_state": dict(self.symbol_disable_state),
+            "family_disable_state": dict(self.family_disable_state),
             "last_snapshot_time": (
                 self._last_snapshot_time.isoformat()
                 if self._last_snapshot_time is not None
@@ -264,6 +313,10 @@ class LiveStateStore:
                 pos.update_time = datetime.fromisoformat(str(update_time))
             store.account.positions[pos.symbol] = pos
         store.set_kill_switch_snapshot(dict(snapshot.get("kill_switch", {})))
+        for scope in ("thesis", "symbol", "family"):
+            raw = snapshot.get(f"{scope}_disable_state", {})
+            if isinstance(raw, dict):
+                store._entity_store(scope).update(raw)
         last_snapshot_time = snapshot.get("last_snapshot_time")
         if last_snapshot_time:
             store._last_snapshot_time = datetime.fromisoformat(str(last_snapshot_time))
