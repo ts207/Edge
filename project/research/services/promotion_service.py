@@ -13,6 +13,7 @@ import pandas as pd
 from project import PROJECT_ROOT
 from project.contracts.schemas import normalize_dataframe_for_schema
 from project.core.config import get_data_root
+from project.core.coercion import as_bool, safe_int
 from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.research.promotion import (
     build_promotion_statistical_audit,
@@ -733,6 +734,7 @@ def _write_promotion_lineage_audit(
         candidate_id = str(bundle.get("candidate_id", "")).strip()
         decision = bundle.get("promotion_decision", {}) if isinstance(bundle.get("promotion_decision", {}), dict) else {}
         metadata = bundle.get("metadata", {}) if isinstance(bundle.get("metadata", {}), dict) else {}
+        search_burden = bundle.get("search_burden", {}) if isinstance(bundle.get("search_burden", {}), dict) else {}
         rows.append({
             "run_id": run_id,
             "candidate_id": candidate_id,
@@ -746,6 +748,13 @@ def _write_promotion_lineage_audit(
             "program_id": str(metadata.get("program_id", "")).strip(),
             "campaign_id": str(metadata.get("campaign_id", "")).strip(),
             "live_exported": candidate_id in promoted_ids,
+            "search_candidates_generated": safe_int(search_burden.get("search_candidates_generated", 0), 0),
+            "search_candidates_eligible": safe_int(search_burden.get("search_candidates_eligible", 0), 0),
+            "search_mutations_attempted": safe_int(search_burden.get("search_mutations_attempted", 0), 0),
+            "search_family_count": safe_int(search_burden.get("search_family_count", 0), 0),
+            "search_lineage_count": safe_int(search_burden.get("search_lineage_count", 0), 0),
+            "search_burden_estimated": bool(as_bool(search_burden.get("search_burden_estimated", False))),
+            "search_scope_version": str(search_burden.get("search_scope_version", "phase1_v1")),
         })
     json_path = out_dir / "promotion_lineage_audit.json"
     md_path = out_dir / "promotion_lineage_audit.md"
