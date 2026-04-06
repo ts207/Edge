@@ -250,3 +250,183 @@ class TestBackwardCompatibility:
         # New columns added
         assert "q_value_scope" in result.columns
         assert "effective_q_value" in result.columns
+
+
+class TestHistoricalUniverseMerge:
+    """Test historical-universe merge for scope multiplicity accounting."""
+
+    def test_historical_rows_widen_scope_count(self):
+        """Historical rows should increase num_tests_scope for current rows."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1", "curr_2"],
+            "p_value_for_fdr": [0.01, 0.02],
+            "family_id": ["f1", "f2"],
+            "campaign_id": ["camp_001", "camp_001"],
+            "run_id": ["run_002", "run_002"],
+            "side_policy": ["directional", "directional"],
+            "multiplicity_pool_eligible": [True, True],
+        })
+        historical = pd.DataFrame({
+            "candidate_id": ["hist_1", "hist_2", "hist_3"],
+            "p_value_for_fdr": [0.015, 0.025, 0.035],
+            "family_id": ["f1", "f2", "f3"],
+            "campaign_id": ["camp_001", "camp_001", "camp_001"],
+            "run_id": ["run_001", "run_001", "run_001"],
+            "side_policy": ["directional", "directional", "directional"],
+            "multiplicity_pool_eligible": [True, True, True],
+        })
+        merged = merge_historical_candidates(current, historical, scope_mode="campaign")
+        scored = apply_canonical_cross_campaign_multiplicity(merged, max_q=0.05)
+        
+        # Current rows should see scope count of 5 (2 current + 3 historical)
+        current_scored = scored[scored["multiplicity_context"] == "current"]
+        for idx in current_scored.index:
+            assert current_scored.loc[idx, "num_tests_scope"] == 5
+
+    def test_q_value_scope_more_conservative_with_history(self):
+        """q_value_scope should be more conservative when historical rows included."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1"],
+            "p_value_for_fdr": [0.01],
+            "family_id": ["f1"],
+            "campaign_id": ["camp_001"],
+            "q_value": [0.03],
+            "run_id": ["run_002"],
+            "side_policy": ["directional"],
+            "multiplicity_pool_eligible": [True],
+        })
+        historical = pd.DataFrame({
+            "candidate_id": ["hist_1", "hist_2", "hist_3", "hist_4"],
+            "p_value_for_fdr": [0.02, 0.03, 0.04, 0.05],
+            "family_id": ["f1", "f2", "f3", "f4"],
+            "campaign_id": ["camp_001"] * 4,
+            "run_id": ["run_001"] * 4,
+            "side_policy": ["directional"] * 4,
+            "multiplicity_pool_eligible": [True] * 4,
+        })
+        
+        # With history
+        merged = merge_historical_candidates(current, historical, scope_mode="campaign")
+        scored_with = apply_canonical_cross_campaign_multiplicity(merged, max_q=0.05)
+        q_with = scored_with[scored_with["multiplicity_context"] == "current"].iloc[0]["q_value_scope"]
+        
+        # Without history
+        merged_no = merge_historical_candidates(current, None, scope_mode="campaign")
+        scored_no = apply_canonical_cross_campaign_multiplicity(merged_no, max_q=0.05)
+        q_no = scored_no[scored_no["multiplicity_context"] == "current"].iloc[0]["q_value_scope"]
+        
+        # With more tests, q_value_scope should be more conservative (higher)
+        assert q_with >= q_no
+
+    def test_historical_rows_marked_as_historical_context(self):
+        """Historical rows should have multiplicity_context='historical'."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1"],
+            "p_value_for_fdr": [0.01],
+            "family_id": ["f1"],
+            "campaign_id": ["camp_001"],
+            "run_id": ["run_002"],
+            "multiplicity_pool_eligible": [True],
+        })
+        historical = pd.DataFrame({
+            "candidate_id": ["hist_1"],
+            "p_value_for_fdr": [0.02],
+            "family_id": ["f1"],
+            "campaign_id": ["camp_001"],
+            "run_id": ["run_001"],
+            "multiplicity_pool_eligible": [True],
+        })
+        merged = merge_historical_candidates(current, historical, scope_mode="campaign")
+        
+        assert merged[merged["candidate_id"] == "curr_1"].iloc[0]["multiplicity_context"] == "current"
+        assert merged[merged["candidate_id"] == "hist_1"].iloc[0]["multiplicity_context"] == "historical"
+
+    def test_degraded_mode_when_history_unavailable(self):
+        """When history unavailable, mark degraded and continue."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1"],
+            "p_value_for_fdr": [0.01],
+            "family_id": ["f1"],
+            "campaign_id": ["camp_001"],
+            "run_id": ["run_002"],
+            "multiplicity_pool_eligible": [True],
+        })
+        merged = merge_historical_candidates(current, historical=None, scope_mode="campaign")
+        
+        assert merged.iloc[0]["multiplicity_scope_degraded"] is True
+        assert merged.iloc[0]["multiplicity_scope_reason"] == "missing_history"
+
+    def test_scope_keys_isolated_across_lineages(self):
+        """Historical rows from different lineage should not affect scope."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1"],
+            "p_value_for_fdr": [0.01],
+            "family_id": ["f1"],
+            "campaign_id": ["camp_001"],
+            "concept_lineage_key": ["lineage_A"],
+            "run_id": ["run_002"],
+            "side_policy": ["directional"],
+            "multiplicity_pool_eligible": [True],
+        })
+        historical = pd.DataFrame({
+            "candidate_id": ["hist_1", "hist_2"],
+            "p_value_for_fdr": [0.02, 0.03],
+            "family_id": ["f1", "f2"],
+            "campaign_id": ["camp_001", "camp_001"],
+            "concept_lineage_key": ["lineage_A", "lineage_B"],  # Different lineage
+            "run_id": ["run_001", "run_001"],
+            "side_policy": ["directional", "directional"],
+            "multiplicity_pool_eligible": [True, True],
+        })
+        merged = merge_historical_candidates(current, historical, scope_mode="campaign_lineage")
+        scored = apply_canonical_cross_campaign_multiplicity(merged, max_q=0.05, scope_mode="campaign_lineage")
+        
+        # Current row should only see scope count of 2 (1 current + 1 matching lineage historical)
+        current_scored = scored[scored["multiplicity_context"] == "current"]
+        # Lineage_B historical should be in different scope key
+        scope_key = current_scored.iloc[0]["multiplicity_scope_key"]
+        scope_count = scored[scored["multiplicity_scope_key"] == scope_key]["num_tests_scope"].iloc[0]
+        assert scope_count == 2  # Only matching lineage
+
+    def test_deduplication_by_candidate_id(self):
+        """Duplicate historical candidates should be deduplicated."""
+        from project.research.promotion.multiplicity_history import _deduplicate_historical_candidates
+        
+        df = pd.DataFrame({
+            "candidate_id": ["dup_1", "dup_1", "uniq_1"],
+            "p_value_for_fdr": [0.01, 0.02, 0.03],
+            "run_id": ["run_001", "run_001", "run_002"],
+        })
+        deduped = _deduplicate_historical_candidates(df)
+        
+        assert len(deduped) == 2
+        assert "dup_1" in deduped["candidate_id"].values
+        assert "uniq_1" in deduped["candidate_id"].values
+
+    def test_current_only_rows_in_downstream(self):
+        """After filtering, only current rows should remain for downstream."""
+        current = pd.DataFrame({
+            "candidate_id": ["curr_1", "curr_2"],
+            "p_value_for_fdr": [0.01, 0.02],
+            "family_id": ["f1", "f2"],
+            "campaign_id": ["camp_001", "camp_001"],
+            "run_id": ["run_002", "run_002"],
+            "multiplicity_pool_eligible": [True, True],
+        })
+        historical = pd.DataFrame({
+            "candidate_id": ["hist_1", "hist_2", "hist_3"],
+            "p_value_for_fdr": [0.015, 0.025, 0.035],
+            "family_id": ["f1", "f2", "f3"],
+            "campaign_id": ["camp_001"] * 3,
+            "run_id": ["run_001"] * 3,
+            "multiplicity_pool_eligible": [True] * 3,
+        })
+        merged = merge_historical_candidates(current, historical, scope_mode="campaign")
+        scored = apply_canonical_cross_campaign_multiplicity(merged, max_q=0.05)
+        
+        # Filter to current only (this is what promotion/core.py does)
+        df = scored[scored["multiplicity_context"] == "current"].copy()
+        
+        assert len(df) == 2
+        assert set(df["candidate_id"]) == {"curr_1", "curr_2"}
+        assert "hist_1" not in df["candidate_id"].values

@@ -103,32 +103,76 @@ def promote_candidates(
         formalize_ids,
         update_program_hypothesis_log,
     )
-    from project.research.multiplicity import apply_canonical_cross_campaign_multiplicity
+    from project.research.multiplicity import (
+        apply_canonical_cross_campaign_multiplicity,
+        merge_historical_candidates,
+    )
+    from project.research.promotion.multiplicity_history import load_historical_scope_candidates
 
-    df = formalize_ids(candidates_df)
-    program_id = str(promotion_spec.get("program_id", "default_program")).strip()
-    data_root = _current_data_root()
-    update_program_hypothesis_log(program_id, data_root, df)
+    # Step 1: Formalize current candidates
+    current_df = formalize_ids(candidates_df)
+    current_count = len(current_df)
     
-    # Phase 1: Apply canonical cross-campaign multiplicity
+    program_id = str(promotion_spec.get("program_id", "default_program")).strip()
+    campaign_id = str(promotion_spec.get("campaign_id", "")).strip() or None
+    data_root = _current_data_root()
+    update_program_hypothesis_log(program_id, data_root, current_df)
+    
+    # Step 2: Load historical scope candidates
     scope_version = promotion_spec.get("artifact_audit_version", "phase1_v1")
-    df = apply_canonical_cross_campaign_multiplicity(
-        df,
+    current_run_id = str(promotion_spec.get("run_id", "")).strip()
+    
+    historical_df = load_historical_scope_candidates(
+        data_root=data_root,
+        program_id=program_id,
+        campaign_id=campaign_id,
+        scope_mode=multiplicity_scope_mode,
+        current_run_id=current_run_id,
+    )
+    historical_count = len(historical_df)
+    
+    # Step 3: Merge current + historical for scope multiplicity accounting
+    scope_df = merge_historical_candidates(
+        current=current_df,
+        historical=historical_df,
+        scope_mode=multiplicity_scope_mode,
+    )
+    
+    # Step 4: Apply canonical scope multiplicity on combined pool
+    scored_scope_df = apply_canonical_cross_campaign_multiplicity(
+        scope_df,
         max_q=max_q_value,
         scope_mode=multiplicity_scope_mode,
         scope_version=scope_version,
     )
     
-    # Record scope diagnostics
+    # Step 5: Filter back to current rows only for downstream promotion
+    df = scored_scope_df[scored_scope_df["multiplicity_context"] == "current"].copy()
+    
+    # Step 6: Record expanded scope diagnostics
+    scope_degraded_count = int(scored_scope_df.get("multiplicity_scope_degraded", pd.Series([False])).sum())
+    scope_context_counts = scored_scope_df["multiplicity_context"].value_counts().to_dict() if "multiplicity_context" in scored_scope_df.columns else {}
+    
     multiplicity_scope_diagnostics = {
         "scope_mode": multiplicity_scope_mode,
         "scope_version": scope_version,
-        "num_tests_scope_avg": float(df["num_tests_scope"].mean()) if "num_tests_scope" in df.columns and not df.empty else 0.0,
-        "effective_q_value_avg": float(df["effective_q_value"].mean()) if "effective_q_value" in df.columns and not df.empty else 0.0,
-        "scope_degraded_count": int(df.get("multiplicity_scope_degraded", pd.Series([False])).sum()) if not df.empty else 0,
-        "candidates_total": len(df),
-        "scope_keys_unique": int(df["multiplicity_scope_key"].nunique()) if "multiplicity_scope_key" in df.columns else 0,
+        "program_id": program_id,
+        "campaign_id": campaign_id,
+        "current_candidates_total": current_count,
+        "historical_candidates_total": historical_count,
+        "combined_candidates_total": len(scored_scope_df),
+        "scope_keys_unique": int(scored_scope_df["multiplicity_scope_key"].nunique()) if "multiplicity_scope_key" in scored_scope_df.columns else 0,
+        "num_tests_scope_avg": float(scored_scope_df["num_tests_scope"].mean()) if "num_tests_scope" in scored_scope_df.columns and not scored_scope_df.empty else 0.0,
+        "effective_q_value_avg": float(scored_scope_df["effective_q_value"].mean()) if "effective_q_value" in scored_scope_df.columns and not scored_scope_df.empty else 0.0,
+        "scope_degraded_count": scope_degraded_count,
+        "scope_degraded_reason_counts": scored_scope_df[scored_scope_df.get("multiplicity_scope_degraded", False)].get("multiplicity_scope_reason", pd.Series(["unknown"])).value_counts().to_dict() if scope_degraded_count > 0 else {},
+        "scope_context_counts": scope_context_counts,
     }
+    
+    _LOG.info(
+        "Scope multiplicity: current=%d historical=%d combined=%d degraded=%d",
+        current_count, historical_count, len(scored_scope_df), scope_degraded_count
+    )
     
     df = apply_program_multiplicity_control(df, program_id, data_root, alpha=max_q_value)
 

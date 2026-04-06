@@ -781,23 +781,48 @@ def _write_multiplicity_scope_diagnostics(out_dir: Path, diag: Dict[str, Any]) -
     """Write multiplicity scope diagnostics as JSON and Markdown."""
     json_path = out_dir / "multiplicity_scope_diagnostics.json"
     md_path = out_dir / "multiplicity_scope_diagnostics.md"
-    
+
     json_path.write_text(json.dumps(diag, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    
+
     md_lines = [
         "# Multiplicity Scope Diagnostics",
         "",
         f"- scope_mode: `{diag.get('scope_mode', 'unknown')}`",
         f"- scope_version: `{diag.get('scope_version', 'unknown')}`",
-        f"- candidates_total: `{diag.get('candidates_total', 0)}`",
+        f"- program_id: `{diag.get('program_id', 'unknown')}`",
+        f"- campaign_id: `{diag.get('campaign_id', 'none')}`",
+        "",
+        "## Candidate Counts",
+        f"- current_candidates_total: `{diag.get('current_candidates_total', 0)}`",
+        f"- historical_candidates_total: `{diag.get('historical_candidates_total', 0)}`",
+        f"- combined_candidates_total: `{diag.get('combined_candidates_total', 0)}`",
         f"- scope_keys_unique: `{diag.get('scope_keys_unique', 0)}`",
+        "",
+        "## Multiplicity Statistics",
         f"- num_tests_scope_avg: `{diag.get('num_tests_scope_avg', 0.0):.2f}`",
         f"- effective_q_value_avg: `{diag.get('effective_q_value_avg', 0.0):.4f}`",
-        f"- scope_degraded_count: `{diag.get('scope_degraded_count', 0)}`",
         "",
+        "## Degradation Status",
+        f"- scope_degraded_count: `{diag.get('scope_degraded_count', 0)}`",
     ]
+
+    # Add scope context counts if available
+    context_counts = diag.get('scope_context_counts', {})
+    if context_counts:
+        md_lines.extend(["", "## Context Breakdown"])
+        for context, count in sorted(context_counts.items()):
+            md_lines.append(f"- {context}: `{count}`")
+
+    # Add degraded reason counts if available
+    degraded_reasons = diag.get('scope_degraded_reason_counts', {})
+    if degraded_reasons:
+        md_lines.extend(["", "## Degraded Reasons"])
+        for reason, count in sorted(degraded_reasons.items()):
+            md_lines.append(f"- {reason}: `{count}`")
+
+    md_lines.append("")
     md_path.write_text("\n".join(md_lines) + "\n", encoding="utf-8")
-    
+
     return {"json_path": str(json_path), "md_path": str(md_path)}
 
 

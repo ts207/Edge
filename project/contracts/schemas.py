@@ -47,6 +47,8 @@ _SCHEMA_REGISTRY: Dict[str, DataFrameSchemaContract] = {
             "multiplicity_scope_key",
             "multiplicity_scope_version",
             "multiplicity_scope_degraded",
+            "multiplicity_scope_reason",
+            "multiplicity_context",
             "promotion_score",
             "bundle_version",
             "policy_version",
