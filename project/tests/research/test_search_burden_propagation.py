@@ -241,14 +241,16 @@ class TestEvidenceBundleSearchBurden:
             "promotion_decision": {"promotion_status": "promoted", "promotion_track": "standard"},
             "policy_version": "test_v1",
             "bundle_version": "test_v1",
-            "search_proposals_attempted": 100,
-            "search_candidates_generated": 50,
-            "search_candidates_eligible": 20,
-            "search_mutations_attempted": 10,
-            "search_family_count": 5,
-            "search_lineage_count": 8,
-            "search_burden_estimated": False,
-            "search_scope_version": "phase1_v1",
+            "search_burden": {
+                "search_proposals_attempted": 100,
+                "search_candidates_generated": 50,
+                "search_candidates_eligible": 20,
+                "search_mutations_attempted": 10,
+                "search_family_count": 5,
+                "search_lineage_count": 8,
+                "search_burden_estimated": False,
+                "search_scope_version": "phase1_v1",
+            },
         }
         
         record = bundle_to_flat_record(bundle)

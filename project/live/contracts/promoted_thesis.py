@@ -95,6 +95,9 @@ class ThesisEvidence(BaseModel):
     promotion_track: str = ""
     policy_version: str = ""
     bundle_version: str = ""
+    stat_regime: str = ""
+    audit_status: str = ""
+    artifact_audit_version: str = ""
 
 
 class ThesisLineage(BaseModel):

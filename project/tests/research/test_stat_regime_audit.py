@@ -115,6 +115,30 @@ class TestInferStatRegime:
         stamp = infer_stat_regime_from_artifact_metadata(row)
         assert stamp.stat_regime == STAT_REGIME_UNKNOWN
 
+    def test_partial_fields_with_policy_version_is_post_audit(self):
+        row = {
+            "q_value": 0.03,
+            "q_value_scope": 0.04,
+            "effective_q_value": 0.04,
+            "num_tests_scope": 100,
+            "multiplicity_scope_mode": "campaign_lineage",
+            "policy_version": "phase4_pr5_v1",
+        }
+        stamp = infer_stat_regime_from_artifact_metadata(row)
+        assert stamp.stat_regime == STAT_REGIME_POST_AUDIT
+        assert stamp.audit_status == AUDIT_STATUS_CURRENT
+        assert stamp.audit_reason == "phase1_fields_partial_with_provenance"
+
+    def test_partial_fields_without_provenance_is_unknown(self):
+        row = {
+            "q_value": 0.03,
+            "q_value_scope": 0.04,
+            "effective_q_value": 0.04,
+        }
+        stamp = infer_stat_regime_from_artifact_metadata(row)
+        assert stamp.stat_regime == STAT_REGIME_UNKNOWN
+        assert stamp.audit_status == AUDIT_STATUS_UNKNOWN
+
 
 class TestDefaultAuditStamp:
     def test_default_stamp_is_post_audit_current(self):

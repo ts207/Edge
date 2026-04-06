@@ -26,6 +26,12 @@ from project.live.contracts import (
 from project.live.thesis_specs import resolve_thesis_definition_ids
 from project.episodes import load_episode_registry
 from project.portfolio.thesis_overlap import overlap_group_id_for_thesis
+from project.research.contracts.stat_regime import (
+    STAT_REGIME_POST_AUDIT,
+    AUDIT_STATUS_CURRENT,
+    ARTIFACT_AUDIT_VERSION_PHASE1_V1,
+    default_audit_stamp,
+)
 
 ALLOWED_DEPLOYMENT_STATES = {"monitor_only", "paper_only", "live_enabled"}
 
@@ -792,6 +798,9 @@ def _build_thesis(
             promotion_track=track,
             policy_version=str(bundle.get("policy_version", "")).strip(),
             bundle_version=str(bundle.get("bundle_version", "")).strip(),
+            stat_regime=STAT_REGIME_POST_AUDIT,
+            audit_status=AUDIT_STATUS_CURRENT,
+            artifact_audit_version=ARTIFACT_AUDIT_VERSION_PHASE1_V1,
         ),
         lineage=ThesisLineage(
             run_id=run_id,

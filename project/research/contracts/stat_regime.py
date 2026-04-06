@@ -179,7 +179,7 @@ def infer_stat_regime_from_artifact_metadata(
             inference_confidence="high",
         )
 
-    if has_phase1_fields and artifact_dt and artifact_dt >= boundary:
+    if has_phase1_fields and (artifact_dt and artifact_dt >= boundary):
         return ArtifactAuditStamp(
             stat_regime=STAT_REGIME_POST_AUDIT,
             audit_status=AUDIT_STATUS_CURRENT,
@@ -202,12 +202,12 @@ def infer_stat_regime_from_artifact_metadata(
             inference_confidence="medium",
         )
 
-    if has_phase1_fields:
+    if has_phase1_fields and (recognized_policy or recognized_bundle or (artifact_dt and artifact_dt >= boundary)):
         return ArtifactAuditStamp(
             stat_regime=STAT_REGIME_POST_AUDIT,
             audit_status=AUDIT_STATUS_CURRENT,
             artifact_audit_version=ARTIFACT_AUDIT_VERSION_PHASE1_V1,
-            audit_reason="phase1_fields_partial",
+            audit_reason="phase1_fields_partial_with_provenance",
             requires_repromotion=False,
             requires_manual_review=False,
             inference_confidence="medium",

@@ -774,6 +774,7 @@ def main() -> int:
             from project.research.audit_historical_artifacts import (
                 scan_historical_artifacts,
                 write_audit_inventory,
+                rewrite_audit_stamp_sidecars,
             )
             result = scan_historical_artifacts(
                 data_root=data_root,
@@ -786,12 +787,16 @@ def main() -> int:
             print(f"Audit statuses: {dict(result.audit_status_counts)}")
             print(f"Requires repromotion: {result.requires_repromotion_count}")
             print(f"Requires manual review: {result.requires_manual_review_count}")
-            if bool(args.emit_inventory) and result.rows:
+            if bool(args.emit_inventory):
                 output_dir = (data_root or Path("data")) / "reports" / "audit"
                 paths = write_audit_inventory(result, output_dir)
                 print(f"Inventory written:")
                 for name, path in paths.items():
                     print(f"  - {name}: {path}")
+            if bool(args.rewrite_stamps):
+                rewrite_result = rewrite_audit_stamp_sidecars(result)
+                print(f"Audit sidecars written: {rewrite_result['sidecars_written']}")
+                print(f"Artifacts processed: {rewrite_result['artifacts_processed']}")
             if result.errors:
                 print(f"Errors: {len(result.errors)}")
                 for err in result.errors[:5]:

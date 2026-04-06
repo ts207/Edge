@@ -60,6 +60,7 @@ class ArtifactInventoryRow:
     requires_repromotion: bool
     requires_manual_review: bool
     artifact_audit_version: str
+    inference_confidence: str
     policy_version: str
     bundle_version: str
     q_value: Optional[float]
@@ -86,6 +87,7 @@ class ArtifactInventoryRow:
             "requires_repromotion": self.requires_repromotion,
             "requires_manual_review": self.requires_manual_review,
             "artifact_audit_version": self.artifact_audit_version,
+            "inference_confidence": self.inference_confidence,
             "policy_version": self.policy_version,
             "bundle_version": self.bundle_version,
             "q_value": self.q_value,
@@ -193,6 +195,15 @@ def _safe_bool(value: Any) -> Optional[bool]:
     return None
 
 
+def _parse_created_at(value: str) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def _build_inventory_row(
     row: Dict[str, Any],
     *,
@@ -200,7 +211,8 @@ def _build_inventory_row(
     artifact_type: str,
     created_at: str,
 ) -> ArtifactInventoryRow:
-    stamp = infer_stat_regime_from_artifact_metadata(row, artifact_timestamp=None)
+    artifact_dt = _parse_created_at(created_at)
+    stamp = infer_stat_regime_from_artifact_metadata(row, artifact_timestamp=artifact_dt)
     return ArtifactInventoryRow(
         run_id=str(row.get("run_id", "")).strip(),
         candidate_id=str(row.get("candidate_id", "")).strip(),
@@ -216,6 +228,7 @@ def _build_inventory_row(
         requires_repromotion=stamp.requires_repromotion,
         requires_manual_review=stamp.requires_manual_review,
         artifact_audit_version=stamp.artifact_audit_version,
+        inference_confidence=stamp.inference_confidence,
         policy_version=str(row.get("policy_version", "")).strip(),
         bundle_version=str(row.get("bundle_version", "")).strip(),
         q_value=_safe_float(row.get("q_value")),
@@ -391,11 +404,78 @@ def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def rewrite_audit_stamp_sidecars(
+    result: AuditInventoryResult,
+) -> Dict[str, Any]:
+    artifact_stamps: Dict[str, List[ArtifactAuditStamp]] = {}
+    for row in result.rows:
+        path_key = row.artifact_path
+        if path_key not in artifact_stamps:
+            artifact_stamps[path_key] = []
+        artifact_stamps[path_key].append(
+            ArtifactAuditStamp(
+                stat_regime=row.stat_regime,
+                audit_status=row.audit_status,
+                artifact_audit_version=row.artifact_audit_version,
+                audit_reason=row.audit_reason,
+                requires_repromotion=row.requires_repromotion,
+                requires_manual_review=row.requires_manual_review,
+                inference_confidence=row.inference_confidence,
+            )
+        )
+
+    written_count = 0
+    aggregated_stamps: Dict[str, ArtifactAuditStamp] = {}
+
+    for artifact_path_str, stamps in artifact_stamps.items():
+        has_manual_review = any(
+            s.audit_status == AUDIT_STATUS_MANUAL_REVIEW_REQUIRED or s.requires_manual_review
+            for s in stamps
+        )
+        has_pre_audit = any(s.stat_regime == STAT_REGIME_PRE_AUDIT for s in stamps)
+        has_degraded = any(s.audit_status == AUDIT_STATUS_DEGRADED for s in stamps)
+
+        if has_manual_review:
+            final_status = AUDIT_STATUS_MANUAL_REVIEW_REQUIRED
+            final_regime = STAT_REGIME_UNKNOWN
+        elif has_pre_audit:
+            final_status = AUDIT_STATUS_LEGACY
+            final_regime = STAT_REGIME_PRE_AUDIT
+        elif has_degraded:
+            final_status = AUDIT_STATUS_DEGRADED
+            final_regime = STAT_REGIME_POST_AUDIT
+        else:
+            final_status = AUDIT_STATUS_CURRENT
+            final_regime = STAT_REGIME_POST_AUDIT
+
+        final_stamp = ArtifactAuditStamp(
+            stat_regime=final_regime,
+            audit_status=final_status,
+            artifact_audit_version=ARTIFACT_AUDIT_VERSION_PHASE1_V1,
+            audit_reason=f"aggregated_from_{len(stamps)}_rows",
+            requires_repromotion=has_pre_audit,
+            requires_manual_review=has_manual_review,
+            inference_confidence="high" if not has_manual_review else "low",
+        )
+
+        artifact_path = Path(artifact_path_str)
+        write_artifact_audit_stamp_sidecar(artifact_path, final_stamp)
+        aggregated_stamps[artifact_path_str] = final_stamp
+        written_count += 1
+
+    return {
+        "sidecars_written": written_count,
+        "artifacts_processed": len(artifact_stamps),
+        "stamps": aggregated_stamps,
+    }
+
+
 __all__ = [
     "ArtifactInventoryRow",
     "AuditInventoryResult",
     "scan_historical_artifacts",
     "write_artifact_audit_stamp_sidecar",
     "write_audit_inventory",
+    "rewrite_audit_stamp_sidecars",
     "AUDIT_INVENTORY_SCHEMA_VERSION",
 ]

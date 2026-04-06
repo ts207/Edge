@@ -59,9 +59,16 @@ Leave-one-symbol-out stability cannot be computed for groups containing only one
 | Issue | Location | Status |
 |-------|----------|--------|
 | DSR `n_trials` scoped to family, not full campaign | `promotion_gate_evaluators.py:393` | Open — `num_tests_event_family` undercounts by ~10× for typical campaigns |
-| `side_policy='both'` counted as 1 test in BH denominator | `multiplicity.py` | Open — effectively doubles the false-discovery rate for bidirectional hypotheses |
-| Cross-campaign multiplicity correction absent | `multiplicity.py` | Open — BY/BH applied within mechanism groups only |
 | Historical p-value contamination (pre-fix candidates) | Artifact history | Open — no automated re-evaluation pass |
+
+#### Resolved Issues (April 2026)
+
+| Issue | Resolution |
+|-------|------------|
+| ~~`side_policy='both'` counted as 1 test in BH denominator~~ | **Fixed**: Now correctly weighted as 2 tests in `apply_canonical_cross_campaign_multiplicity()` |
+| ~~Cross-campaign multiplicity correction absent~~ | **Fixed**: `effective_q_value = max(q_value, q_value_scope, q_value_program)` is canonical decision field; scope-level FDR applied |
+| ~~Discovery search burden not propagated to promotion~~ | **Fixed**: `search_burden_summary.json` loaded and merged in `promotion_service.py`; all outputs carry search-burden fields |
+| ~~Artifact audit provenance undefined~~ | **Fixed**: `stat_regime`, `audit_status`, `artifact_audit_version` stamped on all promotion-derived artifacts; historical scanner available |
 
 ## Gate Parameters Reference
 
