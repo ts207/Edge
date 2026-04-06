@@ -41,27 +41,29 @@ from project.portfolio.incubation import IncubationLedger
 _LOG = logging.getLogger(__name__)
 
 
-def _classify_canonical_regime(move_bps: float) -> str:
+def _classify_canonical_regime(
+    move_bps: float,
+    rv_pct: Optional[float] = None,
+    ms_trend_state: Optional[float] = None,
+) -> Dict[str, Any]:
     """
-    Map a single-bar move in bps to one of the four canonical regimes.
-
-    This is a bar-level approximation; the research pipeline uses a rolling
-    volatility-percentile + trend-state machine.  The 4-regime output ensures
-    that theses tagged with LOW_VOL, BULL_TREND or BEAR_TREND can receive the
-    regime-alignment scoring bonus in the live decision model.
-
-    Thresholds:
-      |move| >= 80 bps  → HIGH_VOL   (shock-onset bar)
-      |move| <  20 bps  → LOW_VOL    (quiet bar)
-      move   >= 20 bps  → BULL_TREND (moderate positive move)
-      move   <= -20 bps → BEAR_TREND (moderate negative move)
+    Unified regime classification. 
+    Calls shared project.core.regime_classifier logic.
     """
-    abs_move = abs(move_bps)
-    if abs_move >= 80.0:
-        return "HIGH_VOL"
-    if abs_move < 20.0:
-        return "LOW_VOL"
-    return "BULL_TREND" if move_bps >= 0.0 else "BEAR_TREND"
+    from project.core.regime_classifier import classify_regime
+    
+    result = classify_regime(
+        move_bps=move_bps,
+        rv_pct=rv_pct,
+        ms_trend_state=ms_trend_state
+    )
+    
+    return {
+        "canonical_regime": result.regime.value,
+        "regime_mode": result.mode.value,
+        "regime_confidence": result.confidence,
+        "regime_metadata": result.metadata
+    }
 
 
 class LiveEngineRunner:
@@ -996,6 +998,11 @@ class LiveEngineRunner:
             spread_bps = ((ask - bid) / mid_price) * 10_000.0 if mid_price > 0.0 else 0.0
         elif mark_price > 0.0:
             mid_price = mark_price
+        regime_info = _classify_canonical_regime(
+            move_bps=move_bps,
+            rv_pct=runtime_features.get("rv_pct"),
+            ms_trend_state=runtime_features.get("ms_trend_state")
+        )
         return {
             "timestamp": str(timestamp),
             "close": float(close),
@@ -1007,7 +1014,10 @@ class LiveEngineRunner:
                 self.strategy_runtime.get("default_depth_usd", 50_000.0) or 50_000.0
             ),
             "tob_coverage": float(self.strategy_runtime.get("default_tob_coverage", 0.95) or 0.95),
-            "canonical_regime": _classify_canonical_regime(move_bps),
+            "canonical_regime": regime_info["canonical_regime"],
+            "regime_mode": regime_info["regime_mode"],
+            "regime_confidence": regime_info["regime_confidence"],
+            "regime_metadata": regime_info["regime_metadata"],
             "microstructure_regime": "healthy" if spread_bps <= 5.0 else "degraded",
             "expected_cost_bps": float(
                 self.strategy_runtime.get("default_expected_cost_bps", 3.0) or 3.0
