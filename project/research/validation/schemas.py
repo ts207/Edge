@@ -144,6 +144,7 @@ class EvidenceBundle:
     promotion_decision: Dict[str, Any] = field(default_factory=dict)
     rejection_reasons: List[str] = field(default_factory=list)
     artifacts: Dict[str, Any] = field(default_factory=dict)
+    search_burden: Dict[str, Any] = field(default_factory=dict)
     policy_version: str = "phase4_pr5_v1"
     bundle_version: str = "phase4_bundle_v1"
 

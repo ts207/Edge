@@ -14,6 +14,10 @@ from project.research.utils.returns_oos import normalize_returns_oos_combined
 from project.research.validation.falsification import evaluate_negative_controls
 from project.research.validation.regime_tests import build_stability_result_from_row
 from project.research.validation.schemas import EvidenceBundle, PromotionDecision
+from project.research.contracts.search_burden import (
+    SEARCH_BURDEN_FIELDS,
+    default_search_burden_dict,
+)
 
 
 def _json_safe(value: Any) -> Any:
@@ -309,6 +313,24 @@ def build_evidence_bundle(
         bundle.metadata["gate_structural_break"] = gate_structural_break
     else:
         bundle.metadata.pop("gate_structural_break", None)
+    
+    # Workstream B: Add search burden to bundle
+    bundle.search_burden = {
+        "search_proposals_attempted": safe_int(row.get("search_proposals_attempted", 0), 0),
+        "search_candidates_generated": safe_int(row.get("search_candidates_generated", 0), 0),
+        "search_candidates_scored": safe_int(row.get("search_candidates_scored", 0), 0),
+        "search_candidates_eligible": safe_int(row.get("search_candidates_eligible", 0), 0),
+        "search_parameterizations_attempted": safe_int(row.get("search_parameterizations_attempted", 0), 0),
+        "search_mutations_attempted": safe_int(row.get("search_mutations_attempted", 0), 0),
+        "search_directions_tested": safe_int(row.get("search_directions_tested", 0), 0),
+        "search_confirmations_attempted": safe_int(row.get("search_confirmations_attempted", 0), 0),
+        "search_trigger_variants_attempted": safe_int(row.get("search_trigger_variants_attempted", 0), 0),
+        "search_family_count": safe_int(row.get("search_family_count", 0), 0),
+        "search_lineage_count": safe_int(row.get("search_lineage_count", 0), 0),
+        "search_scope_version": str(row.get("search_scope_version", "phase1_v1")),
+        "search_burden_estimated": bool(as_bool(row.get("search_burden_estimated", False))),
+    }
+    
     return bundle.to_dict()
 
 
@@ -626,6 +648,14 @@ def bundle_to_flat_record(bundle: Dict[str, Any]) -> Dict[str, Any]:
         "rejection_reasons": "|".join(map(str, decision.get("rejection_reasons", []))),
         "policy_version": bundle.get("policy_version", ""),
         "bundle_version": bundle.get("bundle_version", ""),
+        "search_proposals_attempted": safe_int(bundle.get("search_proposals_attempted", 0), 0),
+        "search_candidates_generated": safe_int(bundle.get("search_candidates_generated", 0), 0),
+        "search_candidates_eligible": safe_int(bundle.get("search_candidates_eligible", 0), 0),
+        "search_mutations_attempted": safe_int(bundle.get("search_mutations_attempted", 0), 0),
+        "search_family_count": safe_int(bundle.get("search_family_count", 0), 0),
+        "search_lineage_count": safe_int(bundle.get("search_lineage_count", 0), 0),
+        "search_burden_estimated": bool(as_bool(bundle.get("search_burden_estimated", False))),
+        "search_scope_version": str(bundle.get("search_scope_version", "phase1_v1")),
     }
 
 

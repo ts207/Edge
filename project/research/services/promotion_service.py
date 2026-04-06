@@ -919,6 +919,23 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         if candidates_df.empty and val_bundle.validated_candidates:
              logging.warning("No validated candidates from bundle found in source tables for run %s", config.run_id)
 
+        # Workstream B: Load search-burden summary if present
+        from project.research.contracts.search_burden import (
+            default_search_burden_dict,
+            load_search_burden_summary,
+            merge_search_burden_columns,
+        )
+        
+        search_burden = load_search_burden_summary(data_root / "runs" / config.run_id)
+        if search_burden is None:
+            logging.warning(
+                "No search-burden summary found for run %s; using defaults (estimated mode)",
+                config.run_id,
+            )
+            search_burden = default_search_burden_dict(estimated=True)
+        
+        candidates_df = merge_search_burden_columns(candidates_df, defaults=search_burden)
+
         candidates_df = _canonicalize_candidate_audit_keys(candidates_df)
 
         if is_confirmatory and not candidates_df.empty:

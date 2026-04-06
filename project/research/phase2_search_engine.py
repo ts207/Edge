@@ -1730,6 +1730,50 @@ def run(
         )
 
     write_json_report(main_diag, diagnostics_path)
+    
+    # Workstream B: Emit search-burden summary
+    try:
+        from project.research.contracts.search_burden import (
+            build_search_burden_summary,
+            write_search_burden_summary,
+        )
+        
+        unique_families = set()
+        unique_lineages = set()
+        if not final_df.empty:
+            if "family_id" in final_df.columns:
+                unique_families = set(final_df["family_id"].dropna().unique())
+            if "concept_lineage_key" in final_df.columns:
+                unique_lineages = set(final_df["concept_lineage_key"].dropna().unique())
+        
+        burden_summary = build_search_burden_summary(
+            proposals_attempted=total_hypotheses_generated,
+            candidates_generated=total_feasible_hypotheses,
+            candidates_scored=total_valid_metrics_rows,
+            candidates_eligible=len(final_df),
+            parameterizations_attempted=total_metrics_rows,
+            mutations_attempted=0,
+            directions_tested=len(unique_families),
+            confirmations_attempted=0,
+            trigger_variants_attempted=0,
+            family_count=len(unique_families),
+            lineage_count=len(unique_lineages),
+            estimated=False,
+            scope_version="phase1_v1",
+        )
+        
+        burden_paths = write_search_burden_summary(burden_summary, out_dir)
+        log.info(
+            "Wrote search-burden summary: %d proposals, %d candidates, %d families, %d lineages",
+            burden_summary["search_proposals_attempted"],
+            burden_summary["search_candidates_generated"],
+            burden_summary["search_family_count"],
+            burden_summary["search_lineage_count"],
+        )
+        main_diag["search_burden_summary_path"] = burden_paths.get("json_path", "")
+    except Exception as _burden_exc:
+        log.warning("Failed to emit search-burden summary (non-fatal): %s", _burden_exc)
+    
     log.info("Wrote candidates to %s", output_path)
     return 0
 
