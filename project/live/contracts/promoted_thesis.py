@@ -24,6 +24,19 @@ DeploymentState = Literal[
     "retired",
 ]
 
+ALL_DEPLOYMENT_STATES: frozenset[str] = frozenset({
+    "monitor_only",
+    "paper_only",
+    "promoted",
+    "paper_enabled",
+    "paper_approved",
+    "live_eligible",
+    "live_enabled",
+    "live_paused",
+    "live_disabled",
+    "retired",
+})
+
 # States that permit live order submission
 LIVE_TRADEABLE_STATES: frozenset[str] = frozenset({"live_enabled"})
 

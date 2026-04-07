@@ -44,6 +44,16 @@ def _required_stage_manifest_enabled() -> bool:
     }
 
 
+def _allow_synthesized_manifest() -> bool:
+    return str(os.environ.get("BACKTEST_ALLOW_SYNTHESIZED_STAGE_MANIFEST", "0")).strip() in {
+        "1",
+        "true",
+        "TRUE",
+        "yes",
+        "YES",
+    }
+
+
 def _validate_stage_manifest_on_disk(
     manifest_path: Path,
     *,
@@ -307,3 +317,49 @@ def is_phase2_stage(stage_name: str) -> bool:
         or stage_name == "phase2_conditional_hypotheses"
         or stage_name.startswith("phase2_conditional_hypotheses_")
     )
+
+
+def _stage_allows_zero_outputs(stage_name: str) -> bool:
+    zero_output_allowed_stages = frozenset({
+        "ingest",
+    })
+    return stage_name in zero_output_allowed_stages
+
+
+def _manifest_declared_outputs_exist(
+    manifest_path: Path,
+    payload: Mapping[str, object],
+) -> bool:
+    def _path_has_payload(path: Path) -> bool:
+        if not path.exists():
+            return False
+        if path.is_dir():
+            for child in path.rglob("*"):
+                if child.is_file():
+                    return True
+            return False
+        return path.is_file()
+
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, list):
+        return False
+    if not outputs:
+        stage_name = str(payload.get("stage", "")).strip()
+        return _stage_allows_zero_outputs(stage_name)
+    for row in outputs:
+        if not isinstance(row, dict):
+            return False
+        raw_path = str(row.get("path", "")).strip()
+        if not raw_path:
+            return False
+        candidate = Path(raw_path)
+        if candidate.is_absolute():
+            if not _path_has_payload(candidate):
+                return False
+            continue
+        if _path_has_payload(manifest_path.parent / candidate):
+            continue
+        if _path_has_payload(PROJECT_ROOT.parent / candidate):
+            continue
+        return False
+    return True

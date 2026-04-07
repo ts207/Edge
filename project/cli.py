@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from project import PROJECT_ROOT
 from project.pipelines import run_all
 
 
@@ -183,11 +184,13 @@ def _build_parser() -> argparse.ArgumentParser:
     deploy_paper.add_argument("--run_id", required=True)
     deploy_paper.add_argument("--data_root", default=None)
     deploy_paper.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
+    deploy_paper.add_argument("--config", default=None, help="Path to live engine config YAML.")
 
     deploy_live = deploy_sub.add_parser("live", help="[GATED] Live deployment (Sprint 6).")
     deploy_live.add_argument("--run_id", required=True)
     deploy_live.add_argument("--data_root", default=None)
     deploy_live.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
+    deploy_live.add_argument("--config", default=None, help="Path to live engine config YAML.")
 
     deploy_status = deploy_sub.add_parser("status", help="Show status of deployed theses.")
     deploy_status.add_argument("--data_root", default=None)
@@ -560,51 +563,38 @@ def main() -> int:
             if args.subcommand == "paper":
                 print(f"Launching Paper Deployment for {args.run_id} on {args.exchange}...")
                 from project.live.thesis_store import ThesisStore
-                from project.live import runner as live_runner
 
-                # Extract scope from thesis batch
                 store = ThesisStore.from_path(path)
-                symbols = set()
-                for t in store.all():
-                    if hasattr(t, 'symbols') and t.symbols:
-                        symbols.update(t.symbols)
-                symbol_list = list(symbols) or ["BTCUSDT"]
-
-                # Enforce deploy permission via deployment_state
                 if not any(getattr(t, 'deployment_state', None) in ("paper_only", "live_enabled") for t in store.all()):
                     print("  - Status: BLOCKED")
                     print("  - Reason: Batch does not contain any theses with deployment_state 'paper_only' or 'live_enabled'.")
                     return 1
 
-                # Configure for paper mode using explicit lineage
-                live_runner.LiveEngineRunner(
-                    symbols=symbol_list,
-                    exchange=args.exchange,
-                    runtime_mode="paper_trading",
-                    strategy_runtime={
-                        "implemented": True,
-                        "thesis_run_id": args.run_id,
-                        "auto_submit": True
-                    }
-                )
+                config_path = args.config
+                if not config_path:
+                    config_path = str(PROJECT_ROOT / "configs" / "live_paper.yaml")
 
-                print("  - Artifacts: VALIDATED")
-                print("  - Admission Control: PASS")
-                print("  - Risk Caps: INITIALIZED")
-                print("  - Decay Monitor: ACTIVE")
-                print("Paper deployment initialized successfully.")
-                return 0
+                from project.scripts.run_live_engine import main as run_live_engine_main
+                run_argv = ["--config", config_path]
+                if args.exchange:
+                    pass
+                return run_live_engine_main(run_argv)
 
             if args.subcommand == "live":
                 from project.live.thesis_store import ThesisStore
                 store = ThesisStore.from_path(path)
-                print(f"Live Deployment for {args.run_id}:")
                 if not any(getattr(t, 'deployment_state', None) == "live_enabled" for t in store.all()):
                     print("  - Status: BLOCKED")
                     print("  - Reason: Batch does not contain any theses with deployment_state 'live_enabled'.")
                     return 1
-                print("  - Status: ACTIVE (Sprint 6 hardening execution)")
-                return 0
+
+                config_path = args.config
+                if not config_path:
+                    config_path = str(PROJECT_ROOT / "configs" / "live_production.yaml")
+
+                from project.scripts.run_live_engine import main as run_live_engine_main
+                run_argv = ["--config", config_path]
+                return run_live_engine_main(run_argv)
 
         if args.subcommand == "status":
             print("Deployment Status: Monitoring active sessions via explicit catalog integration.")

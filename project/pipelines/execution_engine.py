@@ -16,6 +16,7 @@ from project.pipelines.planner import StageDefinition
 from project import PROJECT_ROOT
 from project.pipelines.pipeline_defaults import DATA_ROOT
 from project.pipelines.execution_engine_support import (
+    _allow_synthesized_manifest,
     _filter_unsupported_flags,
     _manifest_declared_outputs_exist,
     _required_stage_manifest_enabled,
@@ -157,10 +158,13 @@ def run_stage(
             try:
                 cached = json.loads(manifest_path.read_text(encoding="utf-8"))
                 outputs_ok = _manifest_declared_outputs_exist(manifest_path, cached)
+                stats = cached.get("stats", {}) if isinstance(cached.get("stats", {}), dict) else {}
+                is_synthesized = bool(stats.get("synthesized_manifest", False))
                 if (
                     cached.get("input_hash") == input_hash
                     and cached.get("status") == "success"
                     and outputs_ok
+                    and not is_synthesized
                 ):
                     print(f"[CACHE HIT] {stage} (input_hash={input_hash}) — skipping.")
                     stage_cache_meta[stage_instance_id] = {
@@ -256,6 +260,7 @@ def run_stage(
 
         if result_returncode in accepted_codes:
             require_manifest = _required_stage_manifest_enabled()
+            allow_synth = _allow_synthesized_manifest()
             if not manifest_path.exists():
                 if require_manifest:
                     error = (
@@ -275,17 +280,25 @@ def run_stage(
                     )
                     print(f"Stage failed: {stage} ({error})", file=sys.stderr)
                     return False
-                _synthesize_stage_manifest_if_missing(
-                    manifest_path=manifest_path,
-                    stage=stage,
-                    stage_instance_id=stage_instance_id,
-                    run_id=run_id,
-                    script_path=script_path,
-                    base_args=base_args,
-                    log_path=log_path,
-                    status="success",
-                    input_hash=input_hash,
-                )
+                if allow_synth:
+                    _synthesize_stage_manifest_if_missing(
+                        manifest_path=manifest_path,
+                        stage=stage,
+                        stage_instance_id=stage_instance_id,
+                        run_id=run_id,
+                        script_path=script_path,
+                        base_args=base_args,
+                        log_path=log_path,
+                        status="success",
+                        input_hash=input_hash,
+                    )
+                else:
+                    error = (
+                        f"stage manifest missing on success for {stage_instance_id}; "
+                        "stage must emit a manifest, or set BACKTEST_ALLOW_SYNTHESIZED_STAGE_MANIFEST=1"
+                    )
+                    print(f"Stage failed: {stage} ({error})", file=sys.stderr)
+                    return False
             valid_manifest, validation_error = _validate_stage_manifest_on_disk(
                 manifest_path, allow_failed_minimal=False
             )

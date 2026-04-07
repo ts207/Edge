@@ -870,6 +870,7 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
     audit_df = pd.DataFrame()
     promoted_df = pd.DataFrame()
     diagnostics: Dict[str, Any] = {}
+    promotion_input_mode = "canonical"
 
     try:
         # Sprint 4: Require validation bundle or use compatibility bridge
@@ -933,27 +934,48 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
             required=True,
         )
         
-        # Reconstruct candidates_df from bundle for promotion processing
-        # We need all columns that promote_candidates might use.
-        # For compatibility, we'll try to load the full table and then filter by validated ones.
-        val_svc = ValidationService(data_root=data_root)
-        tables = val_svc.load_candidate_tables(config.run_id)
-        full_candidates_df = pd.DataFrame()
-        for source in ("edge_candidates", "promotion_audit", "phase2_candidates"):
-            if not tables[source].empty:
-                full_candidates_df = tables[source]
-                break
+        # Prefer canonical promotion-ready candidates artifact over ambient table loading
+        canonical_candidate_path = out_dir.parent.parent / "validation" / config.run_id / "promotion_ready_candidates.parquet"
+        candidates_df = pd.DataFrame()
         
-        if full_candidates_df.empty:
-             # If table is empty but bundle has candidates, we can't do much without the full metrics
-             # but this shouldn't happen if the bundle was created from those tables.
-             raise FileNotFoundError(f"Missing required candidates tables for run {config.run_id}")
+        if canonical_candidate_path.exists():
+            promotion_input_mode = "canonical"
+            candidates_df = read_parquet(canonical_candidate_path)
+            if not candidates_df.empty:
+                logging.info("Loaded canonical promotion-ready candidates from %s", canonical_candidate_path)
+        else:
+            if not config.use_compatibility_bridge:
+                raise FileNotFoundError(
+                    f"Canonical promotion-ready candidates not found at {canonical_candidate_path}. "
+                    "Set use_compatibility_bridge=True to fall back to legacy table loading."
+                )
+            promotion_input_mode = "compatibility_fallback"
+            logging.warning(
+                "Canonical promotion-ready candidates not found for run %s; falling back to legacy table loading",
+                config.run_id
+            )
+            # Reconstruct candidates_df from bundle for promotion processing
+            # We need all columns that promote_candidates might use.
+            # For compatibility, we'll try to load the full table and then filter by validated ones.
+            val_svc = ValidationService(data_root=data_root)
+            tables = val_svc.load_candidate_tables(config.run_id)
+            for source in ("edge_candidates", "promotion_audit", "phase2_candidates"):
+                if not tables[source].empty:
+                    candidates_df = tables[source]
+                    break
+            
+            if candidates_df.empty:
+                 # If table is empty but bundle has candidates, we can't do much without the full metrics
+                 # but this shouldn't happen if the bundle was created from those tables.
+                 raise FileNotFoundError(f"Missing required candidates tables for run {config.run_id}")
 
-        validated_ids = {c.candidate_id for c in val_bundle.validated_candidates}
-        candidates_df = full_candidates_df[full_candidates_df["candidate_id"].isin(validated_ids)].copy()
+            validated_ids = {c.candidate_id for c in val_bundle.validated_candidates}
+            candidates_df = candidates_df[candidates_df["candidate_id"].isin(validated_ids)].copy()
+            
+            if candidates_df.empty and val_bundle.validated_candidates:
+                 logging.warning("No validated candidates from bundle found in source tables for run %s", config.run_id)
         
-        if candidates_df.empty and val_bundle.validated_candidates:
-             logging.warning("No validated candidates from bundle found in source tables for run %s", config.run_id)
+        diagnostics["promotion_input_mode"] = promotion_input_mode
 
         # Workstream B: Load search-burden summary if present
         from project.research.contracts.search_burden import (

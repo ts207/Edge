@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import List
 
 from project.live.contracts.promoted_thesis import (
+    ALL_DEPLOYMENT_STATES,
     LIVE_APPROVAL_REQUIRED_STATES,
     LIVE_TRADEABLE_STATES,
     PromotedThesis,
@@ -48,6 +49,9 @@ def check_thesis(thesis: PromotedThesis) -> List[str]:
     """
     state = str(thesis.deployment_state or "").strip().lower()
     violations: List[str] = []
+
+    if state not in ALL_DEPLOYMENT_STATES:
+        return [f"unrecognized deployment_state: {state}"]
 
     if state not in LIVE_APPROVAL_REQUIRED_STATES:
         # Non-live states have no extra requirements from this gate.

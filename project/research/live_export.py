@@ -16,6 +16,7 @@ from project.core.exceptions import DataIntegrityError
 from project.io.utils import ensure_dir
 from project.events.governance import get_event_governance_metadata
 from project.live.contracts import (
+    ALL_DEPLOYMENT_STATES,
     PromotedThesis,
     ThesisEvidence,
     ThesisGovernance,
@@ -32,8 +33,6 @@ from project.research.contracts.stat_regime import (
     ARTIFACT_AUDIT_VERSION_PHASE1_V1,
     default_audit_stamp,
 )
-
-ALLOWED_DEPLOYMENT_STATES = {"monitor_only", "paper_only", "live_enabled"}
 
 
 @dataclass(frozen=True)
@@ -653,12 +652,12 @@ def _status_for_blueprint(blueprint: Mapping[str, Any] | None) -> str:
 
 
 def _build_thesis(
-    *,
-    run_id: str,
+    *,run_id: str,
     bundle: Mapping[str, Any],
     promoted_row: Mapping[str, Any],
     blueprint: Mapping[str, Any] | None,
-) -> PromotedThesis | None:
+    validation_metadata: Mapping[str, Mapping[str, Any]] | None = None,
+) -> PromotedThesis:
     sample = bundle.get("sample_definition", {})
     split = bundle.get("split_definition", {})
     metadata = bundle.get("metadata", {})
@@ -669,6 +668,8 @@ def _build_thesis(
     cost = bundle.get("cost_robustness", {})
 
     candidate_id = str(bundle.get("candidate_id", "")).strip()
+    if not candidate_id:
+        raise DataIntegrityError("Missing candidate_id in bundle")
     authored_def = _resolve_authored_thesis_definition(
         candidate_id,
         metadata if isinstance(metadata, Mapping) else {},
@@ -692,10 +693,23 @@ def _build_thesis(
     event_family = str(bundle.get("event_family", "") or bundle.get("event_type", "")).strip()
     sample_size = int(safe_int(sample.get("n_events", 0), 0))
     net_expectancy_bps = _finite_or_none(cost.get("net_expectancy_bps"))
-    if not candidate_id or not symbol or not timeframe or not event_family or sample_size <= 0:
-        return None
+
+    missing_fields = []
+    if not symbol:
+        missing_fields.append("symbol")
+    if not timeframe:
+        missing_fields.append("timeframe/bar_duration_minutes")
+    if not event_family:
+        missing_fields.append("event_family")
+    if sample_size <= 0:
+        missing_fields.append("sample_size")
     if net_expectancy_bps is None:
-        return None
+        missing_fields.append("net_expectancy_bps")
+
+    if missing_fields:
+        raise DataIntegrityError(
+            f"Candidate {candidate_id} missing required fields: {', '.join(missing_fields)}"
+        )
 
     status = _status_for_blueprint(blueprint)
     event_side = _resolve_event_side(bundle, blueprint)
@@ -720,23 +734,19 @@ def _build_thesis(
             proposal_id = str(lineage.get("proposal_id", "")).strip()
 
     track = _promotion_track(bundle, promoted_row)
-    # Load validation bundle if available
-    from project.research.validation.result_writer import load_validation_bundle
-    val_bundle = load_validation_bundle(run_id)
+
     validation_run_id = ""
     validation_status = ""
     validation_reasons = []
     validation_artifacts = {}
-    
-    if val_bundle:
-        validation_run_id = val_bundle.run_id
-        # Find this candidate in the bundle
-        for c in val_bundle.validated_candidates + val_bundle.rejected_candidates + val_bundle.inconclusive_candidates:
-            if c.candidate_id == candidate_id:
-                validation_status = c.decision.status
-                validation_reasons = c.decision.reason_codes
-                validation_artifacts = {a.artifact_type: a.path for a in c.artifact_refs}
-                break
+
+    if validation_metadata:
+        val_meta = validation_metadata.get(candidate_id)
+        if val_meta:
+            validation_run_id = str(val_meta.get("validation_run_id", "")).strip()
+            validation_status = str(val_meta.get("validation_status", "")).strip()
+            validation_reasons = list(val_meta.get("validation_reason_codes", []))
+            validation_artifacts = dict(val_meta.get("validation_artifact_paths", {}))
 
     # Sprint 4: Extract explicit promotion fields
     promo_class = str(promoted_row.get("promotion_class") or "paper_promoted").lower()
@@ -859,6 +869,7 @@ def build_promoted_theses(
     bundles: Sequence[Mapping[str, Any]],
     promoted_df: pd.DataFrame | None = None,
     blueprints: Sequence[Mapping[str, Any]] | None = None,
+    validation_metadata: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> list[PromotedThesis]:
     promoted_frame = promoted_df.copy() if promoted_df is not None else pd.DataFrame()
     promoted_rows = _row_by_candidate_id(promoted_frame)
@@ -870,20 +881,28 @@ def build_promoted_theses(
     }
     blueprint_rows = _blueprint_by_candidate_id(blueprints or [])
     theses: list[PromotedThesis] = []
+    failures: list[str] = []
     for bundle in bundles:
         candidate_id = str(bundle.get("candidate_id", "")).strip()
         decision_status = str(bundle.get("promotion_decision", {}).get("promotion_status", "")).strip().lower()
         if promoted_ids and candidate_id not in promoted_ids and decision_status != "promoted":
             continue
         promoted_row = promoted_rows.get(candidate_id, {})
-        thesis = _build_thesis(
-            run_id=run_id,
-            bundle=bundle,
-            promoted_row=promoted_row,
-            blueprint=blueprint_rows.get(candidate_id),
-        )
-        if thesis is not None:
+        try:
+            thesis = _build_thesis(
+                run_id=run_id,
+                bundle=bundle,
+                promoted_row=promoted_row,
+                blueprint=blueprint_rows.get(candidate_id),
+                validation_metadata=validation_metadata,
+            )
             theses.append(thesis)
+        except DataIntegrityError as exc:
+            failures.append(f"Candidate {candidate_id}: {exc}")
+    if failures:
+        raise DataIntegrityError(
+            f"Failed to build {len(failures)} promoted theses: " + "; ".join(failures)
+        )
     theses.sort(key=lambda item: item.thesis_id)
     return theses
 
@@ -940,10 +959,10 @@ def _apply_deployment_state_overrides(
         state_token = str(deployment_state or "").strip().lower()
         if not clean_selector:
             raise ValueError("Deployment-state override selector must not be empty.")
-        if state_token not in ALLOWED_DEPLOYMENT_STATES:
+        if state_token not in ALL_DEPLOYMENT_STATES:
             raise ValueError(
                 f"Unsupported deployment state override {deployment_state!r}. "
-                f"Allowed values: {sorted(ALLOWED_DEPLOYMENT_STATES)}"
+                f"Allowed values: {sorted(ALL_DEPLOYMENT_STATES)}"
             )
         thesis_id = selector_to_thesis_id.get(clean_selector)
         if not thesis_id:
@@ -1008,18 +1027,44 @@ def export_promoted_theses_for_run(
     blueprints: Sequence[Mapping[str, Any]] | None = None,
     deployment_state_overrides: Mapping[str, str] | None = None,
     register_runtime_name: str | None = None,
+    allow_bundle_only_export: bool = False,
 ) -> PromotedThesisExportResult:
     resolved_root = Path(data_root) if data_root is not None else get_data_root()
     effective_bundles = list(bundles) if bundles is not None else _load_evidence_bundles(run_id, resolved_root)
     effective_promoted = (
         promoted_df.copy() if promoted_df is not None else _load_promoted_candidates(run_id, resolved_root)
     )
+    if effective_promoted.empty and not allow_bundle_only_export:
+        raise DataIntegrityError(
+            f"Promoted candidates DataFrame is empty for run {run_id}. "
+            "Set allow_bundle_only_export=True to proceed with bundle-only export."
+        )
     effective_blueprints = list(blueprints) if blueprints is not None else _load_blueprints(run_id, resolved_root)
+
+    validation_metadata: dict[str, dict[str, Any]] = {}
+    try:
+        from project.research.validation.result_writer import load_validation_bundle
+        val_bundle = load_validation_bundle(run_id, resolved_root / "reports" / "validation")
+        if val_bundle:
+            all_candidates = (
+                val_bundle.validated_candidates + val_bundle.rejected_candidates + val_bundle.inconclusive_candidates
+            )
+            for c in all_candidates:
+                validation_metadata[c.candidate_id] = {
+                    "validation_run_id": val_bundle.run_id,
+                    "validation_status": c.decision.status,
+                    "validation_reason_codes": list(c.decision.reason_codes),
+                    "validation_artifact_paths": {a.artifact_type: a.path for a in c.artifact_refs},
+                }
+    except Exception:
+        pass
+
     theses = build_promoted_theses(
         run_id=run_id,
         bundles=effective_bundles,
         promoted_df=effective_promoted,
         blueprints=effective_blueprints,
+        validation_metadata=validation_metadata,
     )
     theses = _apply_deployment_state_overrides(theses, deployment_state_overrides)
     contract_json_path, contract_md_path = _write_contract_artifacts(

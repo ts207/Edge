@@ -216,8 +216,7 @@ def validate_stage_manifest_contract(
         raise ValueError(f"stage manifest missing required fields: {missing}")
 
     status = str(manifest.get("status", "")).strip().lower()
-    if status not in {"running", "success", "failed", "warning", "aborted_stale_run"}:
-        raise ValueError(f"stage manifest has invalid status: {manifest.get('status')}")
+    if status not in {"running", "success", "failed", "warning", "skipped", "aborted_stale_run"}:raise ValueError(f"stage manifest has invalid status: {manifest.get('status')}")
 
     if not isinstance(manifest.get("parameters"), dict):
         raise ValueError("stage manifest.parameters must be an object")
@@ -230,12 +229,12 @@ def validate_stage_manifest_contract(
         return
 
     finished = str(manifest.get("finished_at", "") or "").strip()
-    if status in {"success", "failed", "warning", "aborted_stale_run"} and not finished:
+    if status in {"success", "failed", "warning", "skipped", "aborted_stale_run"} and not finished:
         raise ValueError("stage manifest.finished_at must be set for terminal statuses")
 
     if "ended_at" in manifest and manifest.get("ended_at") is not None:
         ended = str(manifest.get("ended_at", "")).strip()
-        if status in {"success", "failed", "warning", "aborted_stale_run"} and not ended:
+        if status in {"success", "failed", "warning", "skipped", "aborted_stale_run"} and not ended:
             raise ValueError("stage manifest.ended_at must be a non-empty timestamp when present")
 
 
