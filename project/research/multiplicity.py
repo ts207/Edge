@@ -386,6 +386,10 @@ def apply_canonical_cross_campaign_multiplicity(
     q_scope = out["q_value_scope"]
     q_local = out[q_value_col]
     
+    # max() is intentional: each scope (family, campaign, program) is an independent
+    # FDR constraint. A candidate must satisfy all of them — scope-shopping is not
+    # allowed. Taking the worst-case (max) q-value across scopes means the candidate
+    # fails if any scope-level correction rejects it. This is conservative by design.
     out["effective_q_value"] = out.apply(
         lambda r: max(
             float(r.get(q_value_col, 1.0) or 1.0),

@@ -979,8 +979,9 @@ def score_falsification_precheck(row: pd.Series) -> tuple[float, list[str]]:
             flags.append("weak_null_strength")
             
     reversal = row.get("direction_reversal_effect", np.nan)
-    if pd.notna(reversal) and pd.notna(mean_bps):
-        if np.sign(reversal) == np.sign(mean_bps):
+    if pd.notna(reversal) and pd.notna(mean_bps) and abs(mean_bps) > 1e-10:
+        # Guard: np.sign(0) == 0, which would falsely match any zero reversal
+        if np.sign(mean_bps) != 0 and np.sign(reversal) == np.sign(mean_bps):
             penalty += 1.5
             flags.append("asymmetric_reversal_failure")
             
@@ -1053,7 +1054,7 @@ def score_support_component(row: pd.Series, config: dict) -> tuple[float, list[s
             score -= 1.0
             flags.append("fragile_regime_support")
         else:
-            score += regime_support 
+            score += 1.0  # symmetric with penalty: bonus is flat +1.0, not continuous
     
     return score, flags
 
@@ -1089,10 +1090,11 @@ def score_fold_stability_precheck(row: pd.Series, config: dict) -> tuple[float, 
         stability_penalty += 1.5
         flags.append("high_fold_fail_ratio")
         
-    # 3. Validation Fold Concentration Check
+    # 3. Validation Fold Concentration Check — penalize, not just flag
     if valid_folds < 3:
+        stability_penalty += 1.0
         flags.append("insufficient_valid_folds")
-        
+
     return evidence_bonus, stability_penalty, flags
 
 
@@ -1381,16 +1383,18 @@ def apply_ledger_multiplicity_correction(
             penalty = 0.0
         else:
             empirical_fail_rate = 1.0 - success_rate
-            recent_pressure = (
-                float(recent_fail) / float(max(recent_count, 1))
-            )
+            recent_pressure = float(recent_fail) / float(max(recent_count, 1))
+            # Normalize log1p to [0,1] over ~100 tests; unbounded growth was wrong.
+            # Coefficients sum to 1.0: fail_rate 0.5, recent_pressure 0.3, age 0.2.
+            # success_rate credit removed — it's already captured via (1 - fail_rate).
+            _log_norm = float(np.log1p(100))
+            normalized_age = min(float(np.log1p(prior_count)) / _log_norm, 1.0)
             raw_penalty = (
-                0.3 * float(np.log1p(prior_count))
-                + 0.5 * empirical_fail_rate
+                0.5 * empirical_fail_rate
                 + 0.3 * recent_pressure
-                - 0.2 * success_rate
+                + 0.2 * normalized_age
             )
-            penalty = float(np.clip(raw_penalty, 0.0, max_penalty))
+            penalty = float(np.clip(raw_penalty * max_penalty, 0.0, max_penalty))
 
         # Adjusted q-value
         q_raw = pd.to_numeric(row.get("q_value", np.nan), errors="coerce")

@@ -11,8 +11,8 @@ search_spec:
   search_mode: subset
   triggers:
     events:
-    - VOL_SHOCK
-    - VOL_CLUSTER_SHIFT
+    - FUNDING_PERSISTENCE_TRIGGER
+    - TREND_DECELERATION
   contexts: {}
   horizons:
   - 5m
