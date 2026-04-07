@@ -9,9 +9,6 @@ from project.core.coercion import as_bool
 from project.events.governance import promotion_event_metadata
 from project.core.exceptions import PromotionDecisionError
 from project.research.promotion.promotion_decision_support import (
-    _apply_bundle_policy_result,
-    _confirmatory_deployable_gates,
-    _confirmatory_shadow_gates,
     _evaluate_continuation_quality,
     _evaluate_control_audit_and_dsr,
     _evaluate_deploy_oos_and_low_capital,

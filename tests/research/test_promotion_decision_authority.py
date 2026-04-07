@@ -5,15 +5,16 @@ authoritative source for final promotion outcome fields, not the row-level
 assembly logic.
 """
 
-from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
 from project.core.exceptions import PromotionDecisionError
-from project.research.promotion.promotion_decisions import evaluate_row
+from project.research.promotion.promotion_decisions import (
+    _apply_authoritative_bundle_decision,
+    evaluate_row,
+)
 
 
 # Minimal valid row for testing
@@ -173,9 +174,12 @@ class TestPromotionDecisionAuthority:
         mock_validate.assert_called_once()
         mock_evaluate.assert_called_once()
 
+    @patch("project.research.promotion.promotion_decisions.evaluate_promotion_bundle")
     @patch("project.research.promotion.promotion_decisions.build_evidence_bundle")
     def test_malformed_bundle_fails_before_decision(
-        self, mock_build: MagicMock
+        self,
+        mock_build: MagicMock,
+        mock_evaluate: MagicMock,
     ) -> None:
         """Malformed bundle must fail during validation before decision evaluation."""
         # Return an invalid bundle (missing required field)
@@ -204,6 +208,9 @@ class TestPromotionDecisionAuthority:
                 require_hypothesis_audit=False,
                 allow_missing_negative_controls=True,
             )
+
+        # Verify evaluate_promotion_bundle was never called due to validation failure
+        mock_evaluate.assert_not_called()
 
     @patch("project.research.promotion.promotion_decisions.evaluate_promotion_bundle")
     @patch("project.research.promotion.promotion_decisions.validate_evidence_bundle")
@@ -266,3 +273,78 @@ class TestPromotionDecisionAuthority:
         assert "stability_score" in result or "ss" in result
         assert "sign_consistency" in result or "sc" in result
         assert "cost_survival_ratio" in result or "csr" in result
+
+
+class TestApplyAuthoritativeBundleDecision:
+    """Direct unit tests for _apply_authoritative_bundle_decision helper."""
+
+    def test_helper_overrides_contradictory_row_values(self) -> None:
+        """Bundle decision fields must override contradictory row-level values."""
+        # Row result with contradictory promoted status
+        row_result: Dict[str, Any] = {
+            "eligible": True,
+            "promotion_status": "promoted",
+            "promotion_decision": "promoted",
+            "promotion_track": "standard",
+            "rank_score": 0.95,
+            "rejection_reasons": [],
+            "reject_reason": "",
+            "gate_results": {"statistical": "pass", "stability": "pass"},
+        }
+
+        # Bundle decision says rejected
+        bundle_decision: Dict[str, Any] = {
+            "eligible": False,
+            "promotion_status": "rejected",
+            "promotion_track": "fallback_only",
+            "rank_score": 0.25,
+            "rejection_reasons": ["stability", "oos_validation"],
+            "gate_results": {
+                "statistical": "pass",
+                "stability": "fail",
+                "oos_validation": "fail",
+            },
+        }
+
+        result = _apply_authoritative_bundle_decision(row_result, bundle_decision)
+
+        # Verify bundle values are authoritative
+        assert result["eligible"] is False
+        assert result["promotion_status"] == "rejected"
+        assert result["promotion_decision"] == "rejected"
+        assert result["promotion_track"] == "fallback_only"
+        assert result["rank_score"] == 0.25
+        assert result["rejection_reasons"] == ["stability", "oos_validation"]
+        assert result["reject_reason"] == "stability|oos_validation"
+        assert result["gate_results"] == bundle_decision["gate_results"]
+
+    def test_helper_preserves_non_conflict_fields(self) -> None:
+        """Non-conflicting fields from row result should be preserved."""
+        row_result: Dict[str, Any] = {
+            "eligible": False,
+            "promotion_status": "rejected",
+            "promotion_track": "fallback_only",
+            "rank_score": 0.3,
+            "rejection_reasons": ["cost"],
+            "custom_diagnostic": "preserved_value",
+            "stability_score": 0.5,
+        }
+
+        bundle_decision: Dict[str, Any] = {
+            "eligible": False,
+            "promotion_status": "rejected",
+            "promotion_track": "fallback_only",
+            "rank_score": 0.3,
+            "rejection_reasons": ["cost"],
+            "gate_results": {"cost_survival": "fail"},
+        }
+
+        result = _apply_authoritative_bundle_decision(row_result, bundle_decision)
+
+        # Bundle-decided fields
+        assert result["eligible"] is False
+        assert result["gate_results"] == {"cost_survival": "fail"}
+
+        # Non-conflicting row fields preserved
+        assert result["custom_diagnostic"] == "preserved_value"
+        assert result["stability_score"] == 0.5

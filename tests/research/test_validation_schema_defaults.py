@@ -5,7 +5,6 @@ shared mutable state due to improper default value handling.
 """
 
 import pytest
-from pydantic import ValidationError
 
 from project.research.validation.schemas import (
     EvidenceBundle,

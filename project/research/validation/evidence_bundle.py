@@ -6,6 +6,7 @@ from typing import Any, Dict, Sequence
 
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel
 
 from project.core.coercion import as_bool, safe_float, safe_int
 from project.domain.compiled_registry import get_domain_registry
@@ -97,10 +98,31 @@ def _optional_bool_gate(row: Dict[str, Any], *keys: str) -> bool | None:
     return bool(as_bool(value))
 
 
-def _set_optional_bool(target: Any, row: Dict[str, Any], key: str, *aliases: str) -> None:
+def _set_optional_extra_bool(target: BaseModel, row: Dict[str, Any], key: str, *aliases: str) -> None:
+    """Set an optional boolean extra field on a Pydantic model.
+
+    For models with extra="allow", this sets arbitrary boolean gates
+    when the value is present in the row data.
+    """
     value = _optional_bool_gate(row, key, *aliases)
     if value is not None:
         setattr(target, key, value)
+
+
+def _clear_optional_extra(target: BaseModel, key: str) -> None:
+    """Remove an optional extra field from a Pydantic model.
+
+    For models with extra="allow", this removes the key from the
+    model_extra / __pydantic_extra__ dict if present.
+    """
+    extra = getattr(target, "model_extra", None)
+    if isinstance(extra, dict):
+        extra.pop(key, None)
+        return
+
+    pextra = getattr(target, "__pydantic_extra__", None)
+    if isinstance(pextra, dict):
+        pextra.pop(key, None)
 
 
 def _normalize_returns_oos_combined(value: Any) -> list[float]:
@@ -276,43 +298,43 @@ def build_evidence_bundle(
     if microstructure_pass is not None:
         bundle.cost_robustness.microstructure_pass = microstructure_pass
     else:
-        bundle.cost_robustness.__dict__.pop("microstructure_pass", None)
-    _set_optional_bool(bundle.metadata, row, "gate_stability")
-    _set_optional_bool(bundle.metadata, row, "gate_after_cost_stressed_positive")
-    _set_optional_bool(bundle.metadata, row, "gate_delayed_entry_stress")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_hypothesis_audit")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_oos_validation")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_retail_viability")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_low_capital_viability")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_negative_control")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_falsification")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_baseline_beats_complexity")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_placebo_controls")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_tob_coverage")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_dsr")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_robustness")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_regime")
-    _set_optional_bool(bundle.metadata, row, "gate_promo_multiplicity_confirmatory")
+        _clear_optional_extra(bundle.cost_robustness, "microstructure_pass")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_stability")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_after_cost_stressed_positive")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_delayed_entry_stress")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_hypothesis_audit")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_oos_validation")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_retail_viability")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_low_capital_viability")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_negative_control")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_falsification")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_baseline_beats_complexity")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_placebo_controls")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_tob_coverage")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_dsr")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_robustness")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_regime")
+    _set_optional_extra_bool(bundle.metadata, row, "gate_promo_multiplicity_confirmatory")
     if gate_delay_robustness is not None:
         bundle.metadata.gate_delay_robustness = gate_delay_robustness
     else:
-        bundle.metadata.__dict__.pop("gate_delay_robustness", None)
+        _clear_optional_extra(bundle.metadata, "gate_delay_robustness")
     if gate_timeframe_consensus is not None:
         bundle.metadata.gate_timeframe_consensus = gate_timeframe_consensus
     else:
-        bundle.metadata.__dict__.pop("gate_timeframe_consensus", None)
+        _clear_optional_extra(bundle.metadata, "gate_timeframe_consensus")
     if gate_bridge_microstructure is not None:
         bundle.metadata.gate_bridge_microstructure = gate_bridge_microstructure
     else:
-        bundle.metadata.__dict__.pop("gate_bridge_microstructure", None)
+        _clear_optional_extra(bundle.metadata, "gate_bridge_microstructure")
     if gate_regime_stability is not None:
         bundle.metadata.gate_regime_stability = gate_regime_stability
     else:
-        bundle.metadata.__dict__.pop("gate_regime_stability", None)
+        _clear_optional_extra(bundle.metadata, "gate_regime_stability")
     if gate_structural_break is not None:
         bundle.metadata.gate_structural_break = gate_structural_break
     else:
-        bundle.metadata.__dict__.pop("gate_structural_break", None)
+        _clear_optional_extra(bundle.metadata, "gate_structural_break")
     
     # Workstream B: Add search burden to bundle
     bundle.search_burden = SearchBurden(
