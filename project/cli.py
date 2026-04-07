@@ -183,13 +183,11 @@ def _build_parser() -> argparse.ArgumentParser:
     deploy_paper = deploy_sub.add_parser("paper", help="[DRY-RUN] Plan paper trading session.")
     deploy_paper.add_argument("--run_id", required=True)
     deploy_paper.add_argument("--data_root", default=None)
-    deploy_paper.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
     deploy_paper.add_argument("--config", default=None, help="Path to live engine config YAML.")
 
     deploy_live = deploy_sub.add_parser("live", help="[GATED] Live deployment (Sprint 6).")
     deploy_live.add_argument("--run_id", required=True)
     deploy_live.add_argument("--data_root", default=None)
-    deploy_live.add_argument("--exchange", default="binance", choices=["binance", "bybit"])
     deploy_live.add_argument("--config", default=None, help="Path to live engine config YAML.")
 
     deploy_status = deploy_sub.add_parser("status", help="Show status of deployed theses.")
@@ -561,7 +559,7 @@ def main() -> int:
                 return 0
 
             if args.subcommand == "paper":
-                print(f"Launching Paper Deployment for {args.run_id} on {args.exchange}...")
+                print(f"Launching Paper Deployment for {args.run_id}...")
                 from project.live.thesis_store import ThesisStore
 
                 store = ThesisStore.from_path(path)
@@ -576,8 +574,6 @@ def main() -> int:
 
                 from project.scripts.run_live_engine import main as run_live_engine_main
                 run_argv = ["--config", config_path]
-                if args.exchange:
-                    pass
                 return run_live_engine_main(run_argv)
 
             if args.subcommand == "live":

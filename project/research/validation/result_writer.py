@@ -91,6 +91,40 @@ def write_validated_candidate_tables(bundle: ValidationBundle, base_dir: Optiona
     return paths
 
 
+def write_promotion_ready_candidates(bundle: ValidationBundle, base_dir: Optional[Path] = None) -> Optional[Path]:
+    if base_dir is None:
+        base_dir = get_data_root() / "reports" / "validation" / bundle.run_id
+    
+    base_dir.mkdir(parents=True, exist_ok=True)
+    
+    if not bundle.validated_candidates:
+        return None
+    
+    flat_data = []
+    for c in bundle.validated_candidates:
+        row = {
+            "candidate_id": c.candidate_id,
+            "anchor_summary": c.anchor_summary,
+            "template_id": c.template_id,
+            "direction": c.direction,
+            "horizon_bars": c.horizon_bars,
+            "validation_stage_version": c.validation_stage_version,
+            "validation_status": c.decision.status,
+            "validation_run_id": c.decision.run_id,
+            "validation_program_id": c.decision.program_id,
+            "validation_reason_codes": "|".join(c.decision.reason_codes),
+        }
+        metrics_dict = c.metrics.to_dict()
+        for k, v in metrics_dict.items():
+            row[f"metric_{k}"] = v
+        flat_data.append(row)
+    
+    flat_df = pd.DataFrame(flat_data)
+    path = base_dir / "promotion_ready_candidates.parquet"
+    write_parquet(flat_df, path)
+    return path
+
+
 def load_validation_bundle(run_id: str, base_dir: Optional[Path] = None) -> Optional[ValidationBundle]:
     if base_dir is None:
         base_dir = get_data_root() / "reports" / "validation" / run_id

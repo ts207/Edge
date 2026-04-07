@@ -1056,8 +1056,12 @@ def export_promoted_theses_for_run(
                     "validation_reason_codes": list(c.decision.reason_codes),
                     "validation_artifact_paths": {a.artifact_type: a.path for a in c.artifact_refs},
                 }
-    except Exception:
-        pass
+    except (OSError, json.JSONDecodeError, KeyError, AttributeError, TypeError) as exc:
+        logging.warning(
+            "Failed to load validation bundle for run %s: %s. Proceeding without validation metadata.",
+            run_id,
+            exc,
+        )
 
     theses = build_promoted_theses(
         run_id=run_id,
