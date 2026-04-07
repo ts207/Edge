@@ -37,7 +37,7 @@ def test_maintenance_cycle_finds_multiple_priors():
     # The plan says "Update the dry-run test to verify that the maintenance cycle correctly identifies and loads up to 5 historical baselines"
     # I'll implement the code and then verify it with a script that imports it.
 
-    from project.scripts.run_benchmark_maintenance_cycle import find_historical_reviews
+    from project.research.benchmarks.benchmark_utils import find_historical_reviews
 
     priors = find_historical_reviews(matrix_id=matrix_id, history_limit=5)
     assert len(priors) == 2

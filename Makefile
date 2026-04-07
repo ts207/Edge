@@ -59,21 +59,14 @@ help:
 
 benchmark-maintenance-smoke:
 	@echo "Running benchmark maintenance dry-run..."
-	@mkdir -p /tmp/edgee_smoke_out
-	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --execute 0 | tee /tmp/edgee_smoke_out/cycle_output.txt
-	@echo "Reviewing smoke reports..."
-	@TARGET_DIR=$$(grep "CYCLE_OUTPUT_DIR: " /tmp/edgee_smoke_out/cycle_output.txt | cut -d' ' -f2); \
-	PYTHONPATH=. $(PYTHON) project/scripts/show_benchmark_review.py --path $$TARGET_DIR/benchmark_review.json; \
-	PYTHONPATH=. $(PYTHON) project/scripts/show_promotion_readiness.py --review $$TARGET_DIR/benchmark_review.json --cert $$TARGET_DIR/benchmark_certification.json
-	@rm -rf /tmp/edgee_smoke_out
+	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --preset core_v1 --execute 0
 	@echo "Benchmark maintenance smoke check PASSED."
 
 benchmark-maintenance:
 	@echo "Executing full benchmark maintenance cycle..."
-	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --execute 1
+	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --preset core_v1 --execute 1
 	@echo "Maintenance cycle COMPLETE. Reviewing results:"
-	PYTHONPATH=. $(PYTHON) project/scripts/show_benchmark_review.py --path data/reports/benchmarks/latest/benchmark_review.json
-	PYTHONPATH=. $(PYTHON) project/scripts/show_promotion_readiness.py --review data/reports/benchmarks/latest/benchmark_review.json --cert data/reports/benchmarks/latest/benchmark_certification.json
+	PYTHONPATH=. $(PYTHON) project/scripts/show_benchmark_review.py --latest
 
 minimum-green-gate:
 	@echo "Running minimum green gate checks..."
@@ -137,8 +130,6 @@ package:
 legacy-validate:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.run_researcher_verification --mode contracts
 	$(MAKE) minimum-green-gate
-
-	fi
 
 # Advanced/Internal trigger discovery (Proposal-generating only)
 # Manual review required before registry adoption.
@@ -338,7 +329,9 @@ bench-pipeline:
 	$(PYTHON) project/scripts/benchmark_pipeline.py
 
 benchmark-m0:
-	$(PYTHON) project/scripts/run_benchmark_matrix.py --matrix spec/benchmarks/retail_m0_matrix.yaml --execute $(or $(EXECUTE),0)
+	@echo "benchmark-m0 is deprecated; the retail_m0_matrix.yaml no longer exists."
+	@echo "Use 'make benchmark-core' (preset core_v1) instead."
+	@exit 1
 
 
 compile:
@@ -367,7 +360,7 @@ clean-hygiene:
 	$(CLEAN_SCRIPT) hygiene
 
 benchmark-core:
-	$(PYTHON) -m project.scripts.run_benchmark_matrix --preset core_v1
+	$(PYTHON) -m project.scripts.run_benchmark_matrix --preset core_v1 --execute 0
 
 benchmark-review:
 	$(PYTHON) -m project.scripts.show_benchmark_review --latest

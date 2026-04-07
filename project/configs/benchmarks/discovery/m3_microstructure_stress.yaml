@@ -1,7 +1,21 @@
-slice_id: m3_microstructure_stress
-symbols: [DOGE-USD]
-timeframe: 1s
-date_range: [2021-05-01, 2021-05-08]
-expected_benchmark_family: microstructure_stress
-trigger_discovery_included: false
-benchmark_mode_tags: [stress, micro]
+id: m3_microstructure_stress
+label: "Microstructure stress on BTC perpetual"
+symbols: [BTCUSDT]
+timeframe: 5m
+start: "2024-01-01"
+end: "2024-03-01"
+search_spec:
+  version: 1
+  kind: search_spec
+  search_mode: subset
+  triggers:
+    events: [VOL_SPIKE]
+  contexts: {}
+  horizons: [5m, 15m]
+  directions: [long, short]
+  entry_lag: 1
+  cost_profiles: [standard]
+  expression_templates: "*"
+  max_candidates_per_run: 50
+event_source: fixture
+fixture_event_registry: data/reports/benchmarks/fixtures/m3_microstructure_stress_event_registry.parquet

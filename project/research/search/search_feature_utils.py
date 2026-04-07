@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 import pandas as pd
 
@@ -13,6 +14,8 @@ from project.events.event_specs import EVENT_REGISTRY_SPECS
 from project.research.phase2 import load_features as load_features_impl
 from project.research.validation import assign_split_labels
 from project.specs.ontology import MATERIALIZED_STATE_COLUMNS_BY_ID
+
+log = logging.getLogger(__name__)
 
 
 def _load_features_wrapper(
@@ -146,6 +149,7 @@ def prepare_search_features_for_symbol(
     data_root: Path,
     expected_event_ids: Iterable[str] | None = None,
     load_features_fn=_load_features_wrapper,
+    event_registry_override: Optional[str] = None,
 ) -> pd.DataFrame:
     features = load_features_fn(
         run_id=run_id, symbol=symbol, timeframe=timeframe, data_root=data_root
@@ -154,7 +158,18 @@ def prepare_search_features_for_symbol(
         return features
 
     features = normalize_search_feature_columns(features)
-    event_flags = load_registry_flags(data_root=data_root, run_id=run_id)
+
+    log.debug("prepare_search_features_for_symbol: event_registry_override=%s", event_registry_override)
+
+    if event_registry_override:
+        fixture_events = pd.read_parquet(event_registry_override)
+        ts_col = "timestamp" if "timestamp" in fixture_events.columns else "ts"
+        if ts_col in fixture_events.columns:
+            fixture_events[ts_col] = pd.to_datetime(fixture_events[ts_col], utc=True, errors="coerce")
+        event_flags = _build_flags_from_fixture(fixture_events, symbol, ts_col)
+    else:
+        event_flags = load_registry_flags(data_root=data_root, run_id=run_id)
+
     sym_flags = pd.DataFrame()
     if not event_flags.empty:
         sym_flags = event_flags[event_flags["symbol"] == str(symbol).upper()].copy()
@@ -164,17 +179,19 @@ def prepare_search_features_for_symbol(
             direction_cols = [column for column in flag_cols if column.startswith("evt_direction_")]
             bool_cols = [column for column in flag_cols if column not in direction_cols]
             if bool_cols:
-                features[bool_cols] = features[bool_cols].apply(
-                    lambda col: col.where(col.notna(), False).astype(bool)
-                )
+                features[bool_cols] = features[bool_cols].fillna(False).astype(bool)
             for column in direction_cols:
                 features[column] = pd.to_numeric(features[column], errors="coerce")
 
-    registry_events = load_registry_events(
-        data_root=data_root,
-        run_id=run_id,
-        symbols=[str(symbol).upper()],
-    )
+    if event_registry_override:
+        fixture_events = pd.read_parquet(event_registry_override)
+        registry_events = fixture_events[fixture_events["symbol"] == str(symbol).upper()].copy()
+    else:
+        registry_events = load_registry_events(
+            data_root=data_root,
+            run_id=run_id,
+            symbols=[str(symbol).upper()],
+        )
     direction_frame = _build_event_direction_frame(registry_events)
     if not direction_frame.empty:
         overlap_cols = [
@@ -233,3 +250,53 @@ def load_search_feature_frame(
     if not parts:
         return pd.DataFrame()
     return pd.concat(parts, ignore_index=True)
+
+
+def _build_flags_from_fixture(
+    fixture_events: pd.DataFrame,
+    symbol: str,
+    ts_col: str,
+) -> pd.DataFrame:
+    """Build event flag columns from a frozen fixture parquet.
+
+    Produces the same shape as load_registry_flags: one row per
+    (timestamp, symbol) with boolean event_type columns using
+    lowercase signal_column names (e.g. vol_spike_event).
+    Also produces _active and _signal columns.
+    """
+    sym = str(symbol).upper()
+    sub = fixture_events[fixture_events["symbol"] == sym].copy()
+    if sub.empty or "event_type" not in sub.columns:
+        return pd.DataFrame()
+
+    sub[ts_col] = pd.to_datetime(sub[ts_col], utc=True, errors="coerce")
+    sub = sub.dropna(subset=[ts_col])
+
+    sig_col = "signal_column" if "signal_column" in sub.columns else None
+    if sig_col:
+        sub["flag_base"] = sub[sig_col].str.lower()
+    else:
+        sub["flag_base"] = sub["event_type"].str.lower() + "_event"
+
+    parts = []
+    for suffix in ["_event", "_active", "_signal"]:
+        p = sub[[ts_col, "symbol", "flag_base", "event_score"]].copy()
+        p["flag_col"] = p["flag_base"].str.replace("_event", "") + suffix
+        p = p.pivot_table(
+            index=[ts_col, "symbol"],
+            columns="flag_col",
+            values="event_score",
+            aggfunc="max",
+        ).reset_index()
+        parts.append(p)
+
+    if not parts:
+        return pd.DataFrame()
+
+    merged = parts[0]
+    for p in parts[1:]:
+        merged = merged.merge(p, on=[ts_col, "symbol"], how="outer")
+
+    flag_cols = [c for c in merged.columns if c not in (ts_col, "symbol")]
+    merged[flag_cols] = merged[flag_cols].fillna(False).astype(bool)
+    return merged

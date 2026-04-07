@@ -888,6 +888,7 @@ def run(
     use_context_quality: bool = True,
     enable_discovery_v2_scoring: bool = True,
     phase2_event_type: str = "",
+    event_registry_override: Optional[str] = None,
 ) -> int:
     """
     Discovery v2 Search Engine Orchestrator. [STATUS: STABLE]
@@ -1001,6 +1002,7 @@ def run(
             data_root=data_root,
             expected_event_ids=preloaded_expected_event_ids,
             load_features_fn=load_features,
+            event_registry_override=event_registry_override,
         )
         if features.empty:
             log.warning("Empty feature table for %s", symbol)
@@ -1056,6 +1058,7 @@ def run(
                 data_root=data_root,
                 expected_event_ids=expected_event_ids,
                 load_features_fn=load_features,
+                event_registry_override=event_registry_override,
             )
             if features.empty:
                 log.warning("Empty feature table for %s after expected-event materialization", symbol)

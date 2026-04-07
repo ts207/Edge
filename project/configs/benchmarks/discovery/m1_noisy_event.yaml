@@ -1,7 +1,21 @@
-slice_id: m1_noisy_event
-symbols: [ETH-USD]
-timeframe: 1m
-date_range: [2022-05-01, 2022-05-15]
-expected_benchmark_family: noisy_event
-trigger_discovery_included: false
-benchmark_mode_tags: [noise, event]
+id: m1_noisy_event
+label: "Noisy crash on BTC perpetual"
+symbols: [BTCUSDT]
+timeframe: 5m
+start: "2022-05-01"
+end: "2022-07-01"
+search_spec:
+  version: 1
+  kind: search_spec
+  search_mode: subset
+  triggers:
+    events: [FUNDING_EXTREME_ONSET]
+  contexts: {}
+  horizons: [5m, 15m, 1h]
+  directions: [long, short]
+  entry_lag: 1
+  cost_profiles: [standard]
+  expression_templates: "*"
+  max_candidates_per_run: 50
+event_source: fixture
+fixture_event_registry: data/reports/benchmarks/fixtures/m1_noisy_event_event_registry.parquet

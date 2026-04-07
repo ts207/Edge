@@ -1,55 +1,14 @@
-# Discovery Validation Configuration
-# [STATUS: STABLE]
-# Defines the canonical repeated-walkforward validation path.
-#
-# ─────────────────────────────────────────────────────────────────────
-# SHRINKAGE-NOTE
-# The shrinkage estimator (empirical Bayes λ) is calibrated assuming
-# observations span multiple shrinkage time-constants (τ) defined in
-# gates.yaml. Key τ values:
-#   τ=15d  → LIQUIDITY_DISLOCATION
-#   τ=30d  → STATISTICAL_DISLOCATION, VOLATILITY_TRANSITION, TEMPORAL_STRUCTURE
-#   τ=60d  → INFORMATION_DESYNC, POSITIONING_EXTREMES
-#   τ=90d  → FORCED_FLOW_AND_EXHAUSTION, TREND_STRUCTURE
-#   τ=180d → REGIME_TRANSITION
-#
-# train_bars calibration:
-#   8640 bars  = 30 calendar days @ 5m
-#     covers ≥2 half-lives of τ=15d, ≥1 half-life of τ=30d families
-#     shrinkage calibration ADEQUATE for τ≤30d families
-#     shrinkage calibration DEGRADED for τ≥60d families (inflated between-group
-#     variance from short-window noise produces misleading shrinkage intensity)
-#   17280 bars = 60 calendar days @ 5m  → adequate for τ≤60d
-#   20000 bars = 70 calendar days @ 5m  → long-run target, see TODO below
-#
-# Fold sign consistency (directional stability across folds) is window-size-
-# agnostic and provides valid evidence at all train_bars values. The shrinkage
-# concern is specific to the λ estimate; fold stability scoring is unaffected.
-#
-# TODO(train-bars-20000): Raise train_bars to 20000 once research slice windows
-# of ≥80 calendar days are routinely available for BTC/ETH/SOL.
-# ─────────────────────────────────────────────────────────────────────
-version: 1
-kind: discovery_validation
-
 discovery_validation:
   repeated_walkforward:
+    embargo_bars: 12
     enabled: true
-    mode: rolling
-    train_bars: 8640       # 30 calendar days @ 5m — see SHRINKAGE-NOTE above
-                           # Raised from 2000 (7 days) — covers ≥1 half-life τ=30d
-    validation_bars: 500   # ~42 hours
-    test_bars: 500         # ~42 hours (true holdout — not consumed in gate p-value)
-    step_bars: 500         # fold stride
-    min_folds: 3
     max_folds: 6
-    purge_bars: 24         # 2h — removes near-boundary autocorrelation leakage
-                           # Raise to 72 for stricter 6h isolation
-    embargo_bars: 12       # 1h — minimum gap between train end and valid start
-                           # NOTE: funding-family events need embargo_bars >= 192
-                           # (16h = 2x Binance 8h funding cycle). Per-family
-                           # overrides tracked in embargo_policy (future).
-    # embargo_policy:      # FUTURE: per-family embargo overrides
-    #   funding_family: 192    # 16h — covers 2x Binance 8h funding cycle
-    #   volatility_family: 48  # 4h
-    #   default: 24            # 2h
+    min_folds: 3
+    mode: rolling
+    purge_bars: 24
+    step_bars: 500
+    test_bars: 500
+    train_bars: 8640
+    validation_bars: 500
+kind: discovery_validation
+version: 1
