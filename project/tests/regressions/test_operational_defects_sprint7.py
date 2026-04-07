@@ -32,6 +32,12 @@ from project.pipelines.execution_engine_support import (
 from project.research.validation.result_writer import (
     write_promotion_ready_candidates,
 )
+from project.research.validation.schemas import (
+    EvidenceBundle,
+    PromotionDecision,
+    StabilityResult,
+    FalsificationResult,
+)
 
 
 class TestDeploymentStateValidation:
@@ -483,6 +489,213 @@ class TestValidationMetadataPreload:
         assert result.thesis_count == 1
 
 
+class TestCanonicalPromotionArtifactConsumption:
+    """Tests that promotion service consumes canonical promotion_ready_candidates.parquet."""
+
+    def test_promotion_consumes_canonical_artifact(self, tmp_path, monkeypatch):
+        from project.research.validation.contracts import (
+            ValidationBundle,
+            ValidatedCandidateRecord,
+            ValidationDecision,
+            ValidationMetrics,
+        )
+        from project.research.services.promotion_service import (
+            PromotionConfig,
+            execute_promotion,
+        )
+        import json
+
+        run_id = "test_canonical_consumption"
+        data_root = tmp_path / "data"
+        data_root.mkdir(parents=True)
+
+        validation_dir = data_root / "reports" / "validation" / run_id
+        validation_dir.mkdir(parents=True)
+
+        bundle = ValidationBundle(
+            run_id=run_id,
+            created_at="2024-01-01T00:00:00Z",
+            validated_candidates=[
+                ValidatedCandidateRecord(
+                    candidate_id="cand_1",
+                    decision=ValidationDecision(
+                        status="validated",
+                        candidate_id="cand_1",
+                        run_id=run_id,
+                        program_id="test_program",
+                        reason_codes=["PASS"],
+                    ),
+                    metrics=ValidationMetrics(
+                        sample_count=100,
+                        expectancy=0.005,
+                        stability_score=0.8,
+                        net_expectancy=50.0,
+                        p_value=0.01,
+                        q_value=0.05,
+                        cost_sensitivity=0.9,
+                    ),
+                    anchor_summary="test_anchor",
+                    template_id="test_template",
+                    direction="long",
+                    horizon_bars=12,
+                    artifact_refs=[],
+                    validation_stage_version="v1",
+                )
+            ],
+            rejected_candidates=[],
+            inconclusive_candidates=[],
+            summary_stats={"total": 1, "validated": 1},
+            effect_stability_report={},
+        )
+        (validation_dir / "validation_bundle.json").write_text(json.dumps(bundle.to_dict()))
+
+        promo_ready_path = validation_dir / "promotion_ready_candidates.parquet"
+        promo_ready_df = pd.DataFrame([{
+            "candidate_id": "cand_1",
+            "validation_status": "validated",
+            "validation_run_id": run_id,
+            "validation_program_id": "test_program",
+            "metric_sample_count": 100,
+            "metric_expectancy": 0.005,
+            "metric_stability_score": 0.8,
+            "metric_net_expectancy": 50.0,
+            "metric_p_value": 0.01,
+            "metric_q_value": 0.05,
+        }])
+        promo_ready_df.to_parquet(promo_ready_path)
+
+        promo_dir = data_root / "reports" / "promotions" / run_id
+        promo_dir.mkdir(parents=True)
+
+        source_candidates = pd.DataFrame([{
+            "candidate_id": "cand_1",
+            "event_type": "TEST_EVENT",
+            "family": "TEST",
+            "n_events": 100,
+            "stability_score": 0.8,
+            "sign_consistency": 0.7,
+            "cost_survival_ratio": 0.9,
+            "q_value": 0.05,
+            "net_expectancy_bps": 50.0,
+        }])
+        phase2_dir = data_root / "reports" / "phase2" / run_id
+        phase2_dir.mkdir(parents=True)
+        source_candidates.to_parquet(phase2_dir / "phase2_candidates.parquet")
+
+        manifest = {
+            "run_id": run_id,
+            "run_mode": "confirmatory",
+            "discovery_profile": "default",
+            "symbols": "BTCUSDT",
+            "program_id": "test_program",
+        }
+        runs_dir = data_root / "runs" / run_id
+        runs_dir.mkdir(parents=True)
+        (runs_dir / "manifest.json").write_text(json.dumps(manifest))
+
+        monkeypatch.setenv("EDGE_DATA_ROOT", str(data_root))
+
+        config = PromotionConfig(
+            run_id=run_id,
+            symbols="BTCUSDT",
+            out_dir=promo_dir,
+            max_q_value=0.10,
+            min_events=20,
+            min_stability_score=0.5,
+            min_sign_consistency=0.5,
+            min_cost_survival_ratio=0.5,
+            max_negative_control_pass_rate=0.01,
+            min_tob_coverage=0.0,
+            require_hypothesis_audit=False,
+            allow_missing_negative_controls=True,
+            require_multiplicity_diagnostics=False,
+            min_dsr=0.0,
+            max_overlap_ratio=1.0,
+            max_profile_correlation=1.0,
+            allow_discovery_promotion=False,
+            program_id="test_program",
+            retail_profile="capital_constrained",
+            objective_name="default",
+            objective_spec=None,
+            retail_profiles_spec=None,
+            promotion_profile="research",
+            use_compatibility_bridge=False,
+        )
+
+        with pytest.raises((ValueError, FileNotFoundError)):
+            execute_promotion(config)
+
+    def test_promotion_fails_without_canonical_artifact(self, tmp_path, monkeypatch):
+        from project.research.services.promotion_service import (
+            PromotionConfig,
+            execute_promotion,
+        )
+        import json
+
+        run_id = "test_no_canonical_artifact"
+        data_root = tmp_path / "data"
+        data_root.mkdir(parents=True)
+
+        validation_dir = data_root / "reports" / "validation" / run_id
+        validation_dir.mkdir(parents=True)
+
+        bundle_data = {
+            "run_id": run_id,
+            "created_at": "2024-01-01T00:00:00Z",
+            "validated_candidates": [],
+            "rejected_candidates": [],
+            "inconclusive_candidates": [],
+            "summary_stats": {},
+            "effect_stability_report": {},
+        }
+        (validation_dir / "validation_bundle.json").write_text(json.dumps(bundle_data))
+
+        promo_dir = data_root / "reports" / "promotions" / run_id
+        promo_dir.mkdir(parents=True)
+
+        runs_dir = data_root / "runs" / run_id
+        runs_dir.mkdir(parents=True)
+        (runs_dir / "manifest.json").write_text(json.dumps({
+            "run_id": run_id,
+            "run_mode": "confirmatory",
+            "discovery_profile": "default",
+            "symbols": "BTCUSDT",
+            "program_id": "test_program",
+        }))
+
+        monkeypatch.setenv("EDGE_DATA_ROOT", str(data_root))
+
+        config = PromotionConfig(
+            run_id=run_id,
+            symbols="BTCUSDT",
+            out_dir=promo_dir,
+            max_q_value=0.10,
+            min_events=20,
+            min_stability_score=0.5,
+            min_sign_consistency=0.5,
+            min_cost_survival_ratio=0.5,
+            max_negative_control_pass_rate=0.01,
+            min_tob_coverage=0.0,
+            require_hypothesis_audit=False,
+            allow_missing_negative_controls=True,
+            require_multiplicity_diagnostics=False,
+            min_dsr=0.0,
+            max_overlap_ratio=1.0,
+            max_profile_correlation=1.0,
+            allow_discovery_promotion=False,
+            program_id="test_program",
+            retail_profile="capital_constrained",
+            objective_name="default",
+            objective_spec=None,
+            retail_profiles_spec=None,
+            promotion_profile="research",
+            use_compatibility_bridge=False,
+        )
+
+        with pytest.raises(FileNotFoundError, match="Canonical promotion-ready candidates not found"):
+            execute_promotion(config)
+
+
 class TestCanonicalPromotionArtifact:
     """Tests for canonical promotion_ready_candidates.parquet production and consumption."""
 
@@ -560,3 +773,174 @@ class TestCanonicalPromotionArtifact:
         path = write_promotion_ready_candidates(bundle, base_dir=base_dir)
         
         assert path is None
+
+
+class TestSchemaValidation:
+    """Tests for Pydantic schema validation in promotion and validation."""
+
+    def test_promotion_decision_status_consistent_with_eligible(self):
+        with pytest.raises(ValueError, match="eligible=True but promotion_status='rejected'"):
+            PromotionDecision(
+                eligible=True,
+                promotion_status="rejected",
+                promotion_track="standard",
+                rank_score=0.8,
+                rejection_reasons=[],
+            )
+
+        with pytest.raises(ValueError, match="eligible=False but promotion_status='promoted'"):
+            PromotionDecision(
+                eligible=False,
+                promotion_status="promoted",
+                promotion_track="standard",
+                rank_score=0.0,
+                rejection_reasons=["failed_statistical"],
+            )
+
+    def test_promotion_decision_track_validation(self):
+        with pytest.raises(ValueError, match="promotion_track must be one of"):
+            PromotionDecision(
+                eligible=True,
+                promotion_status="promoted",
+                promotion_track="invalid_track",
+                rank_score=0.8,
+                rejection_reasons=[],
+            )
+
+    def test_promotion_decision_valid_cases(self):
+        pd1 = PromotionDecision(
+            eligible=True,
+            promotion_status="promoted",
+            promotion_track="standard",
+            rank_score=0.8,
+            rejection_reasons=[],
+        )
+        assert pd1.eligible is True
+
+        pd2 = PromotionDecision(
+            eligible=False,
+            promotion_status="rejected",
+            promotion_track="fallback_only",
+            rank_score=0.3,
+            rejection_reasons=["failed_stability"],
+        )
+        assert pd2.eligible is False
+
+    def test_evidence_bundle_validates_nested_stability_tests(self):
+        with pytest.raises(ValueError, match="stability_tests missing required fields"):
+            EvidenceBundle(
+                candidate_id="cand_1",
+                primary_event_id="TEST_EVENT",
+                event_family="TEST",
+                event_type="TEST_EVENT",
+                run_id="test_run",
+                sample_definition={"n_events": 100, "validation_samples": 10, "test_samples": 10},
+                split_definition={"bar_duration_minutes": 5},
+                effect_estimates={"estimate": 0.5, "estimate_bps": 50.0, "stderr": 0.1, "stderr_bps": 10.0},
+                uncertainty_estimates={
+                    "ci_low": 0.3, "ci_high": 0.7,
+                    "ci_low_bps": 30.0, "ci_high_bps": 70.0,
+                    "p_value_raw": 0.05, "q_value": 0.1,
+                    "q_value_by": 0.1, "q_value_cluster": 0.1,
+                    "n_obs": 100, "n_clusters": 5,
+                },
+                stability_tests={"sign_consistency": 0.8},
+                falsification_results={},
+                cost_robustness={
+                    "cost_survival_ratio": 0.9,
+                    "net_expectancy_bps": 50.0,
+                    "effective_cost_bps": 5.0,
+                    "turnover_proxy_mean": 2.0,
+                    "tob_coverage": 0.8,
+                    "tob_coverage_pass": True,
+                    "stressed_cost_pass": True,
+                    "retail_net_expectancy_pass": True,
+                    "retail_cost_budget_pass": True,
+                    "retail_turnover_pass": True,
+                },
+                multiplicity_adjustment={
+                    "p_value_adj": 0.1,
+                    "p_value_adj_by": 0.1,
+                    "p_value_adj_holm": 0.1,
+                    "q_value_program": 0.1,
+                    "q_value_scope": 0.1,
+                    "effective_q_value": 0.1,
+                    "correction_family_id": "",
+                    "correction_method": "bh",
+                    "num_tests_scope": 10,
+                    "multiplicity_scope_mode": "campaign_lineage",
+                    "multiplicity_scope_key": "",
+                    "multiplicity_scope_version": "v1",
+                    "multiplicity_scope_degraded": False,
+                },
+                metadata={
+                    "tob_coverage": 0.8,
+                    "repeated_fold_consistency": 0.7,
+                    "structural_robustness_score": 0.8,
+                },
+            )
+
+    def test_evidence_bundle_validates_promotion_decision(self):
+        with pytest.raises(ValueError, match="promotion_decision must have 'eligible' field"):
+            EvidenceBundle(
+                candidate_id="cand_1",
+                primary_event_id="TEST_EVENT",
+                event_family="TEST",
+                event_type="TEST_EVENT",
+                run_id="test_run",
+                sample_definition={"n_events": 100, "validation_samples": 10, "test_samples": 10},
+                split_definition={"bar_duration_minutes": 5},
+                effect_estimates={"estimate": 0.5, "estimate_bps": 50.0, "stderr": 0.1, "stderr_bps": 10.0},
+                uncertainty_estimates={
+                    "ci_low": 0.3, "ci_high": 0.7,
+                    "ci_low_bps": 30.0, "ci_high_bps": 70.0,
+                    "p_value_raw": 0.05, "q_value": 0.1,
+                    "q_value_by": 0.1, "q_value_cluster": 0.1,
+                    "n_obs": 100, "n_clusters": 5,
+                },
+                stability_tests={
+                    "sign_consistency": 0.8,
+                    "stability_score": 0.7,
+                    "regime_stability_pass": True,
+                    "timeframe_consensus_pass": True,
+                    "delay_robustness_pass": True,
+                },
+                falsification_results={
+                    "shift_placebo_pass": True,
+                    "random_placebo_pass": True,
+                    "direction_reversal_pass": True,
+                },
+                cost_robustness={
+                    "cost_survival_ratio": 0.9,
+                    "net_expectancy_bps": 50.0,
+                    "effective_cost_bps": 5.0,
+                    "turnover_proxy_mean": 2.0,
+                    "tob_coverage": 0.8,
+                    "tob_coverage_pass": True,
+                    "stressed_cost_pass": True,
+                    "retail_net_expectancy_pass": True,
+                    "retail_cost_budget_pass": True,
+                    "retail_turnover_pass": True,
+                },
+                multiplicity_adjustment={
+                    "p_value_adj": 0.1,
+                    "p_value_adj_by": 0.1,
+                    "p_value_adj_holm": 0.1,
+                    "q_value_program": 0.1,
+                    "q_value_scope": 0.1,
+                    "effective_q_value": 0.1,
+                    "correction_family_id": "",
+                    "correction_method": "bh",
+                    "num_tests_scope": 10,
+                    "multiplicity_scope_mode": "campaign_lineage",
+                    "multiplicity_scope_key": "",
+                    "multiplicity_scope_version": "v1",
+                    "multiplicity_scope_degraded": False,
+                },
+                metadata={
+                    "tob_coverage": 0.8,
+                    "repeated_fold_consistency": 0.7,
+                    "structural_robustness_score": 0.8,
+                },
+                promotion_decision={"promotion_status": "promoted"},
+            )

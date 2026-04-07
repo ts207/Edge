@@ -302,8 +302,8 @@ class EvidenceBundle(BaseModel):
     split_definition: SplitDefinition
     effect_estimates: EffectEstimates
     uncertainty_estimates: UncertaintyEstimates
-    stability_tests: Dict[str, Any]
-    falsification_results: Dict[str, Any]
+    stability_tests: Dict[str, Any] = Field(default_factory=dict)
+    falsification_results: Dict[str, Any] = Field(default_factory=dict)
     cost_robustness: CostRobustness
     multiplicity_adjustment: MultiplicityAdjustment
     metadata: EvidenceMetadata
@@ -320,6 +320,25 @@ class EvidenceBundle(BaseModel):
         if not str(v).strip():
             raise ValueError("must not be empty")
         return v
+
+    @model_validator(mode="after")
+    def validate_nested_consistency(self) -> "EvidenceBundle":
+        if self.stability_tests:
+            required_stability = {"sign_consistency", "stability_score"}
+            missing = required_stability - set(self.stability_tests.keys())
+            if missing:
+                raise ValueError(f"stability_tests missing required fields: {missing}")
+        if self.falsification_results:
+            required_falsification = {"shift_placebo_pass", "random_placebo_pass", "direction_reversal_pass"}
+            missing = required_falsification - set(self.falsification_results.keys())
+            if missing:
+                raise ValueError(f"falsification_results missing required fields: {missing}")
+        if self.promotion_decision:
+            if "eligible" not in self.promotion_decision:
+                raise ValueError("promotion_decision must have 'eligible' field")
+            if "promotion_status" not in self.promotion_decision:
+                raise ValueError("promotion_decision must have 'promotion_status' field")
+        return self
 
     def to_dict(self) -> Dict[str, Any]:
         return _coerce(self.model_dump())

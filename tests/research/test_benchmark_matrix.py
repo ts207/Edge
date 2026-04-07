@@ -1,7 +1,8 @@
 import json
 import os
 from pathlib import Path
-from project.scripts.run_benchmark_matrix import load_yaml, evaluate_thresholds
+from project.scripts.run_benchmark_matrix import load_yaml
+from project.research.benchmarks.benchmark_utils import evaluate_thresholds
 
 def test_benchmark_preset_loading():
     preset_path = Path("project/configs/benchmarks/discovery/core_v1.yaml")
@@ -9,7 +10,8 @@ def test_benchmark_preset_loading():
     preset = load_yaml(preset_path)
     assert "benchmark_modes" in preset
     assert "slices" in preset
-    assert "baseline_flat" in preset["benchmark_modes"]
+    assert "A" in preset["benchmark_modes"]
+    assert preset["benchmark_modes"]["A"]["label"] == "baseline_flat"
 
 def test_summary_schema(tmp_path):
     summary = {
@@ -36,27 +38,67 @@ def test_threshold_evaluation():
             "min_final_candidates": 5
         }
     }
-    metrics_pass = {
-        "candidate_count_final": 10,
-        "shortlist_avg_similarity": 0.5,
-        "shortlist_distinct_lineage_count": 6,
-        "top_n_median_fold_sign_consistency": 0.7,
-        "top_n_median_after_cost_expectancy_bps": 1.0,
-        "promotion_survival_rate_top_n": 0.3
+    mode_results_pass = {
+        "A": {
+            "emergence": True,
+            "candidate_count": 10,
+            "top10": {
+                "promotion_density": 0.3,
+                "placebo_fail_rate": 0.1,
+                "rank_diversity_score": 0.8,
+                "median_after_cost_expectancy_bps": 1.0,
+                "median_cost_survival_ratio": 0.9,
+            },
+            "median_discovery_quality_score": 0.7,
+            "median_falsification_component": 0.8,
+        },
+        "B": {
+            "emergence": True,
+            "candidate_count": 10,
+            "top10": {
+                "promotion_density": 0.3,
+                "placebo_fail_rate": 0.1,
+                "rank_diversity_score": 0.8,
+                "median_after_cost_expectancy_bps": 1.0,
+                "median_cost_survival_ratio": 0.9,
+            },
+            "median_discovery_quality_score": 0.7,
+            "median_falsification_component": 0.8,
+        },
     }
-    res_pass = evaluate_thresholds(metrics_pass, thresholds, is_trigger=False)
-    assert "min_final_candidates" not in res_pass["failed_thresholds"]
+    res_pass = evaluate_thresholds(mode_results=mode_results_pass, thresholds=thresholds)
+    assert "B" in res_pass["scorecard"]
 
-    metrics_fail = {
-        "candidate_count_final": 2,
-        "shortlist_avg_similarity": 0.5,
-        "shortlist_distinct_lineage_count": 6,
-        "top_n_median_fold_sign_consistency": 0.7,
-        "top_n_median_after_cost_expectancy_bps": 1.0,
-        "promotion_survival_rate_top_n": 0.3
+    mode_results_fail = {
+        "A": {
+            "emergence": True,
+            "candidate_count": 2,
+            "top10": {
+                "promotion_density": 0.3,
+                "placebo_fail_rate": 0.1,
+                "rank_diversity_score": 0.8,
+                "median_after_cost_expectancy_bps": 1.0,
+                "median_cost_survival_ratio": 0.9,
+            },
+            "median_discovery_quality_score": 0.7,
+            "median_falsification_component": 0.8,
+        },
+        "B": {
+            "emergence": True,
+            "candidate_count": 2,
+            "top10": {
+                "promotion_density": 0.3,
+                "placebo_fail_rate": 0.1,
+                "rank_diversity_score": 0.8,
+                "median_after_cost_expectancy_bps": 1.0,
+                "median_cost_survival_ratio": 0.9,
+            },
+            "median_discovery_quality_score": 0.7,
+            "median_falsification_component": 0.8,
+        },
     }
-    res_fail = evaluate_thresholds(metrics_fail, thresholds, is_trigger=False)
-    assert "min_final_candidates" in res_fail["failed_thresholds"]
+    res_fail = evaluate_thresholds(mode_results=mode_results_fail, thresholds=thresholds)
+    assert "B" in res_fail["scorecard"]
 
 def test_history_append(tmp_path):
     import pandas as pd

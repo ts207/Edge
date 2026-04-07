@@ -170,7 +170,18 @@ def _build_parser() -> argparse.ArgumentParser:
     promote_artifacts.add_argument("--data_root", default=None)
 
     # 4. DEPLOY
-    deploy_parser = subparsers.add_parser("deploy", help="Stage 4: Runtime execution.")
+    deploy_parser = subparsers.add_parser(
+        "deploy",
+        help="Stage 4: Runtime execution.",
+        description=(
+            "Deploy stage routes through the live-engine launcher.\n"
+            "Requires a completed 'promote' stage with promoted_theses.json.\n"
+            "Valid runtime modes: paper (dry-run), live (gated production).\n"
+            "The --config flag accepts a live engine config YAML path.\n"
+            "Bundle-only export is compatibility behavior, not the default path."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     deploy_sub = deploy_parser.add_subparsers(dest="subcommand")
 
     deploy_list = deploy_sub.add_parser("list-theses", help="List available promoted theses.")
