@@ -213,6 +213,7 @@ def main() -> int:
             }
         )
 
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as exc:

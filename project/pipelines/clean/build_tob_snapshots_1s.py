@@ -112,6 +112,7 @@ def main() -> int:
                     "snapshot_rows": int(len(resampled)),
                 }
 
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as exc:

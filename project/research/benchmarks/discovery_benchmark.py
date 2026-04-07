@@ -80,6 +80,11 @@ def _build_search_spec_for_mode(
             },
         }
 
+    if "triggers" in spec and "events" in spec["triggers"]:
+        log.info("Using trigger events from slice config: %s", spec["triggers"]["events"])
+    elif "events" in spec:
+        log.info("Using events from slice config: %s", spec["events"])
+
     return spec
 
 
@@ -258,7 +263,6 @@ def _extract_benchmark_metrics(df: pd.DataFrame, out_dir: Path) -> Dict[str, Any
 
 
 def run_benchmark_job(
-    *,
     run_id: str,
     symbols: str,
     timeframe: str,
@@ -272,6 +276,9 @@ def run_benchmark_job(
     fixture_event_registry: Optional[str] = None,
 ) -> Dict:
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    log.info("run_benchmark_job received search_spec: triggers=%s, events=%s",
+             search_spec.get("triggers"), search_spec.get("events"))
 
     search_spec_with_overlays = _build_search_spec_for_mode(search_spec, mode)
     validation_config = _build_validation_config_for_mode(mode)

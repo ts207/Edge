@@ -400,14 +400,14 @@ def encode_context_state_code(
     Format: VLOFTS (Vol, Liq, OI, Funding, Trend, Spread)
     """
     code = (
-        vol.fillna(0) * 100000
-        + liq.fillna(0) * 10000
-        + oi.fillna(0) * 1000
-        + fnd.fillna(0) * 100
-        + trend.fillna(0) * 10
-        + spread.fillna(0) * 1
+        vol.fillna(0).values * 100000
+        + liq.fillna(0).values * 10000
+        + oi.fillna(0).values * 1000
+        + fnd.fillna(0).values * 100
+        + trend.fillna(0).values * 10
+        + spread.fillna(0).values * 1
     )
-    return code.astype(float)
+    return pd.Series(code, index=vol.index, dtype=float)
 
 
 def calculate_ms_cross_asset_probabilities(

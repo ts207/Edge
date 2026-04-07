@@ -292,6 +292,8 @@ def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     else:
         out["ms_liquidation_state"] = 0.0
 
+    # Deduplicate columns from repeated pd.concat operations
+    out = out.loc[:, ~out.columns.duplicated(keep="last")]
     out["ms_context_state_code"] = encode_context_state_code(
         out["ms_vol_state"],
         out["ms_liq_state"],

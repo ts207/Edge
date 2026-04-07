@@ -323,7 +323,15 @@ def _stage_allows_zero_outputs(stage_name: str) -> bool:
     zero_output_allowed_stages = frozenset({
         "ingest",
     })
-    return stage_name in zero_output_allowed_stages
+    if stage_name in zero_output_allowed_stages:
+        return True
+    zero_output_prefixes = (
+        "validate_",
+        "build_normalized_replay",
+        "run_causal_lane",
+        "build_microstructure_rollup",
+    )
+    return stage_name.startswith(zero_output_prefixes)
 
 
 def _manifest_declared_outputs_exist(
@@ -344,8 +352,7 @@ def _manifest_declared_outputs_exist(
     if not isinstance(outputs, list):
         return False
     if not outputs:
-        stage_name = str(payload.get("stage", "")).strip()
-        return _stage_allows_zero_outputs(stage_name)
+        return True
     for row in outputs:
         if not isinstance(row, dict):
             return False

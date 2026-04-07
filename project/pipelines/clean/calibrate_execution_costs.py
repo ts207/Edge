@@ -112,6 +112,7 @@ def main() -> int:
             outputs.append({"path": str(out_path), "rows": 1, "start_ts": None, "end_ts": None})
             calibrated += 1
 
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats={"calibrated_symbols": calibrated})
         return 0
     except Exception as exc:

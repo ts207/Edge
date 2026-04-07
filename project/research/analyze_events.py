@@ -341,6 +341,7 @@ def main(argv: List[str] | None = None) -> int:
         )
         print(f"Wrote {row_count} rows for {event_type} to {out_path}")
 
+        manifest["outputs"] = [{"path": str(out_path), "rows": row_count}]
         finalize_manifest(manifest, "success", stats={"event_count": row_count})
         return 0
     except Exception as exc:

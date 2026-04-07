@@ -1,0 +1,33 @@
+# VOL_SHOCK: volatility shock → exhaustion → short reversal
+program_id: btc_vol_shock
+strategy_family: MeanReversion
+
+symbols: ["BTCUSDT"]
+timeframe: "5m"
+start: "2023-01-01"
+end: "2023-12-31"
+
+hypothesis:
+  anchor:
+    type: event
+    event_id: VOL_SHOCK
+  filters:
+    states: []
+    regimes: []
+    feature_predicates: []
+    contexts: {}
+  sampling_policy:
+    mode: episodic
+    entry_lag_bars: 1
+    overlap_policy: suppress
+  template:
+    id: mean_reversion
+  direction: short
+  horizon_bars: 12
+instrument_classes:
+  - crypto
+  - futures
+objective_name: retail_profitability
+promotion_profile: research
+knobs:
+  - funding_scale=decimal

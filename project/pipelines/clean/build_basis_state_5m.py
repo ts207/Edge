@@ -124,6 +124,7 @@ def main() -> int:
                     "merged_rows": int(len(merged)),
                 }
 
+        manifest["outputs"] = outputs
         finalize_manifest(manifest, "success", stats=stats)
         return 0
     except Exception as exc:
