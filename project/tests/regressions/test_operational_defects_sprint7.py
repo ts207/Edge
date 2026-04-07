@@ -29,6 +29,9 @@ from project.pipelines.execution_engine_support import (
     _stage_allows_zero_outputs,
     _manifest_declared_outputs_exist,
 )
+from project.research.validation.result_writer import (
+    write_promotion_ready_candidates,
+)
 
 
 class TestDeploymentStateValidation:
@@ -355,3 +358,205 @@ class TestSynthesizedManifestCacheRejection:
         is_synthesized = bool(stats.get("synthesized_manifest", False))
         
         assert is_synthesized is True, "Manifest should be marked as synthesized"
+
+
+class TestLiveExportAggregateFailures:
+    """Tests for aggregate failure reporting in live export."""
+
+    def test_multiple_malformed_candidates_aggregate_into_one_failure(self):
+        bundles = [
+            {
+                "candidate_id": "",
+                "sample_definition": {"symbol": "BTCUSDT", "n_events": 100},
+                "split_definition": {"bar_duration_minutes": 60},
+                "event_family": "TEST",
+                "cost_robustness": {"net_expectancy_bps": 50.0},
+            },
+            {
+                "candidate_id": "cand_2",
+                "sample_definition": {},
+                "split_definition": {},
+                "event_family": "",
+                "cost_robustness": {},
+            },
+        ]
+        
+        with pytest.raises(DataIntegrityError, match="Failed to build .* promoted theses"):
+            build_promoted_theses(
+                run_id="test_run",
+                bundles=bundles,
+                promoted_df=pd.DataFrame(),
+                validation_metadata={},
+            )
+
+    def test_single_malformed_candidate_raises_specific_error(self):
+        bundle = {
+            "candidate_id": "cand_123",
+            "sample_definition": {},
+            "split_definition": {},
+            "event_family": "",
+            "cost_robustness": {},
+        }
+        
+        with pytest.raises(DataIntegrityError, match="missing required fields"):
+            build_promoted_theses(
+                run_id="test_run",
+                bundles=[bundle],
+                promoted_df=pd.DataFrame(),
+                validation_metadata={},
+            )
+
+
+class TestValidationMetadataPreload:
+    """Tests for validation metadata preload in export."""
+
+    def test_validation_metadata_attached_on_successful_preload(self, tmp_path):
+        from project.research.validation.contracts import (
+            ValidationBundle,
+            ValidatedCandidateRecord,
+            ValidationDecision,
+            ValidationMetrics,
+        )
+        
+        run_id = "test_validation_preload"
+        data_root = tmp_path / "data"
+        validation_dir = data_root / "reports" / "validation" / run_id
+        validation_dir.mkdir(parents=True)
+        
+        bundle = ValidationBundle(
+            run_id=run_id,
+            created_at="2024-01-01T00:00:00Z",
+            validated_candidates=[
+                ValidatedCandidateRecord(
+                    candidate_id="cand_1",
+                    decision=ValidationDecision(
+                        status="validated",
+                        candidate_id="cand_1",
+                        run_id=run_id,
+                        program_id="test_program",
+                        reason_codes=["PASS"],
+                    ),
+                    metrics=ValidationMetrics(
+                        sample_count=100,
+                        expectancy=0.005,
+                        stability_score=0.8,
+                    ),
+                    anchor_summary="test_anchor",
+                    template_id="test_template",
+                    direction="long",
+                    horizon_bars=12,
+                    artifact_refs=[],
+                )
+            ],
+            rejected_candidates=[],
+            inconclusive_candidates=[],
+            summary_stats={"total": 1, "validated": 1},
+            effect_stability_report={},
+        )
+        
+        import json
+        (validation_dir / "validation_bundle.json").write_text(json.dumps(bundle.to_dict()))
+        
+        promotion_dir = data_root / "reports" / "promotions" / run_id
+        promotion_dir.mkdir(parents=True)
+        
+        evidence_bundle = {
+            "candidate_id": "cand_1",
+            "sample_definition": {"symbol": "BTCUSDT", "n_events": 100},
+            "split_definition": {"bar_duration_minutes": 60},
+            "event_family": "TEST",
+            "event_type": "TEST_EVENT",
+            "cost_robustness": {"net_expectancy_bps": 50.0},
+            "metadata": {"hypothesis_id": "hyp_1"},
+        }
+        (promotion_dir / "evidence_bundles.jsonl").write_text(json.dumps(evidence_bundle))
+        
+        promoted_df = pd.DataFrame([{"candidate_id": "cand_1", "status": "PROMOTED"}])
+        
+        result = export_promoted_theses_for_run(
+            run_id,
+            data_root=data_root,
+            bundles=[evidence_bundle],
+            promoted_df=promoted_df,
+        )
+        
+        assert result.thesis_count == 1
+
+
+class TestCanonicalPromotionArtifact:
+    """Tests for canonical promotion_ready_candidates.parquet production and consumption."""
+
+    def test_write_promotion_ready_candidates_produces_parquet(self, tmp_path):
+        from project.research.validation.contracts import (
+            ValidationBundle,
+            ValidatedCandidateRecord,
+            ValidationDecision,
+            ValidationMetrics,
+        )
+        
+        run_id = "test_promotion_artifact"
+        base_dir = tmp_path / "validation" / run_id
+        
+        bundle = ValidationBundle(
+            run_id=run_id,
+            created_at="2024-01-01T00:00:00Z",
+            validated_candidates=[
+                ValidatedCandidateRecord(
+                    candidate_id="cand_1",
+                    decision=ValidationDecision(
+                        status="validated",
+                        candidate_id="cand_1",
+                        run_id=run_id,
+                        program_id="test_program",
+                        reason_codes=["PASS"],
+                    ),
+                    metrics=ValidationMetrics(
+                        sample_count=100,
+                        expectancy=0.005,
+                        stability_score=0.8,
+                    ),
+                    anchor_summary="test_anchor",
+                    template_id="test_template",
+                    direction="long",
+                    horizon_bars=12,
+                    artifact_refs=[],
+                    validation_stage_version="v1",
+                )
+            ],
+            rejected_candidates=[],
+            inconclusive_candidates=[],
+            summary_stats={"total": 1, "validated": 1},
+            effect_stability_report={},
+        )
+        
+        path = write_promotion_ready_candidates(bundle, base_dir=base_dir)
+        
+        assert path is not None
+        assert path.exists()
+        assert path.name == "promotion_ready_candidates.parquet"
+        
+        df = pd.read_parquet(path)
+        assert len(df) == 1
+        assert df.iloc[0]["candidate_id"] == "cand_1"
+        assert "validation_status" in df.columns
+        assert "validation_run_id" in df.columns
+
+    def test_empty_validated_candidates_returns_none(self, tmp_path):
+        from project.research.validation.contracts import ValidationBundle
+        
+        run_id = "test_empty_artifact"
+        base_dir = tmp_path / "validation" / run_id
+        
+        bundle = ValidationBundle(
+            run_id=run_id,
+            created_at="2024-01-01T00:00:00Z",
+            validated_candidates=[],
+            rejected_candidates=[],
+            inconclusive_candidates=[],
+            summary_stats={},
+            effect_stability_report={},
+        )
+        
+        path = write_promotion_ready_candidates(bundle, base_dir=base_dir)
+        
+        assert path is None

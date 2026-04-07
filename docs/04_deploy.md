@@ -23,8 +23,31 @@ The deployment stage is responsible for:
    ```
 
 ## Runtime Modes
+* **Monitor Only**: Read-only observation of market data without order submission.
 * **Paper Trading**: Executing against live data with simulated fills. Used for final out-of-sample confirmation.
 * **Live Trading**: Executing with real capital on exchange.
+
+### Valid Runtime Modes
+The live engine supports only two runtime modes:
+- `monitor_only` — observation mode, no order submission
+- `trading` — active trading mode
+
+The legacy `paper_trading` mode is no longer valid. Paper trading is now configured via the OMS lineage in the engine config, not the runtime mode.
+
+### Deploy Command Requirements
+Both `deploy paper` and `deploy live` require a configuration file:
+
+```bash
+edge deploy paper --run_id <run_id> --config configs/live_paper.yaml
+edge deploy live --run_id <run_id> --config configs/live_production.yaml
+```
+
+If `--config` is omitted, defaults are used:
+- Paper: `project/configs/live_paper.yaml`
+- Live: `project/configs/live_production.yaml`
+
+## Export Behavior
+Live export requires a non-empty promoted candidates DataFrame by default. The `allow_bundle_only_export=True` flag permits export without promoted candidates, but this is a compatibility behavior, not the canonical path.
 
 ## Risk & Governance
 * **Deployment State**: Operator-facing trade eligibility is enforced exclusively via `deployment_state`. A thesis can be explicitly limited to `monitor_only`, `paper_only`, or successfully promoted to `live_enabled`. This flag must pass gate validation prior to engine startup.
