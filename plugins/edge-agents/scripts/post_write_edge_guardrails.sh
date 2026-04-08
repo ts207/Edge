@@ -59,7 +59,7 @@ for path in "${changed_files[@]}"; do
   esac
 
   case "$path" in
-    Makefile|README.md|docs/03_OPERATOR_WORKFLOW.md|docs/04_COMMANDS_AND_ENTRY_POINTS.md|docs/operator_command_inventory.md|project/cli.py|project/operator/*|project/research/agent_io/*)
+    Makefile|README.md|docs/README.md|docs/00_overview.md|docs/01_discover.md|docs/02_validate.md|docs/03_promote.md|docs/04_deploy.md|docs/93_trigger_discovery.md|docs/94_discovery_benchmarks.md|docs/operator_command_inventory.md|project/cli.py|project/operator/*|project/research/agent_io/*)
       operator_hits+=("$path")
       ;;
   esac
@@ -71,7 +71,7 @@ for path in "${changed_files[@]}"; do
   esac
 
   case "$path" in
-    project/research/seed_*|project/research/thesis_evidence_runner.py|project/portfolio/thesis_overlap.py|project/live/*|project/live/contracts/*|docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md|docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md|data/live/theses/*)
+    project/research/seed_*|project/research/thesis_evidence_runner.py|project/portfolio/thesis_overlap.py|project/live/*|project/live/contracts/*|docs/03_promote.md|docs/04_deploy.md|data/live/theses/*)
       packaging_hits+=("$path")
       ;;
   esac
@@ -107,7 +107,7 @@ for path in "${changed_files[@]}"; do
   esac
 
   case "$path" in
-    README.md|docs/00_START_HERE.md|docs/02_REPOSITORY_MAP.md|docs/operator_command_inventory.md|docs/ARCHITECTURE_SURFACE_INVENTORY.md|docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md|docs/RESEARCH_CALIBRATION_BASELINE.md)
+    README.md|docs/README.md|docs/00_overview.md|docs/02_REPOSITORY_MAP.md|docs/90_architecture.md|docs/92_assurance_and_benchmarks.md|docs/operator_command_inventory.md|docs/ARCHITECTURE_SURFACE_INVENTORY.md)
       doc_coupled_hits+=("$path")
       ;;
   esac
@@ -139,31 +139,32 @@ fi
 if [ "${#operator_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Operator-surface change detected."
   echo "[edge-hook] Maintenance loop:"
-  echo "  make validate"
-  echo "  PYTHONPATH=. ./.venv/bin/python -m project.scripts.generate_operator_surface_inventory"
+  echo "  ./plugins/edge-agents/scripts/edge_validate_repo.sh contracts"
+  echo "  ./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green"
   echo "[edge-hook] Review docs:"
   echo "  README.md"
-  echo "  docs/00_START_HERE.md"
-  echo "  docs/03_OPERATOR_WORKFLOW.md"
-  echo "  docs/04_COMMANDS_AND_ENTRY_POINTS.md"
+  echo "  docs/README.md"
+  echo "  docs/00_overview.md"
+  echo "  docs/operator_command_inventory.md"
 fi
 
 if [ "${#event_registry_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Event / ontology / registry surface change detected."
   echo "[edge-hook] Maintenance loop:"
-  echo "  make validate"
+  echo "  ./plugins/edge-agents/scripts/edge_verify_contracts.sh"
   echo "  PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_event_contract_artifacts"
   echo "  PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map"
   echo "[edge-hook] Review docs:"
-  echo "  docs/generated/event_contract_reference.md"
+  echo "  docs/generated/event_contract_completeness.md"
+  echo "  docs/generated/event_tiers.md"
   echo "  docs/02_REPOSITORY_MAP.md"
-  echo "  docs/05_ARTIFACTS_AND_INTERPRETATION.md"
+  echo "  docs/90_architecture.md"
 fi
 
 if [ "${#packaging_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Runtime-thesis / packaging / overlap surface change detected."
   echo "[edge-hook] Maintenance loop:"
-  echo "  make validate"
+  echo "  ./plugins/edge-agents/scripts/edge_verify_contracts.sh"
   echo "  ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>"
   echo "  PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>"
   echo "[edge-hook] Advanced bootstrap lane only when broader packaging maintenance is intended:"
@@ -174,8 +175,8 @@ if [ "${#packaging_hits[@]}" -gt 0 ]; then
   echo "  docs/generated/seed_thesis_catalog.md"
   echo "  docs/generated/seed_thesis_packaging_summary.md"
   echo "  docs/generated/thesis_overlap_graph.md"
-  echo "  docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md"
-  echo "  docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md"
+  echo "  docs/03_promote.md"
+  echo "  docs/04_deploy.md"
 fi
 
 if [ "${#live_runtime_hits[@]}" -gt 0 ]; then
@@ -198,11 +199,11 @@ fi
 if [ "${#architecture_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Architecture-surface change detected."
   echo "[edge-hook] Maintenance loop:"
-  echo "  make validate"
+  echo "  ./plugins/edge-agents/scripts/edge_verify_contracts.sh"
   echo "  PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map"
   echo "[edge-hook] Review docs:"
-  echo "  docs/ARCHITECTURE_SURFACE_INVENTORY.md"
-  echo "  docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md"
+  echo "  docs/90_architecture.md"
+  echo "  docs/02_REPOSITORY_MAP.md"
   echo "  docs/generated/system_map.md"
 fi
 
@@ -230,6 +231,7 @@ fi
 if [ "${#plugin_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Plugin surface change detected."
   echo "[edge-hook] Sync and check the installed plugin copy:"
+  echo "  ./plugins/edge-agents/scripts/edge_sync_plugin.sh targets"
   echo "  ./plugins/edge-agents/scripts/edge_sync_plugin.sh check"
   echo "  ./plugins/edge-agents/scripts/edge_sync_plugin.sh sync"
 fi

@@ -59,6 +59,9 @@ The canonical discovery path does **not** enable these by default:
 - diversified shortlist
 - trigger discovery
 
+Current example:
+- `LIQUIDATION_CASCADE_PROXY` is an experimental proxy event that extends liquidation-style discovery when direct `liquidation_notional` feeds are unavailable. It remains registry-governed and does not bypass validation or promotion gates.
+
 ### Compatibility-only
 - legacy proposal/operator surfaces retained for migration or internal support
 

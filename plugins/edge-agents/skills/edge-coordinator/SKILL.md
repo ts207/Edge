@@ -5,13 +5,16 @@ description: Coordinate the Edge specialist-agent pipeline using the repo's own 
 
 # Edge Coordinator
 
-This skill follows `agents/coordinator_playbook.md`.
+Use this skill to coordinate bounded research work without inventing a parallel workflow.
 
 ## Read first
 
-1. `agents/coordinator_playbook.md`
-2. `docs/AGENT_CONTRACT.md`
-3. `docs/03_OPERATOR_WORKFLOW.md`
+1. `docs/00_overview.md`
+2. `docs/01_discover.md`
+3. `docs/02_validate.md`
+4. `docs/03_promote.md`
+5. `docs/04_deploy.md`
+6. `docs/operator_command_inventory.md`
 
 ## Role
 

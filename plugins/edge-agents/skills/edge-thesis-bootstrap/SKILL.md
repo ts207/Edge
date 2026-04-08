@@ -9,11 +9,11 @@ Use this skill for the packaging lane, not for raw discovery.
 
 ## Read first
 
-1. `docs/03_OPERATOR_WORKFLOW.md`
-2. `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-3. `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
-4. `docs/AGENT_CONTRACT.md`
-5. `docs/VERIFICATION.md`
+1. `docs/03_promote.md`
+2. `docs/04_deploy.md`
+3. `docs/operator_command_inventory.md`
+4. `docs/92_assurance_and_benchmarks.md`
+5. `docs/README.md`
 
 ## Preferred front door
 

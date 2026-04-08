@@ -168,6 +168,8 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
     )
     signal_column = "oi_delta_1h"
     timeframe_minutes = 5
+    lookback_bars = 288
+    warmup_bars = 288
     max_gap = 3
     anchor_rule = "peak"
     default_severity = "major"
@@ -239,7 +241,16 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
         vol_mask = volume >= vol_th
         price_mask = price_drop >= price_drop_th
 
-        return (oi_mask & vol_mask & price_mask).fillna(False)
+        mask = (oi_mask & vol_mask & price_mask).fillna(False)
+        warmup = max(
+            int(params.get("oi_window", self.lookback_bars)),
+            int(params.get("vol_window", self.lookback_bars)),
+            int(params.get("ret_window", 3)),
+        )
+        if warmup > 0 and len(mask) > 0:
+            mask = mask.copy()
+            mask.iloc[:warmup] = False
+        return mask
 
     def compute_intensity(
         self, df: pd.DataFrame, *, features: dict[str, pd.Series], **params: Any

@@ -181,3 +181,18 @@ def test_proxy_empty_df_returns_no_events():
     detector = LiquidationCascadeProxyDetector()
     events = detector.detect(df, symbol="BTCUSDT", **_SMALL_PARAMS)
     assert len(events) == 0
+
+
+def test_proxy_respects_default_warmup_window():
+    df = _base_df(n=100)
+    trigger = 50
+
+    df.loc[trigger, "oi_delta_1h"] = -200.0
+    df.loc[trigger, "volume"] = 500.0
+    df.loc[trigger - 1, "low"] = 95.0
+    df.loc[trigger, "low"] = 94.0
+
+    detector = LiquidationCascadeProxyDetector()
+    events = detector.detect(df, symbol="BTCUSDT")
+
+    assert len(events) == 0

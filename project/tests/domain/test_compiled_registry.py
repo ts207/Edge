@@ -98,6 +98,14 @@ def test_domain_registry_exposes_runtime_metadata_from_event_specs():
     assert regime.spec_path.endswith("spec/regimes/registry.yaml")
 
 
+def test_domain_registry_event_row_exposes_routing_profile_ref():
+    registry = refresh_domain_registry()
+
+    row = registry.event_row("LIQUIDATION_CASCADE_PROXY")
+
+    assert row["routing_profile_ref"] == "POSITIONING_UNWIND_DELEVERAGING"
+
+
 def test_domain_registry_exposes_context_and_searchable_family_views():
     registry = get_domain_registry()
 

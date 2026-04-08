@@ -21,8 +21,8 @@ Legacy wrapper surfaces have been removed.
 ### `ingest`
 
 - Owner service: `project.pipelines.run_all`
-- Stage patterns: `ingest_binance_um_ohlcv_*`, `ingest_binance_um_funding`, `ingest_binance_spot_ohlcv_*`, `ingest_binance_um_liquidation_snapshot`, `ingest_binance_um_open_interest_hist`
-- Script patterns: `pipelines/ingest/ingest_binance_um_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_funding.py`, `pipelines/ingest/ingest_binance_spot_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_liquidation_snapshot.py`, `pipelines/ingest/ingest_binance_um_open_interest_hist.py`
+- Stage patterns: `ingest_binance_um_ohlcv_*`, `ingest_binance_um_funding`, `ingest_binance_spot_ohlcv_*`, `ingest_binance_um_liquidation_snapshot`, `ingest_binance_um_open_interest_hist`, `ingest_bybit_derivatives_ohlcv_*`, `ingest_bybit_derivatives_funding`, `ingest_bybit_derivatives_oi`
+- Script patterns: `pipelines/ingest/ingest_binance_um_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_funding.py`, `pipelines/ingest/ingest_binance_spot_ohlcv*.py`, `pipelines/ingest/ingest_binance_um_liquidation_snapshot.py`, `pipelines/ingest/ingest_binance_um_open_interest_hist.py`, `pipelines/ingest/ingest_bybit_derivatives_ohlcv.py`, `pipelines/ingest/ingest_bybit_derivatives_funding.py`, `pipelines/ingest/ingest_bybit_derivatives_open_interest.py`
 
 ### `core`
 
@@ -81,6 +81,13 @@ Legacy wrapper surfaces have been removed.
 - Outputs: `raw.perp.funding_5m`
 - External inputs: _none_
 
+### `ingest_bybit_derivatives_funding`
+
+- Inputs: _none_
+- Optional inputs: _none_
+- Outputs: `raw.perp.funding_5m`
+- External inputs: _none_
+
 ### `ingest_binance_um_liquidation_snapshot`
 
 - Inputs: _none_
@@ -95,7 +102,21 @@ Legacy wrapper surfaces have been removed.
 - Outputs: `raw.perp.open_interest`
 - External inputs: _none_
 
+### `ingest_bybit_derivatives_oi`
+
+- Inputs: _none_
+- Optional inputs: _none_
+- Outputs: `raw.perp.open_interest`
+- External inputs: _none_
+
 ### `ingest_binance_um_ohlcv_{tf}`
+
+- Inputs: _none_
+- Optional inputs: _none_
+- Outputs: `raw.perp.ohlcv_{tf}`
+- External inputs: _none_
+
+### `ingest_bybit_derivatives_ohlcv_{tf}`
 
 - Inputs: _none_
 - Optional inputs: _none_

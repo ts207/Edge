@@ -32,15 +32,21 @@ Triggers discovered by this system progress through a formal state machine track
 1. **Run Discovery**: Use `edge discover triggers` to generate candidates. This automatically seeds them in the control plane as `proposed`.
 2. **Review Pipeline**:
    - List proposals: `edge discover triggers list`
-   - Mark a proposal for review: `edge discover triggers review --candidate-id <ID> --status under_review`
-   - Inspect artifacts: View `candidate_trigger_report.md` or run `edge discover triggers inspect --candidate-id <ID>`
+   - Mark a proposal for review: `edge discover triggers review --candidate_id <ID>`
+   - Inspect artifacts: View `candidate_trigger_report.md` or run `edge discover triggers inspect --candidate_id <ID>`
 3. **Decision Gate**:
-   - If flawed or redundant: `edge discover triggers reject --candidate-id <ID> --reason "..."`
-   - If sound: `edge discover triggers approve --candidate-id <ID>`
+   - If flawed or redundant: `edge discover triggers reject --candidate_id <ID> --reason "..."`
+   - If sound: `edge discover triggers approve --candidate_id <ID>`
 4. **Registry Adoption**: 
-   - *Crucial Rule*: Emitting a payload (`edge discover triggers emit-registry-payload`) **DOES NOT** equal adoption.
+   - *Crucial Rule*: Emitting a payload (`edge discover triggers emit-registry-payload --candidate_id <ID>`) **DOES NOT** equal adoption.
    - You must manually copy the emitted YAML snippet into `spec/events/`.
-   - Once committed to the spec, formalize the state: `edge discover triggers mark-adopted --candidate-id <ID>`.
+   - Once committed to the spec, formalize the state: `edge discover triggers mark-adopted --candidate_id <ID>`.
+
+## Current Surface Notes
+
+- This lane is still discover-only. It does not bypass `validate`, `promote`, or deployment-state gating.
+- The canonical discovery path remains `edge discover run` / `make discover`; trigger discovery is a side lane for proposing new event specs.
+- Review and approval operate on proposal state in `data/trigger_proposals/`; they do not modify generated registries or runtime metadata automatically.
 
 ## Usage
 

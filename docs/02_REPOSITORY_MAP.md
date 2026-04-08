@@ -63,3 +63,13 @@ Only `live_enabled` theses may execute trades. Deployment progresses through:
 
 Raw data is resolved via `raw_dataset_dir_candidates(venue=...)`.
 Default venue is `"bybit"`. Binance callers must pass `venue="binance"` explicitly.
+
+## Event Registry Surfaces
+
+Event metadata is maintained across three linked surfaces:
+
+- authored specs in `spec/events/*.yaml`
+- compiled canonical registry in `spec/events/event_registry_unified.yaml`
+- compiled runtime/read model in `spec/domain/domain_graph.yaml`
+
+When event routing, ontology, or runtime metadata changes, those generated surfaces must be refreshed to keep discovery, validation, and runtime consumers aligned.

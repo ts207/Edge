@@ -8,9 +8,9 @@ identity:
   legacy_family: POSITIONING_EXTREMES
   subtype: liquidation_cascade_proxy
   phase: onset
-  evidence_mode: indirect
-  layer: proxy
-  disposition: standalone
+  evidence_mode: proxy
+  layer: canonical
+  disposition: merge
   asset_scope: single_asset
   venue_scope: single_venue
 governance:

@@ -36,4 +36,8 @@ It should not redefine proposal policy or promotion logic.
 
 ## Relationship to docs
 
-See `docs/10_APPS_PLUGINS_AND_AGENTS.md`.
+See:
+
+- `docs/README.md`
+- `docs/operator_command_inventory.md`
+- `docs/02_REPOSITORY_MAP.md`

@@ -43,6 +43,7 @@ Do not start from individual stage scripts unless you already know which stage f
 See:
 
 - `docs/02_REPOSITORY_MAP.md`
-- `docs/03_OPERATOR_WORKFLOW.md`
-- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-- `docs/05_ARTIFACTS_AND_INTERPRETATION.md`
+- `docs/00_overview.md`
+- `docs/01_discover.md`
+- `docs/02_validate.md`
+- `docs/operator_command_inventory.md`

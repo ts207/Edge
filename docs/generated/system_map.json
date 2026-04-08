@@ -17,6 +17,18 @@
       "inputs": [],
       "optional_inputs": [],
       "outputs": [
+        "raw.perp.funding_5m"
+      ],
+      "stage_patterns": [
+        "ingest_bybit_derivatives_funding"
+      ],
+      "version": "phase5_artifact_contract_v1"
+    },
+    {
+      "external_inputs": [],
+      "inputs": [],
+      "optional_inputs": [],
+      "outputs": [
         "raw.perp.liquidations"
       ],
       "stage_patterns": [
@@ -41,10 +53,34 @@
       "inputs": [],
       "optional_inputs": [],
       "outputs": [
+        "raw.perp.open_interest"
+      ],
+      "stage_patterns": [
+        "ingest_bybit_derivatives_oi"
+      ],
+      "version": "phase5_artifact_contract_v1"
+    },
+    {
+      "external_inputs": [],
+      "inputs": [],
+      "optional_inputs": [],
+      "outputs": [
         "raw.perp.ohlcv_{tf}"
       ],
       "stage_patterns": [
         "ingest_binance_um_ohlcv_{tf}"
+      ],
+      "version": "phase5_artifact_contract_v1"
+    },
+    {
+      "external_inputs": [],
+      "inputs": [],
+      "optional_inputs": [],
+      "outputs": [
+        "raw.perp.ohlcv_{tf}"
+      ],
+      "stage_patterns": [
+        "ingest_bybit_derivatives_ohlcv_{tf}"
       ],
       "version": "phase5_artifact_contract_v1"
     },
@@ -657,14 +693,20 @@
         "pipelines/ingest/ingest_binance_um_funding.py",
         "pipelines/ingest/ingest_binance_spot_ohlcv*.py",
         "pipelines/ingest/ingest_binance_um_liquidation_snapshot.py",
-        "pipelines/ingest/ingest_binance_um_open_interest_hist.py"
+        "pipelines/ingest/ingest_binance_um_open_interest_hist.py",
+        "pipelines/ingest/ingest_bybit_derivatives_ohlcv.py",
+        "pipelines/ingest/ingest_bybit_derivatives_funding.py",
+        "pipelines/ingest/ingest_bybit_derivatives_open_interest.py"
       ],
       "stage_patterns": [
         "ingest_binance_um_ohlcv_*",
         "ingest_binance_um_funding",
         "ingest_binance_spot_ohlcv_*",
         "ingest_binance_um_liquidation_snapshot",
-        "ingest_binance_um_open_interest_hist"
+        "ingest_binance_um_open_interest_hist",
+        "ingest_bybit_derivatives_ohlcv_*",
+        "ingest_bybit_derivatives_funding",
+        "ingest_bybit_derivatives_oi"
       ]
     },
     {

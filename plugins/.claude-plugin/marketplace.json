@@ -7,7 +7,7 @@
     {
       "name": "edge-agents",
       "source": "./edge-agents",
-      "description": "Specialist agent pipeline for the Edge crypto research engine: analyst, mechanism_hypothesis, and compiler subagents plus coordinator and repo skills."
+      "description": "Repo-local plugin for the Edge research engine: bounded proposal, diagnosis, validation, export, maintenance, and specialist-agent skills."
     }
   ]
 }

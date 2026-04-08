@@ -9,9 +9,9 @@ Use this skill for developer maintenance and repo-upkeep work in `/home/irene/Ed
 
 ## Read first
 
-1. `docs/08_TESTING_AND_MAINTENANCE.md`
-2. `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-3. `docs/10_APPS_PLUGINS_AND_AGENTS.md`
+1. `docs/README.md`
+2. `docs/operator_command_inventory.md`
+3. `docs/92_assurance_and_benchmarks.md`
 4. `Makefile`
 
 ## Role
@@ -28,39 +28,40 @@ Use this skill for developer maintenance and repo-upkeep work in `/home/irene/Ed
 Use:
 
 ```bash
-make validate
-PYTHONPATH=. ./.venv/bin/python -m project.scripts.generate_operator_surface_inventory
+./plugins/edge-agents/scripts/edge_verify_contracts.sh
+./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green
 ```
 
 Then inspect:
 
 - `README.md`
-- `docs/00_START_HERE.md`
-- `docs/03_OPERATOR_WORKFLOW.md`
-- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
+- `docs/README.md`
+- `docs/00_overview.md`
+- `docs/operator_command_inventory.md`
 
 ### Event, ontology, or registry change
 
 Use:
 
 ```bash
-make validate
+./plugins/edge-agents/scripts/edge_verify_contracts.sh
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_event_contract_artifacts
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map
 ```
 
 Then inspect:
 
-- `docs/generated/event_contract_reference.md`
+- `docs/generated/event_contract_completeness.md`
+- `docs/generated/event_tiers.md`
 - `docs/02_REPOSITORY_MAP.md`
-- `docs/05_ARTIFACTS_AND_INTERPRETATION.md`
+- `docs/90_architecture.md`
 
 ### Runtime-thesis export or overlap change
 
 Use:
 
 ```bash
-make validate
+./plugins/edge-agents/scripts/edge_verify_contracts.sh
 ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ```
@@ -70,7 +71,8 @@ Then inspect:
 - `data/live/theses/<run_id>/promoted_theses.json`
 - `data/live/theses/index.json`
 - `docs/generated/thesis_overlap_graph.md`
-- `docs/11_LIVE_THESIS_STORE_AND_OVERLAP.md`
+- `docs/03_promote.md`
+- `docs/04_deploy.md`
 
 ### Advanced bootstrap or package change
 
@@ -84,21 +86,22 @@ Then inspect:
 
 - `docs/generated/seed_thesis_catalog.md`
 - `docs/generated/seed_thesis_packaging_summary.md`
-- `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
+- `docs/03_promote.md`
+- `docs/04_deploy.md`
 
 ### Architectural boundary change
 
 Use:
 
 ```bash
-make validate
+./plugins/edge-agents/scripts/edge_verify_contracts.sh
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map
 ```
 
 Then inspect:
 
-- `docs/ARCHITECTURE_SURFACE_INVENTORY.md`
-- `docs/ARCHITECTURE_MAINTENANCE_CHECKLIST.md`
+- `docs/90_architecture.md`
+- `docs/02_REPOSITORY_MAP.md`
 - `docs/generated/system_map.md`
 
 ### Live runtime change (deployment gate, kill switch, audit log, approval contract)
@@ -137,7 +140,8 @@ Use:
 Use:
 
 ```bash
-./plugins/edge-agents/scripts/edge_validate_repo.sh
+./plugins/edge-agents/scripts/edge_validate_repo.sh contracts
+./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green
 ./plugins/edge-agents/scripts/edge_governance.sh
 ```
 

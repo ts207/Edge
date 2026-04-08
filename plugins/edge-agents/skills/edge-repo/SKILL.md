@@ -10,10 +10,11 @@ Use this as the default project skill for `/home/irene/Edge`.
 ## Read first
 
 1. `CLAUDE.md`
-2. `docs/AGENT_CONTRACT.md`
-3. `docs/03_OPERATOR_WORKFLOW.md`
-4. `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-5. `docs/VERIFICATION.md`
+2. `docs/README.md`
+3. `docs/00_overview.md`
+4. `docs/02_REPOSITORY_MAP.md`
+5. `docs/operator_command_inventory.md`
+6. `docs/92_assurance_and_benchmarks.md`
 
 ## Core model
 
@@ -46,13 +47,11 @@ Use this as the default project skill for `/home/irene/Edge`.
 ## Default command surface
 
 ```bash
-make discover PROPOSAL=/abs/path/to/proposal.yaml DISCOVER_ACTION=preflight
 make discover PROPOSAL=/abs/path/to/proposal.yaml DISCOVER_ACTION=plan
 make discover PROPOSAL=/abs/path/to/proposal.yaml DISCOVER_ACTION=run
-make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report
-make review REVIEW_ACTION=compare RUN_IDS=<baseline_run,followup_run>
+make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT
 make export RUN_ID=<run_id>
-make validate
+make deploy-paper RUN_ID=<run_id>
 edge operator lint --proposal /abs/path/to/proposal.yaml
 edge operator explain --proposal /abs/path/to/proposal.yaml
 edge operator preflight --proposal /abs/path/to/proposal.yaml
@@ -61,9 +60,11 @@ edge operator run --proposal /abs/path/to/proposal.yaml
 edge operator diagnose --run_id <run_id>
 edge operator regime-report --run_id <run_id>
 edge operator compare --run_ids <baseline_run,followup_run>
+edge validate report --run_id <run_id>
 ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>
 ./plugins/edge-agents/scripts/edge_package_theses.sh [thesis_run_id]
-.venv/bin/python -m project.scripts.run_researcher_verification --mode contracts
+./plugins/edge-agents/scripts/edge_verify_contracts.sh
+./plugins/edge-agents/scripts/edge_validate_repo.sh contracts|minimum-green|all
 ```
 
 ## Routing
@@ -77,6 +78,6 @@ edge operator compare --run_ids <baseline_run,followup_run>
 
 ## Verification default
 
-- After code, plugin, hook, or config changes, run the contract block from `docs/VERIFICATION.md`.
-- After bounded experiment work, run the experiment verification block.
+- After code, plugin, hook, or config changes, run `./plugins/edge-agents/scripts/edge_verify_contracts.sh`.
+- Use `./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green` before landing broader control-plane or architecture changes.
 - Keep verification targeted to the surface changed unless the repo contract requires more.

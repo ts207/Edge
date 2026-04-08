@@ -10,9 +10,9 @@ Use this skill for work in `project/apps/chatgpt/`.
 ## Read first
 
 1. `project/apps/chatgpt/README.md`
-2. `docs/10_APPS_PLUGINS_AND_AGENTS.md`
-3. `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-4. `docs/08_TESTING_AND_MAINTENANCE.md`
+2. `docs/README.md`
+3. `docs/operator_command_inventory.md`
+4. `docs/02_REPOSITORY_MAP.md`
 
 ## Role
 

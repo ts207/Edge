@@ -3,6 +3,18 @@
 ## Overview
 This document explains the benchmark configurations, thresholds, and review processes for the discovery layer.
 
+## Current State
+
+The benchmark control plane currently lives behind the Make targets and scripts that exist in this repo:
+
+- `make benchmark-core`
+- `make benchmark-review`
+- `make benchmark-certify`
+- `make benchmark-maintenance-smoke`
+- `make benchmark-maintenance`
+
+`make benchmark-m0` is retained only as a deprecated stub that exits with guidance to use `benchmark-core`.
+
 ## Ownership model
 
 The benchmark stack has two layers:
@@ -19,6 +31,8 @@ The execution adapter runs benchmark cases. The control plane defines, classifie
 | `legacy` | **STABLE** | Abs t-stat ranking baseline. |
 | `v2` | **STABLE-INTERNAL** | Canonical quality score (Significance + Tradability). |
 | `ledger` | **EXPERIMENTAL** | V3 concept burden adjustment (Multiplicity). |
+| `hierarchical` | **EXPERIMENTAL** | Hierarchical search-space pruning and staged discovery expansion. |
+| `diversified` | **EXPERIMENTAL** | Diversity-aware shortlist selection layered on hierarchical search. |
 
 ## What benchmark evidence is expected to prove
 
@@ -55,3 +69,9 @@ See `project/configs/benchmarks/discovery/thresholds_v1.yaml`.
 1. Run Matrix: `make benchmark-core`
 2. Review Results: `make benchmark-review`
 3. Certify: `make benchmark-certify`
+
+## Generated Outputs
+
+The review/certification scripts write benchmark artifacts under `data/` and surface the operator-facing summary through `project/scripts/show_benchmark_review.py`.
+
+Benchmark evidence is advisory until it is folded back into the canonical discovery defaults and verification policy.

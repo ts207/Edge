@@ -40,8 +40,9 @@ Keep policy in services and contract-aware modules. Do not spread research polic
 
 See:
 
-- `docs/01_PROJECT_MODEL.md`
-- `docs/03_OPERATOR_WORKFLOW.md`
-- `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
-- `docs/06_QUALITY_GATES_AND_PROMOTION.md`
-- `docs/09_THESIS_BOOTSTRAP_AND_PROMOTION.md`
+- `docs/00_overview.md`
+- `docs/01_discover.md`
+- `docs/02_validate.md`
+- `docs/03_promote.md`
+- `docs/91_advanced_research.md`
+- `docs/92_assurance_and_benchmarks.md`

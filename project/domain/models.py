@@ -330,6 +330,7 @@ class DomainRegistry:
         row.setdefault("research_only", event.research_only)
         row.setdefault("strategy_only", event.strategy_only)
         row.setdefault("notes", event.notes)
+        row.setdefault("routing_profile_ref", event.routing_profile_ref)
         row.setdefault("parameters", dict(event.parameters))
         return row
 

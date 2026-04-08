@@ -8,6 +8,8 @@ This doc set is organized around the unified 4-stage public operating model:
 - **Current Canonical Model:** The 4-stage pipeline defined in `project/cli.py` and `docs/00_overview.md`.
 - **Current Compatibility Model:** The legacy `operator` CLI and related abstractions which wrap the older research loop model.
 - **Known Drift:** We are in the process of deprecating the older "founding seed" documentation paths.
+- **Current Registry State:** Event metadata is authored per event under `spec/events/*.yaml`, compiled into `spec/events/event_registry_unified.yaml`, and then projected into `spec/domain/domain_graph.yaml`.
+- **Current Runtime Gate:** Research-generated ideas do not become deployable until they pass the explicit `discover -> validate -> promote -> deploy` artifact chain.
 
 ## Canonical spine
 
@@ -17,7 +19,7 @@ Read these first, in order:
 2. [01_discover.md](01_discover.md) — Generating candidates and issuing structured proposals
 3. [02_validate.md](02_validate.md) — Truth-testing candidates, cost-sensitivity, robust stability
 4. [03_promote.md](03_promote.md) — Packaging robust candidates into trading theses 
-5. [04_deploy.md](04_deploy.md) — Running promoted theses in explicit backtest, paper, or live mode
+5. [04_deploy.md](04_deploy.md) — Running promoted theses in paper or live mode with explicit deployment-state gating
 
 ## Supplementary Foundations
 
@@ -40,6 +42,9 @@ Important generated surfaces include:
 
 - [generated/system_map.md](generated/system_map.md)
 - [generated/event_contract_reference.md](generated/event_contract_reference.md)
+- [generated/event_contract_completeness.md](generated/event_contract_completeness.md)
+- [generated/event_tiers.md](generated/event_tiers.md)
+- [operator_command_inventory.md](operator_command_inventory.md)
 
 ## Templates and notes
 

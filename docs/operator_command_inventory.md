@@ -4,13 +4,14 @@
 > **Legacy Compatibility Surface**
 > This inventory focuses on deprecated operator facades. Consider discover, validate, promote, and deploy directly.
 
-Generated from `project/cli.py` and `Makefile`. Update this file with `python -m project.scripts.generate_operator_surface_inventory`.
+Maintained against `project/cli.py` and `Makefile`. Update this file when those surfaces change.
 
 ## Preferred front door
 
 Use these surfaces first:
 
-- `make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=preflight|plan|run`
+- `make discover PROPOSAL=<proposal.yaml> DISCOVER_ACTION=plan|run`
+- `edge operator preflight --proposal <proposal.yaml>`
 - `make export RUN_ID=<run_id>`
 - `make validate`
 - `make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|regime-report`
@@ -47,6 +48,9 @@ Direct CLI equivalents:
 
 - `baseline`
 - `bench-pipeline`
+- `benchmark-core`
+- `benchmark-review`
+- `benchmark-certify`
 - `benchmark-m0`
 - `benchmark-maintenance`
 - `benchmark-maintenance-smoke`
@@ -90,6 +94,9 @@ Direct CLI equivalents:
   "advanced_make_targets": [
     "baseline",
     "bench-pipeline",
+    "benchmark-core",
+    "benchmark-review",
+    "benchmark-certify",
     "benchmark-m0",
     "benchmark-maintenance",
     "benchmark-maintenance-smoke",
@@ -140,6 +147,9 @@ Direct CLI equivalents:
   "make_targets": [
     "baseline",
     "bench-pipeline",
+    "benchmark-core",
+    "benchmark-review",
+    "benchmark-certify",
     "benchmark-m0",
     "benchmark-maintenance",
     "benchmark-maintenance-smoke",

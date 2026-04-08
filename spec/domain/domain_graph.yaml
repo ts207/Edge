@@ -4,7 +4,7 @@ metadata:
   status: generated
   graph_role: runtime_read_model
   schema_version: 2
-  generated_at_utc: '2026-04-03T17:06:10Z'
+  generated_at_utc: '2026-04-08T22:57:04Z'
   notes: Compiled runtime read model. Semantic nodes are normalized for direct runtime/search
     loading.
 events:
@@ -2013,7 +2013,7 @@ events:
       accel_pct: 95.0
       accel_lookback: 32
       persistence_pct: 85.0
-      persistence_bars: 12
+      persistence_bars: 3
       normalization_pct: 50.0
       normalization_lookback: 96
       min_event_spacing: 96
@@ -2819,7 +2819,7 @@ events:
     spec_path: spec/events/LIQUIDATION_CASCADE.yaml
   LIQUIDATION_CASCADE_PROXY:
     event_type: LIQUIDATION_CASCADE_PROXY
-    canonical_family: POSITIONING_EXTREMES
+    canonical_family: POSITIONING_UNWIND_DELEVERAGING
     canonical_regime: POSITIONING_UNWIND_DELEVERAGING
     legacy_family: POSITIONING_EXTREMES
     event_kind: market_event
@@ -2828,7 +2828,7 @@ events:
     signal_column: liquidation_cascade_proxy_event
     subtype: liquidation_cascade_proxy
     phase: onset
-    evidence_mode: indirect
+    evidence_mode: proxy
     asset_scope: single_asset
     venue_scope: single_venue
     is_composite: false
@@ -2837,9 +2837,11 @@ events:
     research_only: false
     strategy_only: false
     deconflict_priority: 0
-    disposition: standalone
-    layer: proxy
-    notes: OI-native proxy for LIQUIDATION_CASCADE using only Bybit-native data.
+    disposition: merge
+    layer: canonical
+    notes: Use when liquidation_notional data is unavailable (e.g., Bybit native data
+      without cross-exchange liquidation feed). Expected to have lower precision than
+      LIQUIDATION_CASCADE but comparable recall for large cascade events.
     tier: C
     operational_role: trigger
     deployment_disposition: secondary_or_confirm
@@ -2860,20 +2862,117 @@ events:
     collapse_target: ''
     overlap_group: liquidation_proxy
     precedence_rank: 1
-    routing_profile_ref: ''
+    routing_profile_ref: POSITIONING_UNWIND_DELEVERAGING
     suppresses: []
     suppressed_by: []
     maturity_scores: {}
     parameters:
+      merge_gap_bars: 1
+      cooldown_bars: 0
+      anchor_rule: max_intensity
+      min_occurrences: 0
+      synthetic_coverage: covered
+      canonical_family: POSITIONING_EXTREMES
+      detector_contract: true
+      detector:
+        signal_definition: 'Detects liquidation-cascade-like conditions using only
+          native exchange data. Fires when OI pct drop >= rolling_quantile(oi_pct_drop,
+          oi_drop_quantile) AND taker_base_volume >= rolling_quantile(volume, vol_surge_quantile)
+          AND min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.
+
+          '
+        formula: 'oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])
+
+          oi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)
+
+          vol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile,
+          window=vol_window)
+
+          price_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)
+
+          mask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND
+          (price_drop >= price_drop_th)
+
+          event           = peak bar of episode built from contiguous mask (max_gap=3)
+
+          '
+        required_columns:
+        - timestamp
+        - oi_notional
+        - oi_delta_1h
+        - close
+        - high
+        - low
+        - volume
+        lookback_bars: 288
+        warmup_bars: 288
+        bar_type: bar_close
+        timestamp_alignment: Event anchored at peak intensity bar within episode.
+        minimum_sample_size: 50
+      calibration:
+        default_threshold: 0.95
+        search_range:
+        - 0.9
+        - 0.92
+        - 0.95
+        - 0.97
+        - 0.99
+        calibration_target: 'Maximize AUC of forward return (price recovery) vs oi_reduction_pct.
+          Require at least 30 events over calibration window.
+
+          '
+        failure_modes:
+        - Low-OI instrument: oi_delta_1h noisy, pct drop threshold unreliable
+        - Trending OI regime (perpetual growth): baseline quantile inflates, events
+            suppressed
+        - Volume regime change: vol_th must be recalibrated per-regime
+      expected_behavior:
+        holding_horizon_bars: 12-96
+        invalidation_conditions:
+        - OI recovers within 12 bars (false flush, not cascade)
+        - Volume spike without directional price move (block trade, not forced selling)
+        false_positive_scenarios:
+        - Scheduled funding payment causing OI adjustment without forced liquidations
+        - Delisting or partial rollover reducing OI mechanically
+        expected_overlap:
+        - OI_FLUSH: high co-occurrence (OI_FLUSH is a subset without volume/price
+            confirmation)
+        - DELEVERAGING_WAVE: moderate co-occurrence for sustained unwinds
+        - FUNDING_EXTREME_ONSET: low co-occurrence (proxy fires on execution, not
+            funding level)
+      trigger: Detector triggers on OI drop + volume surge + price drop coincidence
+      confirmation: Post-detection price recovery confirms forced-selling exhaustion
+      cluster_id: oi_dynamic
       oi_window: 288
       vol_window: 288
       min_periods: 24
       oi_drop_quantile: 0.95
-      vol_surge_quantile: 0.90
+      vol_surge_quantile: 0.9
       ret_window: 3
       price_drop_th: 0.003
       max_gap: 3
-      synthetic_coverage: covered
+    runtime:
+      templates:
+      - reversal_or_squeeze
+      - mean_reversion
+      - continuation
+      - exhaustion_reversal
+      - convexity_capture
+      - only_if_funding
+      - only_if_oi
+      - tail_risk_avoid
+      horizons:
+      - 5m
+      - 15m
+      - 60m
+      conditioning_cols:
+      - vol_regime
+      - carry_state
+      - funding_bps
+      - ms_trend_state
+      - ms_spread_state
+      - severity_bucket
+      max_candidates_per_run: 1000
     spec_path: spec/events/LIQUIDATION_CASCADE_PROXY.yaml
   LIQUIDATION_EXHAUSTION_REVERSAL:
     event_type: LIQUIDATION_EXHAUSTION_REVERSAL
@@ -10341,6 +10440,28 @@ runtime:
         - ms_spread_state
         - severity_bucket
         max_candidates_per_run: 300
+      LIQUIDATION_CASCADE_PROXY:
+        templates:
+        - reversal_or_squeeze
+        - mean_reversion
+        - continuation
+        - exhaustion_reversal
+        - convexity_capture
+        - only_if_funding
+        - only_if_oi
+        - tail_risk_avoid
+        horizons:
+        - 5m
+        - 15m
+        - 60m
+        conditioning_cols:
+        - vol_regime
+        - carry_state
+        - funding_bps
+        - ms_trend_state
+        - ms_spread_state
+        - severity_bucket
+        max_candidates_per_run: 1000
       LIQUIDATION_EXHAUSTION_REVERSAL:
         templates:
         - mean_reversion

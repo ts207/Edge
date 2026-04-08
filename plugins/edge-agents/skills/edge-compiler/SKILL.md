@@ -10,8 +10,8 @@ This skill follows `agents/compiler.md`.
 ## Read first
 
 1. `agents/compiler.md`
-2. `agents/handoffs/mechanism_hypothesis_to_compiler.md`
-3. `docs/04_COMMANDS_AND_ENTRY_POINTS.md`
+2. `docs/01_discover.md`
+3. `docs/operator_command_inventory.md`
 4. `project/research/agent_io/proposal_schema.py`
 
 ## Current operator front door

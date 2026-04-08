@@ -4,6 +4,7 @@ from project.core.config import get_data_root
 import argparse
 import json
 import logging
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

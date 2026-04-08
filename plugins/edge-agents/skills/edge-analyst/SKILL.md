@@ -10,8 +10,8 @@ This skill follows `agents/analyst.md`.
 ## Read first
 
 1. `agents/analyst.md`
-2. `agents/handoffs/coordinator_to_analyst.md`
-3. `docs/AGENT_CONTRACT.md`
+2. `docs/02_validate.md`
+3. `docs/92_assurance_and_benchmarks.md`
 
 ## Required inputs
 
