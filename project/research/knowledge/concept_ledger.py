@@ -25,6 +25,7 @@ from typing import Iterable, Sequence
 
 import numpy as np
 import pandas as pd
+from project.io.utils import read_parquet, write_parquet
 
 log = logging.getLogger(__name__)
 
@@ -265,7 +266,7 @@ def load_concept_ledger(path: str | Path) -> pd.DataFrame:
     if not resolved.exists():
         return _empty_ledger()
     try:
-        df = pd.read_parquet(resolved)
+        df = read_parquet(resolved)
         # Add any missing columns introduced by schema evolution
         for col in CONCEPT_LEDGER_COLUMNS:
             if col not in df.columns:
@@ -309,7 +310,7 @@ def append_concept_ledger(records: pd.DataFrame, path: str | Path) -> None:
         if "ledger_id" in combined.columns:
             combined = combined.drop_duplicates(subset=["ledger_id"], keep="first")
         combined = _coerce_ledger_types(combined)
-        combined.to_parquet(resolved, index=False)
+        write_parquet(combined, resolved)
         log.debug(
             "Wrote %d new concept ledger records to %s (total %d)",
             len(new_df),

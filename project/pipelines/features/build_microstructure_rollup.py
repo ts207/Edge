@@ -9,7 +9,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from project.io.utils import ensure_dir, write_parquet
+from project.io.utils import (
+    ensure_dir,
+    list_parquet_files,
+    read_parquet,
+    run_scoped_lake_path,
+    choose_partition_dir,
+    write_parquet,
+)
 from project.specs.manifest import finalize_manifest, start_manifest
 
 _BAR_FREQ = "5min"
@@ -18,17 +25,19 @@ _SPREAD_STRESS_THRESHOLD = 2.0  # multiples of median spread
 
 def _load_tob_1s(run_id: str, symbol: str) -> pd.DataFrame:
     data_root = get_data_root()
-    candidates = [
-        data_root / "runs" / run_id / "lake" / "perp" / symbol / "tob_1s.parquet",
-        data_root / "lake" / "perp" / symbol / "tob_1s.parquet",
-    ]
-    for path in candidates:
-        if path.exists():
-            try:
-                return pd.read_parquet(path)
-            except Exception:
-                pass
-    return pd.DataFrame()
+    # Prefer run-scoped tob_1s, fall back to shared cleaned lake
+    run_tob_dir = run_scoped_lake_path(data_root, run_id, "cleaned", "perp", symbol, "tob_1s")
+    shared_tob_dir = data_root / "lake" / "cleaned" / "perp" / symbol / "tob_1s"
+    tob_dir = choose_partition_dir([run_tob_dir, shared_tob_dir])
+    if not tob_dir:
+        return pd.DataFrame()
+    files = list_parquet_files(tob_dir)
+    if not files:
+        return pd.DataFrame()
+    try:
+        return read_parquet(files)
+    except Exception:
+        return pd.DataFrame()
 
 
 def _build_rollup(symbol: str, tob: pd.DataFrame) -> pd.DataFrame:
@@ -141,7 +150,6 @@ def main(argv=None) -> int:
     parser.add_argument("--end", default=None)
     parser.add_argument("--out_dir", default=None)
     parser.add_argument("--timeframe", default="5m")
-    parser.add_argument("--force", type=int, default=0)
     parser.add_argument("--log_path", default=None)
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
@@ -167,12 +175,9 @@ def main(argv=None) -> int:
                     start_ts = pd.Timestamp(args.start, tz="UTC")
                     tob = tob[tob["timestamp"] >= start_ts]
                 if args.end:
-                    end_ts = (
-                        pd.Timestamp(args.end, tz="UTC")
-                        + pd.Timedelta(days=1)
-                        - pd.Timedelta(seconds=1)
-                    )
-                    tob = tob[tob["timestamp"] <= end_ts]
+                    # Consistent with build_cleaned_bars: exact timestamp bound, not end-of-day expansion
+                    end_ts = pd.Timestamp(args.end, tz="UTC")
+                    tob = tob[tob["timestamp"] < end_ts]
             rolled = _build_rollup(symbol, tob)
             all_frames.append(rolled)
 

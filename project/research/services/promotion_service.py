@@ -14,6 +14,7 @@ from project import PROJECT_ROOT
 from project.contracts.schemas import normalize_dataframe_for_schema
 from project.core.config import get_data_root
 from project.core.coercion import as_bool, safe_int
+from project.io.parquet_compat import read_parquet_compat
 from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.research.promotion import (
     build_promotion_statistical_audit,
@@ -451,17 +452,17 @@ def _read_csv_or_parquet(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     try:
         return pd.read_parquet(path)
+    except RuntimeError:
+        raise
     except (ImportError, OSError, ValueError):
         csv_fallback = path.with_suffix(".csv")
         if csv_fallback.exists():
             return pd.read_csv(csv_fallback)
-        raise
+        return read_parquet_compat(path)
 
 
 def _read_bridge_table(path: Path) -> pd.DataFrame:
-    if path.suffix.lower() == ".parquet":
-        return pd.read_parquet(path)
-    return pd.read_csv(path)
+    return read_parquet(path)
 
 
 def _normalize_statuses(value: Any) -> List[str]:

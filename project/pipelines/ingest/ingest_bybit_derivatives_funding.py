@@ -150,7 +150,7 @@ async def _ingest_funding_month(
 
         ensure_utc_timestamp(df["timestamp"], "timestamp")
         ensure_dir(out_dir)
-        df.to_parquet(out_path, index=False)
+        write_parquet(df, out_path)
         
         return {"status": "written", "partition": str(out_path), "count": len(df)}
 

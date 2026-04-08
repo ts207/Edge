@@ -9,6 +9,7 @@ import pandas as pd
 
 from project.artifacts import phase2_diagnostics_path
 from project.core.exceptions import DataIntegrityError
+from project.io.utils import read_parquet as read_logical_parquet
 
 
 DEFAULT_DRIFT_THRESHOLDS: Dict[str, float] = {
@@ -77,7 +78,7 @@ def _read_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     try:
-        return pd.read_parquet(path)
+        return read_logical_parquet(path)
     except Exception as exc:
         raise DataIntegrityError(f"Failed to read comparison parquet artifact {path}: {exc}") from exc
 

@@ -269,8 +269,6 @@ def build_pipeline_plan(
     symbols: str,
     start: str,
     end: str,
-    force_flag: str,
-    allow_missing_funding_flag: str,
     run_spot_pipeline: bool,
     research_gate_profile: str,
     project_root: Path,
@@ -300,8 +298,6 @@ def build_pipeline_plan(
             symbols=symbols,
             start=start,
             end=end,
-            force_flag=force_flag,
-            allow_missing_funding_flag=allow_missing_funding_flag,
             run_spot_pipeline=run_spot_pipeline,
             project_root=project_root,
         )

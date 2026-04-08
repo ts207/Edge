@@ -26,7 +26,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build 5m ToB aggregates from 1s snapshots")
     parser.add_argument("--run_id", required=True)
     parser.add_argument("--symbols", required=True)
-    parser.add_argument("--force", type=int, default=0)
     parser.add_argument("--log_path", default=None)
     args = parser.parse_args()
 
@@ -41,7 +40,6 @@ def main() -> int:
 
     params = {
         "symbols": symbols,
-        "force": int(args.force),
         "agg_interval": "5m",
     }
     inputs: List[Dict[str, object]] = []
@@ -51,7 +49,13 @@ def main() -> int:
 
     try:
         for symbol in symbols:
-            tob_dir = data_root / "lake" / "cleaned" / "perp" / symbol / "tob_1s"
+            # Prefer run-scoped tob_1s inputs, fall back to shared cleaned lake
+            run_tob_dir = run_scoped_lake_path(data_root, args.run_id, "cleaned", "perp", symbol, "tob_1s")
+            shared_tob_dir = data_root / "lake" / "cleaned" / "perp" / symbol / "tob_1s"
+            tob_dir = choose_partition_dir([run_tob_dir, shared_tob_dir])
+            if not tob_dir:
+                logging.warning("No ToB 1s data for %s", symbol)
+                continue
             files = list_parquet_files(tob_dir)
             if not files:
                 logging.warning("No ToB 1s data for %s", symbol)
@@ -105,15 +109,10 @@ def main() -> int:
                 first_ts = data["timestamp"].min()
                 month_key = f"{first_ts.year}-{first_ts.month:02d}"
 
-                out_dir = (
-                    data_root
-                    / "lake"
-                    / "cleaned"
-                    / "perp"
-                    / symbol
-                    / "tob_5m_agg"
-                    / f"year={first_ts.year}"
-                    / f"month={first_ts.month:02d}"
+                # Write to run-scoped output
+                out_dir = run_scoped_lake_path(
+                    data_root, args.run_id, "cleaned", "perp", symbol, "tob_5m_agg",
+                    f"year={first_ts.year}", f"month={first_ts.month:02d}"
                 )
                 out_path = out_dir / f"tob_agg_{symbol}_5m_{month_key}.parquet"
 

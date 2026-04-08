@@ -1,0 +1,9 @@
+{
+  "generated_at_utc": "2026-03-30T00:00:00Z",
+  "run_id": "run_metrics",
+  "saved_at": "2026-04-08T23:33:11.907733+00:00",
+  "schema_version": "promoted_theses_v1",
+  "thesis_ids": [
+    "thesis::run_metrics::cand_1"
+  ]
+}

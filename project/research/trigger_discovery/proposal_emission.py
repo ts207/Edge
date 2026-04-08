@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 import pandas as pd
+from project.io.utils import write_parquet
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def emit_proposals(
     
     # 3. Parquet
     parquet_path = output_dir / "candidate_trigger_scored.parquet"
-    out_df.to_parquet(parquet_path)
+    write_parquet(out_df, parquet_path)
     
     # 4. Human Markdown Report
     md_path = output_dir / "candidate_trigger_report.md"

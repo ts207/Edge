@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional, Sequence
@@ -33,12 +34,15 @@ from project.features.context_states import (
 )
 from project.io.utils import (
     ensure_dir,
-    read_parquet,
-    write_parquet,
-    choose_partition_dir,
+    lake_cache_key,
     list_parquet_files,
     raw_dataset_dir_candidates,
+    read_cache_key,
+    read_parquet,
     run_scoped_lake_path,
+    write_cache_key,
+    write_parquet,
+    choose_partition_dir,
 )
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -818,8 +822,6 @@ def main() -> int:
     parser.add_argument("--symbols", required=True)
     parser.add_argument("--market", default="perp")
     parser.add_argument("--timeframe", default="5m")
-    parser.add_argument("--force", type=int, default=0)
-    parser.add_argument("--allow_missing_funding", type=int, default=0)
     parser.add_argument("--feature_schema_version", default="v2")
     parser.add_argument("--start", default=None)
     parser.add_argument("--end", default=None)
@@ -902,7 +904,8 @@ def main() -> int:
             if not bars_dir:
                 logging.warning(f"No cleaned bars found for {symbol} {tf}")
                 continue
-            bars = read_parquet(list_parquet_files(bars_dir))
+            bars_files = list_parquet_files(bars_dir)
+            bars = read_parquet(bars_files)
             bars = _filter_time_window(bars, start=args.start, end=args.end)
             if bars.empty:
                 logging.warning(
@@ -912,6 +915,51 @@ def main() -> int:
 
             # Load funding (only for perp)
             funding = pd.DataFrame()
+            # Symbol-level cache hit check: if every month's shared feature file
+            # exists with a matching cache key, skip the expensive build_features() call.
+            _shared_feat_root = (
+                data_root / "lake" / "features" / market / symbol / tf
+                / feature_dataset_dir_name(feature_schema_version)
+            )
+            _run_feat_root = run_scoped_lake_path(
+                data_root, run_id, "features", market, symbol, tf,
+                feature_dataset_dir_name(feature_schema_version),
+            )
+            if _shared_feat_root.exists() and not _run_feat_root.exists():
+                import re as _re
+                _year_month_pairs = set()
+                for f in bars_files:
+                    _m = _re.search(r"year=(\d+).*month=(\d+)", str(f))
+                    if _m:
+                        _year_month_pairs.add((int(_m.group(1)), int(_m.group(2))))
+                _all_months_cached = bool(_year_month_pairs)
+                for _ym_year, _ym_month in _year_month_pairs:
+                    _shared_month_path = (
+                        _shared_feat_root / f"year={_ym_year}" / f"month={_ym_month:02d}"
+                        / f"features_{symbol}_{feature_schema_version}_{_ym_year}-{_ym_month:02d}.parquet"
+                    )
+                    _month_bars = [
+                        f for f in bars_files
+                        if f"year={_ym_year}" in str(f) and f"month={_ym_month:02d}" in str(f)
+                    ]
+                    _ck = lake_cache_key(
+                        symbol, market, tf, _ym_year, _ym_month, _month_bars,
+                        feature_schema_version=feature_schema_version,
+                        baseline_run_id=baseline_run_id or "",
+                        start=str(args.start),
+                        end=str(args.end),
+                    )
+                    if not (_ck and _shared_month_path.exists() and read_cache_key(_shared_month_path) == _ck):
+                        _all_months_cached = False
+                        break
+                if _all_months_cached:
+                    logging.info("Cache hit features (all months): copying from shared lake for %s %s", symbol, tf)
+                    shutil.copytree(_shared_feat_root, _run_feat_root)
+                    for existing_path in list_parquet_files(_run_feat_root):
+                        outputs.append({"path": str(existing_path), "rows": 0, "cache_hit": True})
+                    stats["symbols"][symbol] = {"rows": 0, "cache_hit": True}
+                    continue
+
             if market == "perp":
                 funding_dir = _resolve_raw_dir(
                     data_root,
@@ -963,10 +1011,29 @@ def main() -> int:
                 for (year, month), group in out.groupby(
                     [out["timestamp"].dt.year, out["timestamp"].dt.month]
                 ):
+                    year, month = int(year), int(month)
                     out_dir = out_root / f"year={year}" / f"month={month:02d}"
                     out_path = (
                         out_dir
                         / f"features_{symbol}_{feature_schema_version}_{year}-{month:02d}.parquet"
+                    )
+                    shared_path = (
+                        data_root / "lake" / "features" / market / symbol / tf
+                        / feature_dataset_dir_name(feature_schema_version)
+                        / f"year={year}" / f"month={month:02d}"
+                        / f"features_{symbol}_{feature_schema_version}_{year}-{month:02d}.parquet"
+                    )
+                    _month_bars_files = [
+                        f for f in bars_files
+                        if f"year={year}" in str(f) and f"month={month:02d}" in str(f)
+                    ]
+                    _cache_key = lake_cache_key(
+                        symbol, market, tf, year, month,
+                        _month_bars_files,
+                        feature_schema_version=feature_schema_version,
+                        baseline_run_id=baseline_run_id or "",
+                        start=str(args.start),
+                        end=str(args.end),
                     )
                     write_parquet(group, out_path)
                     logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
@@ -978,6 +1045,11 @@ def main() -> int:
                             "end_ts": group["timestamp"].max().isoformat(),
                         }
                     )
+                    # Populate shared cache for future runs
+                    if not shared_path.exists() and _cache_key:
+                        ensure_dir(shared_path.parent)
+                        shutil.copy2(out_path, shared_path)
+                        write_cache_key(shared_path, _cache_key)
 
                 report_path = _feature_quality_report_path(
                     data_root,

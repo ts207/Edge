@@ -1,6 +1,6 @@
 # Event Contract Reference
 
-- Active events: `70`
+- Active events: `71`
 
 ## BASIS_FUNDING_DISLOCATION
 
@@ -44,7 +44,7 @@
 - Shape: subtype=`funding_extreme` | phase=`onset` | evidence=`direct` | layer=`canonical` | disposition=`merge`
 - Scope: asset=`single_asset` | venue=`cross_venue` | research_only=`False` | composite=`False` | context_tag=`False`
 - Runtime config: signal=`funding_extreme_onset_event` | file=`funding_episode_events.parquet` | templates=`['reversal_or_squeeze', 'mean_reversion', 'continuation', 'exhaustion_reversal', 'convexity_capture', 'only_if_funding', 'only_if_oi', 'tail_risk_avoid']` | horizons=`['5m', '60m']` | max_candidates=`500`
-- Thresholds: `{'merge_gap_bars': 1, 'cooldown_bars': 0, 'min_occurrences': 0, 'normalization_lookback': 96, 'min_prior_extreme_abs': 0.0004, 'funding_pct_window': 2880, 'accel_lookback': 32, 'persistence_bars': 12, 'min_event_spacing': 96, 'vol_burst_quantile': 0.9, 'htf_window': 384, 'htf_lookback': 96, 'pre_window': 96, 'post_window': 96, 'phase_tolerance_bars': 16, 'crossover_confirm_bars': 4, 'accel_quantile': 0.995, 'accel_near_zero_cutoff': 5, 'interaction_min_rows_per_year': 150, 'min_hazard_events': 50}`
+- Thresholds: `{'merge_gap_bars': 1, 'cooldown_bars': 0, 'min_occurrences': 0, 'normalization_lookback': 96, 'min_prior_extreme_abs': 0.0004, 'funding_pct_window': 2880, 'accel_lookback': 32, 'persistence_bars': 3, 'min_event_spacing': 96, 'vol_burst_quantile': 0.9, 'htf_window': 384, 'htf_lookback': 96, 'pre_window': 96, 'post_window': 96, 'phase_tolerance_bars': 16, 'crossover_confirm_bars': 4, 'accel_quantile': 0.995, 'accel_near_zero_cutoff': 5, 'interaction_min_rows_per_year': 150, 'min_hazard_events': 50}`
 - Tags: `['funding_crowding']`
 - Notes: Funding extreme onset under basis/funding dislocation.
 
@@ -383,6 +383,17 @@
 - Thresholds: `{'merge_gap_bars': 0, 'cooldown_bars': 24, 'min_occurrences': 0, 'funding_extreme_quantile': 0.99, 'oi_change_z_threshold': 3.0}`
 - Tags: `['forced_liquidation', 'oi_dynamic']`
 - Notes: Positioning unwind regime with explicit deleveraging dynamics.
+
+### LIQUIDATION_CASCADE_PROXY
+
+- Detector: `LiquidationCascadeProxyDetector` | enabled=`True` | default_executable=`True`
+- Family: canonical=`POSITIONING_UNWIND_DELEVERAGING` | legacy=`POSITIONING_EXTREMES`
+- Shape: subtype=`liquidation_cascade_proxy` | phase=`onset` | evidence=`proxy` | layer=`canonical` | disposition=`merge`
+- Scope: asset=`single_asset` | venue=`single_venue` | research_only=`False` | composite=`False` | context_tag=`False`
+- Runtime config: signal=`liquidation_cascade_proxy_event` | file=`liquidation_cascade_proxy_events.parquet` | templates=`['reversal_or_squeeze', 'mean_reversion', 'continuation', 'exhaustion_reversal', 'convexity_capture', 'only_if_funding', 'only_if_oi', 'tail_risk_avoid']` | horizons=`['5m', '15m', '60m']` | max_candidates=`1000`
+- Thresholds: `{'merge_gap_bars': 1, 'cooldown_bars': 0, 'min_occurrences': 0, 'oi_window': 288, 'vol_window': 288, 'min_periods': 24, 'oi_drop_quantile': 0.95, 'vol_surge_quantile': 0.9, 'ret_window': 3, 'max_gap': 3}`
+- Tags: `['oi_dynamic', 'liquidation_proxy']`
+- Notes: Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.
 
 ### OI_FLUSH
 

@@ -12,7 +12,7 @@ from project.specs.manifest import finalize_manifest, start_manifest
 from project.specs.invariants import load_runtime_invariants_specs
 from project.runtime.lane_runner import run_causal_lane_ticks
 from project.runtime.normalized_event import normalized_events_from_frame
-from project.io.utils import write_parquet
+from project.io.utils import read_parquet, write_parquet
 
 
 def main() -> int:
@@ -41,7 +41,7 @@ def main() -> int:
 
     try:
         if normalized_path.exists():
-            normalized_df = pd.read_parquet(normalized_path)
+            normalized_df = read_parquet(normalized_path)
             normalized_events = normalized_events_from_frame(normalized_df)
         else:
             normalized_events = []

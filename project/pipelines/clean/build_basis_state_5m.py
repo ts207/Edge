@@ -25,7 +25,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build 5m Basis state (perp vs spot)")
     parser.add_argument("--run_id", required=True)
     parser.add_argument("--symbols", required=True)
-    parser.add_argument("--force", type=int, default=0)
     parser.add_argument("--log_path", default=None)
     args = parser.parse_args()
 
@@ -40,7 +39,6 @@ def main() -> int:
 
     params = {
         "symbols": symbols,
-        "force": int(args.force),
     }
     inputs: List[Dict[str, object]] = []
     outputs: List[Dict[str, object]] = []
@@ -49,11 +47,17 @@ def main() -> int:
 
     try:
         for symbol in symbols:
-            perp_dir = data_root / "lake" / "cleaned" / "perp" / symbol / "bars_5m"
-            spot_dir = data_root / "lake" / "cleaned" / "spot" / symbol / "bars_5m"
+            # Prefer run-scoped inputs, fall back to shared cleaned lake
+            run_perp_dir = run_scoped_lake_path(data_root, args.run_id, "cleaned", "perp", symbol, "bars_5m")
+            shared_perp_dir = data_root / "lake" / "cleaned" / "perp" / symbol / "bars_5m"
+            perp_dir = choose_partition_dir([run_perp_dir, shared_perp_dir])
+            
+            run_spot_dir = run_scoped_lake_path(data_root, args.run_id, "cleaned", "spot", symbol, "bars_5m")
+            shared_spot_dir = data_root / "lake" / "cleaned" / "spot" / symbol / "bars_5m"
+            spot_dir = choose_partition_dir([run_spot_dir, shared_spot_dir])
 
-            perp_files = list_parquet_files(perp_dir)
-            spot_files = list_parquet_files(spot_dir)
+            perp_files = list_parquet_files(perp_dir) if perp_dir else []
+            spot_files = list_parquet_files(spot_dir) if spot_dir else []
 
             if not perp_files or not spot_files:
                 logging.warning("Missing perp or spot data for %s", symbol)
@@ -96,15 +100,10 @@ def main() -> int:
                 first_ts = merged["timestamp"].iloc[0]
                 month_key = f"{first_ts.year}-{first_ts.month:02d}"
 
-                out_dir = (
-                    data_root
-                    / "lake"
-                    / "cleaned"
-                    / "perp"
-                    / symbol
-                    / "basis_5m"
-                    / f"year={first_ts.year}"
-                    / f"month={first_ts.month:02d}"
+                # Write to run-scoped output
+                out_dir = run_scoped_lake_path(
+                    data_root, args.run_id, "cleaned", "perp", symbol, "basis_5m",
+                    f"year={first_ts.year}", f"month={first_ts.month:02d}"
                 )
                 out_path = out_dir / f"basis_{symbol}_5m_{month_key}.parquet"
 

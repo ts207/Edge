@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import shutil
 import sys
 from pathlib import Path
 from typing import Dict, List
@@ -27,11 +28,14 @@ from project.features.context_states import (
 from project.features.funding_persistence import build_funding_persistence_state
 from project.io.utils import (
     ensure_dir,
+    lake_cache_key,
+    list_parquet_files,
+    read_cache_key,
     read_parquet,
+    run_scoped_lake_path,
+    write_cache_key,
     write_parquet,
     choose_partition_dir,
-    list_parquet_files,
-    run_scoped_lake_path,
 )
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -328,7 +332,6 @@ def main() -> int:
     parser.add_argument("--market", default="perp")
     parser.add_argument("--start", default=None)
     parser.add_argument("--end", default=None)
-    parser.add_argument("--force", type=int, default=0)
     parser.add_argument("--log_path", default=None)
     args = parser.parse_args()
 
@@ -369,10 +372,9 @@ def main() -> int:
             if not feat_dir:
                 logging.warning(f"No {feature_dataset} found for {symbol} {tf}")
                 continue
-            features = read_parquet(list_parquet_files(feat_dir))
+            feat_files = list_parquet_files(feat_dir)
+            features = read_parquet(feat_files)
 
-            # build_market_context expects bars and funding?
-            # Actually, _build_market_context expects the features DataFrame which ALREADY has funding_rate_scaled.
             result = _build_market_context(symbol, features)
 
             if not result.empty:
@@ -383,11 +385,52 @@ def main() -> int:
                 out_root = run_scoped_lake_path(
                     data_root, run_id, "features", market, symbol, tf, "market_context"
                 )
+                shared_ctx_root = (
+                    data_root / "lake" / "features" / market / symbol / tf / "market_context"
+                )
                 for (year, month), group in result.groupby(
                     [result["timestamp"].dt.year, result["timestamp"].dt.month]
                 ):
+                    year, month = int(year), int(month)
                     out_dir = out_root / f"year={year}" / f"month={month:02d}"
                     out_path = out_dir / f"market_context_{symbol}_{year}-{month:02d}.parquet"
+                    shared_path = (
+                        shared_ctx_root / f"year={year}" / f"month={month:02d}"
+                        / f"market_context_{symbol}_{year}-{month:02d}.parquet"
+                    )
+
+                    # Cache key based on the feature files that produced this month's data
+                    _month_feat_files = [
+                        f for f in feat_files
+                        if f"year={year}" in str(f) and f"month={month:02d}" in str(f)
+                    ]
+                    _cache_key = lake_cache_key(
+                        symbol, market, tf, year, month,
+                        _month_feat_files,
+                        start=str(args.start),
+                        end=str(args.end),
+                    )
+                    if (
+                        _cache_key
+                        and shared_path.exists()
+                        and not out_path.exists()
+                        and read_cache_key(shared_path) == _cache_key
+                    ):
+                        logging.info(
+                            "Cache hit market context: copying from shared lake for %s %04d-%02d",
+                            symbol, year, month,
+                        )
+                        ensure_dir(out_path.parent)
+                        shutil.copy2(shared_path, out_path)
+                        outputs.append({
+                            "path": str(out_path),
+                            "rows": int(len(group)),
+                            "start_ts": group["timestamp"].min().isoformat(),
+                            "end_ts": group["timestamp"].max().isoformat(),
+                            "cache_hit": True,
+                        })
+                        continue
+
                     actual_path = _written_path(write_parquet(group, out_path), out_path)
                     logging.info(
                         f"Wrote market context for {symbol} {year}-{month:02d} to {actual_path}"
@@ -400,6 +443,11 @@ def main() -> int:
                             "end_ts": group["timestamp"].max().isoformat(),
                         }
                     )
+                    # Populate shared cache for future runs
+                    if not shared_path.exists() and _cache_key:
+                        ensure_dir(shared_path.parent)
+                        shutil.copy2(actual_path, shared_path)
+                        write_cache_key(shared_path, _cache_key)
 
                 report_path = _context_quality_report_path(
                     data_root,

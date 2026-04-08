@@ -53,7 +53,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     common_args = ["--run_id", args.run_id, "--symbols", args.symbols]
-    time_args = ["--start", args.start, "--end", args.end, "--force", str(args.force)]
+    ingest_time_args = ["--start", args.start, "--end", args.end, "--force", str(args.force)]
 
     # 1. Parallel Ingestion (Raw Light Data)
     logging.info("--- Starting Light Data Ingestion (Parallel) ---")
@@ -61,59 +61,59 @@ def main():
         [
             (
                 PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_ohlcv.py",
-                common_args + time_args + ["--timeframe", "5m"],
+                common_args + ingest_time_args + ["--timeframe", "5m"],
             ),
-            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_spot_ohlcv_5m.py", common_args + time_args),
+            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_spot_ohlcv_5m.py", common_args + ingest_time_args),
             (
                 PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_mark_price_5m.py",
-                common_args + time_args,
+                common_args + ingest_time_args,
             ),
         ]
     )
 
     # 2. Heavy Ingestion (Sequential/Internal Parallelism)
     logging.info("--- Starting Book Ticker Ingestion (Heavy) ---")
-    run_script(PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_book_ticker.py", common_args + time_args)
+    run_script(PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_book_ticker.py", common_args + ingest_time_args)
 
     # 3. Remaining Ingestion
     logging.info("--- Starting Remaining Ingestion ---")
     run_parallel(
         [
-            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_funding.py", common_args + time_args),
+            (PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_funding.py", common_args + ingest_time_args),
             (
                 PROJECT_ROOT / "pipelines/ingest/ingest_binance_um_open_interest_hist.py",
-                common_args + time_args,
+                common_args + ingest_time_args,
             ),
         ]
     )
 
-    # 4. Cleaning (Cleaned)
+    # 4. Cleaning (Cleaned) - --force removed (not supported)
     logging.info("--- Starting Data Cleaning ---")
     run_parallel(
         [
             (
                 PROJECT_ROOT / "pipelines/clean/build_cleaned_bars.py",
-                common_args + ["--market", "perp", "--force", str(args.force)],
+                common_args + ["--market", "perp"],
             ),
             (
                 PROJECT_ROOT / "pipelines/clean/build_cleaned_bars.py",
-                common_args + ["--market", "spot", "--force", str(args.force)],
+                common_args + ["--market", "spot"],
             ),
         ]
     )
 
-    # 5. ToB & Basis Processing
+    # 5. ToB & Basis Processing - --force removed (not supported)
     logging.info("--- Starting ToB & Basis Processing ---")
     run_script(
         PROJECT_ROOT / "pipelines/clean/build_tob_snapshots_1s.py",
-        common_args + ["--force", str(args.force)],
+        common_args,
     )
     run_script(
-        PROJECT_ROOT / "pipelines/clean/build_tob_5m_agg.py", common_args + ["--force", str(args.force)]
+        PROJECT_ROOT / "pipelines/clean/build_tob_5m_agg.py", common_args
     )
     run_script(
         PROJECT_ROOT / "pipelines/clean/build_basis_state_5m.py",
-        common_args + ["--force", str(args.force)],
+        common_args,
     )
 
     # 6. QA Report

@@ -113,6 +113,9 @@ expected_behavior:
   false_positive_scenarios:
   - Scheduled funding payment causing OI adjustment without forced liquidations
   - Delisting or partial rollover reducing OI mechanically
+  disabled_regimes:
+  - DELEVERAGING_WAVE active and unresolved: cascade already captured
+  - LOW_LIQUIDITY_STATE active: oi_delta_1h noise inflates pct drop signal
   expected_overlap:
   - OI_FLUSH: high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)
   - DELEVERAGING_WAVE: moderate co-occurrence for sustained unwinds

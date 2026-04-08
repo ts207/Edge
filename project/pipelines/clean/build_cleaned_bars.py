@@ -16,10 +16,13 @@ from project.core.config import load_configs
 from project.io.utils import (
     choose_partition_dir,
     ensure_dir,
+    lake_cache_key,
     list_parquet_files,
     raw_dataset_dir_candidates,
+    read_cache_key,
     read_parquet,
     run_scoped_lake_path,
+    write_cache_key,
     write_parquet,
 )
 from project.specs.manifest import (
@@ -235,7 +238,6 @@ def main() -> int:
     parser.add_argument("--market", choices=["perp", "spot"], default="perp")
     parser.add_argument("--start", required=False)
     parser.add_argument("--end", required=False)
-    parser.add_argument("--force", type=int, default=0)
     parser.add_argument("--timeframe", default="5m")
     parser.add_argument(
         "--funding_scale", choices=["auto", "decimal", "percent", "bps"], default="auto"
@@ -264,7 +266,6 @@ def main() -> int:
         "market": market,
         "start": args.start,
         "end": args.end,
-        "force": int(args.force),
         "funding_scale": str(args.funding_scale),
         "source_vendor": "bybit",
     }
@@ -567,6 +568,54 @@ def main() -> int:
                     / f"bars_{filename_symbol}_{timeframe}_{month_start.year}-{month_start.month:02d}.parquet"
                 )
 
+                # Cache hit: copy from shared lake if the key matches and run-scoped is absent
+                _month_raw_files = [
+                    f for f in raw_files
+                    if f"year={month_start.year}" in str(f)
+                    and f"month={month_start.month:02d}" in str(f)
+                ]
+                _month_funding_files = [
+                    f for f in funding_files
+                    if f"year={month_start.year}" in str(f)
+                    and f"month={month_start.month:02d}" in str(f)
+                ] if funding_files else []
+                _cache_key = lake_cache_key(
+                    symbol, market, timeframe,
+                    month_start.year, month_start.month,
+                    _month_raw_files + _month_funding_files,
+                    funding_scale=str(args.funding_scale),
+                    requested_start=str(requested_start),
+                    requested_end_exclusive=str(requested_end_exclusive),
+                )
+                if (
+                    _cache_key
+                    and compat_path.exists()
+                    and not out_path.exists()
+                    and read_cache_key(compat_path) == _cache_key
+                ):
+                    logging.info("Cache hit cleaned bars: copying from shared lake for %s %s %04d-%02d",
+                                 symbol, timeframe, month_start.year, month_start.month)
+                    ensure_dir(out_path.parent)
+                    shutil.copy2(compat_path, out_path)
+                    outputs.append({
+                        "path": str(out_path),
+                        "rows": int(len(bars_month)),
+                        "start_ts": bars_month["timestamp"].min().isoformat(),
+                        "end_ts": bars_month["timestamp"].max().isoformat(),
+                        "storage": "parquet",
+                        "cache_hit": True,
+                    })
+                    month_key = f"{month_start.year}-{month_start.month:02d}"
+                    monthly_quality[month_key] = summarize_frame_quality(
+                        bars_month,
+                        expected_minutes=tf_minutes,
+                        numeric_cols=[
+                            "open", "high", "low", "close", "volume",
+                            "quote_volume", "taker_base_volume", "funding_rate_scaled",
+                        ],
+                    ).to_dict()
+                    continue
+
                 # Enforce Runtime Data Contract
                 Cleaned5mBarsSchema.validate(bars_month)
 
@@ -577,6 +626,12 @@ def main() -> int:
                 logging.info("Writing cleaned data to out_path: %s", out_path)
                 ensure_dir(out_path.parent)
                 written, storage = write_parquet(bars_month.reset_index(drop=True), out_path)
+
+                # Populate shared cache for future runs
+                if not compat_path.exists() and _cache_key:
+                    ensure_dir(compat_path.parent)
+                    shutil.copy2(out_path, compat_path)
+                    write_cache_key(compat_path, _cache_key)
 
                 outputs.append(
                     {

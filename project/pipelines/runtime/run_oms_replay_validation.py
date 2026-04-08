@@ -12,7 +12,7 @@ from project.specs.manifest import finalize_manifest, start_manifest
 from project.specs.invariants import load_runtime_invariants_specs
 from project.runtime.normalized_event import normalized_events_from_frame
 from project.runtime.oms_replay import audit_oms_replay
-from project.io.utils import write_parquet
+from project.io.utils import read_parquet, write_parquet
 
 
 def main() -> int:
@@ -47,7 +47,7 @@ def main() -> int:
 
     try:
         if normalized_path.exists():
-            normalized_events = normalized_events_from_frame(pd.read_parquet(normalized_path))
+            normalized_events = normalized_events_from_frame(read_parquet(normalized_path))
         else:
             normalized_events = []
 

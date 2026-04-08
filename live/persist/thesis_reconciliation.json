@@ -1,0 +1,14 @@
+{
+  "added": [
+    "thesis::run_metrics::cand_1"
+  ],
+  "blocked_reasons": [],
+  "current_batch_id": "run_metrics",
+  "downgraded": [],
+  "logged_at": "2026-04-08T23:33:11.907704+00:00",
+  "previous_batch_id": "run_1",
+  "removed": [],
+  "safe_to_proceed": true,
+  "superseded": [],
+  "unchanged": []
+}

@@ -16,6 +16,7 @@ import pandas as pd
 from project import PROJECT_ROOT
 from project.artifacts import run_manifest_path
 from project.core.config import get_data_root
+from project.io.utils import read_table_auto
 from project.operator.preflight import run_preflight
 from project.operator.proposal_tools import explain_proposal, lint_proposal
 from project.operator.stability import (
@@ -60,18 +61,7 @@ def _read_json_dict(path: Path) -> dict[str, Any]:
 
 
 def _read_table(path: Path) -> pd.DataFrame:
-    if path.exists():
-        try:
-            return pd.read_parquet(path)
-        except Exception:
-            pass
-    csv_path = path.with_suffix(".csv")
-    if csv_path.exists():
-        try:
-            return pd.read_csv(csv_path)
-        except Exception:
-            pass
-    return pd.DataFrame()
+    return read_table_auto(path)
 
 
 def _clean_value(value: Any) -> Any:

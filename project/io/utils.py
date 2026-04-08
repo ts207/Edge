@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple
@@ -303,3 +304,45 @@ def sorted_glob(paths):
     import glob
 
     return sorted(glob.glob(paths))
+
+
+def lake_cache_key(
+    symbol: str,
+    market: str,
+    timeframe: str,
+    year: int,
+    month: int,
+    input_paths: Sequence[Path],
+    **params: str,
+) -> str:
+    """
+    Compute a deterministic cache key for a shared-lake artifact.
+
+    Returns an MD5 hex digest encoding:
+    - identity: symbol, market, timeframe, year, month
+    - provenance: mtime of each raw input file (order-independent via sort)
+    - params: any keyword args (e.g. funding_scale)
+
+    Returns "" if any input_path is missing, forcing a cache miss (safe default).
+    """
+    mtime_parts = []
+    for p in sorted(str(x) for x in input_paths):
+        p_path = Path(p)
+        if not p_path.exists():
+            return ""
+        mtime_parts.append(f"{p}:{p_path.stat().st_mtime:.1f}")
+    identity = f"{symbol}|{market}|{timeframe}|{year}|{month:02d}"
+    param_str = "|".join(f"{k}={v}" for k, v in sorted(params.items()))
+    key_data = "|".join([identity] + mtime_parts + [param_str])
+    return hashlib.md5(key_data.encode()).hexdigest()
+
+
+def read_cache_key(path: Path) -> str:
+    """Read the cache key sidecar for a shared-lake artifact. Returns "" if missing."""
+    key_path = path.with_suffix(".cache_key")
+    return key_path.read_text().strip() if key_path.exists() else ""
+
+
+def write_cache_key(path: Path, key: str) -> None:
+    """Write the cache key sidecar alongside a shared-lake artifact."""
+    path.with_suffix(".cache_key").write_text(key)

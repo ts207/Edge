@@ -62,7 +62,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--start", help="Start date (YYYY-MM-DD).")
     parser.add_argument("--end", help="End date (YYYY-MM-DD).")
-    parser.add_argument("--force", type=int, default=0, help="Force re-run of stages.")
     parser.add_argument(
         "--mode", choices=["research", "production", "certification"], default="research"
     )
@@ -76,7 +75,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--funding_scale", choices=["auto", "decimal", "percent", "bps"], default="auto"
     )
     parser.add_argument("--enable_cross_venue_spot_pipeline", type=int, default=0)
-    parser.add_argument("--allow_missing_funding", type=int, default=0)
     parser.add_argument("--allow_constant_funding", type=int, default=0)
     parser.add_argument("--allow_funding_timestamp_rounding", type=int, default=0)
     parser.add_argument("--run_ingest_liquidation_snapshot", type=int, default=0)
@@ -744,8 +742,6 @@ def prepare_run_preflight(
         symbols=",".join(parsed_symbols),
         start=args.start,
         end=args.end,
-        force_flag=as_flag(args.force),
-        allow_missing_funding_flag=as_flag(args.allow_missing_funding),
         run_spot_pipeline=bool(args.enable_cross_venue_spot_pipeline),
         research_gate_profile="discovery" if args.mode == "research" else "promotion",
         project_root=project_root,

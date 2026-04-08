@@ -13,6 +13,7 @@ import pandas as pd
 from project.core.config import get_data_root
 from project.core.exceptions import DataIntegrityError
 from project.core.logging_utils import build_stage_log_handlers
+from project.io.utils import read_parquet, write_parquet
 from project.artifacts import phase2_candidates_path
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -24,9 +25,7 @@ def _load_phase2_results(*, data_root: Path, run_id: str) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     try:
-        if path.suffix == ".parquet":
-            return pd.read_parquet(path)
-        return pd.read_csv(path)
+        return read_parquet(path)
     except Exception as exc:
         _LOG.warning("Failed to read %s: %s", path, exc)
         return pd.DataFrame()
@@ -63,14 +62,11 @@ def finalize_experiment(
         _LOG.error(f"Expanded hypotheses not found at: {hyp_path}")
         return 1
     try:
-        hyps_df = pd.read_parquet(hyp_path)
+        hyps_df = read_parquet(hyp_path)
     except Exception as exc:
         raise DataIntegrityError(f"Failed to read expanded hypotheses from {hyp_path}: {exc}") from exc
 
     results_df = _adapt_legacy_results(_load_phase2_results(data_root=data_root, run_id=run_id))
-
-    # Robust ID matching
-    from project.io.utils import write_parquet
 
     # Initialize merged_df with hyps
     merged_df = hyps_df.copy()

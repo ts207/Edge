@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.io.utils import read_table_auto
 from project.research.validation.contracts import (
     ValidationBundle,
     ValidatedCandidateRecord,
@@ -76,19 +77,7 @@ class ValidationService:
         }
 
     def _read_table(self, path: Path) -> pd.DataFrame:
-        if path.exists():
-            if path.suffix.lower() == ".parquet":
-                return pd.read_parquet(path)
-            if path.suffix.lower() == ".csv":
-                return pd.read_csv(path)
-        alt = (
-            path.with_suffix(".csv") 
-            if path.suffix.lower() == ".parquet" 
-            else path.with_suffix(".parquet")
-        )
-        if alt.exists():
-            return self._read_table(alt)
-        return pd.DataFrame()
+        return read_table_auto(path)
 
     def create_validation_bundle(
         self, 

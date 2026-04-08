@@ -464,7 +464,7 @@
           "min_prior_extreme_abs": 0.0004,
           "normalization_lookback": 96,
           "normalization_pct": 50.0,
-          "persistence_bars": 12,
+          "persistence_bars": 3,
           "persistence_norm_horizon": 96,
           "persistence_pct": 85.0,
           "phase_tolerance_bars": 16,
@@ -511,7 +511,7 @@
           "min_occurrences": 0,
           "min_prior_extreme_abs": 0.0004,
           "normalization_lookback": 96,
-          "persistence_bars": 12,
+          "persistence_bars": 3,
           "phase_tolerance_bars": 16,
           "post_window": 96,
           "pre_window": 96,
@@ -3331,6 +3331,159 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "oi_change_z_threshold": 3.0
+        },
+        "venue_scope": "single_venue"
+      },
+      {
+        "asset_scope": "single_asset",
+        "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+        "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
+        "conditioning_cols": [
+          "vol_regime",
+          "carry_state",
+          "funding_bps",
+          "ms_trend_state",
+          "ms_spread_state",
+          "severity_bucket"
+        ],
+        "deconflict_priority": 0,
+        "default_executable": true,
+        "detector": "LiquidationCascadeProxyDetector",
+        "disposition": "merge",
+        "enabled": true,
+        "event_type": "LIQUIDATION_CASCADE_PROXY",
+        "events_file": "liquidation_cascade_proxy_events.parquet",
+        "evidence_mode": "proxy",
+        "horizons": [
+          "5m",
+          "15m",
+          "60m"
+        ],
+        "instrument_classes": [
+          "crypto",
+          "futures"
+        ],
+        "is_composite": false,
+        "is_context_tag": false,
+        "is_strategy_construct": false,
+        "layer": "canonical",
+        "legacy_family": "POSITIONING_EXTREMES",
+        "max_candidates_per_run": 1000,
+        "notes": "Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.",
+        "parameters": {
+          "anchor_rule": "max_intensity",
+          "calibration": {
+            "calibration_target": "Maximize AUC of forward return (price recovery) vs oi_reduction_pct. Require at least 30 events over calibration window.\n",
+            "default_threshold": 0.95,
+            "failure_modes": [
+              {
+                "Low-OI instrument": "oi_delta_1h noisy, pct drop threshold unreliable"
+              },
+              {
+                "Trending OI regime (perpetual growth)": "baseline quantile inflates, events suppressed"
+              },
+              {
+                "Volume regime change": "vol_th must be recalibrated per-regime"
+              }
+            ],
+            "search_range": [
+              0.9,
+              0.92,
+              0.95,
+              0.97,
+              0.99
+            ]
+          },
+          "canonical_family": "POSITIONING_EXTREMES",
+          "cluster_id": "oi_dynamic",
+          "confirmation": "Post-detection price recovery confirms forced-selling exhaustion",
+          "cooldown_bars": 0,
+          "detector": {
+            "bar_type": "bar_close",
+            "formula": "oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])\noi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)\nvol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile, window=vol_window)\nprice_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)\nmask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND (price_drop >= price_drop_th)\nevent           = peak bar of episode built from contiguous mask (max_gap=3)\n",
+            "lookback_bars": 288,
+            "minimum_sample_size": 50,
+            "required_columns": [
+              "timestamp",
+              "oi_notional",
+              "oi_delta_1h",
+              "close",
+              "high",
+              "low",
+              "volume"
+            ],
+            "signal_definition": "Detects liquidation-cascade-like conditions using only native exchange data. Fires when OI pct drop >= rolling_quantile(oi_pct_drop, oi_drop_quantile) AND taker_base_volume >= rolling_quantile(volume, vol_surge_quantile) AND min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.\n",
+            "timestamp_alignment": "Event anchored at peak intensity bar within episode.",
+            "warmup_bars": 288
+          },
+          "detector_contract": true,
+          "expected_behavior": {
+            "expected_overlap": [
+              {
+                "OI_FLUSH": "high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)"
+              },
+              {
+                "DELEVERAGING_WAVE": "moderate co-occurrence for sustained unwinds"
+              },
+              {
+                "FUNDING_EXTREME_ONSET": "low co-occurrence (proxy fires on execution, not funding level)"
+              }
+            ],
+            "false_positive_scenarios": [
+              "Scheduled funding payment causing OI adjustment without forced liquidations",
+              "Delisting or partial rollover reducing OI mechanically"
+            ],
+            "holding_horizon_bars": "12-96",
+            "invalidation_conditions": [
+              "OI recovers within 12 bars (false flush, not cascade)",
+              "Volume spike without directional price move (block trade, not forced selling)"
+            ]
+          },
+          "max_gap": 3,
+          "merge_gap_bars": 1,
+          "min_occurrences": 0,
+          "min_periods": 24,
+          "oi_drop_quantile": 0.95,
+          "oi_window": 288,
+          "price_drop_th": 0.003,
+          "ret_window": 3,
+          "synthetic_coverage": "covered",
+          "trigger": "Detector triggers on OI drop + volume surge + price drop coincidence",
+          "vol_surge_quantile": 0.9,
+          "vol_window": 288
+        },
+        "phase": "onset",
+        "reports_dir": "liquidation_events",
+        "research_only": false,
+        "sequence_eligible": true,
+        "signal_column": "liquidation_cascade_proxy_event",
+        "strategy_only": false,
+        "subtype": "liquidation_cascade_proxy",
+        "tags": [
+          "oi_dynamic",
+          "liquidation_proxy"
+        ],
+        "templates": [
+          "reversal_or_squeeze",
+          "mean_reversion",
+          "continuation",
+          "exhaustion_reversal",
+          "convexity_capture",
+          "only_if_funding",
+          "only_if_oi",
+          "tail_risk_avoid"
+        ],
+        "threshold_parameters": {
+          "cooldown_bars": 0,
+          "max_gap": 3,
+          "merge_gap_bars": 1,
+          "min_occurrences": 0,
+          "min_periods": 24,
+          "oi_drop_quantile": 0.95,
+          "oi_window": 288,
+          "ret_window": 3,
+          "vol_surge_quantile": 0.9,
+          "vol_window": 288
         },
         "venue_scope": "single_venue"
       },
@@ -8661,7 +8814,7 @@
         "min_prior_extreme_abs": 0.0004,
         "normalization_lookback": 96,
         "normalization_pct": 50.0,
-        "persistence_bars": 12,
+        "persistence_bars": 3,
         "persistence_norm_horizon": 96,
         "persistence_pct": 85.0,
         "phase_tolerance_bars": 16,
@@ -8708,7 +8861,7 @@
         "min_occurrences": 0,
         "min_prior_extreme_abs": 0.0004,
         "normalization_lookback": 96,
-        "persistence_bars": 12,
+        "persistence_bars": 3,
         "phase_tolerance_bars": 16,
         "post_window": 96,
         "pre_window": 96,
@@ -9490,6 +9643,159 @@
         "median_window": 288,
         "merge_gap_bars": 1,
         "min_occurrences": 0
+      },
+      "venue_scope": "single_venue"
+    },
+    {
+      "asset_scope": "single_asset",
+      "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+      "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
+      "conditioning_cols": [
+        "vol_regime",
+        "carry_state",
+        "funding_bps",
+        "ms_trend_state",
+        "ms_spread_state",
+        "severity_bucket"
+      ],
+      "deconflict_priority": 0,
+      "default_executable": true,
+      "detector": "LiquidationCascadeProxyDetector",
+      "disposition": "merge",
+      "enabled": true,
+      "event_type": "LIQUIDATION_CASCADE_PROXY",
+      "events_file": "liquidation_cascade_proxy_events.parquet",
+      "evidence_mode": "proxy",
+      "horizons": [
+        "5m",
+        "15m",
+        "60m"
+      ],
+      "instrument_classes": [
+        "crypto",
+        "futures"
+      ],
+      "is_composite": false,
+      "is_context_tag": false,
+      "is_strategy_construct": false,
+      "layer": "canonical",
+      "legacy_family": "POSITIONING_EXTREMES",
+      "max_candidates_per_run": 1000,
+      "notes": "Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.",
+      "parameters": {
+        "anchor_rule": "max_intensity",
+        "calibration": {
+          "calibration_target": "Maximize AUC of forward return (price recovery) vs oi_reduction_pct. Require at least 30 events over calibration window.\n",
+          "default_threshold": 0.95,
+          "failure_modes": [
+            {
+              "Low-OI instrument": "oi_delta_1h noisy, pct drop threshold unreliable"
+            },
+            {
+              "Trending OI regime (perpetual growth)": "baseline quantile inflates, events suppressed"
+            },
+            {
+              "Volume regime change": "vol_th must be recalibrated per-regime"
+            }
+          ],
+          "search_range": [
+            0.9,
+            0.92,
+            0.95,
+            0.97,
+            0.99
+          ]
+        },
+        "canonical_family": "POSITIONING_EXTREMES",
+        "cluster_id": "oi_dynamic",
+        "confirmation": "Post-detection price recovery confirms forced-selling exhaustion",
+        "cooldown_bars": 0,
+        "detector": {
+          "bar_type": "bar_close",
+          "formula": "oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])\noi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)\nvol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile, window=vol_window)\nprice_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)\nmask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND (price_drop >= price_drop_th)\nevent           = peak bar of episode built from contiguous mask (max_gap=3)\n",
+          "lookback_bars": 288,
+          "minimum_sample_size": 50,
+          "required_columns": [
+            "timestamp",
+            "oi_notional",
+            "oi_delta_1h",
+            "close",
+            "high",
+            "low",
+            "volume"
+          ],
+          "signal_definition": "Detects liquidation-cascade-like conditions using only native exchange data. Fires when OI pct drop >= rolling_quantile(oi_pct_drop, oi_drop_quantile) AND taker_base_volume >= rolling_quantile(volume, vol_surge_quantile) AND min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.\n",
+          "timestamp_alignment": "Event anchored at peak intensity bar within episode.",
+          "warmup_bars": 288
+        },
+        "detector_contract": true,
+        "expected_behavior": {
+          "expected_overlap": [
+            {
+              "OI_FLUSH": "high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)"
+            },
+            {
+              "DELEVERAGING_WAVE": "moderate co-occurrence for sustained unwinds"
+            },
+            {
+              "FUNDING_EXTREME_ONSET": "low co-occurrence (proxy fires on execution, not funding level)"
+            }
+          ],
+          "false_positive_scenarios": [
+            "Scheduled funding payment causing OI adjustment without forced liquidations",
+            "Delisting or partial rollover reducing OI mechanically"
+          ],
+          "holding_horizon_bars": "12-96",
+          "invalidation_conditions": [
+            "OI recovers within 12 bars (false flush, not cascade)",
+            "Volume spike without directional price move (block trade, not forced selling)"
+          ]
+        },
+        "max_gap": 3,
+        "merge_gap_bars": 1,
+        "min_occurrences": 0,
+        "min_periods": 24,
+        "oi_drop_quantile": 0.95,
+        "oi_window": 288,
+        "price_drop_th": 0.003,
+        "ret_window": 3,
+        "synthetic_coverage": "covered",
+        "trigger": "Detector triggers on OI drop + volume surge + price drop coincidence",
+        "vol_surge_quantile": 0.9,
+        "vol_window": 288
+      },
+      "phase": "onset",
+      "reports_dir": "liquidation_events",
+      "research_only": false,
+      "sequence_eligible": true,
+      "signal_column": "liquidation_cascade_proxy_event",
+      "strategy_only": false,
+      "subtype": "liquidation_cascade_proxy",
+      "tags": [
+        "oi_dynamic",
+        "liquidation_proxy"
+      ],
+      "templates": [
+        "reversal_or_squeeze",
+        "mean_reversion",
+        "continuation",
+        "exhaustion_reversal",
+        "convexity_capture",
+        "only_if_funding",
+        "only_if_oi",
+        "tail_risk_avoid"
+      ],
+      "threshold_parameters": {
+        "cooldown_bars": 0,
+        "max_gap": 3,
+        "merge_gap_bars": 1,
+        "min_occurrences": 0,
+        "min_periods": 24,
+        "oi_drop_quantile": 0.95,
+        "oi_window": 288,
+        "ret_window": 3,
+        "vol_surge_quantile": 0.9,
+        "vol_window": 288
       },
       "venue_scope": "single_venue"
     },
