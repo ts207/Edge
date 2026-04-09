@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from project.core.config import get_data_root
+from project.core.exceptions import DataIntegrityError
 from project.research.services.promotion_readiness_service import (
     build_promotion_readiness_report,
     render_promotion_readiness_terminal,
@@ -17,9 +18,12 @@ def _load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise DataIntegrityError(f"Failed to read promotion readiness json artifact {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"Promotion readiness json artifact {path} did not contain an object payload")
+    return payload
 
 
 def _benchmark_roots(data_root: Path) -> list[Path]:

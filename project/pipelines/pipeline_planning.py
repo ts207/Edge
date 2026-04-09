@@ -681,6 +681,17 @@ def prepare_run_preflight(
             # explicitly pins a single event family. Otherwise the parser default of VOL_SHOCK
             # silently narrows the run and breaks calibration parity with event-level reruns.
             args.phase2_event_type = "all"
+    # When --events is specified without --phase2_event_type, pin the search engine to the
+    # same event(s). A single-event list becomes the event type; multiple events use "all".
+    if (
+        getattr(args, "events", None)
+        and not cli_flag_present("--phase2_event_type")
+    ):
+        events_list = [e.strip().upper() for e in args.events if str(e).strip()]
+        if len(events_list) == 1:
+            args.phase2_event_type = events_list[0]
+        else:
+            args.phase2_event_type = "all"
 
     expectancy_script = (
         project_root / "research" / "analyze_conditional_expectancy.py"

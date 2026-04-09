@@ -429,12 +429,12 @@ def cluster_candidates_by_overlap(
     max_sim: dict[int, float] = {i: 0.0 for i in range(n)}
 
     if similarity_edges is not None and not similarity_edges.empty:
-        for _, edge in similarity_edges.iterrows():
-            sim = float(edge.get("similarity", 0.0))
+        for edge in similarity_edges.itertuples(index=False):
+            sim = float(getattr(edge, "similarity", 0.0))
             if sim < float(edge_threshold):
                 continue
-            si = int(edge["source_idx"])
-            ti = int(edge["target_idx"])
+            si = int(getattr(edge, "source_idx"))
+            ti = int(getattr(edge, "target_idx"))
             if 0 <= si < n and 0 <= ti < n:
                 uf.union(si, ti)
                 max_sim[si] = max(max_sim[si], sim)
@@ -460,10 +460,10 @@ def cluster_candidates_by_overlap(
 
     cluster_density_map: dict[str, float] = {}
     if similarity_edges is not None and not similarity_edges.empty:
-        for _, edge in similarity_edges.iterrows():
-            sim = float(edge.get("similarity", 0.0))
-            si = int(edge["source_idx"])
-            ti = int(edge["target_idx"])
+        for edge in similarity_edges.itertuples(index=False):
+            sim = float(getattr(edge, "similarity", 0.0))
+            si = int(getattr(edge, "source_idx"))
+            ti = int(getattr(edge, "target_idx"))
             if 0 <= si < n and 0 <= ti < n:
                 cid_s = cluster_id_map.get(si, "")
                 cid_t = cluster_id_map.get(ti, "")
@@ -517,10 +517,10 @@ def compute_novelty_crowding(
     # Max similarity to any other candidate
     max_sim_to_other: dict[int, float] = {i: 0.0 for i in range(n)}
     if similarity_edges is not None and not similarity_edges.empty:
-        for _, edge in similarity_edges.iterrows():
-            sim = float(edge.get("similarity", 0.0))
-            si = int(edge["source_idx"])
-            ti = int(edge["target_idx"])
+        for edge in similarity_edges.itertuples(index=False):
+            sim = float(getattr(edge, "similarity", 0.0))
+            si = int(getattr(edge, "source_idx"))
+            ti = int(getattr(edge, "target_idx"))
             if 0 <= si < n and 0 <= ti < n:
                 max_sim_to_other[si] = max(max_sim_to_other[si], sim)
                 max_sim_to_other[ti] = max(max_sim_to_other[ti], sim)

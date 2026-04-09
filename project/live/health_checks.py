@@ -100,8 +100,20 @@ def check_kill_switch_triggers(
     Evaluate kill-switch triggers based on live performance vs research.
     """
     # 1. Expectancy Breach
-    expectancy_ratio = live_performance_expectancy / max(1e-6, research_mean_expectancy)
-    expectancy_kill = expectancy_ratio < 0.5
+    baseline_abs = max(abs(research_mean_expectancy), 1e-6)
+    if research_mean_expectancy > 0:
+        expectancy_ratio = live_performance_expectancy / baseline_abs
+        expectancy_kill = expectancy_ratio < 0.5
+    elif research_mean_expectancy < 0:
+        expectancy_ratio = abs(live_performance_expectancy) / baseline_abs
+        expectancy_kill = (
+            live_performance_expectancy < research_mean_expectancy and expectancy_ratio > 1.5
+        )
+    else:
+        expectancy_ratio = 0.0 if live_performance_expectancy == 0 else (
+            float("inf") if live_performance_expectancy > 0 else float("-inf")
+        )
+        expectancy_kill = live_performance_expectancy < 0
 
     # 2. Drawdown Breach
     drawdown_kill = current_drawdown > max_drawdown_limit

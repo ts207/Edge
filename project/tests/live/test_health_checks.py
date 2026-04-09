@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from project.live.health_checks import (
     DataHealthMonitor,
     build_runtime_certification_manifest,
+    check_kill_switch_triggers,
     evaluate_pretrade_microstructure_gate,
 )
 
@@ -123,3 +124,16 @@ def test_pretrade_microstructure_gate_passes_when_inputs_are_safe() -> None:
 
     assert gate["is_tradable"] is True
     assert gate["reasons"] == []
+
+
+def test_kill_switch_does_not_fire_when_live_expectancy_is_less_negative_than_research() -> None:
+    result = check_kill_switch_triggers(
+        live_performance_expectancy=-5.0,
+        research_mean_expectancy=-10.0,
+        max_drawdown_limit=100.0,
+        current_drawdown=20.0,
+        recent_invalidation_streak=0,
+    )
+
+    assert result["should_kill"] is False
+    assert "low_expectancy" not in result["reasons"]

@@ -950,6 +950,15 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
                 "Promotion requires a confirmatory run."
             )
 
+        canonical_candidate_path = (
+            out_dir.parent.parent / "validation" / config.run_id / "promotion_ready_candidates.parquet"
+        )
+        if not canonical_candidate_path.exists() and not config.use_compatibility_bridge:
+            raise FileNotFoundError(
+                f"Canonical promotion-ready candidates not found at {canonical_candidate_path}. "
+                "Set use_compatibility_bridge=True to fall back to legacy table loading."
+            )
+
         contract = resolve_objective_profile_contract(
             project_root=PROJECT_ROOT,
             data_root=data_root,
@@ -962,7 +971,6 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         )
         
         # Prefer canonical promotion-ready candidates artifact over ambient table loading
-        canonical_candidate_path = out_dir.parent.parent / "validation" / config.run_id / "promotion_ready_candidates.parquet"
         candidates_df = pd.DataFrame()
         
         if canonical_candidate_path.exists():
@@ -1333,8 +1341,11 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         # Known graceful cases (0-candidate discover run) → warning only, no traceback.
         if "missing validation bundle" in err_msg or "No candidates found" in err_msg:
             logging.warning("Promotion skipped: %s", err_msg)
+            finalize_manifest(manifest, "warning", error=err_msg)
         else:
             logging.exception("Promotion failed: %s", exc)
-        finalize_manifest(manifest, "failed", error=err_msg)
+            finalize_manifest(manifest, "failed", error=err_msg)
         diagnostics["error"] = err_msg
+        if isinstance(exc, FileNotFoundError):
+            raise
         return PromotionServiceResult(1, out_dir, audit_df, promoted_df, diagnostics)

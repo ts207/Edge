@@ -23,6 +23,10 @@ except ModuleNotFoundError:
 _LOG = logging.getLogger(__name__)
 
 
+class _SubscriptionRejected(RuntimeError):
+    """Raised when the venue rejects a websocket subscription request."""
+
+
 class BybitWebSocketClient:
     """Async WebSocket client for Bybit V5 Derivatives."""
 
@@ -115,9 +119,8 @@ class BybitWebSocketClient:
                                 # Subscription confirmation
                                 if data.get("op") == "subscribe":
                                     if not data.get("success", True):
-                                        _LOG.error(
-                                            "Bybit WS subscription rejected: %s",
-                                            data.get("ret_msg", ""),
+                                        raise _SubscriptionRejected(
+                                            str(data.get("ret_msg", "") or "subscription rejected")
                                         )
                                     continue
 
@@ -129,6 +132,8 @@ class BybitWebSocketClient:
                                         await self.on_message(data)
                                     else:
                                         self.on_message(data)
+                            except _SubscriptionRejected:
+                                raise
                             except Exception as e:
                                 _LOG.error(f"Error processing Bybit WS message: {e}")
                     finally:

@@ -586,6 +586,9 @@ def _evaluate_deploy_oos_and_low_capital(
         if np.isfinite(validation_samples_raw)
         else int(bridge_validation_trades)
     )
+    bridge_oos_gate = None
+    if "gate_oos_validation" in row:
+        bridge_oos_gate = bool_gate(row.get("gate_oos_validation"))
     test_samples = int(test_samples_raw) if np.isfinite(test_samples_raw) else 0
     oos_sample_source = (
         "row.validation_samples"
@@ -601,6 +604,8 @@ def _evaluate_deploy_oos_and_low_capital(
     direction_match = True
     min_val_events = 0
     min_test_events = 0
+    if bridge_oos_gate is not None:
+        oos_evaluated = True
     if _has_explicit_oos_samples(row):
         oos_evaluated = True
         shadow_gates = _confirmatory_shadow_gates(promotion_confirmatory_gates)
@@ -618,6 +623,8 @@ def _evaluate_deploy_oos_and_low_capital(
         if np.isfinite(test_samples_raw):
             oos_pass = oos_pass and (test_samples >= min_test_events)
         oos_pass = oos_pass and direction_match
+        if bridge_oos_gate is not None:
+            oos_pass = oos_pass and bridge_oos_gate
         if not oos_pass:
             if validation_samples < min_val_events or (
                 np.isfinite(test_samples_raw) and test_samples < min_test_events
@@ -628,6 +635,13 @@ def _evaluate_deploy_oos_and_low_capital(
                 )
             if not direction_match:
                 reasons.add_reject("oos_direction_flip", category="oos_validation")
+            if bridge_oos_gate is False:
+                reasons.add_reject("oos_validation_fail", category="oos_validation")
+            reasons.add_promo_fail("gate_promo_oos_validation", category="oos_validation")
+    elif bridge_oos_gate is not None:
+        oos_pass = bool(bridge_oos_gate)
+        if not oos_pass:
+            reasons.add_reject("oos_validation_fail", category="oos_validation")
             reasons.add_promo_fail("gate_promo_oos_validation", category="oos_validation")
     elif is_deploy:
         # In deploy mode, absence of OOS evidence is a hard block — not a pass.

@@ -8,7 +8,7 @@ from project.research.walkforward import (
     WindowResult,
 )
 from project.research.stability import evaluate_regime_stability
-from project.live.drift import calculate_feature_drift
+from project.live.drift import calculate_feature_drift, monitor_execution_drift
 from project.live.health_checks import check_kill_switch_triggers
 
 
@@ -66,6 +66,18 @@ def test_kill_switch():
     )
     assert result["should_kill"]
     assert "low_expectancy" in result["reasons"]
+
+
+def test_execution_drift_detects_sub_1bps_slippage_deterioration() -> None:
+    drift = monitor_execution_drift(
+        research_slippage_bps=0.1,
+        live_slippage_bps=0.8,
+        research_fill_rate=0.95,
+        live_fill_rate=0.95,
+    )
+
+    assert drift["slippage_drift_ratio"] == pytest.approx(8.0)
+    assert drift["alert"] is True
 
 
 if __name__ == "__main__":

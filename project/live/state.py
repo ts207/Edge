@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from project.core.exceptions import DataIntegrityError
+
 
 @dataclass
 class PositionState:
@@ -352,9 +354,12 @@ class LiveStateStore:
     @classmethod
     def load_snapshot(cls, path: str | Path) -> "LiveStateStore":
         source = Path(path)
-        payload = json.loads(source.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(source.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DataIntegrityError(f"Failed to read live state snapshot {source}: {exc}") from exc
         if not isinstance(payload, dict):
-            raise ValueError("live state snapshot must be a JSON object")
+            raise DataIntegrityError(f"Live state snapshot {source} must be a JSON object")
         store = cls.from_snapshot(payload)
         store._snapshot_path = source
         return store

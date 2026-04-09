@@ -197,6 +197,16 @@ def test_get_operator_dashboard_coerces_string_limit(tmp_path) -> None:
     assert len(payload["recent_proposals"]) == 1
 
 
+def test_get_operator_dashboard_surfaces_invalid_run_manifest(tmp_path) -> None:
+    run_root = tmp_path / "runs" / "broken_run"
+    run_root.mkdir(parents=True)
+    (run_root / "run_manifest.json").write_text("{", encoding="utf-8")
+
+    payload = get_operator_dashboard(data_root=str(tmp_path), limit=5)
+
+    assert any(run["status"] == "invalid_manifest" for run in payload["recent_runs"])
+
+
 def test_render_operator_summary_normalizes_json_and_loose_shapes() -> None:
     rendered = render_operator_summary(
         title="Edge Operator",

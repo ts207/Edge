@@ -11,7 +11,7 @@ import pandas as pd
 
 from project.core.config import get_data_root
 from project.core.exceptions import DataIntegrityError
-from project.io.utils import ensure_dir, write_parquet
+from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.specs.manifest import load_run_manifest
 
 from project.research.knowledge.schemas import (
@@ -323,7 +323,7 @@ def _write_memory_frame(df: pd.DataFrame, path: Path) -> Path:
 
 def _read_best_available(path: Path) -> pd.DataFrame:
     if path.exists():
-        return pd.read_parquet(path)
+        return read_parquet(path)
     csv_path = path.with_suffix(".csv")
     if csv_path.exists():
         return pd.read_csv(csv_path)

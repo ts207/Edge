@@ -11,6 +11,14 @@ def test_episode_registry_loads_expected_contracts() -> None:
     assert "VOL_SHOCK" in registry["EP_VOLATILITY_BREAKOUT"].required_events
 
 
+def test_episode_registry_returns_fresh_mapping_from_cached_registry() -> None:
+    first = load_episode_registry()
+    second = load_episode_registry()
+
+    assert first is not second
+    assert first["EP_LIQUIDITY_SHOCK"] is second["EP_LIQUIDITY_SHOCK"]
+
+
 def test_episode_runtime_inference_derives_liquidity_shock() -> None:
     matches = infer_live_episode_matches(
         ["VOL_SHOCK"],

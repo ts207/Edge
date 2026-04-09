@@ -31,6 +31,22 @@ def test_load_spot_close_reference_uses_requested_timeframe(monkeypatch):
     assert not any("bars_5m" in path for path in captured_paths)
 
 
+def test_prune_partition_files_by_window_keeps_only_relevant_months():
+    files = [
+        Path("/tmp/features/year=2025/month=12/part.parquet"),
+        Path("/tmp/features/year=2026/month=01/part.parquet"),
+        Path("/tmp/features/year=2026/month=02/part.parquet"),
+    ]
+
+    out = build_features._prune_partition_files_by_window(
+        files,
+        start="2026-01-15T00:00:00Z",
+        end="2026-01-31T23:59:59Z",
+    )
+
+    assert out == [Path("/tmp/features/year=2026/month=01/part.parquet")]
+
+
 def test_main_writes_output_to_requested_timeframe_path(monkeypatch, tmp_path):
     bars = pd.DataFrame(
         {

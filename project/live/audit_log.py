@@ -24,12 +24,15 @@ Lineage chain on fill_event:
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
+
+_LOG = logging.getLogger(__name__)
 
 
 def _utcnow() -> str:
@@ -313,14 +316,18 @@ class AuditLog:
         events: List[Dict[str, Any]] = []
         with self._lock:
             text = self._path.read_text(encoding="utf-8")
-        for line in text.splitlines():
+        for line_no, line in enumerate(text.splitlines(), start=1):
             line = line.strip()
             if not line:
                 continue
             try:
                 events.append(json.loads(line))
             except json.JSONDecodeError:
-                pass  # corrupt line — skip, don't lose the rest
+                _LOG.warning(
+                    "Skipping malformed live audit log line %s in %s",
+                    line_no,
+                    self._path,
+                )
         return events
 
     def load_by_type(self, event_type: str) -> List[Dict[str, Any]]:

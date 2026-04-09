@@ -170,6 +170,16 @@ class LiveEngineRunner:
             5.0,
             float(self.strategy_runtime.get("market_feature_poll_interval_seconds", 30.0) or 30.0),
         )
+        self.runtime_market_feature_stale_after_seconds = max(
+            self.market_feature_poll_interval_seconds,
+            float(
+                self.strategy_runtime.get(
+                    "runtime_market_feature_stale_after_seconds",
+                    self.market_feature_poll_interval_seconds * 2.0,
+                )
+                or (self.market_feature_poll_interval_seconds * 2.0)
+            ),
+        )
         # Keep the default ledger under the canonical project live directory.
         self.incubation_ledger = IncubationLedger(PROJECT_ROOT / "live" / "incubation_ledger.json")
 
@@ -304,7 +314,7 @@ class LiveEngineRunner:
         payload: Dict[str, Dict[str, Any]] = {}
         for symbol in sorted({str(s).upper() for s in self.symbols}):
             ticker = dict(self._latest_book_ticker_by_symbol.get(symbol, {}))
-            runtime = dict(self._latest_runtime_market_features_by_symbol.get(symbol, {}))
+            runtime = self._fresh_runtime_market_features_for_symbol(symbol)
             payload[symbol] = {
                 "best_bid_price": float(ticker.get("best_bid_price", 0.0) or 0.0),
                 "best_ask_price": float(ticker.get("best_ask_price", 0.0) or 0.0),
@@ -971,6 +981,22 @@ class LiveEngineRunner:
                     snapshot["open_interest_timestamp"] = str(oi_ts)
         return snapshot
 
+    def _fresh_runtime_market_features_for_symbol(self, symbol: str) -> Dict[str, Any]:
+        runtime = dict(self._latest_runtime_market_features_by_symbol.get(str(symbol).upper(), {}))
+        if not runtime:
+            return {}
+        refreshed_at = str(runtime.get("refreshed_at", "") or "").strip()
+        if not refreshed_at:
+            return {}
+        try:
+            refreshed_ts = datetime.fromisoformat(refreshed_at)
+        except ValueError:
+            return {}
+        age_seconds = (datetime.now(timezone.utc) - refreshed_ts).total_seconds()
+        if age_seconds > self.runtime_market_feature_stale_after_seconds:
+            return {}
+        return runtime
+
     async def _refresh_runtime_market_features_once(self) -> None:
         if self.market_feature_fetcher is None or not self._requires_runtime_market_features():
             return
@@ -980,20 +1006,22 @@ class LiveEngineRunner:
                 raw = await self.market_feature_fetcher(normalized)
             except Exception as exc:
                 _LOG.debug("Runtime market-feature refresh failed for %s: %s", normalized, exc)
+                self._latest_runtime_market_features_by_symbol.pop(normalized, None)
                 continue
             if not isinstance(raw, Mapping):
+                self._latest_runtime_market_features_by_symbol.pop(normalized, None)
                 continue
             previous = dict(self._latest_runtime_market_features_by_symbol.get(normalized, {}))
-            merged = dict(previous)
-            merged.update(dict(raw))
-            open_interest = raw.get("open_interest")
+            merged = dict(raw)
+            merged["refreshed_at"] = datetime.now(timezone.utc).isoformat()
+            open_interest = merged.get("open_interest")
             if open_interest is not None:
                 try:
                     current_oi = float(open_interest)
                 except Exception:
                     current_oi = None
                 previous_oi = previous.get("open_interest")
-                delta_fraction = raw.get("open_interest_delta_fraction")
+                delta_fraction = merged.get("open_interest_delta_fraction")
                 if delta_fraction is None and current_oi is not None:
                     try:
                         previous_oi_f = float(previous_oi) if previous_oi is not None else None
@@ -1044,9 +1072,7 @@ class LiveEngineRunner:
     ) -> Dict[str, Any]:
         normalized_symbol = str(symbol).upper()
         ticker = self._latest_book_ticker_by_symbol.get(normalized_symbol, {})
-        runtime_features = dict(
-            self._latest_runtime_market_features_by_symbol.get(normalized_symbol, {})
-        )
+        runtime_features = self._fresh_runtime_market_features_for_symbol(normalized_symbol)
         bid = float(ticker.get("best_bid_price", 0.0) or 0.0)
         ask = float(ticker.get("best_ask_price", 0.0) or 0.0)
         spread_bps = 0.0
@@ -1558,16 +1584,17 @@ class LiveEngineRunner:
     async def _handle_kill_switch_trigger(self, reason: KillSwitchReason, message: str) -> None:
         _LOG.critical("Actuating kill-switch %s: %s", reason.name, message)
         try:
-            await self._shutdown_runtime()
             if self.runtime_mode == "trading":
                 await self.order_manager.cancel_all_orders()
                 await self.order_manager.flatten_all_positions(self.state_store)
+            await self._shutdown_runtime()
         except Exception as exc:
             _LOG.error("Kill-switch actuation failed: %s", exc)
         self.persist_runtime_metrics_snapshot()
 
     async def _consume_klines(self):
         while self._running:
+            event = None
             try:
                 event = await self.data_manager.kline_queue.get()
                 # Here we would update the live engine's feature state
@@ -1576,14 +1603,17 @@ class LiveEngineRunner:
                 )
                 self.health_monitor.on_event(event.symbol, f"kline:{event.timeframe}")
                 await self._process_kline_for_thesis_runtime(event)
-                self.data_manager.kline_queue.task_done()
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 _LOG.error(f"Error consuming kline: {e}")
+            finally:
+                if event is not None:
+                    self.data_manager.kline_queue.task_done()
 
     async def _consume_tickers(self):
         while self._running:
+            event = None
             try:
                 event = await self.data_manager.ticker_queue.get()
                 # Here we would update order execution state, bid/ask spread, etc.
@@ -1600,11 +1630,13 @@ class LiveEngineRunner:
                     ),
                 }
                 self.health_monitor.on_event(event.symbol, "ticker")
-                self.data_manager.ticker_queue.task_done()
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 _LOG.error(f"Error consuming ticker: {e}")
+            finally:
+                if event is not None:
+                    self.data_manager.ticker_queue.task_done()
 
     async def _sync_account_state(self):
         while self._running:

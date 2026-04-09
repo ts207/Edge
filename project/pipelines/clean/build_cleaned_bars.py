@@ -219,6 +219,7 @@ def _resolve_raw_dir(
     run_id: str | None = None,
     aliases: tuple[str, ...] = (),
 ) -> Path | None:
+    datasets = [str(dataset).strip(), *[str(alias).strip() for alias in aliases if str(alias).strip()]]
     candidates = raw_dataset_dir_candidates(
         data_root,
         market=market,
@@ -227,6 +228,22 @@ def _resolve_raw_dir(
         run_id=run_id,
         aliases=aliases,
     )
+    roots: list[Path] = []
+    if run_id:
+        roots.append(run_scoped_lake_path(data_root, run_id, "raw"))
+    roots.append(Path(data_root) / "lake" / "raw")
+    seen = {str(path) for path in candidates}
+    for root in roots:
+        if not root.exists() or not root.is_dir():
+            continue
+        for venue_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+            for dataset_name in datasets:
+                candidate = venue_dir / market / symbol / dataset_name
+                key = str(candidate)
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append(candidate)
     return choose_partition_dir(candidates) or (candidates[0] if candidates else None)
 
 
@@ -587,35 +604,6 @@ def main() -> int:
                     requested_start=str(requested_start),
                     requested_end_exclusive=str(requested_end_exclusive),
                 )
-                if (
-                    _cache_key
-                    and compat_path.exists()
-                    and not out_path.exists()
-                    and read_cache_key(compat_path) == _cache_key
-                ):
-                    logging.info("Cache hit cleaned bars: copying from shared lake for %s %s %04d-%02d",
-                                 symbol, timeframe, month_start.year, month_start.month)
-                    ensure_dir(out_path.parent)
-                    shutil.copy2(compat_path, out_path)
-                    outputs.append({
-                        "path": str(out_path),
-                        "rows": int(len(bars_month)),
-                        "start_ts": bars_month["timestamp"].min().isoformat(),
-                        "end_ts": bars_month["timestamp"].max().isoformat(),
-                        "storage": "parquet",
-                        "cache_hit": True,
-                    })
-                    month_key = f"{month_start.year}-{month_start.month:02d}"
-                    monthly_quality[month_key] = summarize_frame_quality(
-                        bars_month,
-                        expected_minutes=tf_minutes,
-                        numeric_cols=[
-                            "open", "high", "low", "close", "volume",
-                            "quote_volume", "taker_base_volume", "funding_rate_scaled",
-                        ],
-                    ).to_dict()
-                    continue
-
                 # Enforce Runtime Data Contract
                 Cleaned5mBarsSchema.validate(bars_month)
 
@@ -626,16 +614,17 @@ def main() -> int:
                 logging.info("Writing cleaned data to out_path: %s", out_path)
                 ensure_dir(out_path.parent)
                 written, storage = write_parquet(bars_month.reset_index(drop=True), out_path)
+                written_path = Path(written)
 
                 # Populate shared cache for future runs
-                if not compat_path.exists() and _cache_key:
+                if written_path.exists() and not compat_path.exists() and _cache_key:
                     ensure_dir(compat_path.parent)
-                    shutil.copy2(out_path, compat_path)
+                    shutil.copy2(written_path, compat_path)
                     write_cache_key(compat_path, _cache_key)
 
                 outputs.append(
                     {
-                        "path": str(written),
+                        "path": str(written_path),
                         "rows": int(len(bars_month)),
                         "start_ts": bars_month["timestamp"].min().isoformat(),
                         "end_ts": bars_month["timestamp"].max().isoformat(),

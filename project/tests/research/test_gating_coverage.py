@@ -193,3 +193,36 @@ def test_build_event_return_frame_ignores_nan_direction_override() -> None:
 
     assert frame.loc[0, "direction_sign"] == -1.0
     assert frame.loc[0, "forward_return_raw"] > 0.0
+
+
+def test_calculate_expectancy_stats_fails_closed_on_invalid_split_labels() -> None:
+    timestamps = pd.date_range("2024-01-01", periods=6, freq="5min", tz="UTC")
+    sym_events = pd.DataFrame(
+        {
+            "enter_ts": [timestamps[0], timestamps[1]],
+            "evt_split_label": ["train", ""],
+        }
+    )
+    features_df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "close": [100.0, 101.0, 102.0, 103.0, 104.0, 105.0],
+        }
+    )
+
+    stats = calculate_expectancy_stats(
+        sym_events,
+        features_df,
+        rule="enter_long_market",
+        horizon="5m",
+        side_policy="both",
+        canonical_family="basis",
+        shift_labels_k=0,
+        entry_lag_bars=1,
+        min_samples=2,
+        horizon_bars_override=1,
+    )
+
+    assert stats["p_value"] == 1.0
+    assert stats["t_stat"] == 0.0
+    assert stats["n_events"] == 2.0

@@ -1,6 +1,11 @@
 import numpy as np
 import pandas as pd
-from project.research.services.candidate_discovery_scoring import build_discovery_quality_score, score_novelty_precheck, score_tradability_precheck
+from project.research.services.candidate_discovery_scoring import (
+    annotate_discovery_v2_scores,
+    build_discovery_quality_score,
+    score_novelty_precheck,
+    score_tradability_precheck,
+)
 
 def test_falsification_scoring():
     # Strong placebo should generate penalty
@@ -14,6 +19,20 @@ def test_falsification_scoring():
     score = build_discovery_quality_score(row, {}, {})
     assert score["falsification_component"] >= 2.0  # 2.0 for placebo exceeds main
     assert "placebo_exceeds_main" in score["falsification_reason"]
+
+
+def test_build_discovery_quality_score_accepts_mapping_input():
+    score = build_discovery_quality_score(
+        {
+            "mean_return_bps": 10.0,
+            "placebo_shift_effect": 12.0,
+            "null_strength_ratio": 0.8,
+            "t_stat": 2.0,
+        },
+        {},
+        {},
+    )
+    assert score["falsification_component"] >= 2.0
 
 def test_tradability_scoring():
     row_poor = pd.Series({"cost_survival_ratio": 0.4, "turnover_proxy": 0.9, "coverage_ratio": 0.005})
@@ -79,3 +98,47 @@ def test_fold_stability_scoring():
     assert penalty_s == 0.0
     assert bonus_s > 0.0
     assert len(flags_s) == 0
+
+
+def test_annotate_discovery_v2_scores_assigns_overlap_cluster_counts():
+    candidates = pd.DataFrame(
+        [
+            {
+                "event_family_key": "FAMILY",
+                "template_family_key": "TPL",
+                "direction_key": "LONG",
+                "horizon_bucket": "12b",
+                "mean_return_bps": 5.0,
+                "placebo_shift_effect": 0.0,
+                "null_strength_ratio": 0.0,
+                "t_stat": 2.5,
+                "cost_survival_ratio": 1.0,
+                "turnover_proxy": 0.1,
+                "coverage_ratio": 1.0,
+                "fold_valid_count": 3,
+                "fold_sign_consistency": 1.0,
+                "fold_fail_ratio": 0.0,
+            },
+            {
+                "event_family_key": "FAMILY",
+                "template_family_key": "TPL",
+                "direction_key": "LONG",
+                "horizon_bucket": "12b",
+                "mean_return_bps": 4.0,
+                "placebo_shift_effect": 0.0,
+                "null_strength_ratio": 0.0,
+                "t_stat": 2.0,
+                "cost_survival_ratio": 1.0,
+                "turnover_proxy": 0.1,
+                "coverage_ratio": 1.0,
+                "fold_valid_count": 3,
+                "fold_sign_consistency": 1.0,
+                "fold_fail_ratio": 0.0,
+            },
+        ]
+    )
+
+    out = annotate_discovery_v2_scores(candidates, {})
+
+    assert list(out["overlap_cluster_id"]) == ["FAMILY|TPL|LONG|12b", "FAMILY|TPL|LONG|12b"]
+    assert list(out["overlap_penalty"]) == [0.5, 0.5]

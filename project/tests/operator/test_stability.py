@@ -4,8 +4,10 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
+from project.core.exceptions import DataIntegrityError
 from project.operator.stability import (
     write_negative_result_diagnostics,
     write_regime_split_report,
@@ -188,3 +190,48 @@ def test_negative_result_diagnostics_warning_only_run_is_not_mechanical_gap(monk
 
     assert diagnostics["diagnosis"] == "no_effect"
     assert diagnostics["recommended_next_action"] == "kill_or_reframe_hypothesis"
+
+
+def test_negative_result_diagnostics_raises_on_malformed_regime_mapping(monkeypatch, tmp_path):
+    data_root = tmp_path / "data"
+    program_id = "btc_campaign"
+    run_id = "run_bad_regime_map"
+    _write_summary_seed(
+        data_root=data_root,
+        program_id=program_id,
+        run_id=run_id,
+        start="2021-01-01",
+        end="2021-12-31",
+        metric=-2.6,
+    )
+    phase2 = data_root / "reports" / "phase2" / run_id / "phase2_candidates.parquet"
+    pd.DataFrame(
+        [
+            {
+                "event_type": "VOL_SHOCK",
+                "template_id": "mean_reversion",
+                "direction": "short",
+                "horizon": "12b",
+                "t_stat": -2.6,
+                "train_n_obs": 120,
+                "expectancy_by_regime_bps": "{not valid json",
+            }
+        ]
+    ).to_parquet(phase2, index=False)
+
+    import project.research.reports.operator_reporting as reporting
+
+    monkeypatch.setattr(
+        reporting,
+        "build_run_reflection",
+        lambda run_id, data_root=None: {
+            "candidate_count": 1,
+            "promoted_count": 0,
+            "mechanical_outcome": "success",
+            "statistical_outcome": "weak_signal",
+            "primary_fail_gate": "gate_promo_stability_gate",
+        },
+    )
+
+    with pytest.raises(DataIntegrityError, match="Failed to parse stability mapping JSON"):
+        write_negative_result_diagnostics(run_id=run_id, program_id=program_id, data_root=data_root)

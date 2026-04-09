@@ -71,3 +71,18 @@ def test_edge_agents_plugin_files_do_not_reference_removed_docs_or_commands() ->
         text = path.read_text(encoding="utf-8")
         for needle in banned:
             assert needle not in text, f"{needle} still referenced in {path.relative_to(_repo_root())}"
+
+
+def test_edge_agents_mechanism_hypothesis_skill_references_current_files() -> None:
+    root = _repo_root() / "plugins" / "edge-agents"
+
+    skill_text = (root / "skills" / "edge-mechanism-hypothesis" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    agent_text = (root / "agents" / "mechanism-hypothesis.md").read_text(encoding="utf-8")
+
+    assert "agents/mechanism-hypothesis.md" in skill_text
+    assert "agents/mechanism_hypothesis.md" not in skill_text
+    assert "agents/handoffs/analyst_to_mechanism_hypothesis.md" not in skill_text
+    assert "Read this file for the full spec before beginning." in agent_text
+    assert "agents/mechanism_hypothesis.md" not in agent_text

@@ -15,6 +15,7 @@ import pandas as pd
 
 from project import PROJECT_ROOT
 from project.core.config import get_data_root
+from project.io.utils import read_parquet
 
 _LOG = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ def _load_promotion_audit_artifacts(
         
         try:
             if audit_path.suffix == ".parquet":
-                df = pd.read_parquet(audit_path)
+                df = read_parquet(audit_path)
             else:
                 df = pd.read_json(audit_path, orient="records")
             
@@ -118,7 +119,7 @@ def _load_promoted_candidates_artifacts(
         
         try:
             if promoted_path.suffix == ".parquet":
-                df = pd.read_parquet(promoted_path)
+                df = read_parquet(promoted_path)
             else:
                 df = pd.read_json(promoted_path, orient="records")
             
@@ -169,7 +170,7 @@ def _load_evidence_bundle_summaries(
         
         try:
             if summary_path.suffix == ".parquet":
-                df = pd.read_parquet(summary_path)
+                df = read_parquet(summary_path)
             else:
                 df = pd.read_json(summary_path, orient="records")
             

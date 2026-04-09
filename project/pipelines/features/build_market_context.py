@@ -121,6 +121,25 @@ def _written_path(write_result: object, requested_path: Path) -> Path:
     return requested_path
 
 
+def _filter_time_window(
+    frame: pd.DataFrame,
+    *,
+    start: str | None,
+    end: str | None,
+) -> pd.DataFrame:
+    if frame.empty or "timestamp" not in frame.columns or (not start and not end):
+        return frame
+    out = frame.copy()
+    out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True, errors="coerce")
+    if start:
+        start_ts = pd.Timestamp(start, tz="UTC")
+        out = out[out["timestamp"] >= start_ts]
+    if end:
+        end_ts = pd.Timestamp(end, tz="UTC")
+        out = out[out["timestamp"] < end_ts]
+    return out.reset_index(drop=True)
+
+
 def _build_market_context(symbol: str, features: pd.DataFrame) -> pd.DataFrame:
     ensure_market_context_feature_definitions_registered()
     if "funding_rate_scaled" not in features.columns:
@@ -374,6 +393,15 @@ def main() -> int:
                 continue
             feat_files = list_parquet_files(feat_dir)
             features = read_parquet(feat_files)
+            features = _filter_time_window(features, start=args.start, end=args.end)
+            if features.empty:
+                logging.warning(
+                    "No %s remain for %s %s after start/end filtering",
+                    feature_dataset,
+                    symbol,
+                    tf,
+                )
+                continue
 
             result = _build_market_context(symbol, features)
 
@@ -410,27 +438,6 @@ def main() -> int:
                         start=str(args.start),
                         end=str(args.end),
                     )
-                    if (
-                        _cache_key
-                        and shared_path.exists()
-                        and not out_path.exists()
-                        and read_cache_key(shared_path) == _cache_key
-                    ):
-                        logging.info(
-                            "Cache hit market context: copying from shared lake for %s %04d-%02d",
-                            symbol, year, month,
-                        )
-                        ensure_dir(out_path.parent)
-                        shutil.copy2(shared_path, out_path)
-                        outputs.append({
-                            "path": str(out_path),
-                            "rows": int(len(group)),
-                            "start_ts": group["timestamp"].min().isoformat(),
-                            "end_ts": group["timestamp"].max().isoformat(),
-                            "cache_hit": True,
-                        })
-                        continue
-
                     actual_path = _written_path(write_parquet(group, out_path), out_path)
                     logging.info(
                         f"Wrote market context for {symbol} {year}-{month:02d} to {actual_path}"
@@ -444,7 +451,7 @@ def main() -> int:
                         }
                     )
                     # Populate shared cache for future runs
-                    if not shared_path.exists() and _cache_key:
+                    if actual_path.exists() and not shared_path.exists() and _cache_key:
                         ensure_dir(shared_path.parent)
                         shutil.copy2(actual_path, shared_path)
                         write_cache_key(shared_path, _cache_key)

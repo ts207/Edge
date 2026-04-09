@@ -494,6 +494,21 @@ events:
     - 5m
     - 15m
     - 60m
+  LIQUIDATION_CASCADE_PROXY:
+    canonical_family: POSITIONING_EXTREMES
+    templates:
+    - reversal_or_squeeze
+    - mean_reversion
+    - continuation
+    - exhaustion_reversal
+    - convexity_capture
+    - only_if_funding
+    - only_if_oi
+    - tail_risk_avoid
+    horizons:
+    - 5m
+    - 15m
+    - 60m
     max_candidates_per_run: 300
   DELEVERAGING_WAVE:
     canonical_family: POSITIONING_EXTREMES

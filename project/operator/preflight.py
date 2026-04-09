@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,9 @@ from project.core.config import get_data_root
 from project.io.utils import list_parquet_files, resolve_raw_dataset_dir
 from project.research.agent_io.proposal_schema import load_operator_proposal
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
+
+_PARTITION_YEAR_RE = re.compile(r"year=(\d{4})")
+_PARTITION_MONTH_RE = re.compile(r"month=(\d{2})")
 
 
 @dataclass(frozen=True)
@@ -26,15 +30,40 @@ def _bool_from_int(raw: int | bool) -> bool:
     return bool(int(raw)) if isinstance(raw, int) else bool(raw)
 
 
+def _partition_month_key(path: Path) -> tuple[int, int] | None:
+    text = str(path)
+    year_match = _PARTITION_YEAR_RE.search(text)
+    month_match = _PARTITION_MONTH_RE.search(text)
+    if not year_match or not month_match:
+        return None
+    return int(year_match.group(1)), int(month_match.group(1))
+
+
+def _sample_boundary_files(files: list[Path]) -> list[Path]:
+    if len(files) <= 2:
+        return files
+    keyed = [(path, _partition_month_key(path)) for path in files]
+    with_keys = [item for item in keyed if item[1] is not None]
+    if not with_keys:
+        return [files[0], files[-1]]
+    ordered = sorted(with_keys, key=lambda item: (item[1][0], item[1][1], str(item[0])))
+    selected = [ordered[0][0]]
+    if ordered[-1][0] != ordered[0][0]:
+        selected.append(ordered[-1][0])
+    return selected
+
+
 def _ts_bounds(path: Path | None) -> dict[str, Any]:
     if path is None:
-        return {"start": None, "end": None, "file_count": 0}
+        return {"start": None, "end": None, "file_count": 0, "unreadable_file_count": 0}
     files = list_parquet_files(path)
     if not files:
-        return {"start": None, "end": None, "file_count": 0}
+        return {"start": None, "end": None, "file_count": 0, "unreadable_file_count": 0}
+    sampled_files = _sample_boundary_files(files)
     starts: list[pd.Timestamp] = []
     ends: list[pd.Timestamp] = []
-    for file_path in files:
+    unreadable_file_count = 0
+    for file_path in sampled_files:
         try:
             frame = pd.read_csv(file_path, usecols=["timestamp"]) if file_path.suffix == ".csv" else None
             if frame is None:
@@ -42,6 +71,7 @@ def _ts_bounds(path: Path | None) -> dict[str, Any]:
 
                 frame = read_parquet(file_path, columns=["timestamp"])
         except Exception:
+            unreadable_file_count += 1
             continue
         if frame.empty or "timestamp" not in frame.columns:
             continue
@@ -51,11 +81,19 @@ def _ts_bounds(path: Path | None) -> dict[str, Any]:
         starts.append(ts.min())
         ends.append(ts.max())
     if not starts or not ends:
-        return {"start": None, "end": None, "file_count": len(files)}
+        return {
+            "start": None,
+            "end": None,
+            "file_count": len(files),
+            "sampled_file_count": len(sampled_files),
+            "unreadable_file_count": unreadable_file_count,
+        }
     return {
         "start": min(starts).isoformat(),
         "end": max(ends).isoformat(),
         "file_count": len(files),
+        "sampled_file_count": len(sampled_files),
+        "unreadable_file_count": unreadable_file_count,
     }
 
 
@@ -156,6 +194,8 @@ def _proposal_preflight_checks(
                 status = "block" if expectation.required else "warn"
             elif coverage == "partial":
                 status = "warn" if expectation.required else "warn"
+            elif int(bounds.get("unreadable_file_count", 0) or 0) > 0:
+                status = "warn"
             symbol_payload[expectation.name] = {
                 "status": status,
                 "required": expectation.required,

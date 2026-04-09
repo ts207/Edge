@@ -186,3 +186,47 @@ def test_evaluate_row_characterization_flags_continuation_quality_fragility():
         "gate_promo_continuation_quality" in str(result["promotion_fail_gate_primary"])
         or "continuation_quality" in result["reject_reason"]
     )
+
+
+def test_evaluate_row_characterization_honors_scope_multiplicity_policy_flags():
+    row = _passing_row()
+    row["q_value_scope"] = math.nan
+    row["multiplicity_scope_mode"] = "campaign_lineage"
+    kwargs = _base_kwargs()
+    kwargs["require_scope_level_multiplicity"] = True
+
+    result = evaluate_row(row=row, **kwargs)
+
+    assert result["promotion_decision"] == "rejected"
+    assert "gate_promo_multiplicity_scope" in str(result["promotion_fail_gate_primary"])
+
+
+def test_evaluate_row_characterization_can_disable_effective_q_check_when_requested():
+    row = _passing_row()
+    row["q_value"] = 0.01
+    row["q_value_scope"] = 0.90
+    row["multiplicity_scope_mode"] = "campaign_lineage"
+    kwargs = _base_kwargs()
+    kwargs["require_scope_level_multiplicity"] = False
+    kwargs["use_effective_q_value"] = False
+
+    result = evaluate_row(row=row, **kwargs)
+
+    assert result["promotion_decision"] == "promoted"
+    assert result["gate_promo_statistical"] == "pass"
+
+
+def test_evaluate_row_characterization_respects_upstream_oos_gate_when_present():
+    row = _passing_row()
+    row["validation_samples"] = 25
+    row["test_samples"] = 25
+    row["mean_validation_return"] = 0.01
+    row["mean_test_return"] = 0.01
+    row["gate_oos_validation"] = False
+    kwargs = _base_kwargs()
+    kwargs["promotion_confirmatory_gates"] = {"shadow": {"min_oos_event_count": 20}}
+
+    result = evaluate_row(row=row, **kwargs)
+
+    assert result["promotion_decision"] == "rejected"
+    assert result["gate_promo_oos_validation"] == "fail"

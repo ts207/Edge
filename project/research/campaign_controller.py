@@ -16,6 +16,7 @@ import pandas as pd
 import yaml
 
 from project.core.config import get_data_root
+from project.io.utils import read_parquet
 from project.domain.compiled_registry import get_domain_registry
 from project.research import campaign_controller_scan_support as _scan_support
 from project.research.experiment_engine import build_experiment_plan, RegistryBundle
@@ -479,7 +480,7 @@ class CampaignController:
         def _parquet(path: Path) -> pd.DataFrame:
             if path.exists():
                 try:
-                    return pd.read_parquet(path)
+                    return read_parquet(path)
                 except Exception:
                     _record_memory_error(path, "failed to read Parquet memory artifact", exc_info=True)
                     return pd.DataFrame()
@@ -955,12 +956,14 @@ class CampaignController:
                 self.config.program_id,
             )
         except Exception as exc:
-            _LOG.warning("update_search_intelligence failed: %s", exc)
+            raise RuntimeError(
+                f"update_search_intelligence failed for program {self.config.program_id}"
+            ) from exc
 
         if not self.ledger_path.exists():
             return CampaignSummary(self.config.program_id)
 
-        df = pd.read_parquet(self.ledger_path)
+        df = read_parquet(self.ledger_path)
         summary = CampaignSummary(
             program_id=self.config.program_id,
             total_runs=int(df["run_id"].nunique()) if "run_id" in df.columns else 0,

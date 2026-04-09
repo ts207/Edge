@@ -53,6 +53,8 @@ _BASE_WINDOW_MINUTES = (
     5  # legacy 5m semantic baseline, converted to active timeframe via _duration_to_bars
 )
 _WARMUP_COL_PATTERN = re.compile(r"_\d+$")
+_PARTITION_YEAR_RE = re.compile(r"year=(\d{4})")
+_PARTITION_MONTH_RE = re.compile(r"month=(\d{2})")
 
 
 def _feature_quality_report_path(
@@ -81,6 +83,16 @@ def _write_feature_quality_report(path: Path, payload: dict[str, object]) -> Non
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _written_path(write_result: object, requested_path: Path) -> Path:
+    if isinstance(write_result, tuple) and write_result:
+        candidate = write_result[0]
+        if isinstance(candidate, Path):
+            return candidate
+    if isinstance(write_result, Path):
+        return write_result
+    return requested_path
+
+
 def _resolve_raw_dir(
     data_root: Path,
     *,
@@ -90,6 +102,7 @@ def _resolve_raw_dir(
     run_id: str | None = None,
     aliases: tuple[str, ...] = (),
 ) -> Path | None:
+    datasets = [str(dataset).strip(), *[str(alias).strip() for alias in aliases if str(alias).strip()]]
     candidates = raw_dataset_dir_candidates(
         data_root,
         market=market,
@@ -98,6 +111,22 @@ def _resolve_raw_dir(
         run_id=run_id,
         aliases=aliases,
     )
+    roots: list[Path] = []
+    if run_id:
+        roots.append(run_scoped_lake_path(data_root, run_id, "raw"))
+    roots.append(Path(data_root) / "lake" / "raw")
+    seen = {str(path) for path in candidates}
+    for root in roots:
+        if not root.exists() or not root.is_dir():
+            continue
+        for venue_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+            for dataset_name in datasets:
+                candidate = venue_dir / market / symbol / dataset_name
+                key = str(candidate)
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append(candidate)
     return choose_partition_dir(candidates) or (candidates[0] if candidates else None)
 
 
@@ -816,6 +845,61 @@ def _filter_time_window(
     return out.reset_index(drop=True)
 
 
+def _resolve_window_bounds(
+    start: str | None,
+    end: str | None,
+) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
+    start_ts = pd.to_datetime(start, utc=True, errors="coerce") if start else None
+    end_ts = pd.to_datetime(end, utc=True, errors="coerce") if end else None
+    if start_ts is not None and pd.isna(start_ts):
+        start_ts = None
+    if end_ts is not None and pd.isna(end_ts):
+        end_ts = None
+    if end_ts is not None and end:
+        end_text = str(end).strip()
+        if len(end_text) == 10 and "T" not in end_text:
+            end_ts = end_ts + pd.Timedelta(days=1)
+    return start_ts, end_ts
+
+
+def _partition_month_key(path: Path) -> tuple[int, int] | None:
+    text = str(path)
+    year_match = _PARTITION_YEAR_RE.search(text)
+    month_match = _PARTITION_MONTH_RE.search(text)
+    if not year_match or not month_match:
+        return None
+    return int(year_match.group(1)), int(month_match.group(1))
+
+
+def _prune_partition_files_by_window(
+    files: Sequence[Path],
+    *,
+    start: str | None,
+    end: str | None,
+) -> list[Path]:
+    start_ts, end_ts = _resolve_window_bounds(start, end)
+    if (start_ts is None and end_ts is None) or not files:
+        return list(files)
+
+    def _month_floor(ts: pd.Timestamp) -> tuple[int, int]:
+        return ts.year, ts.month
+
+    min_month = _month_floor(start_ts) if start_ts is not None else None
+    max_month = _month_floor(end_ts) if end_ts is not None else None
+    pruned: list[Path] = []
+    for file_path in files:
+        month_key = _partition_month_key(file_path)
+        if month_key is None:
+            pruned.append(file_path)
+            continue
+        if min_month is not None and month_key < min_month:
+            continue
+        if max_month is not None and month_key > max_month:
+            continue
+        pruned.append(file_path)
+    return pruned or list(files)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build canonical features.")
     parser.add_argument("--run_id", required=True)
@@ -904,7 +988,11 @@ def main() -> int:
             if not bars_dir:
                 logging.warning(f"No cleaned bars found for {symbol} {tf}")
                 continue
-            bars_files = list_parquet_files(bars_dir)
+            bars_files = _prune_partition_files_by_window(
+                list_parquet_files(bars_dir),
+                start=args.start,
+                end=args.end,
+            )
             bars = read_parquet(bars_files)
             bars = _filter_time_window(bars, start=args.start, end=args.end)
             if bars.empty:
@@ -915,51 +1003,6 @@ def main() -> int:
 
             # Load funding (only for perp)
             funding = pd.DataFrame()
-            # Symbol-level cache hit check: if every month's shared feature file
-            # exists with a matching cache key, skip the expensive build_features() call.
-            _shared_feat_root = (
-                data_root / "lake" / "features" / market / symbol / tf
-                / feature_dataset_dir_name(feature_schema_version)
-            )
-            _run_feat_root = run_scoped_lake_path(
-                data_root, run_id, "features", market, symbol, tf,
-                feature_dataset_dir_name(feature_schema_version),
-            )
-            if _shared_feat_root.exists() and not _run_feat_root.exists():
-                import re as _re
-                _year_month_pairs = set()
-                for f in bars_files:
-                    _m = _re.search(r"year=(\d+).*month=(\d+)", str(f))
-                    if _m:
-                        _year_month_pairs.add((int(_m.group(1)), int(_m.group(2))))
-                _all_months_cached = bool(_year_month_pairs)
-                for _ym_year, _ym_month in _year_month_pairs:
-                    _shared_month_path = (
-                        _shared_feat_root / f"year={_ym_year}" / f"month={_ym_month:02d}"
-                        / f"features_{symbol}_{feature_schema_version}_{_ym_year}-{_ym_month:02d}.parquet"
-                    )
-                    _month_bars = [
-                        f for f in bars_files
-                        if f"year={_ym_year}" in str(f) and f"month={_ym_month:02d}" in str(f)
-                    ]
-                    _ck = lake_cache_key(
-                        symbol, market, tf, _ym_year, _ym_month, _month_bars,
-                        feature_schema_version=feature_schema_version,
-                        baseline_run_id=baseline_run_id or "",
-                        start=str(args.start),
-                        end=str(args.end),
-                    )
-                    if not (_ck and _shared_month_path.exists() and read_cache_key(_shared_month_path) == _ck):
-                        _all_months_cached = False
-                        break
-                if _all_months_cached:
-                    logging.info("Cache hit features (all months): copying from shared lake for %s %s", symbol, tf)
-                    shutil.copytree(_shared_feat_root, _run_feat_root)
-                    for existing_path in list_parquet_files(_run_feat_root):
-                        outputs.append({"path": str(existing_path), "rows": 0, "cache_hit": True})
-                    stats["symbols"][symbol] = {"rows": 0, "cache_hit": True}
-                    continue
-
             if market == "perp":
                 funding_dir = _resolve_raw_dir(
                     data_root,
@@ -970,7 +1013,13 @@ def main() -> int:
                     aliases=("funding",),
                 )
                 if funding_dir:
-                    funding = read_parquet(list_parquet_files(funding_dir))
+                    funding = read_parquet(
+                        _prune_partition_files_by_window(
+                            list_parquet_files(funding_dir),
+                            start=args.start,
+                            end=args.end,
+                        )
+                    )
                     funding = _filter_time_window(funding, start=args.start, end=args.end)
 
             # Build features
@@ -1035,20 +1084,20 @@ def main() -> int:
                         start=str(args.start),
                         end=str(args.end),
                     )
-                    write_parquet(group, out_path)
-                    logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {out_path}")
+                    actual_path = _written_path(write_parquet(group, out_path), out_path)
+                    logging.info(f"Wrote features for {symbol} {year}-{month:02d} to {actual_path}")
                     outputs.append(
                         {
-                            "path": str(out_path),
+                            "path": str(actual_path),
                             "rows": int(len(group)),
                             "start_ts": group["timestamp"].min().isoformat(),
                             "end_ts": group["timestamp"].max().isoformat(),
                         }
                     )
                     # Populate shared cache for future runs
-                    if not shared_path.exists() and _cache_key:
+                    if actual_path.exists() and not shared_path.exists() and _cache_key:
                         ensure_dir(shared_path.parent)
-                        shutil.copy2(out_path, shared_path)
+                        shutil.copy2(actual_path, shared_path)
                         write_cache_key(shared_path, _cache_key)
 
                 report_path = _feature_quality_report_path(

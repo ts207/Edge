@@ -159,13 +159,12 @@ def finalize_experiment(
     ledger_path = data_root / "artifacts" / "experiments" / program_id / "tested_ledger.parquet"
     if ledger_path.exists():
         try:
-            ledger_df = pd.read_parquet(ledger_path)
+            ledger_df = read_parquet(ledger_path)
             ledger_df = pd.concat([ledger_df, merged_df], ignore_index=True)
             ledger_df = ledger_df.drop_duplicates(subset=["hypothesis_id"], keep="last")
             write_parquet(ledger_df, ledger_path)
         except Exception as e:
-            _LOG.error(f"Failed to update ledger: {e}")
-            write_parquet(merged_df, ledger_path)
+            raise DataIntegrityError(f"Failed to update ledger at {ledger_path}: {e}") from e
     else:
         ledger_path.parent.mkdir(parents=True, exist_ok=True)
         write_parquet(merged_df, ledger_path)

@@ -8,13 +8,14 @@ from typing import Any, Dict, Iterable
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.io.utils import read_parquet
 
 from project.research.knowledge.memory import ensure_memory_store, memory_paths, read_memory_table
 
 
 def _read_optional_parquet(path: Path) -> pd.DataFrame:
     if path.exists():
-        return pd.read_parquet(path)
+        return read_parquet(path)
     return pd.DataFrame()
 
 
@@ -209,9 +210,11 @@ def query_dynamic_weights(
     resolved_data_root = Path(data_root) if data_root is not None else get_data_root()
     memory_files = memory_paths(program_id, data_root=resolved_data_root)
 
-    tested_regions = pd.DataFrame()
-    if memory_files.tested_regions.exists():
-        tested_regions = pd.read_parquet(memory_files.tested_regions)
+    tested_regions = read_memory_table(
+        program_id,
+        "tested_regions",
+        data_root=resolved_data_root,
+    )
 
     if tested_regions.empty:
         return {"error": "No tested regions in campaign memory", "program_id": program_id}

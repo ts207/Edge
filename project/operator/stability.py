@@ -8,6 +8,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.core.exceptions import DataIntegrityError
 from project.research.knowledge.memory import read_memory_table
 from project.research.validation.regime_tests import build_stability_result_from_row
 
@@ -225,6 +226,8 @@ def build_negative_result_diagnostics(*, run_id: str, program_id: str | None = N
                     elif primary_fail_gate in {"gate_promo_timeframe_consensus", "gate_promo_stability_gate", "gate_promo_stability_score"}:
                         diagnosis = "regime_instability"
                         rationale = "The run failed a stability-style gate rather than a pure signal gate."
+            except DataIntegrityError:
+                raise
             except Exception:
                 pass
         elif primary_fail_gate and "sample" in primary_fail_gate.lower():

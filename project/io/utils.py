@@ -200,10 +200,21 @@ def read_parquet(
     """
     if isinstance(files, (str, Path)):
         files = [Path(files)]
+    else:
+        files = [Path(file_path) for file_path in files]
+
+    if not files:
+        return pd.DataFrame()
+
+    force_fallback = _force_parquet_fallback_enabled()
+    if HAS_PYARROW and not force_fallback and len(files) > 1 and all(path.suffix == ".parquet" for path in files):
+        try:
+            return pq.read_table([str(path) for path in files], columns=columns).to_pandas()
+        except Exception:
+            pass
 
     frames = []
     for file_path in files:
-        file_path = Path(file_path)
         if file_path.suffix == ".csv":
             use_cols = columns if columns else None
             try:
@@ -222,7 +233,6 @@ def read_parquet(
                     except ValueError:
                         frames.append(pd.read_csv(csv_fallback))
                     continue
-            force_fallback = _force_parquet_fallback_enabled()
             if HAS_PYARROW and not force_fallback:
                 try:
                     # Use ParquetFile for single-file reads to avoid memory usage

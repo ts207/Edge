@@ -74,6 +74,10 @@ class OrderSubmissionFailed(RuntimeError):
     """Raised when a live order cannot be truthfully submitted."""
 
 
+class OrderNeutralizationFailed(RuntimeError):
+    """Raised when emergency cancel/flatten actions fail during live unwind."""
+
+
 class OrderStatus(Enum):
     PENDING_NEW = auto()
     NEW = auto()
@@ -359,12 +363,19 @@ class OrderManager:
         symbols_to_cancel = (
             [symbol] if symbol else list(set(o.symbol for o in self.active_orders.values()))
         )
+        failures: List[str] = []
         for sym in symbols_to_cancel:
             try:
                 await self.exchange_client.cancel_all_open_orders(sym)
                 LOGGER.info(f"Cancelled all open orders for {sym}")
             except Exception as e:
                 LOGGER.error(f"Failed to cancel orders for {sym}: {e}")
+                failures.append(f"{sym}: {e}")
+        if failures:
+            raise OrderNeutralizationFailed(
+                "Failed to cancel all open orders during emergency unwind: "
+                + "; ".join(failures)
+            )
 
     async def flatten_all_positions(self, state_store: Any, symbol: Optional[str] = None):
         """Submit reactive market orders to close all positions in the state store."""
@@ -374,6 +385,7 @@ class OrderManager:
 
         positions = state_store.account.positions
         symbols = [symbol.upper()] if symbol else list(positions.keys())
+        failures: List[str] = []
 
         for sym in symbols:
             pos = positions.get(sym)
@@ -388,6 +400,12 @@ class OrderManager:
                 LOGGER.info(f"Submitted flattening order for {sym}: {side} {pos.quantity}")
             except Exception as e:
                 LOGGER.error(f"Failed to flatten position for {sym}: {e}")
+                failures.append(f"{sym}: {e}")
+        if failures:
+            raise OrderNeutralizationFailed(
+                "Failed to flatten all positions during emergency unwind: "
+                + "; ".join(failures)
+            )
 
     def on_order_update(self, client_order_id: str, status: OrderStatus, **kwargs):
         order = self.get_order(client_order_id)

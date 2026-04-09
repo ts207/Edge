@@ -8,6 +8,7 @@ AccountState/PositionState.
 from __future__ import annotations
 
 import pytest
+from project.core.exceptions import DataIntegrityError
 from project.live.state import LiveStateStore, PositionState
 
 
@@ -141,3 +142,11 @@ def test_live_state_auto_persists_account_updates(tmp_path):
     restored = LiveStateStore.load_snapshot(snapshot_path)
     assert restored.account.wallet_balance == pytest.approx(1234.0)
     assert "BTCUSDT" in restored.account.positions
+
+
+def test_live_state_load_snapshot_raises_on_malformed_json(tmp_path):
+    snapshot_path = tmp_path / "broken_snapshot.json"
+    snapshot_path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(DataIntegrityError, match="Failed to read live state snapshot"):
+        LiveStateStore.load_snapshot(snapshot_path)

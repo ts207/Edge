@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import datetime as dt
 import json
+import logging
 import shutil
 import tempfile
 from collections import Counter
@@ -27,6 +28,8 @@ from project.operator.stability import (
 from project.research.agent_io.issue_proposal import issue_proposal
 from project.research.agent_io.proposal_to_experiment import translate_and_validate_proposal
 
+_LOG = logging.getLogger(__name__)
+
 
 def _path_or_none(value: str | None) -> Path | None:
     if value is None:
@@ -50,14 +53,53 @@ def _resolve_data_root(value: str | None) -> Path:
     return _path_or_none(value) or get_data_root()
 
 
-def _read_json_dict(path: Path) -> dict[str, Any]:
+def _read_json_dict(path: Path, *, include_errors: bool = False) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        _LOG.warning("Failed to read JSON artifact %s: %s", path, exc)
+        if include_errors:
+            return {
+                "__invalid_json__": True,
+                "__error__": str(exc),
+                "__path__": str(path),
+            }
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _invalid_run_summary(path: Path, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    raw = dict(payload or {})
+    run_id = path.parent.name
+    error = str(raw.get("__error__", "")).strip()
+    return {
+        "run_id": run_id,
+        "program_id": None,
+        "status": "invalid_manifest",
+        "mechanical_outcome": None,
+        "checklist_decision": None,
+        "failed_stage": None,
+        "objective_name": None,
+        "objective_id": None,
+        "promotion_profile": None,
+        "experiment_type": None,
+        "start": None,
+        "end": None,
+        "finished_at": None,
+        "started_at": None,
+        "planned_stage_count": None,
+        "completed_stage_count": None,
+        "artifact_count": None,
+        "candidate_count": None,
+        "promoted_count": None,
+        "normalized_symbols": [],
+        "normalized_timeframes": [],
+        "symbols_label": "",
+        "manifest_error": error,
+        "manifest_path": str(path),
+    }
 
 
 def _read_table(path: Path) -> pd.DataFrame:
@@ -462,10 +504,13 @@ def _recent_run_summaries(data_root: Path, *, program_id: str | None = None, lim
         manifest_paths = list(runs_root.glob("*/run_manifest.json"))
 
     for manifest_path in manifest_paths[:100]:  # Hard cap on total scan
-        manifest = _read_json_dict(manifest_path)
+        manifest = _read_json_dict(manifest_path, include_errors=True)
         if not manifest:
             continue
-        summary = _run_summary(manifest, manifest_path.parent.name)
+        if manifest.get("__invalid_json__"):
+            summary = _invalid_run_summary(manifest_path, manifest)
+        else:
+            summary = _run_summary(manifest, manifest_path.parent.name)
         if program_id and str(summary.get("program_id") or "").strip() != str(program_id).strip():
             continue
         records.append(summary)
@@ -479,9 +524,12 @@ def _selected_run_snapshot(run_id: str | None, data_root: Path) -> dict[str, Any
     resolved_run_id = str(run_id or "").strip()
     if not resolved_run_id:
         return {}
-    manifest = _read_json_dict(run_manifest_path(resolved_run_id, data_root))
+    manifest_path = run_manifest_path(resolved_run_id, data_root)
+    manifest = _read_json_dict(manifest_path, include_errors=True)
     if not manifest:
         return {}
+    if manifest.get("__invalid_json__"):
+        return _invalid_run_summary(manifest_path, manifest)
     summary = _run_summary(manifest, resolved_run_id)
     summary["effective_behavior"] = _clean_value(manifest.get("effective_behavior") or {})
     summary["objective_hard_gates"] = _clean_value(manifest.get("objective_hard_gates") or {})
@@ -1422,11 +1470,15 @@ def catalog_list_runs(
 
     records: list[dict[str, Any]] = []
     for manifest_path in manifest_paths[:normalized_limit * 3]:
-        manifest = _read_json_dict(manifest_path)
+        manifest = _read_json_dict(manifest_path, include_errors=True)
         if not manifest:
             continue
-        run_id = str(manifest.get("run_id") or manifest_path.parent.name)
-        summary = _run_summary(manifest, run_id)
+        if manifest.get("__invalid_json__"):
+            summary = _invalid_run_summary(manifest_path, manifest)
+            run_id = str(summary.get("run_id") or manifest_path.parent.name)
+        else:
+            run_id = str(manifest.get("run_id") or manifest_path.parent.name)
+            summary = _run_summary(manifest, run_id)
 
         # Stage-filter: check presence of stage-specific artifact directories
         if normalized_stage:

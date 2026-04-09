@@ -36,6 +36,7 @@ PHASE2_EVENT_CHAIN: List[Tuple[str, str, List[str]]] = [
     ("OI_SPIKE_NEGATIVE", "analyze_events.py", ["--event_type", "OI_SPIKE_NEGATIVE"]),
     ("OI_FLUSH", "analyze_events.py", ["--event_type", "OI_FLUSH"]),
     ("LIQUIDATION_CASCADE", "analyze_events.py", ["--event_type", "LIQUIDATION_CASCADE"]),
+    ("LIQUIDATION_CASCADE_PROXY", "analyze_events.py", ["--event_type", "LIQUIDATION_CASCADE_PROXY"]),
     ("LIQUIDITY_SHOCK", "analyze_events.py", ["--event_type", "LIQUIDITY_SHOCK"]),
     ("LIQUIDITY_STRESS_DIRECT", "analyze_events.py", ["--event_type", "LIQUIDITY_STRESS_DIRECT"]),
     ("LIQUIDITY_STRESS_PROXY", "analyze_events.py", ["--event_type", "LIQUIDITY_STRESS_PROXY"]),

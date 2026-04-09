@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from project.core.config import get_data_root
+from project.core.exceptions import DataIntegrityError
 from project.research.services.pathing import phase2_candidates_path as canonical_phase2_candidates_path
 from project.research.services.pathing import phase2_diagnostics_path as canonical_phase2_diagnostics_path
 from project.research.services.pathing import phase2_run_dir
@@ -132,6 +133,8 @@ def load_json_dict(path: Path) -> Dict[str, Any]:
         return {}
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        raise DataIntegrityError(f"Failed to read JSON artifact {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"JSON artifact {path} did not contain an object payload")
+    return payload

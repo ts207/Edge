@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 
 from project.events.registry import EVENT_REGISTRY_SPECS, load_registry_events
-from project.io.utils import ensure_dir, write_parquet
+from project.io.utils import ensure_dir, read_parquet, write_parquet
 
 _TIMEFRAME_TO_NS: Dict[str, int] = {
     "5m": 300_000_000_000,
@@ -145,7 +145,7 @@ def main() -> int:
     ep_path = DATA_ROOT / "events" / args.run_id / "episodes.parquet"
     if ep_path.exists():
         try:
-            episodes = pd.read_parquet(ep_path)
+            episodes = read_parquet(ep_path)
         except Exception:
             pass
 

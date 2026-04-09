@@ -13,7 +13,7 @@ from project.artifacts import live_thesis_index_path, promoted_theses_path
 from project.core.coercion import safe_float, safe_int
 from project.core.config import get_data_root
 from project.core.exceptions import DataIntegrityError
-from project.io.utils import ensure_dir
+from project.io.utils import ensure_dir, read_parquet
 from project.events.governance import get_event_governance_metadata
 from project.live.contracts import (
     ALL_DEPLOYMENT_STATES,
@@ -84,7 +84,7 @@ def _load_table(path: Path) -> pd.DataFrame:
     if path.exists():
         try:
             if path.suffix.lower() == ".parquet":
-                return pd.read_parquet(path)
+                return read_parquet(path)
             if path.suffix.lower() == ".csv":
                 return pd.read_csv(path)
         except Exception as exc:

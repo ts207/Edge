@@ -4,7 +4,9 @@ from project.core.config import get_data_root
 import argparse
 import logging
 import sys
+from datetime import timedelta
 from pathlib import Path
+from argparse import SUPPRESS
 
 import numpy as np
 import pandas as pd
@@ -151,6 +153,7 @@ def main(argv=None) -> int:
     parser.add_argument("--out_dir", default=None)
     parser.add_argument("--timeframe", default="5m")
     parser.add_argument("--log_path", default=None)
+    parser.add_argument("--force", default=None, help=SUPPRESS)
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     out_dir = (
@@ -175,8 +178,10 @@ def main(argv=None) -> int:
                     start_ts = pd.Timestamp(args.start, tz="UTC")
                     tob = tob[tob["timestamp"] >= start_ts]
                 if args.end:
-                    # Consistent with build_cleaned_bars: exact timestamp bound, not end-of-day expansion
                     end_ts = pd.Timestamp(args.end, tz="UTC")
+                    end_text = str(args.end or "").strip()
+                    if len(end_text) == 10 and "T" not in end_text:
+                        end_ts = end_ts + timedelta(days=1)
                     tob = tob[tob["timestamp"] < end_ts]
             rolled = _build_rollup(symbol, tob)
             all_frames.append(rolled)

@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
+from project.io.utils import read_parquet
 from project.research.services.pathing import resolve_phase2_candidates_path
 
 
@@ -46,7 +47,7 @@ def _read_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     try:
-        return pd.read_parquet(path)
+        return read_parquet(path)
     except Exception:
         return pd.DataFrame()
 
@@ -236,15 +237,24 @@ def _next_month_key(value: date) -> str:
 
 
 def _list_symbol_funding_months(data_root: Path, symbol: str) -> List[str]:
-    funding_root = data_root / "lake" / "raw" / "bybit" / "perp" / symbol / "funding"
     months: set[str] = set()
-    for path in funding_root.glob("year=*/month=*"):
-        try:
-            year = int(path.parent.name.split("=")[1])
-            month = int(path.name.split("=")[1])
-        except (IndexError, ValueError):
-            continue
-        months.add(f"{year:04d}-{month:02d}")
+    raw_root = data_root / "lake" / "raw"
+    funding_roots = [
+        raw_root / "perp" / symbol / "funding",
+        raw_root / "perp" / symbol / "fundingRate",
+    ]
+    if raw_root.exists():
+        for venue_dir in sorted(path for path in raw_root.iterdir() if path.is_dir()):
+            funding_roots.append(venue_dir / "perp" / symbol / "funding")
+            funding_roots.append(venue_dir / "perp" / symbol / "fundingRate")
+    for funding_root in funding_roots:
+        for path in funding_root.glob("year=*/month=*"):
+            try:
+                year = int(path.parent.name.split("=")[1])
+                month = int(path.name.split("=")[1])
+            except (IndexError, ValueError):
+                continue
+            months.add(f"{year:04d}-{month:02d}")
     return sorted(months)
 
 

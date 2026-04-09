@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Set
 
+from project.core.exceptions import DataIntegrityError
 from project.live.contracts import PromotedThesis
 from project.live.thesis_store import ThesisStore
 
@@ -51,10 +52,12 @@ def _load_previous_batch_metadata(persist_dir: Path) -> Dict[str, str]:
     if not meta_path.exists():
         return {}
     try:
-        return json.loads(meta_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        _LOG.warning("Failed to load previous batch metadata: %s", exc)
-        return {}
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DataIntegrityError(f"Failed to read thesis batch metadata {meta_path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"Thesis batch metadata {meta_path} must be a JSON object")
+    return payload
 
 
 def _save_current_batch_metadata(persist_dir: Path, store: ThesisStore) -> None:

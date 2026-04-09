@@ -218,9 +218,11 @@ def read_run_manifest(
     try:
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-            return dict(data)
-    except Exception:
-        return {}
+    except Exception as exc:
+        raise DataIntegrityError(f"Failed to read run manifest from {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise DataIntegrityError(f"Run manifest {path} did not contain an object payload")
+    return dict(data)
 
 
 def reconcile_run_manifest_from_stage_manifests(
@@ -233,8 +235,14 @@ def reconcile_run_manifest_from_stage_manifests(
     if manifest_path.exists():
         try:
             run_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except Exception:
-            run_manifest = {}
+        except Exception as exc:
+            raise DataIntegrityError(
+                f"Failed to reconcile malformed run manifest at {manifest_path}: {exc}"
+            ) from exc
+        if not isinstance(run_manifest, dict):
+            raise DataIntegrityError(
+                f"Run manifest {manifest_path} did not contain an object payload"
+            )
     else:
         run_manifest = read_run_manifest(run_id, data_root=root)
     if not run_manifest:

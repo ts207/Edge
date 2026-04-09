@@ -151,7 +151,7 @@ def monitor_execution_drift(
     """
     Monitor if execution conditions are worse than research assumptions.
     """
-    slippage_drift = live_slippage_bps / max(1.0, research_slippage_bps)
+    slippage_drift = live_slippage_bps / max(1e-6, abs(research_slippage_bps))
     fill_rate_drift = live_fill_rate / max(1e-6, research_fill_rate)
 
     return {

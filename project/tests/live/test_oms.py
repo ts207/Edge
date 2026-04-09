@@ -12,6 +12,7 @@ from project.live.kill_switch import KillSwitchManager, KillSwitchReason
 from project.live.oms import (
     OrderManager,
     LiveOrder,
+    OrderNeutralizationFailed,
     OrderStatus,
     OrderSide,
     OrderType,
@@ -217,6 +218,41 @@ def test_submit_order_async_submits_to_venue():
     ]
     assert mgr.active_orders["order3c"].exchange_order_id == "venue-1"
     assert mgr.active_orders["order3c"].status == OrderStatus.NEW
+
+
+def test_cancel_all_orders_raises_if_any_symbol_cannot_be_cancelled():
+    class _DummyExchangeClient:
+        async def cancel_all_open_orders(self, symbol):
+            if symbol == "ETHUSDT":
+                raise RuntimeError("venue reject")
+
+    mgr = OrderManager(exchange_client=_DummyExchangeClient())
+    mgr.add_order(LiveOrder("btc", "BTCUSDT", OrderSide.BUY, OrderType.MARKET, 1.0))
+    mgr.add_order(LiveOrder("eth", "ETHUSDT", OrderSide.BUY, OrderType.MARKET, 1.0))
+
+    with pytest.raises(OrderNeutralizationFailed, match="ETHUSDT"):
+        __import__("asyncio").run(mgr.cancel_all_orders())
+
+
+def test_flatten_all_positions_raises_if_any_symbol_cannot_be_flattened():
+    class _DummyExchangeClient:
+        async def create_market_order(self, **kwargs):
+            if kwargs["symbol"] == "ETHUSDT":
+                raise RuntimeError("venue reject")
+
+    mgr = OrderManager(exchange_client=_DummyExchangeClient())
+    state_store = LiveStateStore()
+    state_store.update_from_exchange_snapshot(
+        {
+            "positions": [
+                {"symbol": "BTCUSDT", "quantity": 0.5, "unrealized_pnl": 0.0},
+                {"symbol": "ETHUSDT", "quantity": 1.0, "unrealized_pnl": 0.0},
+            ]
+        }
+    )
+
+    with pytest.raises(OrderNeutralizationFailed, match="ETHUSDT"):
+        __import__("asyncio").run(mgr.flatten_all_positions(state_store))
 
 
 def test_build_live_order_from_strategy_result_attaches_execution_metadata(

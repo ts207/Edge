@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from project.io.utils import read_parquet
 from project.domain.hypotheses import HypothesisSpec, TriggerSpec
 from project.domain.compiled_registry import get_domain_registry
 from project.events.governance import event_matches_filters, get_event_governance_metadata
@@ -76,9 +77,7 @@ def _validate_campaign_status(
         )
 
     if ledger_path.exists():
-        import pandas as pd
-
-        df = pd.read_parquet(ledger_path)
+        df = read_parquet(ledger_path)
 
         # Cumulative Budget
         limit_total = registries.limits.get("limits", {}).get(
@@ -129,9 +128,7 @@ def _validate_proposal_quality(
     if not ledger_path.exists():
         return  # First run always accepted
 
-    import pandas as pd
-
-    df = pd.read_parquet(ledger_path)
+    df = read_parquet(ledger_path)
 
     # 1. Retesting exhausted regions
     def get_eid(payload):

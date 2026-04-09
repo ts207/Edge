@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
+from project.core.exceptions import DataIntegrityError
+
 
 def _load_json(path_like: str | Path | None) -> Dict[str, Any]:
     if not path_like:
@@ -13,8 +15,10 @@ def _load_json(path_like: str | Path | None) -> Dict[str, Any]:
         return {}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    except Exception as exc:
+        raise DataIntegrityError(f"Failed to read benchmark review json artifact {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"Benchmark review json artifact {path} did not contain an object payload")
     return payload if isinstance(payload, dict) else {}
 
 

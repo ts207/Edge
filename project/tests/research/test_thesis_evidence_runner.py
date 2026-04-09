@@ -9,6 +9,7 @@ import yaml
 
 from project.research.seed_bootstrap import build_promotion_seed_inventory
 from project.research.seed_empirical import run_empirical_seed_pass
+from project.research import thesis_evidence_runner
 from project.research.thesis_evidence_runner import build_founding_thesis_evidence
 
 
@@ -152,6 +153,32 @@ def _synthetic_liquidation_proxy_features() -> pd.DataFrame:
             "spread_zscore": np.where(event_mask_np, 8.0, 0.5),
         }
     )
+
+
+def test_load_raw_dataset_uses_shared_parquet_reader(monkeypatch, tmp_path) -> None:
+    dataset_dir = tmp_path / "lake" / "raw" / "perp" / "BTCUSDT" / "ohlcv_5m"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    files = [dataset_dir / "year=2026" / "month=01" / "part-000.parquet"]
+    frame = pd.DataFrame({"timestamp": pd.to_datetime(["2026-01-01T00:00:00Z"], utc=True)})
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        thesis_evidence_runner,
+        "resolve_raw_dataset_dir",
+        lambda *_args, **_kwargs: dataset_dir,
+    )
+    monkeypatch.setattr(thesis_evidence_runner, "list_parquet_files", lambda _path: files)
+
+    def _fake_read_parquet(arg):
+        captured["arg"] = arg
+        return frame.copy()
+
+    monkeypatch.setattr(thesis_evidence_runner, "read_parquet", _fake_read_parquet)
+
+    out = thesis_evidence_runner._load_raw_dataset("BTCUSDT", "ohlcv_5m", data_root=tmp_path)
+
+    assert not out.empty
+    assert captured["arg"] == files
 
 
 def test_build_founding_thesis_evidence_writes_bundle(tmp_path: Path, monkeypatch) -> None:

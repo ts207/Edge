@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from project import PROJECT_ROOT
+from project.io.utils import read_table_auto as read_table_auto_compat
 
 
 def get_data_root() -> Path:
@@ -55,19 +56,7 @@ def read_table_auto(path: Path) -> Any:
     """Automatically reads a Parquet or CSV file into a pandas DataFrame."""
     if not path.exists():
         return None
-    try:
-        import pandas as pd
-
-        if path.suffix.lower() == ".parquet":
-            return pd.read_parquet(path)
-        if path.suffix.lower() == ".csv":
-            return pd.read_csv(path)
-    except ImportError:
-        # If pandas is not available, we can't read the table automatically
-        pass
-    except Exception:
-        pass
-    return None
+    return read_table_auto_compat(path)
 
 
 def build_timing_map(timings: List[Tuple[str, float]]) -> Dict[str, float]:

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from project.core.coercion import as_bool, safe_float
+from project.core.exceptions import DataIntegrityError
 from project.research.validation.schemas import StabilityResult
 
 
@@ -21,10 +22,11 @@ def _parse_mapping(value: Any) -> Dict[str, float]:
     if isinstance(value, str) and value.strip():
         try:
             parsed = json.loads(value)
-            if isinstance(parsed, dict):
-                return _parse_mapping(parsed)
-        except Exception:
-            return {}
+        except json.JSONDecodeError as exc:
+            raise DataIntegrityError(f"Failed to parse stability mapping JSON: {exc}") from exc
+        if not isinstance(parsed, dict):
+            raise DataIntegrityError("Stability mapping payload must be a JSON object")
+        return _parse_mapping(parsed)
     return {}
 
 

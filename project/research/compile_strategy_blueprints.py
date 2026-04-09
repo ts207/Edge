@@ -37,6 +37,7 @@ from project.research.utils.decision_safety import (
 )
 
 from project.core.execution_costs import resolve_execution_costs
+from project.io.parquet_compat import read_parquet_compat
 from project.io.utils import ensure_dir, write_parquet
 from project.research.compile_strategy_blueprints_artifacts import (
     write_strategy_contract_artifacts as _write_strategy_contract_artifacts_impl,
@@ -489,7 +490,10 @@ def _load_phase2_table(run_id: str, event_type: str) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     if path.suffix == ".parquet":
-        return pd.read_parquet(path)
+        try:
+            return pd.read_parquet(path)
+        except (ImportError, OSError, ValueError, FileNotFoundError):
+            return read_parquet_compat(path)
     return pd.read_csv(path)
 
 
@@ -587,7 +591,7 @@ def main() -> int:
             raise FileNotFoundError(f"Missing promoted candidates: {promoted_path}")
 
         edge_df = (
-            pd.read_parquet(promoted_path)
+            read_parquet_compat(promoted_path)
             if promoted_path.suffix == ".parquet"
             else pd.read_csv(promoted_path)
         )

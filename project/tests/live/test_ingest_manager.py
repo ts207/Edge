@@ -65,6 +65,22 @@ def test_backfill_drops_oldest_when_queue_is_full(monkeypatch) -> None:
     assert item["close"] == 20.5
 
 
+def test_backfill_drop_preserves_queue_task_accounting(monkeypatch) -> None:
+    monkeypatch.setattr(mgr, "BinanceWebSocketClient", DummyClient)
+
+    class RestClient:
+        async def get_klines(self, symbol, timeframe, limit=100):
+            return [
+                [1, 10, 11, 9, 10.5, 100],
+                [2, 20, 21, 19, 20.5, 200],
+            ]
+
+    ld = mgr.LiveDataManager(["BTCUSDT"], rest_client=RestClient())
+    ld.kline_queue = asyncio.Queue(maxsize=1)
+    asyncio.run(ld.backfill())
+    assert ld.kline_queue._unfinished_tasks == 1
+
+
 def test_on_message_routes_kline_and_ticker_events(monkeypatch) -> None:
     monkeypatch.setattr(mgr, "BinanceWebSocketClient", DummyClient)
     monkeypatch.setattr(

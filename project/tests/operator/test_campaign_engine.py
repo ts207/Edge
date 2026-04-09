@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 import project.operator.campaign_engine as campaign_engine
+from project.core.exceptions import DataIntegrityError
 from project.research.knowledge.memory import ensure_memory_store, read_memory_table
 
 
@@ -87,3 +89,16 @@ def test_run_campaign_executes_multiple_cycles(monkeypatch, tmp_path):
     assert report["executed_cycles"] == 2
     assert report["stop_reason"] == "decision_stop"
     assert Path(report["report_path"]).exists()
+
+
+def test_load_latest_cycle_report_raises_on_malformed_json(tmp_path):
+    paths = campaign_engine.CampaignPaths(
+        root=tmp_path,
+        proposals_dir=tmp_path / "proposals",
+        reports_dir=tmp_path / "reports",
+    )
+    paths.reports_dir.mkdir(parents=True)
+    (paths.reports_dir / "campaign_report.json").write_text("{", encoding="utf-8")
+
+    with pytest.raises(DataIntegrityError, match="Failed to read campaign report"):
+        campaign_engine._load_latest_cycle_report(paths)

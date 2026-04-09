@@ -45,7 +45,7 @@ parameters:
   oi_window: 288
   vol_window: 288
   min_periods: 24
-  oi_drop_quantile: 0.95
+  oi_drop_quantile: 0.98
   vol_surge_quantile: 0.90
   ret_window: 3
   price_drop_th: 0.003

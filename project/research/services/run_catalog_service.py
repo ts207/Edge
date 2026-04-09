@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from project.core.config import get_data_root
 from project.research.validation.manifest import load_manifest, RunArtifactManifest
+
+_LOG = logging.getLogger(__name__)
 
 def list_runs(stage: Optional[str] = None, data_root: Optional[Path] = None) -> List[Dict[str, Any]]:
     root = data_root or get_data_root()
@@ -32,8 +35,17 @@ def list_runs(stage: Optional[str] = None, data_root: Optional[Path] = None) -> 
                     m = load_manifest(manifest_path)
                     if stage is None or m.stage == stage:
                         runs.append(m.to_dict())
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _LOG.warning("Failed loading artifact manifest %s: %s", manifest_path, exc)
+                    invalid_row = {
+                        "run_id": run_dir.name,
+                        "stage": "invalid_manifest",
+                        "created_at": "",
+                        "manifest_path": str(manifest_path),
+                        "manifest_error": str(exc),
+                    }
+                    if stage is None or invalid_row["stage"] == stage:
+                        runs.append(invalid_row)
     return sorted(runs, key=lambda x: x["created_at"], reverse=True)
 
 def compare_manifests(run_id_a: str, run_id_b: str, stage: str, data_root: Optional[Path] = None) -> Dict[str, Any]:

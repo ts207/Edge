@@ -10,14 +10,18 @@ from pathlib import Path
 from statistics import median
 from typing import Dict, List
 
+from project.core.exceptions import DataIntegrityError
+
 DATA_ROOT = get_data_root()
 
 
 def _load_manifest(path: Path) -> Dict[str, object]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    except Exception as exc:
+        raise DataIntegrityError(f"Failed to read benchmark pipeline manifest {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"Benchmark pipeline manifest {path} did not contain an object payload")
     return payload if isinstance(payload, dict) else {}
 
 

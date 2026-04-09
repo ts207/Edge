@@ -13,7 +13,7 @@ from scipy import stats
 
 from project.core.config import get_data_root
 from project.events.governance import get_event_governance_metadata
-from project.io.utils import list_parquet_files, resolve_raw_dataset_dir
+from project.io.utils import list_parquet_files, read_parquet, resolve_raw_dataset_dir
 from project.research.artifact_hygiene import (
     build_artifact_refs,
     build_summary_metadata,
@@ -96,8 +96,7 @@ def _load_raw_dataset(symbol: str, dataset: str, *, data_root: Path) -> pd.DataF
     files = list_parquet_files(dataset_dir)
     if not files:
         return pd.DataFrame()
-    frames = [pd.read_parquet(file_path) for file_path in files]
-    frame = pd.concat(frames, ignore_index=True)
+    frame = read_parquet(files)
     if "timestamp" in frame.columns:
         frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
         frame = frame.sort_values("timestamp").drop_duplicates("timestamp").reset_index(drop=True)
@@ -137,8 +136,7 @@ def _load_feature_dataset(symbol: str, *, data_root: Path, timeframe: str = "5m"
     files = list_parquet_files(feature_dir)
     if not files:
         return pd.DataFrame()
-    frames = [pd.read_parquet(file_path) for file_path in files]
-    frame = pd.concat(frames, ignore_index=True)
+    frame = read_parquet(files)
     if "timestamp" in frame.columns:
         frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
         frame = frame.sort_values("timestamp").drop_duplicates("timestamp").reset_index(drop=True)

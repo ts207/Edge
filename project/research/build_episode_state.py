@@ -157,7 +157,7 @@ def main() -> int:
             print(f"No episodes file at {episodes_path}")
             finalize_manifest(manifest, "skipped")
             return 0
-        episodes = pd.read_parquet(episodes_path)
+        episodes = read_parquet(episodes_path)
 
         for symbol in symbols:
             grid = _load_bar_grid(args.run_id, symbol, args.timeframe)

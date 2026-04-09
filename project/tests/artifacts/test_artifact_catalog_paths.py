@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from project.artifacts.catalog import (
     blueprint_summary_path,
     checklist_path,
@@ -11,6 +13,7 @@ from project.artifacts.catalog import (
     promotion_summary_path,
     run_manifest_path,
 )
+from project.core.exceptions import DataIntegrityError
 
 
 def test_catalog_paths_and_json_loading(tmp_path: Path) -> None:
@@ -35,6 +38,15 @@ def test_catalog_paths_and_json_loading(tmp_path: Path) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text('{"status": "success"}', encoding="utf-8")
     assert load_json_dict(p)["status"] == "success"
+
+
+def test_load_json_dict_raises_for_malformed_existing_json(tmp_path: Path) -> None:
+    path = run_manifest_path("broken", tmp_path / "data")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(DataIntegrityError, match="Failed to read JSON artifact"):
+        load_json_dict(path)
 
 
 def test_phase2_candidates_prefers_existing_parquet(tmp_path: Path) -> None:

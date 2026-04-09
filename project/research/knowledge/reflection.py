@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.io.utils import read_parquet
 from project.specs.manifest import load_run_manifest
 
 from project.research.knowledge.schemas import REFLECTION_COLUMNS, canonical_json
@@ -27,7 +28,7 @@ def _read_json(path: Path) -> Dict[str, Any]:
 
 def _read_optional_table(path: Path) -> pd.DataFrame:
     if path.exists():
-        return pd.read_parquet(path)
+        return read_parquet(path)
     csv_path = path.with_suffix(".csv")
     if csv_path.exists():
         return pd.read_csv(csv_path)

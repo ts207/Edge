@@ -73,6 +73,16 @@ def test_manifest_roundtrip_and_resume_resolution(tmp_path: Path, monkeypatch) -
     assert resume_from_index == 1
 
 
+def test_read_run_manifest_raises_on_malformed_json(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(prov, "_get_data_root", lambda: tmp_path)
+    manifest_path = tmp_path / "runs" / "run-1" / "run_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(DataIntegrityError, match="Failed to read run manifest"):
+        prov.read_run_manifest("run-1")
+
+
 def test_resume_resolution_rejects_manifest_with_external_effective_config(tmp_path: Path) -> None:
     data_root = tmp_path / "data"
     manifest_dir = data_root / "runs" / "run-1"

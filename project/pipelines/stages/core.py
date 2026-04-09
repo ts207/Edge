@@ -20,6 +20,7 @@ def build_core_stages(
     runtime_max_events = int(getattr(args, "runtime_max_events", 250000) or 250000)
     determinism_replay_checks = bool(int(getattr(args, "determinism_replay_checks", 0) or 0))
     oms_replay_checks = bool(int(getattr(args, "oms_replay_checks", 0) or 0))
+    force_flag = str(int(getattr(args, "force", 0) or 0))
 
     timeframes = parse_timeframes(getattr(args, "timeframes", "5m"))
     universe_timeframe = timeframes[0]

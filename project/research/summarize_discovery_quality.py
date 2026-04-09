@@ -11,6 +11,7 @@ from typing import Dict, List
 
 import pandas as pd
 
+from project.io.utils import read_parquet
 from project.specs.manifest import finalize_manifest, start_manifest
 
 def _utc_now_iso() -> str:
@@ -51,7 +52,7 @@ def _load_candidates(path: Path) -> pd.DataFrame:
     path_parquet = path.with_suffix(".parquet")
     if path_parquet.exists():
         try:
-            return pd.read_parquet(path_parquet)
+            return read_parquet(path_parquet)
         except Exception:
             pass
     if path.exists():
@@ -171,7 +172,7 @@ def _build_summary_from_flat_phase2_layout(
         for symbol_dir in sorted(child for child in hypotheses_root.iterdir() if child.is_dir()):
             evaluated_path = symbol_dir / "evaluated_hypotheses.parquet"
             if evaluated_path.exists():
-                evaluated = pd.read_parquet(evaluated_path)
+                evaluated = read_parquet(evaluated_path)
                 if not evaluated.empty and "trigger_key" in evaluated.columns:
                     work = evaluated.copy()
                     work["event_type"] = work["trigger_key"].map(_event_type_from_trigger_key)
@@ -184,7 +185,7 @@ def _build_summary_from_flat_phase2_layout(
 
             failures_path = symbol_dir / "gate_failures.parquet"
             if failures_path.exists():
-                failures = pd.read_parquet(failures_path)
+                failures = read_parquet(failures_path)
                 if not failures.empty and "trigger_key" in failures.columns:
                     work = failures.copy()
                     work["event_type"] = work["trigger_key"].map(_event_type_from_trigger_key)

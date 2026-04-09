@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
 from project.io.utils import ensure_dir
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -53,12 +56,17 @@ def load_live_episodes(root: str | Path) -> List[Dict[str, Any]]:
     if not paths.episodic_path.exists():
         return []
     rows: list[dict[str, Any]] = []
-    for line in paths.episodic_path.read_text(encoding="utf-8").splitlines():
+    for line_no, line in enumerate(paths.episodic_path.read_text(encoding="utf-8").splitlines(), start=1):
         if not line.strip():
             continue
         try:
             payload = json.loads(line)
         except json.JSONDecodeError:
+            _LOG.warning(
+                "Skipping malformed live episodic memory line %s in %s",
+                line_no,
+                paths.episodic_path,
+            )
             continue
         if isinstance(payload, dict):
             rows.append(payload)

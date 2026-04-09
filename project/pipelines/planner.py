@@ -52,8 +52,8 @@ DEPENDENCY_PATTERNS: List[Tuple[str, List[str]]] = [
     ("run_determinism_replay_checks", ["run_causal_lane_ticks"]),
     ("run_oms_replay_validation", ["run_causal_lane_ticks"]),
     # Research Chain
-    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}"]),
-    ("analyze_events__{event}_{tf}", ["build_features_{tf}"]),
+    ("analyze_{script}__{event}_{tf}", ["build_features_{tf}", "build_market_context_{tf}"]),
+    ("analyze_events__{event}_{tf}", ["build_features_{tf}", "build_market_context_{tf}"]),
     ("build_event_registry__{event}_{tf}", ["@ANALYZERS_FOR_EVENT"]),
     ("canonicalize_event_episodes__{event}_{tf}", ["build_event_registry__{event}_{tf}"]),
     ("phase2_conditional_hypotheses__{event}_{tf}", ["canonicalize_event_episodes__{event}_{tf}"]),
@@ -277,6 +277,7 @@ def build_pipeline_plan(
     script_supports_flag: Callable[[Path, str], bool],
     retail_profile_name: str,
 ) -> Dict[str, StageDefinition]:
+    force_flag = str(int(getattr(args, "force", 0) or 0))
     # Collect all stages
     raw_stages = []
     raw_stages.extend(

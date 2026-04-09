@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from project.core.exceptions import DataIntegrityError
 from project.live.contracts.promoted_thesis import ThesisCapProfile
 
 
@@ -124,7 +125,12 @@ class DeploymentApprovalRecord(BaseModel):
     @classmethod
     def from_file(cls, path: str | Path) -> "DeploymentApprovalRecord":
         p = Path(path)
-        data = json.loads(p.read_text(encoding="utf-8"))
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DataIntegrityError(f"Failed to read deployment approval record {p}: {exc}") from exc
+        if not isinstance(data, dict):
+            raise DataIntegrityError(f"Deployment approval record {p} must be a JSON object")
         return cls.from_dict(data)
 
     def save(self, path: str | Path) -> Path:

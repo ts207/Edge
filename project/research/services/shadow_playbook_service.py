@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
+from project.io.utils import read_parquet
 
 
 GROUP_KEY = ["symbol", "event_type", "direction", "horizon"]
@@ -14,7 +15,7 @@ def _read_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     try:
-        return pd.read_parquet(path)
+        return read_parquet(path)
     except Exception:
         return pd.DataFrame()
 

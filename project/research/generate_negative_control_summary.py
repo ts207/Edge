@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from project.core.config import get_data_root
-from project.io.utils import ensure_dir
+from project.io.utils import ensure_dir, read_parquet
 from project.research.services.pathing import negative_control_out_dir
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -26,7 +26,7 @@ def _make_parser() -> argparse.ArgumentParser:
 def _read_csv_or_parquet(path: Path) -> pd.DataFrame:
     if path.suffix.lower() == ".parquet":
         try:
-            return pd.read_parquet(path)
+            return read_parquet(path)
         except (ImportError, OSError, ValueError):
             csv_path = path.with_suffix(".csv")
             if csv_path.exists():

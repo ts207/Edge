@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -77,7 +78,8 @@ class EpisodeRuntimeMatch:
     runtime_hint: str
 
 
-def load_episode_registry() -> dict[str, EpisodeContract]:
+@functools.lru_cache(maxsize=1)
+def _load_episode_registry_cached() -> dict[str, EpisodeContract]:
     payload = load_yaml_relative("spec/episodes/episode_registry.yaml")
     rows = payload.get("episodes", {}) if isinstance(payload, dict) else {}
     if not isinstance(rows, dict):
@@ -89,6 +91,10 @@ def load_episode_registry() -> dict[str, EpisodeContract]:
         contract = EpisodeContract.model_validate({"episode_id": str(episode_id), **raw})
         out[contract.episode_id] = contract
     return out
+
+
+def load_episode_registry() -> dict[str, EpisodeContract]:
+    return dict(_load_episode_registry_cached())
 
 
 def _normalize_events(active_event_families: Iterable[str]) -> list[str]:

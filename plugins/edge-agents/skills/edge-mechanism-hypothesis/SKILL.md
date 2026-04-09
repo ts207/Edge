@@ -5,13 +5,13 @@ description: Convert an Edge analyst report into 1-3 frozen bounded hypotheses u
 
 # Edge Mechanism Hypothesis
 
-This skill follows `agents/mechanism_hypothesis.md`.
+This skill follows `agents/mechanism-hypothesis.md`.
 
 ## Read first
 
-1. `agents/mechanism_hypothesis.md`
-2. `agents/handoffs/analyst_to_mechanism_hypothesis.md`
-3. The original proposal YAML
+1. `agents/mechanism-hypothesis.md`
+2. The original proposal YAML
+3. The structured analyst report
 
 ## Inputs
 

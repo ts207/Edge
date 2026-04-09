@@ -8,6 +8,7 @@ from typing import Any
 import yaml
 
 from project.core.config import get_data_root
+from project.core.exceptions import DataIntegrityError
 from project.operator.decision_engine import decide_next_action
 from project.operator.mutation_engine import generate_next_proposal, write_mutated_proposal
 from project.research.campaign_contract import CampaignContract, load_campaign_contract
@@ -106,8 +107,44 @@ def _persist_campaign_metadata(*, program_id: str, run_id: str, data_root: Path,
 def _load_latest_cycle_report(paths: CampaignPaths) -> dict[str, Any]:
     report_path = paths.reports_dir / "campaign_report.json"
     if report_path.exists():
-        return json.loads(report_path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise DataIntegrityError(
+                f"Failed to read campaign report from {report_path}: {exc}"
+            ) from exc
+        if not isinstance(payload, dict):
+            raise DataIntegrityError(
+                f"Campaign report {report_path} did not contain an object payload"
+            )
+        return payload
     return {}
+
+
+def _load_campaign_mutation_type(path: Path) -> str:
+    try:
+        raw_text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise DataIntegrityError(f"Failed to read campaign proposal {path}: {exc}") from exc
+
+    if path.suffix == ".json":
+        try:
+            payload = json.loads(raw_text)
+        except Exception as exc:
+            raise DataIntegrityError(f"Failed to parse campaign proposal json {path}: {exc}") from exc
+    else:
+        try:
+            payload = yaml.safe_load(raw_text)
+        except Exception as exc:
+            raise DataIntegrityError(f"Failed to parse campaign proposal yaml {path}: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise DataIntegrityError(f"Campaign proposal {path} did not contain an object payload")
+
+    campaign = payload.get("campaign", {})
+    if isinstance(campaign, dict):
+        return str(campaign.get("mutation_type", "generated"))
+    return "generated"
 
 
 def _write_campaign_report(paths: CampaignPaths, payload: dict[str, Any]) -> Path:
@@ -143,7 +180,11 @@ def run_campaign(*, campaign_spec_path: str | Path, data_root: Path | None = Non
         )
         run_id = str(issued.get("run_id", "") or "")
         program_id = str(issued.get("program_id", "") or program_id)
-        mutation_type = "initial" if cycle_number == 1 else json.loads(Path(current_proposal_path).read_text(encoding="utf-8")).get("campaign", {}).get("mutation_type", "generated") if current_proposal_path.suffix == ".json" else yaml.safe_load(Path(current_proposal_path).read_text(encoding="utf-8")).get("campaign", {}).get("mutation_type", "generated")
+        mutation_type = (
+            "initial"
+            if cycle_number == 1
+            else _load_campaign_mutation_type(Path(current_proposal_path))
+        )
 
         summary = write_operator_outputs_for_run(run_id=run_id, program_id=program_id, data_root=resolved)
         diagnostics = dict(summary.get("negative_result_diagnostics", {}) or {})

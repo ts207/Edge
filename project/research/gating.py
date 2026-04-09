@@ -31,6 +31,19 @@ from project.research.helpers.shrinkage import (
 
 log = logging.getLogger(__name__)
 
+_VALID_SPLIT_LABELS = {"train", "validation", "test"}
+
+
+def _normalized_split_label(row: Dict[str, Any]) -> str:
+    if "evt_split_label" in row:
+        raw = row.get("evt_split_label")
+    elif "split_label" in row:
+        raw = row.get("split_label")
+    else:
+        return "train"
+    label = str(raw).strip().lower()
+    return label if label in _VALID_SPLIT_LABELS else "unknown"
+
 
 def distribution_stats(returns: np.ndarray) -> Dict[str, float]:
     """Compute mean, std, HAC t-stat, p-value for a return distribution."""
@@ -94,6 +107,16 @@ def join_events_to_features(
         return pd.DataFrame()
 
     evt = events_df.copy()
+    alias_columns = {
+        "evt_split_label": "split_label",
+        "evt_vol_regime": "vol_regime",
+        "evt_liquidity_state": "liquidity_state",
+        "evt_market_liquidity_state": "market_liquidity_state",
+        "evt_depth_state": "depth_state",
+    }
+    for src, dst in alias_columns.items():
+        if src in evt.columns and dst not in evt.columns:
+            evt[dst] = evt[src]
     evt["event_ts"] = ts_ns_utc(evt[ts_col], allow_nat=True)
     evt = evt.dropna(subset=["event_ts"]).sort_values("event_ts").reset_index(drop=True)
     if evt.empty:
@@ -258,7 +281,7 @@ def _extract_event_returns(
             )
         )
         event_dir_list.append(event_direction)
-        event_split_list.append(str(row.get("evt_split_label", "train")).strip().lower())
+        event_split_list.append(_normalized_split_label(row))
 
     return {
         "returns": event_returns,
@@ -492,7 +515,7 @@ def _build_event_return_frame_from_joined(
             {
                 "event_ts": event_ts,
                 "cluster_day": event_ts.strftime("%Y-%m-%d"),
-                "split_label": str(row.get("evt_split_label", "train")).strip().lower(),
+                "split_label": _normalized_split_label(row),
                 "vol_regime": row.get("evt_vol_regime", row.get("vol_regime", "")),
                 "liquidity_state": row.get(
                     "evt_liquidity_state",
@@ -858,6 +881,15 @@ def calculate_expectancy_stats(
     )
     
     event_split_list = extracted["splits"]
+    if any(split == "unknown" for split in event_split_list):
+        log.warning(
+            "calculate_expectancy_stats encountered invalid split labels; failing closed for gating."
+        )
+        return {
+            **empty_expectancy_stats(),
+            "n_events": float(len(event_returns)),
+            "n_effective": float(len(event_returns)),
+        }
 
     # B1: gate t-statistic and p-value are computed on train+validation only.
     # The test split is a pure holdout and must not participate in gate decisions.

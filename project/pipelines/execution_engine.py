@@ -219,6 +219,9 @@ def run_stage(
         allowed_nonzero["generate_recommendations_checklist"] = {1}
     if stage.startswith("bridge_evaluate_phase2"):
         allowed_nonzero[stage] = {1}
+    # promote_candidates exits 1 when validation bundle is missing (graceful skip)
+    if stage == "promote_candidates":
+        allowed_nonzero[stage] = {1}
     accepted_codes = {0} | allowed_nonzero.get(stage, set())
     attempts = max(1, int(max_attempts))
     backoff_sec = max(0.0, float(retry_backoff_sec))

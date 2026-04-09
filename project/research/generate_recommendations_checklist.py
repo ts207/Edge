@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from project.core.coercion import as_bool, safe_float
+from project.io.utils import read_table_auto
 from project.research.recommendations.checklist import build_checklist_payload
 from project.specs.manifest import finalize_manifest, start_manifest
 
@@ -84,16 +85,12 @@ def _metric_value(payload: Dict[str, Any], name: str, default: float = 0.0) -> f
 
 
 def _read_table(parquet_path: Path, csv_path: Path) -> pd.DataFrame:
-    if parquet_path.exists():
-        try:
-            return pd.read_parquet(parquet_path)
-        except Exception:
-            pass
-    if csv_path.exists():
-        try:
-            return pd.read_csv(csv_path)
-        except Exception:
-            pass
+    frame = read_table_auto(parquet_path)
+    if isinstance(frame, pd.DataFrame) and (not frame.empty or parquet_path.exists()):
+        return frame
+    frame = read_table_auto(csv_path)
+    if isinstance(frame, pd.DataFrame):
+        return frame
     return pd.DataFrame()
 
 

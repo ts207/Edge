@@ -10,6 +10,7 @@ import pandas as pd
 
 from project.core.config import get_data_root
 from project.core.exceptions import DataIntegrityError
+from project.io.utils import read_parquet
 from project.domain.compiled_registry import get_domain_registry
 from project.events.governance import default_planning_event_ids, event_matches_filters
 from project.research.experiment_engine import RegistryBundle
@@ -29,7 +30,7 @@ def _safe_read_legacy_ledger(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     try:
-        return pd.read_parquet(path)
+        return read_parquet(path)
     except Exception as exc:
         _LOG.warning("Failed to read legacy campaign ledger from %s", path, exc_info=True)
         raise DataIntegrityError(f"Failed to read legacy campaign ledger from {path}: {exc}") from exc

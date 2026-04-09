@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from project.core.exceptions import DataIntegrityError
 from project.research.services.benchmark_review_service import (
     build_benchmark_review,
     classify_benchmark_slice,
@@ -91,3 +94,15 @@ def test_build_and_write_benchmark_review(tmp_path: Path) -> None:
     payload = json.loads(paths["json"].read_text(encoding="utf-8"))
     assert payload["schema_version"] == "benchmark_review_v1"
     assert paths["markdown"].exists()
+
+
+def test_classify_benchmark_slice_raises_on_malformed_report_json(tmp_path: Path) -> None:
+    foundation = tmp_path / "live.json"
+    foundation.write_text("{", encoding="utf-8")
+
+    with pytest.raises(DataIntegrityError, match="Failed to read benchmark review json artifact"):
+        classify_benchmark_slice(
+            generated_reports={
+                "live_foundation": str(foundation),
+            }
+        )

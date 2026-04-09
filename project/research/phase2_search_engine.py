@@ -40,7 +40,7 @@ from project.research.search.bridge_adapter import (
     hypotheses_to_bridge_candidates,
     split_bridge_candidates,
 )
-from project.io.utils import ensure_dir, write_parquet
+from project.io.utils import ensure_dir, read_parquet, write_parquet
 from project.research.search.distributed_runner import run_distributed_search
 from project.research._family_event_utils import load_features as load_features
 from project.research.search.search_feature_utils import (
@@ -69,6 +69,16 @@ _DEFAULT_BROAD_SEARCH_SPECS = {
 }
 
 _DEFAULT_PHASE2_MIN_T_STAT = 1.5
+
+
+def _safe_concat(frames: list, **kwargs) -> pd.DataFrame:
+    """pd.concat wrapper that clears .attrs to avoid DataFrame-in-attrs comparison errors."""
+    cleaned = []
+    for f in frames:
+        c = f.copy()
+        c.attrs = {}
+        cleaned.append(c)
+    return pd.concat(cleaned, **kwargs)
 
 
 def _is_default_broad_search_spec(search_spec: str) -> bool:
@@ -113,7 +123,13 @@ def _write_event_scoped_search_spec(
     narrowed["events"] = [event_type]
     event_templates = event_row.get("templates", [])
     if isinstance(event_templates, (list, tuple)) and event_templates:
-        narrowed["expression_templates"] = [str(item) for item in event_templates if str(item).strip()]
+        _registry = get_domain_registry()
+        expr_templates = [str(t) for t in event_templates if str(t).strip() and not _registry.is_filter_template(str(t))]
+        filter_templates = [str(t) for t in event_templates if str(t).strip() and _registry.is_filter_template(str(t))]
+        if expr_templates:
+            narrowed["expression_templates"] = expr_templates
+        if filter_templates:
+            narrowed["filter_templates"] = filter_templates
         narrowed.pop("templates", None)
     event_horizons = event_row.get("horizons", [])
     if isinstance(event_horizons, (list, tuple)) and event_horizons:
@@ -1612,7 +1628,7 @@ def run(
     # The controller reads this artefact in _build_next_actions() and injects
     # matching entries into the explore_adjacent queue.
     regime_conditional_df = (
-        pd.concat(regime_conditional_inputs, ignore_index=True)
+        _safe_concat(regime_conditional_inputs, ignore_index=True)
         if regime_conditional_inputs
         else pd.DataFrame()
     )
@@ -1620,7 +1636,7 @@ def run(
 
     # Phase 2 — Write fold_breakdown if computed
     if all_fold_breakdowns:
-        fold_df = pd.concat(all_fold_breakdowns, ignore_index=True)
+        fold_df = _safe_concat(all_fold_breakdowns, ignore_index=True)
         write_parquet(fold_df, out_dir / "phase2_candidate_fold_metrics.parquet")
 
     # Phase 4 — Write merged hierarchical stage artifacts (if any)
@@ -1715,10 +1731,10 @@ def run(
             hypotheses_generated=total_hypotheses_generated,
             feasible_hypotheses=total_feasible_hypotheses,
             metrics=(
-                pd.concat(metrics_frames, ignore_index=True) if metrics_frames else pd.DataFrame()
+                _safe_concat(metrics_frames, ignore_index=True) if metrics_frames else pd.DataFrame()
             ),
             candidate_universe=(
-                pd.concat(candidate_universe_frames, ignore_index=True)
+                _safe_concat(candidate_universe_frames, ignore_index=True)
                 if candidate_universe_frames
                 else pd.DataFrame()
             ),
@@ -1873,13 +1889,13 @@ def main(argv=None) -> int:
                 pass
         if candidate_path.exists():
             try:
-                stats["candidate_rows"] = int(len(pd.read_parquet(candidate_path)))
+                stats["candidate_rows"] = int(len(read_parquet(candidate_path)))
             except Exception:
                 pass
         if regime_candidates_path.exists():
             try:
                 stats["regime_conditional_candidate_rows"] = int(
-                    len(pd.read_parquet(regime_candidates_path))
+                    len(read_parquet(regime_candidates_path))
                 )
             except Exception:
                 pass

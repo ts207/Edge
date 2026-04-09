@@ -1,213 +1,66 @@
-Good. The benchmark is now doing the hard part: **running the real search pipeline across A–F**.
+## Current state (2026-04-09)
 
-Your current bottleneck is no longer execution. It is **evaluation semantics**.
+### What has run
 
-## What the results already prove
+**Infrastructure (pipeline bugs fixed — all working)**
+- 9 pipeline bugs fixed this session (dependency races, zero-output rejections, exit code handling, search engine event type routing, filter template mis-classification, DataFrame.attrs concat crash)
+- Pipeline runs end-to-end, exit 0, all stages succeed or warn
 
-Two things are already established:
+**Shared lake cache populated**
+- BTC+ETH 2021–2024 cleaned bars, features, market context written to shared lake
+- Subsequent runs use cache hits (fast)
 
-### 1. The benchmark is valid as an execution harness
+**LIQUIDATION_CASCADE_PROXY campaign — STOPPED**
 
-* all 30 jobs ran
-* event fixtures survived into phase 2
-* hypotheses were generated
-* candidates were produced
+Run: `liq_proxy_combined` (BTC+ETH, 2021–2024, oi_quantile=0.98, vol_quantile=0.90)
 
-That means the benchmark system is now a real experimental surface.
+| Symbol | Events | Best horizon | t_stat | mean bps | n_train |
+|--------|--------|-------------|--------|----------|---------|
+| BTCUSDT | ~1000 | 60m long | 1.73 | 10.1 | 597 |
+| ETHUSDT | ~930 | 60m long (also 15m) | 1.79 | 12.5 | 549 |
 
-### 2. Hierarchical search is the only component with an obvious signal so far
+**Decision: STOP.** Gate requires t≥2.0. Ceiling is ~1.8 per symbol across all threshold configs.
 
-From your counts:
+**Root cause:** Proxy detector fires on OI+volume coincidences that include false positives (funding payments, block trades, rollover events). Per-event return std ~150 bps vs 10 bps mean → SNR too low. Threshold calibration from 0.95→0.99 was fully explored; 0.98 is best known point.
 
-* `A/B/C` often produce `0`
-* `D/E/F` rescue multiple slices
+**Signal is real:** direction (long 60m) replicates BTC+ETH with consistent effect size. Effect is not noise — it's genuine cascade exhaustion bounce. But the proxy can't select events cleanly enough to pass gate.
 
-That is not enough for full promotion, but it is enough to say:
+### What the detector needs
 
-**hierarchical search has the first real positive signal**
+To reach t≥2.0, need ONE of:
+1. **Confirmation bar requirement** — OI must remain suppressed N bars after signal (e.g., `oi_suppress_bars: 2`). This would filter false-positive OI spikes that recover immediately.
+2. **Funding rate gate** — require `funding_rate > X` at signal time. Real cascades happen in funding-elevated regimes.
+3. **Cascade true positive** — use `LIQUIDATION_CASCADE` (requires liquidation_notional feed). Check if Bybit cross-exchange liquidation data exists in the lake.
 
-Everything else is still unevaluated, not disproven.
+### Next campaign options
 
-## What is missing
+**Option A: Fix the proxy**
+Add confirmation requirement to `LiquidationCascadeProxyDetector`. Spec change needed. Then re-run.
 
-Right now the scorecard is mostly asking:
-
-* promotion density
-* placebo fail rate
-* diversity score
-* cost-adjusted expectancy
-* cost survival
-
-But your current result summary is mostly based on:
-
-* candidate counts
-* whether a mode produced anything at all
-
-So the scorecard is inconclusive because **the benchmark output does not yet translate discovery artifacts into decision metrics strongly enough**.
-
-## The exact next move
-
-Do **not** add more pipeline logic.
-
-Add a **benchmark metric extraction layer** that turns each mode’s candidate parquet into decision-grade metrics.
-
-## What to compute next
-
-For each `slice × mode`, compute these:
-
-### Core quality
-
-* `candidate_count`
-* `top10_candidate_count`
-* `median_discovery_quality_score`
-* `max_discovery_quality_score`
-* `median_t_stat`
-* `median_estimate_bps`
-* `median_cost_survival_ratio`
-
-### Integrity
-
-* `median_falsification_component`
-* `placebo_fail_rate_top10`
-* `median_fold_stability_component`
-* `sign_consistency_top10`
-
-### Diversity
-
-* `unique_family_id_top10`
-* `unique_template_id_top10`
-* `unique_comp_key_top10`
-* `overlap_penalty_rate_top10`
-
-### Search-topology value
-
-This one is important for D vs C:
-
-* `candidate_emergence_rate` = whether mode found any valid candidates on the slice
-* `top_quality_when_nonzero`
-* `runtime_seconds`
-
-That lets you say:
-
-* flat failed, hierarchical found valid candidates
-* and whether those candidates are actually any good
-
-## Minimal change to make the benchmark decision-capable
-
-The fastest way is to upgrade `_extract_benchmark_metrics(...)` in `discovery_benchmark.py`.
-
-It already extracts some metrics. Extend it to include:
-
-```python
-{
-  "candidate_count": ...,
-  "top10_count": ...,
-  "top10": {
-    "promotion_density": ...,
-    "placebo_fail_rate": ...,
-    "rank_diversity_score": ...,
-    "median_after_cost_expectancy_bps": ...,
-    "median_cost_survival_ratio": ...,
-    "median_discovery_quality_score": ...,
-    "median_t_stat": ...,
-    "median_falsification_component": ...,
-    "median_fold_stability_component": ...,
-    "unique_family_id": ...,
-    "unique_template_id": ...,
-    "emergence": 0 or 1,
-  }
-}
+**Option B: Switch to FUNDING_EXTREME_ONSET**
+This event has cleaner signal (funding state is a leading indicator). Known to fire cleanly on 5m data. Run:
+```
+python3 -m project.pipelines.run_all \
+  --run_id funding_extreme_btc_full \
+  --symbols BTCUSDT,ETHUSDT \
+  --start 2021-01-01 \
+  --end 2024-12-31 \
+  --events FUNDING_EXTREME_ONSET \
+  --timeframe 5m
 ```
 
-The important addition is:
+**Option C: OI_FLUSH**
+Adjacent event, tighter definition. Often co-occurs with LIQUIDATION_CASCADE_PROXY but OI_FLUSH focuses on the OI component only. May have cleaner signal.
 
-* `emergence`
-* `median_discovery_quality_score`
-* `median_t_stat`
-* `fold / falsification summaries`
+### Infrastructure facts
 
-Because candidate count alone is too weak, but emergence + quality is enough to distinguish D from C.
+- `spec/events/LIQUIDATION_CASCADE_PROXY.yaml` — `oi_drop_quantile: 0.98` is the best calibration point
+- `spec/templates/registry.yaml` — LIQUIDATION_CASCADE_PROXY added (mirrors LIQUIDATION_CASCADE)
+- `project/events/phase2.py` — LIQUIDATION_CASCADE_PROXY added to PHASE2_EVENT_CHAIN
+- Pipeline runs with `--events EVENTNAME` correctly pins `phase2_event_type` to that event
+- Filter templates (e.g., `only_if_regime`) are now correctly separated from expression templates in resolved search specs
+- `promote_candidates` exits 1 + warns (not fails) when validation bundle is missing — expected in discovery runs
 
-## How to interpret your current results right now
+### Shared lake state
 
-### A → B
-
-No evidence yet that v2 scoring helps or hurts.
-
-Status: **hold**
-
-### B → C
-
-No evidence yet that folds improve integrity.
-
-Status: **hold**
-
-### C → D
-
-Clear signal that hierarchical search increases discovery coverage.
-
-But you still need to know:
-
-* are these rescued candidates any good?
-* or is hierarchical just surfacing more junk?
-
-Status: **provisional hold leaning promote pending quality metrics**
-
-### D → E
-
-No current evidence that ledger changes anything meaningful.
-
-Status: **hold**
-
-### E → F
-
-No current evidence that diversification changes anything meaningful.
-
-Status: **hold**
-
-## One very important issue
-
-### `m1_noisy_event` is currently not an informative slice
-
-You said it has `0 FUNDING_EXTREME_ONSET events`.
-
-That slice is currently functioning as:
-
-* empty coverage case
-* pipeline robustness check
-
-It is **not** a meaningful discovery comparison slice.
-
-So either:
-
-* replace its fixture with a slice that actually contains that event family, or
-* explicitly mark it as a negative-control/empty-coverage slice and exclude it from component promotion logic
-
-That matters because otherwise it dilutes the benchmark.
-
-## Best next implementation order
-
-### Step 1
-
-Upgrade metric extraction in `discovery_benchmark.py`
-
-### Step 2
-
-Re-run the benchmark suite
-
-### Step 3
-
-Inspect `benchmark_scorecard.json` again
-
-### Step 4
-
-Only if hierarchical still looks good on quality, move it to `stable-internal`
-
-## Strongest recommendation
-
-Do not try to make **all** components decision-capable at once.
-
-Make the benchmark good enough to answer this one first:
-
-**Are the D-mode rescued candidates actually better than zero-output flat search in a statistically and economically meaningful way?**
-
+All BTC+ETH 2021–2024 cleaned/features/market_context are cached in `data/lake/runs/liq_proxy_combined/`. Re-use this run_id for re-runs of the same date range to skip data building.

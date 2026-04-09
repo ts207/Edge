@@ -124,7 +124,7 @@ def _load_phase1_events(run_id: str, event_type: str) -> pd.DataFrame:
         return pd.DataFrame()
     try:
         if path.suffix == ".parquet":
-            df = pd.read_parquet(path)
+            df = read_parquet(path)
         else:
             df = pd.read_csv(path)
         if spec is not None:
@@ -142,7 +142,7 @@ def _load_phase2_candidates(run_id: str) -> pd.DataFrame:
     frames: List[pd.DataFrame] = []
     for path in sorted(phase2_root.rglob("phase2_candidates.parquet")):
         try:
-            frame = pd.read_parquet(path)
+            frame = read_parquet(path)
         except Exception:
             continue
         if frame.empty:

@@ -9,6 +9,7 @@ from project.core.coercion import as_bool
 from project.events.governance import promotion_event_metadata
 from project.core.exceptions import PromotionDecisionError
 from project.research.promotion.promotion_decision_support import (
+    _apply_bundle_policy_result,
     _evaluate_continuation_quality,
     _evaluate_control_audit_and_dsr,
     _evaluate_deploy_oos_and_low_capital,
@@ -30,23 +31,24 @@ from project.research.validation.evidence_bundle import (
 
 def _apply_authoritative_bundle_decision(
     result: Dict[str, Any],
+    bundle: Dict[str, Any],
     bundle_decision: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Apply bundle decision as authority for final promotion outcome fields.
 
-    This function overwrites row-level decision fields with bundle-level
-    decision values, making the bundle evaluation the single source of truth
-    for promotion status, track, rank score, and rejection reasons.
+    The bundle remains authoritative for final status/track/score, but
+    row-level diagnostics stay attached so promotion audit consumers do not
+    lose detailed reject codes or gate snapshots.
     """
-    out = dict(result)
+    out = _apply_bundle_policy_result(result, bundle, bundle_decision)
 
     out["eligible"] = bool(bundle_decision["eligible"])
     out["promotion_status"] = str(bundle_decision["promotion_status"])
     out["promotion_decision"] = str(bundle_decision["promotion_status"])
     out["promotion_track"] = str(bundle_decision["promotion_track"])
+    out["promotion_score"] = float(bundle_decision["rank_score"])
     out["rank_score"] = float(bundle_decision["rank_score"])
     out["rejection_reasons"] = list(bundle_decision.get("rejection_reasons", []))
-    out["reject_reason"] = "|".join(out["rejection_reasons"])
     out["gate_results"] = dict(bundle_decision.get("gate_results", {}))
 
     return out
@@ -79,6 +81,9 @@ def evaluate_row(
     enforce_placebo_controls: bool = True,
     enforce_timeframe_consensus: bool = True,
     enforce_regime_stability: bool = True,
+    require_scope_level_multiplicity: bool = True,
+    allow_multiplicity_scope_degraded: bool = True,
+    use_effective_q_value: bool = True,
     policy_version: str = "phase4_pr5_v1",
     bundle_version: str = "phase4_bundle_v1",
     is_reduced_evidence: bool = False,
@@ -153,7 +158,16 @@ def evaluate_row(
         
         scope_level_multiplicity_pass = True
         multiplicity_scope_degraded = as_bool(row.get("multiplicity_scope_degraded", False))
-        use_effective_q = as_bool(row.get("use_effective_q_value", True))
+        use_effective_q = bool(use_effective_q_value)
+        scope_metadata_present = any(
+            [
+                "q_value_scope" in row,
+                "multiplicity_scope_mode" in row,
+                "multiplicity_scope_key" in row,
+                "multiplicity_scope_version" in row,
+                "multiplicity_scope_degraded" in row,
+            ]
+        )
         
         values_for_effective_q = [v for v in [q_value, q_value_program, q_value_scope] if np.isfinite(v)]
         if values_for_effective_q:
@@ -195,17 +209,27 @@ def evaluate_row(
                 category="statistical_significance",
             )
         
-        require_scope_multiplicity = as_bool(row.get("require_scope_level_multiplicity", True))
-        allow_degraded = as_bool(row.get("allow_multiplicity_scope_degraded", True))
+        require_scope_multiplicity = bool(require_scope_level_multiplicity)
+        allow_degraded = bool(allow_multiplicity_scope_degraded)
         
-        if require_scope_multiplicity and not scope_q_value_available and not multiplicity_scope_degraded:
+        if (
+            require_scope_multiplicity
+            and scope_metadata_present
+            and not scope_q_value_available
+            and not multiplicity_scope_degraded
+        ):
             reasons.add_pair(
                 reject_reason="multiplicity_scope_missing",
                 promo_fail_reason="gate_promo_multiplicity_scope",
                 category="multiplicity_scope",
             )
             scope_level_multiplicity_pass = False
-        elif require_scope_multiplicity and multiplicity_scope_degraded and not allow_degraded:
+        elif (
+            require_scope_multiplicity
+            and scope_metadata_present
+            and multiplicity_scope_degraded
+            and not allow_degraded
+        ):
             reasons.add_pair(
                 reject_reason="multiplicity_scope_degraded_not_allowed",
                 promo_fail_reason="gate_promo_multiplicity_scope",
@@ -369,6 +393,9 @@ def evaluate_row(
             enforce_placebo_controls=enforce_placebo_controls,
             enforce_timeframe_consensus=enforce_timeframe_consensus,
             enforce_regime_stability=enforce_regime_stability,
+            require_scope_level_multiplicity=require_scope_level_multiplicity,
+            allow_multiplicity_scope_degraded=allow_multiplicity_scope_degraded,
+            use_effective_q_value=use_effective_q_value,
             policy_version=policy_version,
             bundle_version=bundle_version,
         )
@@ -384,7 +411,7 @@ def evaluate_row(
         bundle_decision = evaluate_promotion_bundle(bundle, policy)
         bundle["promotion_decision"] = dict(bundle_decision)
         bundle["rejection_reasons"] = list(bundle_decision.get("rejection_reasons", []))
-        result = _apply_authoritative_bundle_decision(result, bundle_decision)
+        result = _apply_authoritative_bundle_decision(result, bundle, bundle_decision)
         return _restore_boolean_compat_gates(result)
     except Exception as e:
         if isinstance(e, PromotionDecisionError):

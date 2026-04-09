@@ -22,6 +22,9 @@ def _build_bundle_policy(
     enforce_placebo_controls: bool,
     enforce_timeframe_consensus: bool,
     enforce_regime_stability: bool = True,
+    require_scope_level_multiplicity: bool = True,
+    allow_multiplicity_scope_degraded: bool = True,
+    use_effective_q_value: bool = True,
     policy_version: str = "phase4_pr5_v1",
     bundle_version: str = "phase4_bundle_v1",
 ) -> PromotionPolicy:
@@ -43,6 +46,9 @@ def _build_bundle_policy(
         enforce_placebo_controls=bool(enforce_placebo_controls),
         enforce_timeframe_consensus=bool(enforce_timeframe_consensus),
         enforce_regime_stability=bool(enforce_regime_stability),
+        require_scope_level_multiplicity=bool(require_scope_level_multiplicity),
+        allow_multiplicity_scope_degraded=bool(allow_multiplicity_scope_degraded),
+        use_effective_q_value=bool(use_effective_q_value),
         policy_version=str(policy_version),
         bundle_version=str(bundle_version),
     )

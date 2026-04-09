@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from project.core.exceptions import DataIntegrityError
 from project.research.promotion.core import build_promotion_statistical_audit
 from project.research.validation.evidence_bundle import (
     PromotionPolicy,
@@ -39,6 +40,17 @@ def test_build_stability_result_from_row_detects_regime_flip_and_symbol_consiste
     assert payload["cross_symbol_sign_consistency"] == 1.0
     assert payload["rolling_instability_score"] >= 0.0
     assert payload["details"]["by_regime"]["low"]["n_obs"] == 40
+
+
+def test_build_stability_result_from_row_raises_on_malformed_regime_mapping():
+    row = {
+        "effect_shrunk_state": 0.02,
+        "std_return": 0.01,
+        "expectancy_by_regime_bps": "{not valid json",
+    }
+
+    with pytest.raises(DataIntegrityError, match="Failed to parse stability mapping JSON"):
+        build_stability_result_from_row(row)
 
 
 def test_evidence_bundle_policy_and_serialization(tmp_path: Path):

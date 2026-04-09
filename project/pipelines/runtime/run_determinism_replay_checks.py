@@ -6,8 +6,8 @@ import json
 import sys
 from typing import Dict, List
 
-import pandas as pd
 from project import PROJECT_ROOT
+from project.io.utils import read_parquet
 from project.specs.manifest import finalize_manifest, start_manifest
 from project.specs.invariants import load_runtime_invariants_specs
 from project.runtime.replay import determinism_replay_check
@@ -44,7 +44,7 @@ def main() -> int:
     try:
         ticks: List[Dict[str, object]]
         if ticks_path.exists():
-            ticks = list(pd.read_parquet(ticks_path).to_dict(orient="records"))
+            ticks = list(read_parquet(ticks_path).to_dict(orient="records"))
         else:
             ticks = []
         specs = load_runtime_invariants_specs(PROJECT_ROOT.parent)

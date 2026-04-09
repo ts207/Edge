@@ -140,6 +140,11 @@ class LiveDataManager:
         _LOG.info(f"Stopping Live Data Manager for {self.exchange}...")
         await self.client.disconnect()
 
+    @staticmethod
+    def _drop_oldest_event(queue: asyncio.Queue) -> None:
+        queue.get_nowait()
+        queue.task_done()
+
     def _enqueue_threadsafe(self, queue: asyncio.Queue, event: Dict[str, Any], label: str) -> None:
         loop = self._loop
         if loop is None:
@@ -147,7 +152,7 @@ class LiveDataManager:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
                 try:
-                    queue.get_nowait()
+                    self._drop_oldest_event(queue)
                     queue.put_nowait(event)
                 except (asyncio.QueueEmpty, asyncio.QueueFull):
                     pass
@@ -159,7 +164,7 @@ class LiveDataManager:
             except asyncio.QueueFull:
                 _LOG.warning("%s queue full, dropping oldest event", label)
                 try:
-                    queue.get_nowait()
+                    self._drop_oldest_event(queue)
                     queue.put_nowait(event)
                 except (asyncio.QueueEmpty, asyncio.QueueFull):
                     pass

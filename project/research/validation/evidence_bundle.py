@@ -139,9 +139,17 @@ def build_evidence_bundle(
     bundle_version: str = "phase4_bundle_v1",
 ) -> Dict[str, Any]:
     row = _normalize_bundle_row_aliases(row)
-    candidate_id = str(row.get("candidate_id", "")).strip()
-    event_type = str(row.get("event_type", row.get("event", ""))).strip()
-    run_id = str(row.get("run_id", "")).strip()
+    candidate_id = (
+        str(row.get("candidate_id", "")).strip()
+        or str(row.get("plan_row_id", "")).strip()
+        or str(row.get("hypothesis_id", "")).strip()
+        or "__adhoc_candidate__"
+    )
+    event_type = (
+        str(row.get("event_type", row.get("primary_event_id", row.get("event", "")))).strip()
+        or "UNKNOWN_EVENT"
+    )
+    run_id = str(row.get("run_id", "")).strip() or "__adhoc__"
     stability = build_stability_result_from_row(row)
     falsification = evaluate_negative_controls(
         row=row,
@@ -396,6 +404,21 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
         effective_q_value = max(values_for_effective_q)
     else:
         effective_q_value = q_value
+    effective_q_value_for_check = (
+        effective_q_value if bool(policy.use_effective_q_value)
+        else (q_value if np.isfinite(q_value) else effective_q_value)
+    )
+    multiplicity_adjustment = bundle.get("multiplicity_adjustment", {}) or {}
+    scope_degraded = bool(as_bool(multiplicity_adjustment.get("multiplicity_scope_degraded", False)))
+    scope_metadata_present = any(
+        [
+            np.isfinite(q_value_scope),
+            bool(str(multiplicity_adjustment.get("multiplicity_scope_mode", "")).strip()),
+            bool(str(multiplicity_adjustment.get("multiplicity_scope_key", "")).strip()),
+            bool(str(multiplicity_adjustment.get("multiplicity_scope_version", "")).strip()),
+            scope_degraded,
+        ]
+    )
     tob_coverage = safe_float(cost.get("tob_coverage", meta.get("tob_coverage", np.nan)), np.nan)
     if not np.isfinite(tob_coverage):
         tob_coverage = safe_float(bundle.get("tob_coverage", np.nan), np.nan)
@@ -436,10 +459,30 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
             "pass"
             if (
                 np.isfinite(q_value)
-                and effective_q_value <= float(policy.max_q_value)
+                and effective_q_value_for_check <= float(policy.max_q_value)
                 and n_events >= int(policy.min_events)
             )
             else ("fail" if np.isfinite(q_value) else "missing_evidence")
+        ),
+        "multiplicity_scope": (
+            "pass"
+            if (
+                (not policy.require_scope_level_multiplicity)
+                or (not scope_metadata_present)
+                or (
+                    np.isfinite(q_value_scope)
+                    and q_value_scope <= float(policy.max_q_value)
+                )
+                or (
+                    scope_degraded
+                    and bool(policy.allow_multiplicity_scope_degraded)
+                )
+            )
+            else (
+                "fail"
+                if scope_metadata_present
+                else "missing_evidence"
+            )
         ),
         "multiplicity_diagnostics": (
             "pass"
@@ -540,6 +583,7 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
     }
     required_for_eligibility = [
         "statistical",
+        "multiplicity_scope",
         "multiplicity_diagnostics",
         "multiplicity_confirmatory",
         "stability",
@@ -561,6 +605,11 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
         required_for_eligibility.append("retail_viability")
     if policy.require_low_capital_viability:
         required_for_eligibility.append("low_capital_viability")
+    if (
+        not policy.require_scope_level_multiplicity
+        and "multiplicity_scope" in required_for_eligibility
+    ):
+        required_for_eligibility.remove("multiplicity_scope")
     if (
         not policy.enforce_baseline_beats_complexity
         and "baseline_beats_complexity" in required_for_eligibility

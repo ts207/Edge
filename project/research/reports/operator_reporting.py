@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 
 from project.core.config import get_data_root
+from project.io.utils import read_table_auto
 from project.operator.stability import write_sprint4_outputs_for_run
 from project.research.knowledge.memory import read_memory_table, write_memory_table
 from project.research.knowledge.reflection import build_run_reflection
@@ -34,14 +35,16 @@ def operator_summary_paths(run_id: str, *, data_root: Path | None = None) -> Ope
 
 
 def _read_table(path: Path) -> pd.DataFrame:
-    if path.exists():
-        if path.suffix.lower() == ".parquet":
-            return pd.read_parquet(path)
-        if path.suffix.lower() == ".csv":
-            return pd.read_csv(path)
+    frame = read_table_auto(path)
+    if isinstance(frame, pd.DataFrame) and not frame.empty:
+        return frame
+    if isinstance(frame, pd.DataFrame) and path.exists():
+        return frame
     alt = path.with_suffix(".csv") if path.suffix.lower() == ".parquet" else path.with_suffix(".parquet")
     if alt.exists():
-        return _read_table(alt)
+        alt_frame = read_table_auto(alt)
+        if isinstance(alt_frame, pd.DataFrame):
+            return alt_frame
     return pd.DataFrame()
 
 

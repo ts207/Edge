@@ -60,3 +60,31 @@ def test_read_parquet_loads_legacy_csv_compatibility_path(tmp_path: Path) -> Non
     restored = io_utils.read_parquet(tmp_path / "legacy.parquet", columns=["a"])
 
     assert restored.to_dict(orient="list") == {"a": [1]}
+
+
+def test_read_parquet_uses_multi_file_pyarrow_fast_path_when_available(tmp_path: Path, monkeypatch) -> None:
+    first = tmp_path / "part-000.parquet"
+    second = tmp_path / "part-001.parquet"
+    first.write_bytes(b"PAR1")
+    second.write_bytes(b"PAR1")
+
+    captured: dict[str, object] = {}
+
+    class _FakeTable:
+        def to_pandas(self) -> pd.DataFrame:
+            return pd.DataFrame({"a": [1, 2]})
+
+    def _fake_read_table(paths, columns=None):
+        captured["paths"] = paths
+        captured["columns"] = columns
+        return _FakeTable()
+
+    monkeypatch.setattr(io_utils, "HAS_PYARROW", True)
+    monkeypatch.setattr(io_utils, "_force_parquet_fallback_enabled", lambda: False)
+    monkeypatch.setattr(io_utils.pq, "read_table", _fake_read_table)
+
+    restored = io_utils.read_parquet([first, second], columns=["a"])
+
+    assert restored.to_dict(orient="list") == {"a": [1, 2]}
+    assert captured["paths"] == [str(first), str(second)]
+    assert captured["columns"] == ["a"]

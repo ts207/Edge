@@ -45,6 +45,12 @@ class _DummyOrderManager:
         self.flatten_calls += 1
 
 
+class _FailingOrderManager(_DummyOrderManager):
+    async def cancel_all_orders(self) -> None:
+        self.cancel_calls += 1
+        raise RuntimeError("cancel failed")
+
+
 def test_live_runner_exposes_persistent_session_metadata(tmp_path) -> None:
     snapshot_path = tmp_path / "live_session_state.json"
     report_path = tmp_path / "execution_quality.json"
@@ -234,6 +240,31 @@ def test_live_runner_actuates_kill_switch_shutdown_and_unwind() -> None:
     assert order_manager.flatten_calls == 1
 
 
+def test_live_runner_does_not_shutdown_if_kill_switch_unwind_fails() -> None:
+    data_manager = _DummyDataManager()
+    order_manager = _FailingOrderManager()
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        order_manager=order_manager,
+        data_manager=data_manager,
+        runtime_mode="trading",
+        strategy_runtime={"implemented": True},
+    )
+    runner._running = True
+
+    async def _exercise() -> None:
+        runner.kill_switch.trigger(KillSwitchReason.MANUAL, "manual test")
+        assert runner._kill_switch_task is not None
+        await runner._kill_switch_task
+
+    asyncio.run(_exercise())
+
+    assert runner._running is False
+    assert data_manager.stop_calls == 0
+    assert order_manager.cancel_calls == 1
+    assert order_manager.flatten_calls == 0
+
+
 def test_live_runner_monitor_only_kill_switch_does_not_mutate_venue() -> None:
     data_manager = _DummyDataManager()
     order_manager = _DummyOrderManager()
@@ -256,6 +287,49 @@ def test_live_runner_monitor_only_kill_switch_does_not_mutate_venue() -> None:
     assert data_manager.stop_calls == 1
     assert order_manager.cancel_calls == 0
     assert order_manager.flatten_calls == 0
+
+
+def test_live_runner_marks_kline_task_done_even_when_processing_fails() -> None:
+    data_manager = _DummyDataManager()
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        data_manager=data_manager,
+    )
+    runner._running = True
+
+    async def _boom(event) -> None:
+        raise RuntimeError("processing failed")
+
+    runner._process_kline_for_thesis_runtime = _boom  # type: ignore[method-assign]
+
+    event = KlineEvent(
+        symbol="BTCUSDT",
+        timeframe="1m",
+        timestamp=pd.Timestamp("2026-01-01T00:00:00Z"),
+        open=1.0,
+        high=1.0,
+        low=1.0,
+        close=1.0,
+        volume=1.0,
+        quote_volume=1.0,
+        taker_base_volume=1.0,
+        is_final=True,
+    )
+
+    async def _exercise() -> None:
+        consumer = asyncio.create_task(runner._consume_klines())
+        await data_manager.kline_queue.put(event)
+        await asyncio.sleep(0.05)
+        runner._running = False
+        consumer.cancel()
+        try:
+            await consumer
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(_exercise())
+
+    assert data_manager.kline_queue._unfinished_tasks == 0
 
 
 class _DummyStrategy:
@@ -1132,6 +1206,53 @@ def test_live_runner_refreshes_runtime_market_features_and_computes_open_interes
         assert snapshot["open_interest_delta_fraction"] == pytest.approx(-0.1)
         assert snapshot["mark_price"] == pytest.approx(102.0)
         assert snapshot["mid_price"] == pytest.approx(102.0)
+
+    asyncio.run(_exercise())
+
+
+def test_live_runner_clears_runtime_market_features_after_refresh_failure() -> None:
+    responses = iter(
+        [
+            {"funding_rate": 0.0010, "open_interest": 1000.0, "mark_price": 101.0},
+            RuntimeError("rest outage"),
+        ]
+    )
+
+    async def _fetch_market_features(symbol: str):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    runner = LiveEngineRunner(
+        ["btcusdt"],
+        data_manager=_DummyDataManager(),
+        strategy_runtime={
+            "implemented": True,
+            "supported_event_ids": ["LIQUIDATION_CASCADE"],
+        },
+        market_feature_fetcher=_fetch_market_features,
+    )
+    runner._thesis_store = object()
+
+    async def _exercise() -> None:
+        await runner._refresh_runtime_market_features_once()
+        assert runner._latest_runtime_market_features_by_symbol["BTCUSDT"]["funding_rate"] == pytest.approx(
+            0.0010
+        )
+        await runner._refresh_runtime_market_features_once()
+        assert "BTCUSDT" not in runner._latest_runtime_market_features_by_symbol
+
+        snapshot = runner._current_market_snapshot(
+            symbol="BTCUSDT",
+            timeframe="5m",
+            close=103.0,
+            timestamp="2026-04-01T00:00:00+00:00",
+            move_bps=450.0,
+        )
+        assert snapshot["funding_rate"] == pytest.approx(0.0)
+        assert snapshot["open_interest"] == pytest.approx(0.0)
+        assert snapshot["open_interest_delta_fraction"] == pytest.approx(0.0)
 
     asyncio.run(_exercise())
 

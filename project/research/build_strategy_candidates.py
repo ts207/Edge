@@ -12,8 +12,7 @@ import pandas as pd
 
 from project import PROJECT_ROOT
 from project.core.config import get_data_root
-from project.io.utils import write_parquet
-from project.io.utils import ensure_dir
+from project.io.utils import ensure_dir, read_parquet, read_table_auto, write_parquet
 from project.research.candidates.builder import (
     build_compiled_blueprint_strategy_candidate,
     build_edge_strategy_candidate,
@@ -66,9 +65,8 @@ def _synthesize_fractional_allocation_policy(
 def _read_optional_table(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    if path.suffix.lower() == ".parquet":
-        return pd.read_parquet(path)
-    return pd.read_csv(path)
+    frame = read_table_auto(path)
+    return frame if isinstance(frame, pd.DataFrame) else pd.DataFrame()
 
 
 def _load_edge_candidates_df(*, data_root: Path, run_id: str) -> pd.DataFrame:
@@ -217,7 +215,7 @@ def _build_alpha_bundle_candidates(
     )
     if not scores_path.exists():
         return []
-    scores_df = pd.read_parquet(scores_path)
+    scores_df = read_parquet(scores_path)
     if scores_df.empty or "symbol" not in scores_df.columns or "score" not in scores_df.columns:
         return []
 

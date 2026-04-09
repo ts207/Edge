@@ -273,7 +273,8 @@ def _manifest_declared_outputs_exist(
     if not isinstance(outputs, list):
         return False
     if not outputs:
-        return True
+        stage_name = str(payload.get("stage", "")).strip()
+        return _stage_allows_zero_outputs(stage_name)
     for row in outputs:
         if not isinstance(row, dict):
             return False
@@ -322,51 +323,40 @@ def is_phase2_stage(stage_name: str) -> bool:
 def _stage_allows_zero_outputs(stage_name: str) -> bool:
     zero_output_allowed_stages = frozenset({
         "ingest",
+        "build_strategy_candidates",
+        "compile_strategy_blueprints",
+        "select_profitable_strategies",
     })
+    zero_output_allowed_stages_containing = (
+        "build_event_registry",
+        "canonicalize_event_episodes",
+        "analyze_events",
+        "phase1_correlation_clustering",
+        "phase2_search_engine",
+        "phase2_conditional_hypotheses",
+        "bridge_evaluate_phase2",
+        "analyze_interaction_lift",
+        "export_edge_candidates",
+        "generate_negative_control_summary",
+        "promote_candidates",
+        "update_edge_registry",
+        "update_campaign_memory",
+        "analyze_conditional_expectancy",
+        "validate_expectancy_traps",
+        "generate_recommendations_checklist",
+        "summarize_discovery_quality",
+        "evaluate_naive_entry",
+        "finalize_experiment",
+    )
     if stage_name in zero_output_allowed_stages:
         return True
+    if any(s in stage_name for s in zero_output_allowed_stages_containing):
+        return True
     zero_output_prefixes = (
+        "ingest_",
         "validate_",
         "build_normalized_replay",
         "run_causal_lane",
         "build_microstructure_rollup",
     )
     return stage_name.startswith(zero_output_prefixes)
-
-
-def _manifest_declared_outputs_exist(
-    manifest_path: Path,
-    payload: Mapping[str, object],
-) -> bool:
-    def _path_has_payload(path: Path) -> bool:
-        if not path.exists():
-            return False
-        if path.is_dir():
-            for child in path.rglob("*"):
-                if child.is_file():
-                    return True
-            return False
-        return path.is_file()
-
-    outputs = payload.get("outputs")
-    if not isinstance(outputs, list):
-        return False
-    if not outputs:
-        return True
-    for row in outputs:
-        if not isinstance(row, dict):
-            return False
-        raw_path = str(row.get("path", "")).strip()
-        if not raw_path:
-            return False
-        candidate = Path(raw_path)
-        if candidate.is_absolute():
-            if not _path_has_payload(candidate):
-                return False
-            continue
-        if _path_has_payload(manifest_path.parent / candidate):
-            continue
-        if _path_has_payload(PROJECT_ROOT.parent / candidate):
-            continue
-        return False
-    return True

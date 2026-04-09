@@ -962,13 +962,30 @@ def apply_historical_frontier_multiple_testing(
 
 # --- Phase 2 V2 Scoring Components ---
 
-def score_falsification_precheck(row: pd.Series) -> tuple[float, list[str]]:
+def _row_get(row: object, key: str, default: object = np.nan) -> object:
+    getter = getattr(row, "get", None)
+    if callable(getter):
+        return getter(key, default)
+    try:
+        return row[key]  # type: ignore[index]
+    except Exception:
+        return default
+
+
+def _row_has(row: object, key: str) -> bool:
+    try:
+        return key in row  # type: ignore[operator]
+    except Exception:
+        return False
+
+
+def score_falsification_precheck(row: object) -> tuple[float, list[str]]:
     penalty = 0.0
     flags = []
     
-    mean_bps = row.get("mean_return_bps", np.nan)
-    placebo_shift = row.get("placebo_shift_effect", np.nan)
-    null_ratio = row.get("null_strength_ratio", np.nan)
+    mean_bps = _row_get(row, "mean_return_bps", np.nan)
+    placebo_shift = _row_get(row, "placebo_shift_effect", np.nan)
+    null_ratio = _row_get(row, "null_strength_ratio", np.nan)
     
     if pd.notna(mean_bps) and pd.notna(placebo_shift):
         if abs(placebo_shift) > abs(mean_bps):
@@ -978,7 +995,7 @@ def score_falsification_precheck(row: pd.Series) -> tuple[float, list[str]]:
             penalty += 1.0
             flags.append("weak_null_strength")
             
-    reversal = row.get("direction_reversal_effect", np.nan)
+    reversal = _row_get(row, "direction_reversal_effect", np.nan)
     if pd.notna(reversal) and pd.notna(mean_bps) and abs(mean_bps) > 1e-10:
         # Guard: np.sign(0) == 0, which would falsely match any zero reversal
         if np.sign(mean_bps) != 0 and np.sign(reversal) == np.sign(mean_bps):
@@ -988,11 +1005,11 @@ def score_falsification_precheck(row: pd.Series) -> tuple[float, list[str]]:
     return penalty, flags
 
 
-def score_tradability_precheck(row: pd.Series, config: dict) -> tuple[float, list[str]]:
+def score_tradability_precheck(row: object, config: dict) -> tuple[float, list[str]]:
     score = 0.0
     flags = []
     
-    survival_ratio = row.get("cost_survival_ratio", np.nan)
+    survival_ratio = _row_get(row, "cost_survival_ratio", np.nan)
     if pd.notna(survival_ratio):
         if survival_ratio < 0.5:
             score -= 1.0
@@ -1000,13 +1017,13 @@ def score_tradability_precheck(row: pd.Series, config: dict) -> tuple[float, lis
         elif survival_ratio > 1.5:
             score += 1.0
             
-    turnover = row.get("turnover_proxy", np.nan)
+    turnover = _row_get(row, "turnover_proxy", np.nan)
     turnover_threshold = config.get("default_turnover_penalty_thresh", 0.8)
     if pd.notna(turnover) and turnover > turnover_threshold:
         score -= 1.0
         flags.append("high_turnover_penalty")
         
-    coverage = row.get("coverage_ratio", np.nan)
+    coverage = _row_get(row, "coverage_ratio", np.nan)
     coverage_threshold = config.get("default_coverage_thresh", 0.01)
     if pd.notna(coverage) and coverage < coverage_threshold:
         score -= 0.5
@@ -1015,12 +1032,12 @@ def score_tradability_precheck(row: pd.Series, config: dict) -> tuple[float, lis
     return score, flags
 
 
-def score_novelty_precheck(row: pd.Series, overlap_context: dict) -> tuple[float, float, str, list[str]]:
+def score_novelty_precheck(row: object, overlap_context: dict) -> tuple[float, float, str, list[str]]:
     key = (
-        str(row.get("event_family_key", "")),
-        str(row.get("template_family_key", "")),
-        str(row.get("direction_key", "")),
-        str(row.get("horizon_bucket", ""))
+        str(_row_get(row, "event_family_key", "")),
+        str(_row_get(row, "template_family_key", "")),
+        str(_row_get(row, "direction_key", "")),
+        str(_row_get(row, "horizon_bucket", ""))
     )
     cluster_id = "|".join(key)
     
@@ -1042,11 +1059,11 @@ def score_novelty_precheck(row: pd.Series, overlap_context: dict) -> tuple[float
     return novelty_score, overlap_penalty, cluster_id, flags
 
 
-def score_support_component(row: pd.Series, config: dict) -> tuple[float, list[str]]:
+def score_support_component(row: object, config: dict) -> tuple[float, list[str]]:
     score = 0.0
     flags = []
     
-    regime_support = row.get("regime_support_ratio", np.nan)
+    regime_support = _row_get(row, "regime_support_ratio", np.nan)
     min_support = config.get("min_acceptable_regime_support_ratio", 0.5)
     
     if pd.notna(regime_support):
@@ -1059,24 +1076,25 @@ def score_support_component(row: pd.Series, config: dict) -> tuple[float, list[s
     return score, flags
 
 
-def score_significance_component(row: pd.Series) -> float:
-    t_stat = row.get("t_stat", np.nan)
+def score_significance_component(row: object) -> float:
+    t_stat = _row_get(row, "t_stat", np.nan)
     if pd.isna(t_stat):
         return 0.0
     return float(np.clip(abs(t_stat) / 2.0, 0.0, 3.0))
 
-def score_fold_stability_precheck(row: pd.Series, config: dict) -> tuple[float, float, list[str]]:
+def score_fold_stability_precheck(row: object, config: dict) -> tuple[float, float, list[str]]:
     flags = []
     stability_penalty = 0.0
     evidence_bonus = 0.0
     
-    if "fold_valid_count" not in row or pd.isna(row["fold_valid_count"]) or row["fold_valid_count"] < 1:
+    fold_valid_count = _row_get(row, "fold_valid_count", np.nan)
+    if not _row_has(row, "fold_valid_count") or pd.isna(fold_valid_count) or fold_valid_count < 1:
         return 0.0, 0.0, []
         
-    valid_folds = int(row["fold_valid_count"])
-    sign_consistency = float(row.get("fold_sign_consistency", 0.0))
-    fail_ratio = float(row.get("fold_fail_ratio", 1.0))
-    worst_oos = float(row.get("fold_worst_oos_expectancy", 0.0))
+    valid_folds = int(fold_valid_count)
+    sign_consistency = float(_row_get(row, "fold_sign_consistency", 0.0))
+    fail_ratio = float(_row_get(row, "fold_fail_ratio", 1.0))
+    worst_oos = float(_row_get(row, "fold_worst_oos_expectancy", 0.0))
     
     # 1. Sign Consistency (Bonus)
     if sign_consistency >= 0.8:
@@ -1098,7 +1116,7 @@ def score_fold_stability_precheck(row: pd.Series, config: dict) -> tuple[float, 
     return evidence_bonus, stability_penalty, flags
 
 
-def build_discovery_quality_score(row: pd.Series, overlap_context: dict, config: dict) -> dict:
+def build_discovery_quality_score(row: object, overlap_context: dict, config: dict) -> dict:
     falsification_penalty, falsification_flags = score_falsification_precheck(row)
     tradability_score, tradability_flags = score_tradability_precheck(row, config)
     novelty_score, overlap_penalty, cluster_id, overlap_flags = score_novelty_precheck(row, overlap_context)
@@ -1158,21 +1176,21 @@ def annotate_discovery_v2_scores(candidates: pd.DataFrame, config: dict) -> pd.D
         return candidates
         
     out = candidates.copy()
-    
-    overlap_context = {}
-    for idx, row in out.iterrows():
-        key = (
-            str(row.get("event_family_key", "")),
-            str(row.get("template_family_key", "")),
-            str(row.get("direction_key", "")),
-            str(row.get("horizon_bucket", ""))
-        )
-        cluster_id = "|".join(key)
-        overlap_context[cluster_id] = overlap_context.get(cluster_id, 0) + 1
+
+    cluster_keys = (
+        out.get("event_family_key", pd.Series("", index=out.index)).astype(str)
+        + "|"
+        + out.get("template_family_key", pd.Series("", index=out.index)).astype(str)
+        + "|"
+        + out.get("direction_key", pd.Series("", index=out.index)).astype(str)
+        + "|"
+        + out.get("horizon_bucket", pd.Series("", index=out.index)).astype(str)
+    )
+    overlap_context = cluster_keys.value_counts(dropna=False).to_dict()
         
     v2_metrics = []
-    for idx, row in out.iterrows():
-        v2_metrics.append(build_discovery_quality_score(row, overlap_context, config))
+    for row in out.itertuples(index=False):
+        v2_metrics.append(build_discovery_quality_score(row._asdict(), overlap_context, config))
         
     v2_df = pd.DataFrame(v2_metrics, index=out.index)
     
