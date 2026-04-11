@@ -11,7 +11,7 @@ The plugin should track the repo's current front door and maintenance loop:
 
 ## What is included
 
-- skills for repo orientation, maintenance, ChatGPT-app development, coordination, analysis, compiler flow, and thesis bootstrap
+- skills for repo orientation, maintenance, ChatGPT-app development, coordination, analysis, and compiler flow
 - thin wrappers around the canonical `make discover|promote|export|deploy-paper`, `edge operator ...`, and contract-validation surfaces
 - hook definitions for contract-sensitive edits and recent-run awareness
 
@@ -34,8 +34,6 @@ The plugin should track the repo's current front door and maintenance loop:
 - `scripts/edge_compare_runs.sh`
 - `scripts/edge_show_run_artifacts.sh`
 - `scripts/edge_export_theses.sh`
-- `scripts/edge_package_theses.sh`
-- `scripts/edge_bootstrap_theses.sh`
 
 ## Dependency rule
 
@@ -57,7 +55,6 @@ The plugin now helps route common developer change types:
 - operator or proposal-surface changes -> contract verification plus current operator-doc review
 - event, ontology, or registry changes -> contract verification plus event-contract and system-map regeneration
 - runtime-thesis or overlap changes -> explicit run export plus overlap regeneration
-- advanced bootstrap packaging changes -> `make package`
 - ChatGPT app changes -> `edge-chatgpt-app` inspection/serve helpers plus canonical operator surfaces
 - plugin changes -> plugin-cache target discovery plus sync and sync checks
 

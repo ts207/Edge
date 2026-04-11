@@ -19,10 +19,9 @@ Use this as the default project skill for `/home/irene/Edge`.
 ## Core model
 
 - Edge is a governed event-driven crypto research platform.
-- Normal progress happens in one of three connected loops:
+- Normal progress happens in one of two connected loops:
   - bounded experiment lane: `proposal -> explain -> preflight -> plan -> run -> review -> export`
   - runtime/export loop: `promoted run -> explicit export -> explicit runtime selection`
-  - advanced bootstrap lane: `seed inventory -> testing -> empirical evidence -> package -> overlap graph`
 - The operating unit is a bounded hypothesis, not a broad discovery brief.
 - Sprint 7 live runtime layer: `ThesisStore -> DeploymentGate -> KillSwitchManager -> RiskEnforcer -> OMS`
   - Only `live_enabled` theses may trade; requires a `DeploymentApprovalRecord` with `status='approved'`
@@ -62,7 +61,6 @@ edge operator regime-report --run_id <run_id>
 edge operator compare --run_ids <baseline_run,followup_run>
 edge validate report --run_id <run_id>
 ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>
-./plugins/edge-agents/scripts/edge_package_theses.sh [thesis_run_id]
 ./plugins/edge-agents/scripts/edge_verify_contracts.sh
 ./plugins/edge-agents/scripts/edge_validate_repo.sh contracts|minimum-green|all
 ```

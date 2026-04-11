@@ -2,7 +2,7 @@ version: 1
 kind: thesis_registry
 schema_version: thesis_registry_v1
 notes:
-  - Canonical authored thesis clauses for the founding/bootstrap lane.
+  - Canonical authored thesis clauses for runtime-facing thesis definitions.
   - Packaged promoted thesis payloads may add evidence, lineage, and deployment outcomes,
     but clause semantics should originate here when a thesis contract is defined.
 defaults:
@@ -63,8 +63,8 @@ theses:
         lookback_window: 288
         cooldown_bars: 12
         min_basis_bps: 10.0
-    notes: Founding basis dislocation thesis uses canonical feature-schema basis fields
-      when spot-perp paired raw bars are not available as a dedicated bootstrap input.
+    notes: Basis dislocation thesis uses canonical feature-schema basis fields when
+      spot-perp paired raw bars are not available as a dedicated input dataset.
   THESIS_FND_DISLOC:
     identity:
       thesis_id: THESIS_FND_DISLOC
@@ -107,8 +107,8 @@ theses:
         alignment_window: 3
         cooldown_bars: 12
         min_basis_bps: 5.0
-    notes: Founding funding dislocation thesis uses canonical basis and funding features
-      from the feature schema when bootstrap raw inputs are not sufficient on their own.
+    notes: Funding dislocation thesis uses canonical basis and funding features from
+      the feature schema when dedicated raw inputs are not sufficient on their own.
   THESIS_VOL_SHOCK:
     identity:
       thesis_id: THESIS_VOL_SHOCK

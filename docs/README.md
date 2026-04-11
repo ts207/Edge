@@ -137,7 +137,7 @@ Research notes live under `docs/research/`.
 ## Documentation Rules
 
 - Teach the canonical stage story first, then link outward.
-- Mark compatibility, bootstrap, and internal research lanes explicitly.
+- Mark compatibility and internal research lanes explicitly.
 - Prefer code-backed terminology from `project/cli.py`, `project/artifacts/`, and `project/live/contracts/`.
 - Update the owning hand-authored doc when behavior changes.
 - Regenerate generated docs instead of editing them manually.

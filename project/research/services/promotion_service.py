@@ -124,9 +124,8 @@ class ResolvedPromotionPolicy:
     use_effective_q_value: bool = True
 
 
-PROMOTION_CLASSES: tuple[str, ...] = ("seed_promoted", "paper_promoted", "production_promoted")
+PROMOTION_CLASSES: tuple[str, ...] = ("paper_promoted", "production_promoted")
 DEFAULT_DEPLOYMENT_STATE_BY_PROMOTION_CLASS: dict[str, str] = {
-    "seed_promoted": "monitor_only",
     "paper_promoted": "paper_only",
     "production_promoted": "live_enabled",
 }

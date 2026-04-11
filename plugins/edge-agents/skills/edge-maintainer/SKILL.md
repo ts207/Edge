@@ -74,21 +74,6 @@ Then inspect:
 - `docs/03_promote.md`
 - `docs/04_deploy.md`
 
-### Advanced bootstrap or package change
-
-Use:
-
-```bash
-./plugins/edge-agents/scripts/edge_package_theses.sh [thesis_run_id]
-```
-
-Then inspect:
-
-- `docs/generated/seed_thesis_catalog.md`
-- `docs/generated/seed_thesis_packaging_summary.md`
-- `docs/03_promote.md`
-- `docs/04_deploy.md`
-
 ### Architectural boundary change
 
 Use:

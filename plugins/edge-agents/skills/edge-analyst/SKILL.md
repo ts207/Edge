@@ -44,6 +44,6 @@ This skill follows `agents/analyst.md`.
 - Primary rejection mechanism
 - Top near-misses
 - Mechanistic meaning
-- Whether the run only informs the bounded loop or is thesis-bootstrap-queue-worthy
+- Whether the run only informs the bounded loop or warrants promotion/export follow-up
 - 1-3 bounded next experiments
 - keep / modify / kill classification

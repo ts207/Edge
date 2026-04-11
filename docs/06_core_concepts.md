@@ -66,7 +66,6 @@ The class assigned during promotion that describes readiness and intended operat
 
 Current classes:
 
-- `seed_promoted`
 - `paper_promoted`
 - `production_promoted`
 

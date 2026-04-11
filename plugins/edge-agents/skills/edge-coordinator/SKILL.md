@@ -1,6 +1,6 @@
 ---
 name: edge-coordinator
-description: Coordinate the Edge specialist-agent pipeline using the repo's own coordinator playbook. Use when the user wants an end-to-end bounded research loop, stage discipline, drift checks, or help choosing whether to diagnose, formulate, compile, or bootstrap.
+description: Coordinate the Edge specialist-agent pipeline using the repo's own coordinator playbook. Use when the user wants an end-to-end bounded research loop, stage discipline, drift checks, or help choosing whether to diagnose, formulate, or compile.
 ---
 
 # Edge Coordinator
@@ -22,7 +22,6 @@ Use this skill to coordinate bounded research work without inventing a parallel 
 - Do not delegate coordination.
 - Enforce the sequence `analyst -> mechanism_hypothesis -> compiler` for bounded research.
 - Use explicit run export when the goal is a runtime batch from one run.
-- Use the thesis bootstrap loop only when claims need broader packaging maintenance.
 
 ## Required discipline
 
@@ -43,24 +42,12 @@ Use this skill to coordinate bounded research work without inventing a parallel 
 8. Compile only valid hypotheses into repo-native proposal YAML.
 9. Review lint/explain/plan again before any follow-up execution.
 
-## Thesis bootstrap flow
+## Runtime export flow
 
-Use export first when the goal is runtime input from a specific run:
+Use export when the goal is runtime input from a specific run:
 
 ```bash
 ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>
-```
-
-Use the advanced bootstrap flow only when the task is broader packaging work:
-
-```bash
-python -m project.scripts.build_seed_bootstrap_artifacts
-python -m project.scripts.build_seed_testing_artifacts
-python -m project.scripts.build_seed_empirical_artifacts
-python -m project.scripts.build_founding_thesis_evidence
-python -m project.scripts.build_seed_packaging_artifacts
-python -m project.scripts.build_structural_confirmation_artifacts
-python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
 ```
 
 ## Deployment permission model (Sprint 7)

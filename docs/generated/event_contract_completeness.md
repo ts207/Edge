@@ -1,7 +1,7 @@
 # Event contract completeness
 
-- Active events: `70`
-- Complete contracts: `70`
+- Active events: `71`
+- Complete contracts: `71`
 - Missing contracts: `0`
 
 ## Missing fields by event

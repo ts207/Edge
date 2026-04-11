@@ -173,7 +173,7 @@ ingest
   → deploy
 ```
 
-The key point is that `phase2_search_engine` is still the authoritative discovery engine, but the repo now has clearer downstream boundaries than older docs showed.
+The key point is that `phase2_search_engine` is still the canonical planner-owned discovery stage and authoritative discovery engine, but the repo now has clearer downstream boundaries than older docs showed.
 
 ## Runtime Thesis Flow
 

@@ -131,14 +131,12 @@ def _assemble_promotion_result(
     fallback_reason = "" if not fallback_used else (primary_promo_fail or "non_standard_track")
 
     # Sprint 4: Explicit Promotion Layer Fields
-    # Suggested classes: seed_promoted, paper_promoted, production_promoted
+    # Suggested classes: paper_promoted, production_promoted
     # Suggested readiness: research_inventory, paper_ready, live_review_required, live_ready
 
     promo_class = "paper_promoted"
     if promotion_profile == "deploy":
         promo_class = "production_promoted"
-    elif is_reduced_evidence:
-        promo_class = "seed_promoted"
 
     readiness = "research_inventory"
     if promoted:
@@ -150,8 +148,6 @@ def _assemble_promotion_result(
     deploy_state_default = "paper_only"
     if promo_class == "production_promoted" and promoted:
         deploy_state_default = "live_enabled"
-    elif promo_class == "seed_promoted":
-        deploy_state_default = "monitor_only"
 
     inventory_reason_code = ""
     if not promoted:

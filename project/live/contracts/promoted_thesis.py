@@ -175,7 +175,7 @@ class PromotedThesis(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     thesis_id: str = Field(min_length=1)
-    promotion_class: Literal["seed_promoted", "paper_promoted", "production_promoted"] = (
+    promotion_class: Literal["paper_promoted", "production_promoted"] = (
         "paper_promoted"
     )
     deployment_state: DeploymentState = "paper_only"

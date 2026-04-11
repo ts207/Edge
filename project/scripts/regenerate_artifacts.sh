@@ -4,8 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # This script is an internal maintenance tool, not part of canonical runtime pipelines.
-INTERNAL_BOOTSTRAP_THESIS_RUN_ID="${INTERNAL_BOOTSTRAP_THESIS_RUN_ID:-seed_founding_batch_v1}"
-THESIS_RUN_ID="${THESIS_RUN_ID:-$INTERNAL_BOOTSTRAP_THESIS_RUN_ID}"
+THESIS_RUN_ID="${THESIS_RUN_ID:-}"
 
 echo "Regenerating repository artifacts..."
 
@@ -30,63 +29,44 @@ PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_runtime_event_
 echo "[sidecars] Regenerating compatibility sidecars..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_canonical_registry_sidecars.py"
 
-echo "[0/13] Regenerating Event Governance Artifacts..."
+echo "[0/6] Regenerating Event Governance Artifacts..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_event_contract_artifacts.py"
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/event_ontology_audit.py"
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_event_ontology_artifacts.py"
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_event_deep_analysis_suite.py"
 
-echo "[1/13] Regenerating Thesis Bootstrap Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_seed_bootstrap_artifacts.py"
+if [ -n "$THESIS_RUN_ID" ]; then
+  echo "[1/6] Regenerating Thesis Overlap Artifacts for THESIS_RUN_ID=$THESIS_RUN_ID..."
+  PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_thesis_overlap_artifacts.py" \
+    --run_id "$THESIS_RUN_ID"
+else
+  echo "[1/6] Skipping thesis-overlap regeneration (set THESIS_RUN_ID to enable it)."
+fi
 
-echo "[2/13] Building Founding Thesis Evidence Bundles..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_founding_thesis_evidence.py"
-
-echo "[3/13] Regenerating Thesis Testing Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_seed_testing_artifacts.py"
-
-echo "[4/13] Regenerating Structural Confirmation Bridge Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_structural_confirmation_artifacts.py"
-
-echo "[5/13] Regenerating Empirical Thesis Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_seed_empirical_artifacts.py"
-
-echo "[6/13] Regenerating Seed Thesis Packaging Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_seed_packaging_artifacts.py"
-
-echo "[7/13] Regenerating Thesis Overlap Artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_thesis_overlap_artifacts.py" \
-  --run_id "$THESIS_RUN_ID"
-
-echo "[8/13] Regenerating paired-event studies for packaged confirmation theses..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_paired_event_study.py" \
-  --candidate-id THESIS_VOL_SHOCK_LIQUIDITY_CONFIRM
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_paired_event_study.py" \
-  --candidate-id THESIS_LIQUIDITY_VACUUM_CASCADE_CONFIRM
-
-echo "[9/13] Regenerating integrated Block H overlap + shadow-live artifacts..."
-PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/run_block_h.py"
-
-echo "[10/13] Regenerating System Map..."
+echo "[2/6] Regenerating System Map..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/build_system_map.py"
 
-echo "[11/13] Regenerating Detector Coverage Report..."
+echo "[3/6] Regenerating Detector Coverage Report..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/detector_coverage_audit.py" \
     --md-out "$REPO_ROOT/docs/generated/detector_coverage.md" \
     --json-out "$REPO_ROOT/docs/generated/detector_coverage.json"
 
-echo "[12/13] Regenerating Ontology Audit..."
+echo "[4/6] Regenerating Ontology Audit..."
 PYTHONPATH="$REPO_ROOT" python3 "$REPO_ROOT/project/scripts/ontology_consistency_audit.py" \
     --output "$REPO_ROOT/docs/generated/ontology_audit.json"
 
-echo "[13/13] Verifying thesis store loads cleanly for THESIS_RUN_ID=$THESIS_RUN_ID..."
-PYTHONPATH="$REPO_ROOT" THESIS_RUN_ID="$THESIS_RUN_ID" python3 - <<'PY'
+if [ -n "$THESIS_RUN_ID" ]; then
+  echo "[5/6] Verifying thesis store loads cleanly for THESIS_RUN_ID=$THESIS_RUN_ID..."
+  PYTHONPATH="$REPO_ROOT" THESIS_RUN_ID="$THESIS_RUN_ID" python3 - <<'PY'
 import os
 from project.live.thesis_store import ThesisStore
 run_id = os.environ["THESIS_RUN_ID"]
 store = ThesisStore.from_run_id(run_id)
 print(f"Loaded {len(store.all())} theses from explicit run_id={store.run_id or run_id}")
 PY
+else
+  echo "[5/6] Skipping thesis-store verification (set THESIS_RUN_ID to enable it)."
+fi
 
 echo "Artifact regeneration complete."
 echo "Please review changes and commit them."

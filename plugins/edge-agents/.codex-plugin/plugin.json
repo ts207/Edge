@@ -1,7 +1,7 @@
 {
   "name": "edge-agents",
   "version": "0.6.0",
-  "description": "Repo-local Codex plugin for Edge proposal, validation, promotion, export, deploy, maintenance, ChatGPT-app, and thesis-bootstrap workflows.",
+  "description": "Repo-local Codex plugin for Edge proposal, validation, promotion, export, deploy, maintenance, and ChatGPT-app workflows.",
   "author": {
     "name": "irene",
     "email": "irene@local.invalid",
@@ -21,8 +21,8 @@
   "hooks": "./hooks.json",
   "interface": {
     "displayName": "Edge Agents",
-    "shortDescription": "Bounded operator, review, export, maintenance, and advanced thesis-bootstrap workflows for Edge.",
-    "longDescription": "Project-local Codex plugin for Edge. It wraps the repo's canonical make, edge operator, validate report, export, deploy, and edge-chatgpt-app surfaces with reusable Codex skills, maintenance routing, proposal inspection helpers, run-review helpers, developer wrappers, and guardrail hooks for bounded research, explicit thesis-batch export, diagnosis, app upkeep, and advanced packaging maintenance.",
+    "shortDescription": "Bounded operator, review, export, maintenance, and ChatGPT-app workflows for Edge.",
+    "longDescription": "Project-local Codex plugin for Edge. It wraps the repo's canonical make, edge operator, validate report, export, deploy, and edge-chatgpt-app surfaces with reusable Codex skills, maintenance routing, proposal inspection helpers, run-review helpers, developer wrappers, and guardrail hooks for bounded research, explicit thesis-batch export, diagnosis, and app upkeep.",
     "developerName": "Edge",
     "category": "Developer Tools",
     "capabilities": [
@@ -39,8 +39,7 @@
       "Export one explicit thesis batch from a run and inspect its deployment state.",
       "Route a repo change through the right validation and generated-doc maintenance loop.",
       "Inspect or develop the Edge ChatGPT app surface without bypassing canonical operator flows.",
-      "Diagnose an Edge run and decide keep, modify, or kill.",
-      "Use the advanced thesis bootstrap lane only when broader packaging maintenance is required."
+      "Diagnose an Edge run and decide keep, modify, or kill."
     ],
     "brandColor": "#0F766E"
   }

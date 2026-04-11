@@ -70,6 +70,7 @@
 
 - `CROSS_ASSET_DESYNC_EVENT` — role `filter`, disposition `repair_before_promotion`
 - `FUNDING_TIMESTAMP_EVENT` — role `context`, disposition `context_only`
+- `LIQUIDATION_CASCADE_PROXY` — role `trigger`, disposition `secondary_or_confirm`
 - `SCHEDULED_NEWS_WINDOW_EVENT` — role `context`, disposition `context_only`
 - `SESSION_CLOSE_EVENT` — role `context`, disposition `context_only`
 - `SESSION_OPEN_EVENT` — role `context`, disposition `context_only`

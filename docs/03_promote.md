@@ -99,7 +99,6 @@ The current promotion service maps classes to default deployment states as follo
 
 | Promotion class | Default deployment state |
 |-----------------|--------------------------|
-| `seed_promoted` | `monitor_only` |
 | `paper_promoted` | `paper_only` |
 | `production_promoted` | `live_enabled` |
 

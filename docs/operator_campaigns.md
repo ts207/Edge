@@ -67,6 +67,6 @@ Each generated proposal includes a bounded block so the one-change rule remains 
 
 ## Important boundary
 
-Campaign outputs are inputs to thesis testing and promotion. A successful campaign cycle does not directly create a production-eligible thesis. The expected downstream path is:
+Campaign outputs are inputs to the canonical lifecycle. A successful campaign cycle does not directly create a production-eligible thesis. The expected downstream path is:
 
-`campaign output -> testing -> empirical evidence -> packaging -> thesis store`
+`campaign output -> validate -> promote -> export -> thesis store`

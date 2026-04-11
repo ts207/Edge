@@ -751,7 +751,7 @@ def _build_thesis(
 
     # Sprint 4: Extract explicit promotion fields
     promo_class = str(promoted_row.get("promotion_class") or "paper_promoted").lower()
-    if promo_class not in {"seed_promoted", "paper_promoted", "production_promoted"}:
+    if promo_class not in {"paper_promoted", "production_promoted"}:
         promo_class = "paper_promoted"
         
     deploy_state = str(

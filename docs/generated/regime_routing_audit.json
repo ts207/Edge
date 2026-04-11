@@ -67,6 +67,11 @@
         "convexity_capture",
         "exhaustion_reversal",
         "reversal_or_squeeze"
+      ],
+      "LIQUIDATION_CASCADE_PROXY": [
+        "convexity_capture",
+        "exhaustion_reversal",
+        "reversal_or_squeeze"
       ]
     },
     "LIQUIDITY_STRESS": {

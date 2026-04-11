@@ -189,8 +189,6 @@ The repo-local plugin wrappers under `plugins/edge-agents/scripts/` are importan
 - `edge_validate_repo.sh`
 - `edge_verify_contracts.sh`
 - `edge_governance.sh`
-- `edge_package_theses.sh`
-- `edge_bootstrap_theses.sh`
 - `edge_chatgpt_app.sh`
 - `edge_sync_plugin.sh`
 

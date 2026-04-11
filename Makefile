@@ -93,7 +93,6 @@ DISCOVER_ACTION ?= plan
 REVIEW_ACTION ?= diagnose
 PROPOSAL ?=
 RUN_IDS ?=
-INTERNAL_BOOTSTRAP_THESIS_RUN_ID ?= seed_founding_batch_v1
 RUN_ID ?=
 
 discover:
@@ -116,16 +115,6 @@ export:
 deploy-paper:
 	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make deploy-paper RUN_ID=<run_id>"; exit 2; fi
 	PYTHONPATH=. $(PYTHON) -m project.cli deploy paper --run_id $(RUN_ID)
-
-package:
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_bootstrap_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_testing_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_empirical_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_founding_thesis_evidence
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_seed_packaging_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_structural_confirmation_artifacts
-	PYTHONPATH=. $(PYTHON) -m project.scripts.build_thesis_overlap_artifacts --run_id $(INTERNAL_BOOTSTRAP_THESIS_RUN_ID)
-	./project/scripts/regenerate_artifacts.sh
 
 legacy-validate:
 	PYTHONPATH=. $(PYTHON) -m project.scripts.run_researcher_verification --mode contracts
@@ -367,4 +356,3 @@ benchmark-review:
 
 benchmark-certify:
 	$(PYTHON) -m project.scripts.run_benchmark_maintenance_cycle --preset core_v1
-
