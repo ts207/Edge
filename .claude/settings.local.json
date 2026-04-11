@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"evaluated_hypotheses\\\\|gate_failures\" /home/irene/Edge/project/ --include=*.py -l)",
+      "Bash(wc -l /home/irene/Edge/agents/*.md /home/irene/Edge/agents/**/*.md)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/edge operator:*)",
+      "Bash(python -m json.tool)",
+      "Read(///wsl.localhost/Ubuntu/home/**)",
+      "Read(//mnt/c/**)",
+      "Bash(claude:*)",
+      "Bash(read f:*)",
+      "Bash(python:*)",
+      "Skill(update-config)",
+      "Bash(./plugins/edge-agents/scripts/edge_sync_plugin.sh check:*)",
+      "Bash(./plugins/edge-agents/scripts/edge_sync_plugin.sh sync:*)",
+      "Bash(xargs -I{} python3 -c \" import pandas as pd, sys try: df = pd.read_parquet\\('{}'\\) if 'symbol' in df.columns: syms = df['symbol'].unique\\(\\).tolist\\(\\) if any\\(s != 'BTCUSDT' for s in syms\\): print\\('{}:', syms\\) except: pass \")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(cat /home/irene/Edge/deploy/systemd/*.service)",
+      "Bash(python3 project/pipelines/run_all.py --run_id batch6_structural --symbols BTCUSDT,ETHUSDT --start 2021-01-01 --end 2024-12-31 --events MOMENTUM_DIVERGENCE_TRIGGER,FAILED_CONTINUATION,SUPPORT_RESISTANCE_BREAK,CHOP_TO_TREND_SHIFT,TREND_TO_CHOP_SHIFT,SLIPPAGE_SPIKE_EVENT,SPREAD_REGIME_WIDENING_EVENT --timeframes 5m)",
+      "Bash(echo \"PID: $!\")"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/irene/Edge/.claude/hooks/scripts/session-start-context.sh",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/irene/Edge/.claude/hooks/scripts/protect-forbidden-files.sh",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {},
+  "extraKnownMarketplaces": {}
+}
