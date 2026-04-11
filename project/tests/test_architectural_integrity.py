@@ -446,31 +446,16 @@ def test_promotion_helper_imports_use_research_compat():
         pytest.fail("\n".join(sorted(set(violations))))
 
 
-def test_research_pipeline_wrappers_only_depend_on_cli_services_and_specs() -> None:
-    allowed_import_prefixes = {
-        "project.research.cli",
-        "project.research.services",
-        "project.specs.gates",
-    }
-    wrapper_paths = [
-        PROJECT_ROOT / "pipelines" / "research" / "phase2_candidate_discovery.py",
-        PROJECT_ROOT / "pipelines" / "research" / "promote_candidates.py",
-    ]
-    violations: list[str] = []
-    for wrapper_path in wrapper_paths:
-        content = wrapper_path.read_text(encoding="utf-8")
-        imports = re.findall(r"(?:from|import)\s+(project\.[a-zA-Z0-9_\.]+)", content)
-        for imported in imports:
-            if any(
-                imported == prefix or imported.startswith(f"{prefix}.")
-                for prefix in allowed_import_prefixes
-            ):
-                continue
-            violations.append(
-                f"Architectural Violation: {wrapper_path.relative_to(PROJECT_ROOT.parent)} imports {imported}"
-            )
-    if violations:
-        pytest.fail("\n".join(sorted(set(violations))))
+def test_research_pipeline_wrapper_package_removed() -> None:
+    wrapper_root = PROJECT_ROOT / "pipelines" / "research"
+    source_files = []
+    if wrapper_root.exists():
+        source_files = [
+            path
+            for path in wrapper_root.rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts
+        ]
+    assert source_files == []
 
 
 def _files_importing(module_pattern: str) -> list[str]:

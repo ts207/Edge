@@ -170,34 +170,17 @@ def test_cli_promote_run_rejects_compatibility_bridge_flag(monkeypatch, capsys):
     assert "unrecognized arguments: --use_compatibility_bridge 1" in err
 
 
-def test_cli_operator_plan_remains_explicitly_invocable(monkeypatch):
+def test_cli_operator_plan_alias_removed(monkeypatch, capsys):
     cli = _load_cli_module()
-    captured = {}
-
-    def _fake_issue_proposal(*args, **kwargs):
-        captured["args"] = args
-        captured["kwargs"] = kwargs
-        return {"returncode": 0}
 
     monkeypatch.setattr(
         sys,
         "argv",
         ["backtest", "operator", "plan", "--proposal", "spec/proposals/unit.yaml"],
     )
-    monkeypatch.setattr(
-        __import__("project.research.agent_io.issue_proposal", fromlist=["issue_proposal"]),
-        "issue_proposal",
-        _fake_issue_proposal,
-    )
 
-    assert cli.main() == 0
-    assert captured["args"] == ("spec/proposals/unit.yaml",)
-    assert captured["kwargs"] == {
-        "registry_root": Path("project/configs/registries"),
-        "data_root": None,
-        "run_id": None,
-        "plan_only": True,
-        "dry_run": False,
-        "check": False,
-        "legacy_compatibility": False,
-    }
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert int(exc.value.code) == 2
+    assert "invalid choice: 'operator'" in capsys.readouterr().err

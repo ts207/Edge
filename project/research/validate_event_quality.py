@@ -492,7 +492,7 @@ def _compute_rerun_sensitivity(
     if not detector_script:
         return {"status": "skipped", "reason": "no_detector_mapping"}
 
-    script_path = PROJECT_ROOT / "pipelines" / "research" / detector_script
+    script_path = PROJECT_ROOT / "research" / detector_script
     if not script_path.exists():
         return {"status": "skipped", "reason": f"missing_detector_script:{detector_script}"}
 

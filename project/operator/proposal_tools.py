@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import argparse
+import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from project.core.config import get_data_root
@@ -91,3 +94,32 @@ def explain_proposal(
         "estimated_hypothesis_count": int(translation["validated_plan"].get("estimated_hypothesis_count", 0) or 0),
         "run_all_overrides": translation["run_all_overrides"],
     }
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Inspect bounded proposal files.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    for command in ("lint", "explain"):
+        cmd = sub.add_parser(command)
+        cmd.add_argument("--proposal", required=True)
+        cmd.add_argument("--registry_root", default="project/configs/registries")
+        cmd.add_argument("--data_root", default=None)
+        cmd.add_argument("--out_dir", default=None)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    fn = lint_proposal if args.command == "lint" else explain_proposal
+    result = fn(
+        proposal_path=args.proposal,
+        registry_root=args.registry_root,
+        data_root=args.data_root,
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result.get("status", "pass") != "block" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

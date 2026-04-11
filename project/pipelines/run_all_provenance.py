@@ -14,7 +14,7 @@ def validate_phase2_event_chain(phase2_event_chain, event_registry_specs) -> Lis
     for etype, script, _ in phase2_event_chain:
         if etype not in event_registry_specs:
             issues.append(f"Missing event spec/registry entry for {etype}")
-        script_path = PROJECT_ROOT / "pipelines" / "research" / str(script)
+        script_path = PROJECT_ROOT / "research" / str(script)
         if not script_path.exists():
             issues.append(f"Missing phase2 analyzer script for {etype}: {script}")
         if _det_reg.get_detector(etype) is None:

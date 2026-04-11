@@ -3,12 +3,12 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from project.pipelines.research import phase2_candidate_discovery as p2  # noqa: E402
+from project.research.cli.candidate_discovery_cli import build_candidate_discovery_parser
 from project.research.services import phase2_support
 
 
 def test_phase2_parser_rejects_removed_candidate_plan_flag():
-    parser = p2._make_parser()
+    parser = build_candidate_discovery_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(
             [
@@ -26,7 +26,7 @@ def test_phase2_parser_rejects_removed_candidate_plan_flag():
 
 
 def test_phase2_parser_rejects_removed_atlas_mode_flag():
-    parser = p2._make_parser()
+    parser = build_candidate_discovery_parser()
     with pytest.raises(SystemExit) as exc:
         parser.parse_args(
             [

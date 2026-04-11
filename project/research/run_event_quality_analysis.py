@@ -1,4 +1,4 @@
-# project/pipelines/research/run_event_quality_analysis.py
+# project/research/run_event_quality_analysis.py
 """
 Event Quality Analysis Pipeline Runner.
 
@@ -6,7 +6,7 @@ Runs all four event quality analyses against a features DataFrame and
 writes results to an output directory.
 
 Usage (CLI):
-    python project/pipelines/research/run_event_quality_analysis.py \
+    python project/research/run_event_quality_analysis.py \
         --run_id <run_id> \
         --symbol BTCUSDT \
         --output_dir data/reports/event_quality/my_run

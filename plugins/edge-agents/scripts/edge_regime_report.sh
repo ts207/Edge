@@ -18,7 +18,7 @@ ensure_edge_env "$repo_root"
 cd "$repo_root"
 
 cmd=(
-  "$repo_root/.venv/bin/edge" operator regime-report
+  "$repo_root/.venv/bin/edge" validate report
   --run_id "$run_id"
 )
 

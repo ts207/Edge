@@ -26,7 +26,7 @@ fi
 
 mkdir -p "$(dirname "$json_output")"
 
-"$repo_root/.venv/bin/edge" operator preflight \
+"$repo_root/.venv/bin/python" -m project.operator.preflight \
   --proposal "$proposal_path" \
   --registry_root "$registry_root" \
   --json_output "$json_output"

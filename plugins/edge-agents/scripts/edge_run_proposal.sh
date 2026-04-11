@@ -20,7 +20,7 @@ ensure_edge_env "$repo_root"
 cd "$repo_root"
 
 cmd=(
-  "$repo_root/.venv/bin/edge" operator run
+  "$repo_root/.venv/bin/edge" discover run
   --proposal "$proposal_path"
   --registry_root "$registry_root"
   --run_id "$run_id"

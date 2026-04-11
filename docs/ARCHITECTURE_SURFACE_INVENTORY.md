@@ -42,6 +42,7 @@ These surfaces have been removed and must not be referenced in new code.
 | Surface | Removed in | Replacement |
 |---|---|---|
 | Legacy CLI `pipeline run-all` | Cleanup batch | `discover run` or explicit Make wrappers |
+| `project/pipelines/research` wrapper package | Cleanup batch | Canonical `project/research` modules and `project/research/cli` |
 | `phase2_candidate_discovery.py` | Sprint 6 | `phase2_search_engine.py` |
 | `load_latest_theses` runtime flag | Sprint 7 | `thesis_path` or `thesis_run_id` |
 | Legacy proposal format (`trigger_space` / `horizons_bars`) | Sprint 6.6 | StructuredHypothesis format |

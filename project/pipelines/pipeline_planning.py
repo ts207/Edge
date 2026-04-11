@@ -645,9 +645,7 @@ def prepare_run_preflight(
         and not bool(int(getattr(args, "skip_ingest_spot_ohlcv", 0) or 0))
         and _requires_cross_venue_spot_pipeline(args)
     ):
-        # Only auto-enable if not explicitly disabled via 0
-        if str(getattr(args, "enable_cross_venue_spot_pipeline", "1")) != "0":
-            args.enable_cross_venue_spot_pipeline = 1
+        args.enable_cross_venue_spot_pipeline = 1
 
     if bool(int(getattr(args, "performance_mode", 0) or 0)):
         if not cli_flag_present("--runtime_invariants_mode"):

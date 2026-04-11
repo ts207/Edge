@@ -19,7 +19,7 @@ ensure_edge_env "$repo_root"
 cd "$repo_root"
 
 cmd=(
-  "$repo_root/.venv/bin/edge" operator diagnose
+  "$repo_root/.venv/bin/edge" validate diagnose
   --run_id "$run_id"
 )
 

@@ -64,6 +64,29 @@ def build_ingest_stages(
                     ],
                 )
             )
+        if run_spot_pipeline and not args.skip_ingest_spot_ohlcv:
+            for tf in timeframes:
+                script = project_root / "pipelines" / "ingest" / f"ingest_binance_spot_ohlcv_{tf}.py"
+                if not script.exists():
+                    continue
+                stages.append(
+                    (
+                        f"ingest_binance_spot_ohlcv_{tf}",
+                        script,
+                        [
+                            "--run_id",
+                            run_id,
+                            "--symbols",
+                            symbols,
+                            "--start",
+                            start,
+                            "--end",
+                            end,
+                            "--force",
+                            force_flag,
+                        ],
+                    )
+                )
         return stages
 
     # Fallback to Binance logic

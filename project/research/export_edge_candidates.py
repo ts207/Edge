@@ -520,11 +520,11 @@ def _run_research_chain(
     run_id: str,
     symbols: str,
 ) -> None:
-    phase2_script_path = PROJECT_ROOT / "pipelines" / "research" / "phase2_candidate_discovery.py"
-    registry_script_path = PROJECT_ROOT / "pipelines" / "research" / "build_event_registry.py"
-    bridge_script_path = PROJECT_ROOT / "pipelines" / "research" / "bridge_evaluate_phase2.py"
+    phase2_script_path = PROJECT_ROOT / "research" / "cli" / "candidate_discovery_cli.py"
+    registry_script_path = PROJECT_ROOT / "research" / "build_event_registry.py"
+    bridge_script_path = PROJECT_ROOT / "research" / "bridge_evaluate_phase2.py"
     for event_type, script, extra_args in PHASE2_EVENT_CHAIN:
-        script_path = PROJECT_ROOT / "pipelines" / "research" / script
+        script_path = PROJECT_ROOT / "research" / script
         if not script_path.exists():
             logging.warning("Missing phase1 script (skipping): %s", script_path)
             continue

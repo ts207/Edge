@@ -167,8 +167,8 @@ class TestPhase2CostResolution:
     """Phase 2 must resolve costs from fees.yaml, not --mock_cost_bps."""
 
     def test_resolve_phase2_costs_function_exists(self):
-        """_resolve_phase2_costs must be importable from phase2_candidate_discovery."""
-        from project.pipelines.research import phase2_candidate_discovery, phase2_cost_model
+        """_resolve_phase2_costs must be importable from the canonical cost module."""
+        from project.research import phase2_cost_model
 
         assert hasattr(phase2_cost_model, "_resolve_phase2_costs"), (
             "_resolve_phase2_costs() helper must exist"
@@ -224,18 +224,18 @@ class TestPhase2CostResolution:
         assert coordinate["fee_bps_per_side"] == pytest.approx(1.0, abs=1e-6)
 
     def test_parser_exposes_make_parser(self):
-        """Module must expose _make_parser() so the parser can be inspected in tests."""
-        from project.pipelines.research import phase2_candidate_discovery, phase2_cost_model
+        """Candidate discovery parser builder must be inspectable in tests."""
+        from project.research.cli import candidate_discovery_cli
 
-        assert hasattr(phase2_candidate_discovery, "_make_parser"), (
-            "_make_parser() must be exposed at module level"
+        assert hasattr(candidate_discovery_cli, "build_candidate_discovery_parser"), (
+            "build_candidate_discovery_parser() must be exposed at module level"
         )
 
     def test_parser_has_no_mock_cost_bps(self):
         """Argument parser must NOT have --mock_cost_bps."""
-        from project.pipelines.research.phase2_candidate_discovery import _make_parser
+        from project.research.cli.candidate_discovery_cli import build_candidate_discovery_parser
 
-        parser = _make_parser()
+        parser = build_candidate_discovery_parser()
         option_strings = [opt for action in parser._actions for opt in action.option_strings]
         assert "--mock_cost_bps" not in option_strings, (
             "--mock_cost_bps must be removed; use --fees_bps / --slippage_bps / --cost_bps"
@@ -243,18 +243,18 @@ class TestPhase2CostResolution:
 
     def test_parser_has_fees_bps_arg(self):
         """Argument parser must have --fees_bps, --slippage_bps, --cost_bps overrides."""
-        from project.pipelines.research.phase2_candidate_discovery import _make_parser
+        from project.research.cli.candidate_discovery_cli import build_candidate_discovery_parser
 
-        parser = _make_parser()
+        parser = build_candidate_discovery_parser()
         option_strings = [opt for action in parser._actions for opt in action.option_strings]
         for expected in ("--fees_bps", "--slippage_bps", "--cost_bps"):
             assert expected in option_strings, f"Parser must expose {expected} override"
 
     def test_parser_has_shift_labels_k_not_shift_labels(self):
         """Parser must use --shift_labels_k (int) instead of --shift_labels (bool int)."""
-        from project.pipelines.research.phase2_candidate_discovery import _make_parser
+        from project.research.cli.candidate_discovery_cli import build_candidate_discovery_parser
 
-        parser = _make_parser()
+        parser = build_candidate_discovery_parser()
         option_strings = [opt for action in parser._actions for opt in action.option_strings]
         assert "--shift_labels" not in option_strings, (
             "--shift_labels must be renamed to --shift_labels_k"
@@ -263,9 +263,9 @@ class TestPhase2CostResolution:
 
     def test_parser_has_cost_calibration_args(self):
         """Parser must expose ToB calibration flags for candidate-level economic gating."""
-        from project.pipelines.research.phase2_candidate_discovery import _make_parser
+        from project.research.cli.candidate_discovery_cli import build_candidate_discovery_parser
 
-        parser = _make_parser()
+        parser = build_candidate_discovery_parser()
         option_strings = [opt for action in parser._actions for opt in action.option_strings]
         for expected in (
             "--cost_calibration_mode",

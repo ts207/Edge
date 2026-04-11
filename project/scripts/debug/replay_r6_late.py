@@ -24,7 +24,7 @@ VENV_PYTHON = str(Path(".venv/bin/python"))
 MODULES = {
     "bridge_evaluate_phase2": "project.research.bridge_evaluate_phase2",
     "export_edge_candidates": "project.research.export_edge_candidates",
-    "promote_candidates": "project.pipelines.research.promote_candidates",
+    "promote_candidates": "project.research.cli.promotion_cli",
     "analyze_conditional_expectancy": "project.research.analyze_conditional_expectancy",
     "validate_expectancy_traps": "project.research.validate_expectancy_traps",
     "generate_recommendations_checklist": "project.research.generate_recommendations_checklist",
