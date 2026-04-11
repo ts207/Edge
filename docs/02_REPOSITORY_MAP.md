@@ -11,7 +11,6 @@ Edge/
 ├── docs/                     Hand-authored docs and generated references
 ├── data/                     Local artifacts, reports, runs, and thesis inventory
 ├── plugins/                  Repo-local plugin surfaces
-├── tests/                    Pytest suites
 └── Makefile                  Canonical repo task wrappers
 ```
 
@@ -102,6 +101,9 @@ Edge/
 
 ### Testing and reliability support
 
+- `project/tests/`
+  The single pytest discovery tree for the repository.
+
 - `project/reliability/`
   Reliability-oriented logic and tooling.
 
@@ -137,6 +139,19 @@ Edge/
   `docs/generated/`
 
 Generated docs should be refreshed by repo generators, not hand-edited.
+
+## Local-Only Scratch Paths
+
+These top-level paths are intentionally local-only and should not be tracked:
+
+- `tmp/` and `.tmp/`
+  Proposal scratch, pytest residue, and local verification output.
+
+- `live/persist/`
+  Runtime persistence snapshots written by local runs.
+
+- `artifacts/` and `logs/`
+  Local runtime and debugging output.
 
 ## `data/` Directory Map
 

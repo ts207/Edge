@@ -9,11 +9,12 @@ The canonical operating model is:
 That four-stage story is the public front door, but the repository now includes a broader control plane around it:
 
 - a canonical stage CLI in `project/cli.py`
-- a planner-owned orchestration layer in `project/pipelines/run_all.py`
+- a planner-owned orchestration layer in `project/pipelines/run_all.py` for legacy bundle flows
 - a compatibility `operator` surface for older bounded-research workflows
 - an explicit thesis export step that writes runtime inventory under `data/live/theses/`
 - a gated live runtime with thesis-state validation, approval metadata, kill switches, and reconciliation
 - an MCP / ChatGPT app interface in `project/apps/chatgpt/` that fronts canonical repo surfaces instead of redefining policy
+- a repo hygiene gate that keeps `tmp/`, `live/persist/`, `logs/`, and top-level scratch files local-only
 
 ## System Model
 
@@ -67,6 +68,7 @@ make validate RUN_ID=<run_id>
 make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT,ETHUSDT
 make export RUN_ID=<run_id>
 make deploy-paper RUN_ID=<run_id>
+make check-hygiene
 ```
 
 Direct CLI equivalents:
@@ -91,6 +93,7 @@ The current repo update that older docs did not explain clearly is:
 - thesis lifecycle and runtime permissioning are now explicit through `deployment_state`, approval metadata, and `DeploymentGate`
 - advanced trigger discovery exists under `discover triggers ...`, but it is proposal-generating research, not a shortcut into live inventory
 - the ChatGPT app and plugin layers are interface shells over canonical repo behavior, not separate engines
+- `project/tests/` is the only supported pytest root; `tmp/` and `live/persist/` are local scratch, not tracked repo surfaces
 
 ## Artifact Flow
 
@@ -115,9 +118,10 @@ This boundary matters operationally:
 - `project/pipelines/`: planner-owned orchestration, manifests, stage graph, smoke flows
 - `project/research/`: discovery, validation, promotion, reporting, trigger discovery, campaign tools
 - `project/live/`: thesis contracts, deployment gate, live runner, reconciliation, kill switch, scoring
+- `project/tests/`: single repo test tree for pytest discovery
 - `project/events/` and `spec/events/`: authored event definitions and compiled registry surfaces
 - `project/apps/chatgpt/`: app / MCP scaffold around canonical operator workflows
-- `plugins/edge-agents/`: repo-local plugin scripts for maintenance, validation, and operator ergonomics
+- `plugins/edge-agents/`: repo-local plugin scripts for maintenance, validation, hygiene, and operator ergonomics
 
 ## Documentation
 

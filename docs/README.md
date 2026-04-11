@@ -45,6 +45,7 @@ Helpful wrappers:
 - `make promote`
 - `make export`
 - `make deploy-paper`
+- `make check-hygiene`
 
 Important clarifications:
 
@@ -83,6 +84,7 @@ Important clarifications:
 
 ### Maintenance, validation, and regression discipline
 
+- `operator_command_inventory.md`
 - [92_assurance_and_benchmarks.md](92_assurance_and_benchmarks.md)
 - [94_discovery_benchmarks.md](94_discovery_benchmarks.md)
 
@@ -111,7 +113,7 @@ Important clarifications:
 
 ## Generated Docs
 
-`docs/generated/` is evidence, inventory, and generated reference material. It is not the primary onboarding surface.
+`docs/generated/` is the tracked generated contract/reference surface. It is not the primary onboarding surface.
 
 Use generated docs when you need current derived state:
 
@@ -121,7 +123,7 @@ Use generated docs when you need current derived state:
 - [generated/event_tiers.md](generated/event_tiers.md)
 - [generated/thesis_overlap_graph.md](generated/thesis_overlap_graph.md)
 
-Do not hand-edit generated docs when a generator exists.
+Do not hand-edit generated docs when a generator exists. Use `project/scripts/regenerate_artifacts.sh` for the approved tracked set.
 
 ## Templates and Notes
 
@@ -139,5 +141,6 @@ Research notes live under `docs/research/`.
 - Teach the canonical stage story first, then link outward.
 - Mark compatibility and internal research lanes explicitly.
 - Prefer code-backed terminology from `project/cli.py`, `project/artifacts/`, and `project/live/contracts/`.
+- Treat `project/tests/` as the only supported pytest root; `tmp/` and `live/persist/` are local-only scratch.
 - Update the owning hand-authored doc when behavior changes.
 - Regenerate generated docs instead of editing them manually.

@@ -19,8 +19,13 @@ blocked_patterns=(
   '^data/reports/.+'
   '^data/runs/.+'
   '^data/lake/(cleaned|features|runs)/.+'
+  '^tmp/.+'
+  '^\.tmp/.+'
+  '^live/persist/.+'
+  '^artifacts/.+'
+  '^logs/.+'
   '^project/(context_entropy_report\.json|extraction_output\.txt|ontology_dedup_map\.json|ontology_dedup_summary\.csv)$'
-  '^(analyze_phase2_candidates\.py|check_blocked\.py|find_all_raw\.py|find_blocked_conditions\.py)$'
+  '^(analyze_phase2_candidates\.py|check_blocked\.py|check_missing_binance\.py|find_all_raw\.py|find_blocked_conditions\.py|run_and_analyze\.py)$'
   '^debug\.log$'
   '^debug.*\.log$'
   '^debug.*\.txt$'
@@ -94,13 +99,19 @@ for f in *; do
 done
 
 echo "[hygiene] checking for large untracked data..."
-untracked_data="$(find data -type f ! -name ".gitkeep" | head -n 1)"
+untracked_data="$(find data -type f ! -name ".gitkeep" -print -quit)"
 if [[ -n "$untracked_data" ]]; then
   echo "[hygiene] untracked data detected in data/ directory. Run 'make clean-all-data' to purge."
   # We don't fail hard on untracked data, just warn, unless strict mode requested
   if [[ "${STRICT_HYGIENE:-0}" == "1" ]]; then
     fail=1
   fi
+fi
+
+echo "[hygiene] checking repo uses a single test root..."
+if [[ -d "tests" ]] && find tests -type f | grep -q .; then
+  echo "[hygiene] legacy repo-root tests/ tree still contains test files."
+  fail=1
 fi
 
 if [[ "$fail" -ne 0 ]]; then

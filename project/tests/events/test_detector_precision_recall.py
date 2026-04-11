@@ -1,7 +1,7 @@
 """
 Per-detector precision/recall regression tests.
 
-Tests are parameterized from tests/events/fixtures/detector_thresholds.json.
+Tests are parameterized from project/tests/events/fixtures/detector_thresholds.json.
 The fixture is seeded after the audit (plan Task 5).
 
 If the fixture file is empty or an entry is missing, the test is SKIPPED (not

@@ -3,7 +3,7 @@
     "BASIS_FUNDING_DISLOCATION": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -83,7 +83,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "INFORMATION_DESYNC",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -145,7 +145,6 @@
             ],
             "stability_requirement": "anchor_quantile consistent across BTC/ETH spot-perp pairs within 0.01. Hit rate of reversion within window_end > 55% on both halves.\n"
           },
-          "canonical_family": "INFORMATION_DESYNC",
           "cluster_id": "desync",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -205,6 +204,7 @@
           "min_basis_bps": 35.0,
           "min_occurrences": 0,
           "persistence_bars": 2,
+          "research_family": "INFORMATION_DESYNC",
           "revert_z": 0.5,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on cross venue desync pattern",
@@ -242,7 +242,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -327,7 +327,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -394,7 +394,6 @@
             ],
             "stability_requirement": "Threshold must produce >= 30 events on both first-half and second-half of in-sample period. Threshold deviation across assets < 5 percentile points.\n"
           },
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "funding_crowding",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -470,6 +469,7 @@
           "phase_tolerance_bars": 16,
           "post_window": 96,
           "pre_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding extreme onset pattern",
           "vol_auc_horizon": 8,
@@ -493,6 +493,8 @@
           "convexity_capture",
           "only_if_funding",
           "only_if_oi",
+          "only_if_regime",
+          "only_if_highvol",
           "tail_risk_avoid"
         ],
         "threshold_parameters": {
@@ -521,7 +523,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -556,7 +558,6 @@
         "notes": "Funding sign inversion as subtype metadata.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "funding_crowding",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -577,6 +578,7 @@
           "min_spacing": 24,
           "oi_change_z_threshold": 3.0,
           "persistence_bars": 2,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding flip pattern"
         },
@@ -615,7 +617,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -650,14 +652,13 @@
         "parameters": {
           "accel_lookback": 32,
           "accel_near_zero_cutoff": 5,
-          "accel_pct": 95.0,
+          "accel_pct": 85.0,
           "accel_persistence_intervals": 2,
           "accel_quantile": 0.995,
           "anchor_rule": "max_intensity",
           "auc_bootstrap_iters": 2000,
           "baseline_samples_per_event": 3,
           "baseline_seed": 7,
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "funding_crowding",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -674,7 +675,7 @@
               "Funding reverses sign"
             ]
           },
-          "extreme_pct": 95.0,
+          "extreme_pct": 85.0,
           "funding_pct_window": 2880,
           "htf_lookback": 96,
           "htf_window": 384,
@@ -694,6 +695,7 @@
           "phase_tolerance_bars": 16,
           "post_window": 96,
           "pre_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding normalization trigger pattern",
           "vol_auc_horizon": 8,
@@ -745,7 +747,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -788,7 +790,6 @@
           "auc_bootstrap_iters": 2000,
           "baseline_samples_per_event": 3,
           "baseline_seed": 7,
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "funding_crowding",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -813,10 +814,11 @@
           "liq_auc_horizon": 96,
           "liquidation_abs_return": 0.03,
           "merge_gap_bars": 1,
-          "min_event_spacing": 96,
+          "min_event_spacing": 576,
           "min_hazard_events": 50,
           "min_occurrences": 0,
           "min_prior_extreme_abs": 0.0004,
+          "min_spacing": 576,
           "normalization_lookback": 96,
           "normalization_pct": 50.0,
           "persistence_bars": 12,
@@ -825,6 +827,7 @@
           "phase_tolerance_bars": 16,
           "post_window": 96,
           "pre_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding persistence trigger pattern",
           "vol_auc_horizon": 8,
@@ -848,7 +851,8 @@
           "convexity_capture",
           "only_if_funding",
           "only_if_oi",
-          "tail_risk_avoid"
+          "tail_risk_avoid",
+          "only_if_regime"
         ],
         "threshold_parameters": {
           "accel_lookback": 32,
@@ -861,10 +865,11 @@
           "htf_window": 384,
           "interaction_min_rows_per_year": 150,
           "merge_gap_bars": 1,
-          "min_event_spacing": 96,
+          "min_event_spacing": 576,
           "min_hazard_events": 50,
           "min_occurrences": 0,
           "min_prior_extreme_abs": 0.0004,
+          "min_spacing": 576,
           "normalization_lookback": 96,
           "persistence_bars": 12,
           "phase_tolerance_bars": 16,
@@ -876,7 +881,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -911,7 +916,6 @@
         "notes": "Composite research hypothesis, not a canonical event.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "funding_crowding",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -928,6 +932,7 @@
           "max_gap_bars": 96,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on seq fnd extreme then breakout pattern"
         },
@@ -953,7 +958,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "BASIS_FUNDING_DISLOCATION",
+        "canonical_family": "INFORMATION_DESYNC",
         "canonical_regime": "BASIS_FUNDING_DISLOCATION",
         "conditioning_cols": [
           "vol_regime",
@@ -989,7 +994,6 @@
         "notes": "Spot/perp basis shock is a basis/funding subtype.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "INFORMATION_DESYNC",
           "cluster_id": "desync",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1007,6 +1011,7 @@
           "merge_gap_bars": 0,
           "min_basis_bps": 15.0,
           "min_occurrences": 0,
+          "research_family": "INFORMATION_DESYNC",
           "shock_change_quantile": 0.95,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on spot perp basis shock pattern",
@@ -1046,7 +1051,7 @@
     "CROSS_ASSET_DESYNCHRONIZATION": [
       {
         "asset_scope": "cross_asset",
-        "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+        "canonical_family": "INFORMATION_DESYNC",
         "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
         "conditioning_cols": [
           "vol_regime",
@@ -1105,7 +1110,6 @@
             ],
             "stability_requirement": "Threshold must remain within one z-score step across calibration splits for the same pair universe."
           },
-          "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
           "causal_mechanism": "When two historically linked assets stop moving together, one leg may be lagging price discovery or absorbing flow asymmetrically. The contract only fires when the divergence is observed on paired data; it never degrades into a single-asset anomaly label.",
           "cooldown_bars": 24,
           "detector": {
@@ -1154,6 +1158,7 @@
           "merge_gap_bars": 1,
           "min_occurrences": 0,
           "min_pair_observations": 96,
+          "research_family": "CROSS_ASSET_DESYNCHRONIZATION",
           "synthetic_coverage": "covered",
           "threshold_z": 3.0
         },
@@ -1186,7 +1191,7 @@
       },
       {
         "asset_scope": "cross_asset",
-        "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+        "canonical_family": "INFORMATION_DESYNC",
         "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
         "conditioning_cols": [
           "vol_regime",
@@ -1222,7 +1227,6 @@
         "notes": "Cross-asset divergence between index and components.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "INFORMATION_DESYNC",
           "cluster_id": "desync",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1240,6 +1244,7 @@
           "lead_lag_window": 60,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "INFORMATION_DESYNC",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on index component divergence pattern"
         },
@@ -1271,7 +1276,7 @@
       },
       {
         "asset_scope": "cross_asset",
-        "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+        "canonical_family": "INFORMATION_DESYNC",
         "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
         "conditioning_cols": [
           "vol_regime",
@@ -1307,7 +1312,6 @@
         "notes": "Lead/lag structure break.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "INFORMATION_DESYNC",
           "cluster_id": "desync",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1325,6 +1329,7 @@
           "lead_lag_window": 60,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "INFORMATION_DESYNC",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on lead lag break pattern"
         },
@@ -1393,7 +1398,6 @@
         "notes": "Execution-cost regime shift.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "EXECUTION_FRICTION",
           "cluster_id": "execution_cost",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1409,6 +1413,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "EXECUTION_FRICTION",
           "slippage_z_threshold": 3.0,
           "spread_z_threshold": 3.0,
           "synthetic_coverage": "covered",
@@ -1474,7 +1479,6 @@
         "notes": "Execution friction shock.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "EXECUTION_FRICTION",
           "cluster_id": "execution_cost",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1490,6 +1494,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "EXECUTION_FRICTION",
           "slippage_z_threshold": 3.0,
           "spread_z_threshold": 3.0,
           "synthetic_coverage": "covered",
@@ -1556,7 +1561,6 @@
         "notes": "Persistent execution-friction regime widening.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "EXECUTION_FRICTION",
           "cluster_id": "execution_cost",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -1576,6 +1580,7 @@
           "min_occurrences": 0,
           "min_periods": 288,
           "min_spacing": 48,
+          "research_family": "EXECUTION_FRICTION",
           "synthetic_coverage": "covered",
           "trend_window": 24,
           "trigger": "Detector triggers on spread regime widening event pattern"
@@ -1611,7 +1616,7 @@
     "LIQUIDATION_CASCADE": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDATION_CASCADE",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "LIQUIDATION_CASCADE",
         "conditioning_cols": [
           "vol_regime",
@@ -1643,7 +1648,7 @@
         "is_strategy_construct": false,
         "layer": "canonical",
         "legacy_family": "POSITIONING_EXTREMES",
-        "max_candidates_per_run": 300,
+        "max_candidates_per_run": 1000,
         "notes": "Structurally distinct canonical cascade regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
@@ -1695,12 +1700,173 @@
           "min_occurrences": 0
         },
         "venue_scope": "single_venue"
+      },
+      {
+        "asset_scope": "single_asset",
+        "canonical_family": "POSITIONING_EXTREMES",
+        "canonical_regime": "LIQUIDATION_CASCADE",
+        "conditioning_cols": [
+          "vol_regime",
+          "carry_state",
+          "funding_bps",
+          "ms_trend_state",
+          "ms_spread_state",
+          "severity_bucket"
+        ],
+        "deconflict_priority": 0,
+        "default_executable": true,
+        "detector": "LiquidationCascadeProxyDetector",
+        "disposition": "merge",
+        "enabled": true,
+        "event_type": "LIQUIDATION_CASCADE_PROXY",
+        "events_file": "liquidation_cascade_proxy_events.parquet",
+        "evidence_mode": "proxy",
+        "horizons": [
+          "5m",
+          "15m",
+          "60m"
+        ],
+        "instrument_classes": [
+          "crypto",
+          "futures"
+        ],
+        "is_composite": false,
+        "is_context_tag": false,
+        "is_strategy_construct": false,
+        "layer": "canonical",
+        "legacy_family": "POSITIONING_EXTREMES",
+        "max_candidates_per_run": 300,
+        "notes": "Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.",
+        "parameters": {
+          "anchor_rule": "max_intensity",
+          "calibration": {
+            "calibration_target": "Maximize AUC of forward return (price recovery) vs oi_reduction_pct. Require at least 30 events over calibration window.\n",
+            "default_threshold": 0.95,
+            "failure_modes": [
+              {
+                "Low-OI instrument": "oi_delta_1h noisy, pct drop threshold unreliable"
+              },
+              {
+                "Trending OI regime (perpetual growth)": "baseline quantile inflates, events suppressed"
+              },
+              {
+                "Volume regime change": "vol_th must be recalibrated per-regime"
+              }
+            ],
+            "search_range": [
+              0.9,
+              0.92,
+              0.95,
+              0.97,
+              0.99
+            ]
+          },
+          "cluster_id": "oi_dynamic",
+          "confirmation": "Post-detection price recovery confirms forced-selling exhaustion",
+          "cooldown_bars": 0,
+          "detector": {
+            "bar_type": "bar_close",
+            "formula": "oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])\noi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)\nvol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile, window=vol_window)\nprice_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)\nmask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND (price_drop >= price_drop_th)\nevent           = peak bar of episode built from contiguous mask (max_gap=3)\n",
+            "lookback_bars": 288,
+            "minimum_sample_size": 50,
+            "required_columns": [
+              "timestamp",
+              "oi_notional",
+              "oi_delta_1h",
+              "close",
+              "high",
+              "low",
+              "volume"
+            ],
+            "signal_definition": "Detects liquidation-cascade-like conditions using only native exchange data. Fires when OI pct drop >= rolling_quantile(oi_pct_drop, oi_drop_quantile) AND taker_base_volume >= rolling_quantile(volume, vol_surge_quantile) AND min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.\n",
+            "timestamp_alignment": "Event anchored at peak intensity bar within episode.",
+            "warmup_bars": 288
+          },
+          "detector_contract": true,
+          "expected_behavior": {
+            "disabled_regimes": [
+              {
+                "DELEVERAGING_WAVE active and unresolved": "cascade already captured"
+              },
+              {
+                "LOW_LIQUIDITY_STATE active": "oi_delta_1h noise inflates pct drop signal"
+              }
+            ],
+            "expected_overlap": [
+              {
+                "OI_FLUSH": "high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)"
+              },
+              {
+                "DELEVERAGING_WAVE": "moderate co-occurrence for sustained unwinds"
+              },
+              {
+                "FUNDING_EXTREME_ONSET": "low co-occurrence (proxy fires on execution, not funding level)"
+              }
+            ],
+            "false_positive_scenarios": [
+              "Scheduled funding payment causing OI adjustment without forced liquidations",
+              "Delisting or partial rollover reducing OI mechanically"
+            ],
+            "holding_horizon_bars": "12-96",
+            "invalidation_conditions": [
+              "OI recovers within 12 bars (false flush, not cascade)",
+              "Volume spike without directional price move (block trade, not forced selling)"
+            ]
+          },
+          "max_gap": 3,
+          "merge_gap_bars": 1,
+          "min_occurrences": 0,
+          "min_periods": 24,
+          "oi_drop_quantile": 0.98,
+          "oi_window": 288,
+          "price_drop_th": 0.003,
+          "research_family": "POSITIONING_EXTREMES",
+          "ret_window": 3,
+          "synthetic_coverage": "covered",
+          "trigger": "Detector triggers on OI drop + volume surge + price drop coincidence",
+          "vol_surge_quantile": 0.9,
+          "vol_window": 288
+        },
+        "phase": "onset",
+        "reports_dir": "liquidation_events",
+        "research_only": false,
+        "sequence_eligible": true,
+        "signal_column": "liquidation_cascade_proxy_event",
+        "strategy_only": false,
+        "subtype": "liquidation_cascade_proxy",
+        "tags": [
+          "oi_dynamic",
+          "liquidation_proxy"
+        ],
+        "templates": [
+          "reversal_or_squeeze",
+          "mean_reversion",
+          "continuation",
+          "exhaustion_reversal",
+          "convexity_capture",
+          "only_if_funding",
+          "only_if_oi",
+          "tail_risk_avoid"
+        ],
+        "threshold_parameters": {
+          "cooldown_bars": 0,
+          "max_gap": 3,
+          "merge_gap_bars": 1,
+          "min_occurrences": 0,
+          "min_periods": 24,
+          "oi_drop_quantile": 0.98,
+          "oi_window": 288,
+          "ret_window": 3,
+          "vol_surge_quantile": 0.9,
+          "vol_window": 288
+        },
+        "venue_scope": "single_venue"
       }
     ],
     "LIQUIDITY_STRESS": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -1731,7 +1897,6 @@
         "notes": "Hybrid liquidity-stress evidence: direct imbalance-stall confirmation combined with spread and RV stress.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Spread and realized-volatility stress persist long enough to confirm the absorption signal.",
           "cooldown_bars": 96,
@@ -1750,6 +1915,7 @@
           "merge_gap_bars": 0,
           "min_history_bars": 288,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "rv_quantile": 0.9,
           "spread_quantile": 0.965,
           "synthetic_coverage": "covered",
@@ -1785,7 +1951,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -1819,7 +1985,6 @@
         "notes": "Direct depth failure evidence for liquidity stress.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -1839,6 +2004,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "rv_weight": 0.35,
           "spread_weight": 0.45,
           "synthetic_coverage": "covered",
@@ -1875,7 +2041,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -1906,7 +2072,6 @@
         "notes": "Hybrid liquidity-stress evidence: direct micro-depth depletion combined with spread and RV stress.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Spread and realized-volatility stress remain elevated around the depth-collapse impulse.",
           "cooldown_bars": 96,
@@ -1926,6 +2091,7 @@
           "merge_gap_bars": 0,
           "min_history_bars": 288,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "rv_quantile": 0.9,
           "rv_weight": 0.35,
           "spread_quantile": 0.99,
@@ -1964,7 +2130,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -1983,7 +2149,9 @@
         "events_file": "liquidity_dislocation_events.parquet",
         "evidence_mode": "direct",
         "horizons": [
-          "15m"
+          "12b",
+          "24b",
+          "48b"
         ],
         "instrument_classes": [
           "crypto",
@@ -1998,7 +2166,6 @@
         "notes": "Gap print inside liquidity-stress regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -2016,6 +2183,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on liquidity gap print pattern",
           "z_threshold": 3.0
@@ -2050,7 +2218,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2084,7 +2252,6 @@
         "notes": "High-level liquidity stress onset.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -2102,6 +2269,7 @@
           "median_window": 288,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "spread_spike_th": 3.0,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on liquidity shock pattern"
@@ -2135,7 +2303,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2166,7 +2334,6 @@
         "notes": "Direct evidence mode for liquidity stress.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -2184,6 +2351,7 @@
           "median_window": 288,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "spread_spike_th": 3.0,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on liquidity stress direct pattern"
@@ -2214,7 +2382,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2245,7 +2413,6 @@
         "notes": "Hybrid liquidity-stress evidence: direct book stress when available plus bar-range expansion and optional trade-flow collapse confirmation.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "confirmation": "Spread stress should remain elevated briefly while proxy range expansion or trade-flow weakness confirms the shock.",
           "cooldown_bars": 0,
           "depth_collapse_th": 0.5,
@@ -2263,6 +2430,7 @@
           "median_window": 288,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "spread_spike_th": 3.0,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers when direct liquidity stress and proxy range-stress confirmation align."
@@ -2293,7 +2461,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2353,7 +2521,6 @@
             ],
             "stability_requirement": "Selected threshold must yield >= min_events_calibration events on both in-sample and the most recent 12-month rolling window.\n"
           },
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -2418,6 +2585,7 @@
           "range_expansion_threshold": 0.02,
           "range_multiplier": 1.05,
           "range_window": 24,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "shock_quantile": 0.99,
           "shock_quantiles": "0.5,0.6,0.7",
           "shock_threshold_mode": "rolling",
@@ -2467,7 +2635,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2501,7 +2669,6 @@
         "notes": "Orderflow imbalance is treated as a liquidity-stress subtype.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "orderflow_imbalance",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -2521,6 +2688,7 @@
           "min_history_bars": 288,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "ret_quantile": 0.998,
           "ret_window": 288,
           "rv_quantile": 0.92,
@@ -2568,7 +2736,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2599,7 +2767,6 @@
         "notes": "Hybrid liquidity-stress evidence via synchronized return, realized-volatility, volume, and flow-pressure imbalance.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "orderflow_imbalance",
           "confirmation": "The synchronized stress cluster persists long enough to confirm a liquidity-stress shock rather than an isolated print.",
           "cooldown_bars": 24,
@@ -2618,6 +2785,7 @@
           "min_history_bars": 288,
           "min_occurrences": 0,
           "min_spacing": 24,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "ret_quantile": 0.995,
           "ret_window": 288,
           "rv_quantile": 0.9,
@@ -2660,7 +2828,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2694,7 +2862,6 @@
         "notes": "Composite liquidity repair motif.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -2711,6 +2878,7 @@
           "max_gap_bars": 48,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on seq liq vacuum then depth recovery pattern"
         },
@@ -2737,7 +2905,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2771,7 +2939,6 @@
         "notes": "Spread blowout retained as liquidity-stress subtype.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "liquidity_stress",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -2789,6 +2956,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on spread blowout pattern",
           "z_threshold": 3.0
@@ -2824,7 +2992,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2858,7 +3026,6 @@
         "notes": "Stop-run style liquidity stress.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "cluster_id": "orderflow_imbalance",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -2877,6 +3044,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on sweep stoprun pattern",
           "z_threshold": 3.0
@@ -2912,7 +3080,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "LIQUIDITY_STRESS",
+        "canonical_family": "LIQUIDITY_DISLOCATION",
         "canonical_regime": "LIQUIDITY_STRESS",
         "conditioning_cols": [
           "vol_regime",
@@ -2943,7 +3111,6 @@
         "notes": "Hybrid liquidity-stress recovery evidence: wick and reclaim structure confirmed by realized-volume expansion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "LIQUIDITY_DISLOCATION",
           "confirmation": "Follow-through should hold the reclaimed range while realized volume remains elevated versus baseline.",
           "cooldown_bars": 12,
           "expected_behavior": {
@@ -2961,6 +3128,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_volume_quantile": 0.2,
+          "research_family": "LIQUIDITY_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers when wick-dominance and reclaim structure align with abnormal realized volume.",
           "z_threshold": 3.0
@@ -2994,7 +3162,7 @@
     "POSITIONING_EXPANSION": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_EXPANSION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "POSITIONING_EXPANSION",
         "conditioning_cols": [
           "vol_regime",
@@ -3029,7 +3197,6 @@
         "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "oi_dynamic",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -3047,6 +3214,7 @@
           "merge_gap_bars": 1,
           "min_occurrences": 0,
           "oi_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "spike_z_th": 2.5,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on oi spike negative pattern"
@@ -3082,7 +3250,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_EXPANSION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "POSITIONING_EXPANSION",
         "conditioning_cols": [
           "vol_regime",
@@ -3116,7 +3284,6 @@
         "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "oi_dynamic",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -3134,6 +3301,7 @@
           "merge_gap_bars": 1,
           "min_occurrences": 0,
           "oi_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "spike_z_th": 2.5,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on oi spike positive pattern"
@@ -3169,7 +3337,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_EXPANSION",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "POSITIONING_EXPANSION",
         "conditioning_cols": [
           "vol_regime",
@@ -3204,7 +3372,6 @@
         "notes": "Composite positioning/volatility hypothesis.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "oi_dynamic",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -3221,6 +3388,7 @@
           "max_gap_bars": 48,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on seq oi spikepos then vol spike pattern"
         },
@@ -3248,7 +3416,7 @@
     "POSITIONING_UNWIND_DELEVERAGING": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
         "conditioning_cols": [
           "vol_regime",
@@ -3283,7 +3451,6 @@
         "notes": "Positioning unwind regime with explicit deleveraging dynamics.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "forced_liquidation",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -3301,6 +3468,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "oi_change_z_threshold": 3.0,
+          "research_family": "POSITIONING_EXTREMES",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on deleveraging wave pattern"
         },
@@ -3336,160 +3504,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
-        "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
-        "conditioning_cols": [
-          "vol_regime",
-          "carry_state",
-          "funding_bps",
-          "ms_trend_state",
-          "ms_spread_state",
-          "severity_bucket"
-        ],
-        "deconflict_priority": 0,
-        "default_executable": true,
-        "detector": "LiquidationCascadeProxyDetector",
-        "disposition": "merge",
-        "enabled": true,
-        "event_type": "LIQUIDATION_CASCADE_PROXY",
-        "events_file": "liquidation_cascade_proxy_events.parquet",
-        "evidence_mode": "proxy",
-        "horizons": [
-          "5m",
-          "15m",
-          "60m"
-        ],
-        "instrument_classes": [
-          "crypto",
-          "futures"
-        ],
-        "is_composite": false,
-        "is_context_tag": false,
-        "is_strategy_construct": false,
-        "layer": "canonical",
-        "legacy_family": "POSITIONING_EXTREMES",
-        "max_candidates_per_run": 1000,
-        "notes": "Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.",
-        "parameters": {
-          "anchor_rule": "max_intensity",
-          "calibration": {
-            "calibration_target": "Maximize AUC of forward return (price recovery) vs oi_reduction_pct. Require at least 30 events over calibration window.\n",
-            "default_threshold": 0.95,
-            "failure_modes": [
-              {
-                "Low-OI instrument": "oi_delta_1h noisy, pct drop threshold unreliable"
-              },
-              {
-                "Trending OI regime (perpetual growth)": "baseline quantile inflates, events suppressed"
-              },
-              {
-                "Volume regime change": "vol_th must be recalibrated per-regime"
-              }
-            ],
-            "search_range": [
-              0.9,
-              0.92,
-              0.95,
-              0.97,
-              0.99
-            ]
-          },
-          "canonical_family": "POSITIONING_EXTREMES",
-          "cluster_id": "oi_dynamic",
-          "confirmation": "Post-detection price recovery confirms forced-selling exhaustion",
-          "cooldown_bars": 0,
-          "detector": {
-            "bar_type": "bar_close",
-            "formula": "oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])\noi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)\nvol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile, window=vol_window)\nprice_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)\nmask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND (price_drop >= price_drop_th)\nevent           = peak bar of episode built from contiguous mask (max_gap=3)\n",
-            "lookback_bars": 288,
-            "minimum_sample_size": 50,
-            "required_columns": [
-              "timestamp",
-              "oi_notional",
-              "oi_delta_1h",
-              "close",
-              "high",
-              "low",
-              "volume"
-            ],
-            "signal_definition": "Detects liquidation-cascade-like conditions using only native exchange data. Fires when OI pct drop >= rolling_quantile(oi_pct_drop, oi_drop_quantile) AND taker_base_volume >= rolling_quantile(volume, vol_surge_quantile) AND min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.\n",
-            "timestamp_alignment": "Event anchored at peak intensity bar within episode.",
-            "warmup_bars": 288
-          },
-          "detector_contract": true,
-          "expected_behavior": {
-            "expected_overlap": [
-              {
-                "OI_FLUSH": "high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)"
-              },
-              {
-                "DELEVERAGING_WAVE": "moderate co-occurrence for sustained unwinds"
-              },
-              {
-                "FUNDING_EXTREME_ONSET": "low co-occurrence (proxy fires on execution, not funding level)"
-              }
-            ],
-            "false_positive_scenarios": [
-              "Scheduled funding payment causing OI adjustment without forced liquidations",
-              "Delisting or partial rollover reducing OI mechanically"
-            ],
-            "holding_horizon_bars": "12-96",
-            "invalidation_conditions": [
-              "OI recovers within 12 bars (false flush, not cascade)",
-              "Volume spike without directional price move (block trade, not forced selling)"
-            ]
-          },
-          "max_gap": 3,
-          "merge_gap_bars": 1,
-          "min_occurrences": 0,
-          "min_periods": 24,
-          "oi_drop_quantile": 0.95,
-          "oi_window": 288,
-          "price_drop_th": 0.003,
-          "ret_window": 3,
-          "synthetic_coverage": "covered",
-          "trigger": "Detector triggers on OI drop + volume surge + price drop coincidence",
-          "vol_surge_quantile": 0.9,
-          "vol_window": 288
-        },
-        "phase": "onset",
-        "reports_dir": "liquidation_events",
-        "research_only": false,
-        "sequence_eligible": true,
-        "signal_column": "liquidation_cascade_proxy_event",
-        "strategy_only": false,
-        "subtype": "liquidation_cascade_proxy",
-        "tags": [
-          "oi_dynamic",
-          "liquidation_proxy"
-        ],
-        "templates": [
-          "reversal_or_squeeze",
-          "mean_reversion",
-          "continuation",
-          "exhaustion_reversal",
-          "convexity_capture",
-          "only_if_funding",
-          "only_if_oi",
-          "tail_risk_avoid"
-        ],
-        "threshold_parameters": {
-          "cooldown_bars": 0,
-          "max_gap": 3,
-          "merge_gap_bars": 1,
-          "min_occurrences": 0,
-          "min_periods": 24,
-          "oi_drop_quantile": 0.95,
-          "oi_window": 288,
-          "ret_window": 3,
-          "vol_surge_quantile": 0.9,
-          "vol_window": 288
-        },
-        "venue_scope": "single_venue"
-      },
-      {
-        "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+        "canonical_family": "POSITIONING_EXTREMES",
         "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
         "conditioning_cols": [
           "vol_regime",
@@ -3524,7 +3539,6 @@
         "notes": "OI flush folded into unwind/deleveraging regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "POSITIONING_EXTREMES",
           "cluster_id": "oi_dynamic",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -3538,10 +3552,11 @@
               "Funding reverses sign"
             ]
           },
-          "flush_pct_th": -0.005,
+          "flush_pct_th": -0.02,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
           "oi_window": 96,
+          "research_family": "POSITIONING_EXTREMES",
           "spike_z_th": 2.5,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on oi flush pattern"
@@ -3565,6 +3580,8 @@
           "convexity_capture",
           "only_if_funding",
           "only_if_oi",
+          "only_if_regime",
+          "only_if_highvol",
           "tail_risk_avoid"
         ],
         "threshold_parameters": {
@@ -3578,7 +3595,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
         "conditioning_cols": [
           "vol_regime",
@@ -3609,7 +3626,6 @@
         "notes": "Recovery phase following deleveraging wave.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cluster_window": 12,
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -3637,6 +3653,7 @@
           "rebound_return_min": 0.001,
           "rebound_window": 6,
           "rebound_window_bars": 12,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "return_abs_min": 0.0025,
           "return_quantile": 0.75,
           "reversal_quantile": 0.65,
@@ -3727,7 +3744,6 @@
         "notes": "Cross-asset transition evidence via beta instability.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "REGIME_TRANSITION",
           "cluster_id": "regime_shift",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -3744,6 +3760,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "regime_window": 288,
+          "research_family": "REGIME_TRANSITION",
           "synthetic_coverage": "covered",
           "transition_z_threshold": 2.5,
           "trigger": "Detector triggers on beta spike event pattern"
@@ -3810,7 +3827,6 @@
         "notes": "Transition from choppy to directional conditions.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "REGIME_TRANSITION",
           "cluster_id": "regime_shift",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -3827,6 +3843,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "regime_window": 288,
+          "research_family": "REGIME_TRANSITION",
           "synthetic_coverage": "covered",
           "transition_z_threshold": 2.5,
           "trigger": "Detector triggers on chop to trend shift pattern"
@@ -3894,7 +3911,6 @@
         "notes": "Cross-asset regime transition via correlation instability.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "REGIME_TRANSITION",
           "cluster_id": "regime_shift",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -3911,6 +3927,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "regime_window": 288,
+          "research_family": "REGIME_TRANSITION",
           "synthetic_coverage": "covered",
           "transition_z_threshold": 2.5,
           "trigger": "Detector triggers on correlation breakdown event pattern"
@@ -3977,7 +3994,6 @@
         "notes": "Transition from directional to choppy conditions.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "REGIME_TRANSITION",
           "cluster_id": "regime_shift",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -3994,6 +4010,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "regime_window": 288,
+          "research_family": "REGIME_TRANSITION",
           "synthetic_coverage": "covered",
           "transition_z_threshold": 2.5,
           "trigger": "Detector triggers on trend to chop shift pattern"
@@ -4061,7 +4078,6 @@
         "notes": "Regime transition expressed through volatility-state change.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "REGIME_TRANSITION",
           "cluster_id": "regime_shift",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 48,
@@ -4078,6 +4094,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "regime_window": 288,
+          "research_family": "REGIME_TRANSITION",
           "synthetic_coverage": "covered",
           "transition_z_threshold": 2.5,
           "trigger": "Detector triggers on vol regime shift event pattern"
@@ -4113,7 +4130,7 @@
     "SCHEDULED_TEMPORAL_WINDOW": [
       {
         "asset_scope": "multi_asset",
-        "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+        "canonical_family": "TEMPORAL_STRUCTURE",
         "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
         "conditioning_cols": [
           "vol_regime",
@@ -4148,7 +4165,6 @@
         "notes": "Mechanical funding window context; not a canonical regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "TEMPORAL_STRUCTURE",
           "cluster_id": "temporal_anchor",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4165,6 +4181,7 @@
           "funding_abs_quantile": 0.0,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TEMPORAL_STRUCTURE",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on funding timestamp event pattern"
         },
@@ -4194,7 +4211,7 @@
       },
       {
         "asset_scope": "multi_asset",
-        "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+        "canonical_family": "TEMPORAL_STRUCTURE",
         "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
         "conditioning_cols": [
           "vol_regime",
@@ -4229,7 +4246,6 @@
         "notes": "Context gate for scheduled news windows.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "TEMPORAL_STRUCTURE",
           "cluster_id": "temporal_anchor",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4245,6 +4261,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TEMPORAL_STRUCTURE",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on scheduled news window event pattern"
         },
@@ -4272,7 +4289,7 @@
       },
       {
         "asset_scope": "multi_asset",
-        "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+        "canonical_family": "TEMPORAL_STRUCTURE",
         "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
         "conditioning_cols": [
           "vol_regime",
@@ -4307,7 +4324,6 @@
         "notes": "Session close context tag.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "TEMPORAL_STRUCTURE",
           "cluster_id": "temporal_anchor",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4330,6 +4346,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "minute_close_start": 55,
+          "research_family": "TEMPORAL_STRUCTURE",
           "session_range_quantile": 0.0,
           "session_vol_z_min": null,
           "synthetic_coverage": "covered",
@@ -4361,7 +4378,7 @@
       },
       {
         "asset_scope": "multi_asset",
-        "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+        "canonical_family": "TEMPORAL_STRUCTURE",
         "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
         "conditioning_cols": [
           "vol_regime",
@@ -4396,7 +4413,6 @@
         "notes": "Session open context tag.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "TEMPORAL_STRUCTURE",
           "cluster_id": "temporal_anchor",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4419,6 +4435,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "minute_open": 0,
+          "research_family": "TEMPORAL_STRUCTURE",
           "session_range_quantile": 0.0,
           "session_vol_z_min": null,
           "synthetic_coverage": "covered",
@@ -4452,7 +4469,7 @@
     "STATISTICAL_STRETCH_OVERSHOOT": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
         "conditioning_cols": [
           "vol_regime",
@@ -4488,7 +4505,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "band_z_threshold": 3.0,
-          "canonical_family": "STATISTICAL_DISLOCATION",
           "cluster_id": "statistical_stretch",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4505,6 +4521,7 @@
           "lookback_window": 288,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "STATISTICAL_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on band break pattern"
         },
@@ -4534,7 +4551,7 @@
       },
       {
         "asset_scope": "cross_asset",
-        "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
         "conditioning_cols": [
           "vol_regime",
@@ -4571,7 +4588,6 @@
           "alpha1": 0.05,
           "alpha2": 0.95,
           "anchor_rule": "max_intensity",
-          "canonical_family": "STATISTICAL_DISLOCATION",
           "cluster_id": "basis_dislocation",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4588,6 +4604,7 @@
           "lookback_window": 288,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "STATISTICAL_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on copula pairs trading pattern"
         },
@@ -4616,7 +4633,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
         "conditioning_cols": [
           "vol_regime",
@@ -4652,7 +4669,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "band_z_threshold": 3.0,
-          "canonical_family": "STATISTICAL_DISLOCATION",
           "cluster_id": "statistical_stretch",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4669,6 +4685,7 @@
           "lookback_window": 288,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "STATISTICAL_DISLOCATION",
           "return_quantile": 0.995,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on gap overshoot pattern"
@@ -4700,7 +4717,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
         "conditioning_cols": [
           "vol_regime",
@@ -4736,7 +4753,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "band_z_threshold": 3.0,
-          "canonical_family": "STATISTICAL_DISLOCATION",
           "cluster_id": "statistical_stretch",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4754,6 +4770,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "price_quantile": 0.95,
+          "research_family": "STATISTICAL_DISLOCATION",
           "rv_quantile": 0.95,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on overshoot after shock pattern"
@@ -4786,7 +4803,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+        "canonical_family": "STATISTICAL_DISLOCATION",
         "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
         "conditioning_cols": [
           "vol_regime",
@@ -4822,7 +4839,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "band_z_threshold": 3.0,
-          "canonical_family": "STATISTICAL_DISLOCATION",
           "cluster_id": "statistical_stretch",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4839,6 +4855,7 @@
           "lookback_window": 288,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "STATISTICAL_DISLOCATION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on zscore stretch pattern",
           "zscore_quantile": 0.96
@@ -4872,7 +4889,7 @@
     "TREND_CONTINUATION": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_CONTINUATION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_CONTINUATION",
         "conditioning_cols": [
           "vol_regime",
@@ -4908,7 +4925,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -4924,6 +4940,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 288,
           "trigger": "Detector triggers on pullback pivot pattern"
@@ -4957,7 +4974,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_CONTINUATION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_CONTINUATION",
         "conditioning_cols": [
           "vol_regime",
@@ -4993,7 +5010,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -5009,6 +5025,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 288,
           "trigger": "Detector triggers on range breakout pattern"
@@ -5042,7 +5059,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_CONTINUATION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_CONTINUATION",
         "conditioning_cols": [
           "vol_regime",
@@ -5078,7 +5095,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -5094,6 +5110,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 288,
           "trigger": "Detector triggers on support resistance break pattern"
@@ -5127,7 +5144,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_CONTINUATION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_CONTINUATION",
         "conditioning_cols": [
           "vol_regime",
@@ -5163,7 +5180,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -5180,6 +5196,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "min_spacing": 192,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 96,
           "trigger": "Detector triggers on trend acceleration pattern"
@@ -5216,7 +5233,7 @@
     "TREND_FAILURE_EXHAUSTION": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5250,7 +5267,6 @@
         "notes": "Exhaustion marker rather than standalone family.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cascade_window_bars": 12,
           "cluster_id": "exhaustion",
           "confirmation": "Post-detection price action confirms signal validity",
@@ -5269,6 +5285,7 @@
           "merge_gap_bars": 0,
           "min_occurrences": 0,
           "range_quantile": 0.995,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "ret_quantile": 0.998,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on climax volume bar pattern",
@@ -5285,14 +5302,7 @@
           "exhaustion",
           "high_urgency"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "cascade_window_bars": 12,
           "cooldown_bars": 48,
@@ -5307,7 +5317,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5343,7 +5353,6 @@
           "anchor_rule": "max_intensity",
           "breakout_strength_min": 0.003,
           "breakout_window": 48,
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cluster_id": "exhaustion",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -5359,6 +5368,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "reversal_window": 12,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on failed continuation pattern"
@@ -5373,14 +5383,7 @@
         "tags": [
           "exhaustion"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "breakout_strength_min": 0.003,
           "breakout_window": 48,
@@ -5393,7 +5396,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5429,7 +5432,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -5446,6 +5448,7 @@
           "max_range_ratio": 8.0,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 288,
           "trigger": "Detector triggers on false breakout pattern"
@@ -5481,7 +5484,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5512,7 +5515,6 @@
         "notes": "Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined with price and volatility exhaustion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cluster_id": "exhaustion",
           "confirmation": "Price reversal and volatility-cooldown behavior confirm the exhaustion signal.",
           "cooldown_bars": 12,
@@ -5537,6 +5539,7 @@
           "oi_drop_abs_min": 5.0,
           "oi_drop_quantile": 0.8,
           "rebound_window": 6,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "return_abs_min": 0.0025,
           "return_quantile": 0.75,
           "reversal_quantile": 0.65,
@@ -5557,14 +5560,7 @@
         "strategy_only": false,
         "subtype": "flow_exhaustion",
         "tags": [],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "cooldown_bars": 12,
           "liquidation_abs_min": 25.0,
@@ -5591,7 +5587,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5627,7 +5623,6 @@
           "anchor_mode": "taker_imbalance",
           "anchor_quantile": 0.99,
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cluster_id": "exhaustion",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 0,
@@ -5651,6 +5646,7 @@
           "oi_drop_abs_min": 5.0,
           "oi_drop_quantile": 0.88,
           "rebound_window": 6,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "return_abs_min": 0.0025,
           "return_quantile": 0.8,
           "reversal_quantile": 0.65,
@@ -5674,14 +5670,7 @@
           "exhaustion",
           "forced_liquidation"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "anchor_quantile": 0.99,
           "cooldown_bars": 0,
@@ -5708,7 +5697,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5742,7 +5731,6 @@
         "notes": "Reversal after forced liquidation exhaustion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cluster_id": "forced_liquidation",
           "cluster_window": 12,
           "confirmation": "Post-detection price action confirms signal validity",
@@ -5774,6 +5762,7 @@
           "rebound_return_min": 0.001,
           "rebound_window": 6,
           "rebound_window_bars": 12,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "return_abs_min": 0.0025,
           "return_quantile": 0.75,
           "reversal_quantile": 0.65,
@@ -5797,14 +5786,7 @@
         "tags": [
           "forced_liquidation"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "cluster_window": 12,
           "cooldown_bars": 24,
@@ -5837,7 +5819,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5871,7 +5853,6 @@
         "notes": "Divergence-based exhaustion signal.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cascade_window_bars": 12,
           "cluster_id": "exhaustion",
           "confirmation": "Post-detection price action confirms signal validity",
@@ -5890,6 +5871,7 @@
           "max_trend_persistence_bars": 72,
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "slow_trend_quantile": 0.7,
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on momentum divergence trigger pattern"
@@ -5904,14 +5886,7 @@
         "tags": [
           "exhaustion"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "cascade_window_bars": 12,
           "cooldown_bars": 96,
@@ -5925,7 +5900,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "TREND_STRUCTURE",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -5961,7 +5936,6 @@
         "parameters": {
           "anchor_rule": "max_intensity",
           "breakout_z_threshold": 2.5,
-          "canonical_family": "TREND_STRUCTURE",
           "cluster_id": "trend_momentum",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 12,
@@ -5977,6 +5951,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "TREND_STRUCTURE",
           "synthetic_coverage": "covered",
           "trend_window": 288,
           "trigger": "Detector triggers on trend deceleration pattern"
@@ -6010,7 +5985,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "TREND_FAILURE_EXHAUSTION",
+        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "canonical_regime": "TREND_FAILURE_EXHAUSTION",
         "conditioning_cols": [
           "vol_regime",
@@ -6044,7 +6019,6 @@
         "notes": "Canonical exhaustion onset.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
           "cascade_window_bars": 12,
           "cluster_id": "exhaustion",
           "confirmation": "Post-detection price action confirms signal validity",
@@ -6069,6 +6043,7 @@
           "min_trend_duration_bars": 72,
           "pullback_quantile": 0.7,
           "pullback_window": 96,
+          "research_family": "FORCED_FLOW_AND_EXHAUSTION",
           "reversal_alignment_window": 3,
           "reversal_quantile": 0.65,
           "reversal_window": 3,
@@ -6094,14 +6069,7 @@
           "exhaustion",
           "trend_momentum"
         ],
-        "templates": [
-          "mean_reversion",
-          "exhaustion_reversal",
-          "momentum_fade",
-          "range_reversion",
-          "only_if_trend",
-          "drawdown_filter"
-        ],
+        "templates": [],
         "threshold_parameters": {
           "cascade_window_bars": 12,
           "context_max_entropy": 0.9,
@@ -6133,7 +6101,7 @@
     "VOLATILITY_EXPANSION": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_EXPANSION",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_EXPANSION",
         "conditioning_cols": [
           "vol_regime",
@@ -6167,7 +6135,6 @@
         "notes": "Volatility cluster migration under expansion regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "vol_regime",
           "compression_quantile": 0.1,
           "confirmation": "Post-detection price action confirms signal validity",
@@ -6185,6 +6152,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on vol cluster shift pattern",
           "vol_lookback_window": 288
@@ -6219,7 +6187,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_EXPANSION",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_EXPANSION",
         "conditioning_cols": [
           "vol_regime",
@@ -6253,7 +6221,6 @@
         "notes": "Canonical realized-volatility expansion onset.",
         "parameters": {
           "anchor_rule": "first",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "vol_regime",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 6,
@@ -6269,6 +6236,7 @@
           },
           "merge_gap_bars": 1,
           "min_occurrences": 5,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on vol spike pattern"
         },
@@ -6302,7 +6270,7 @@
     "VOLATILITY_RELAXATION_COMPRESSION_RELEASE": [
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
         "conditioning_cols": [
           "vol_regime",
@@ -6336,7 +6304,6 @@
         "notes": "Compression-release bridge event; not a standalone canonical regime.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "trend_momentum",
           "compression_ratio_max": 0.8,
           "compression_window": 6,
@@ -6356,6 +6323,7 @@
           "merge_gap_bars": 0,
           "min_breakout_distance": 0.0015,
           "min_occurrences": 0,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on breakout trigger pattern",
           "vol_lookback_window": 96
@@ -6393,7 +6361,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
         "conditioning_cols": [
           "vol_regime",
@@ -6427,7 +6395,6 @@
         "notes": "Compression-release subtype rather than standalone family.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "vol_regime",
           "compression_quantile": 0.1,
           "confirmation": "Post-detection price action confirms signal validity",
@@ -6445,6 +6412,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on range compression end pattern",
           "vol_lookback_window": 288
@@ -6479,7 +6447,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
         "conditioning_cols": [
           "vol_regime",
@@ -6513,7 +6481,6 @@
         "notes": "Composite compression-release hypothesis.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "vol_regime",
           "confirmation": "Post-detection price action confirms signal validity",
           "cooldown_bars": 24,
@@ -6530,6 +6497,7 @@
           "max_gap_bars": 48,
           "merge_gap_bars": 1,
           "min_occurrences": 0,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on seq vol comp then breakout pattern"
         },
@@ -6555,7 +6523,7 @@
       },
       {
         "asset_scope": "single_asset",
-        "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+        "canonical_family": "VOLATILITY_TRANSITION",
         "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
         "conditioning_cols": [
           "vol_regime",
@@ -6589,7 +6557,6 @@
         "notes": "Start of volatility normalization after expansion.",
         "parameters": {
           "anchor_rule": "max_intensity",
-          "canonical_family": "VOLATILITY_TRANSITION",
           "cluster_id": "vol_regime",
           "compression_quantile": 0.1,
           "confirmation": "Post-detection price action confirms signal validity",
@@ -6607,6 +6574,7 @@
           },
           "merge_gap_bars": 0,
           "min_occurrences": 0,
+          "research_family": "VOLATILITY_TRANSITION",
           "synthetic_coverage": "covered",
           "trigger": "Detector triggers on vol relaxation start pattern",
           "vol_lookback_window": 288
@@ -6783,7 +6751,7 @@
   "rows": [
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -6814,7 +6782,6 @@
       "notes": "Hybrid liquidity-stress evidence: direct imbalance-stall confirmation combined with spread and RV stress.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Spread and realized-volatility stress persist long enough to confirm the absorption signal.",
         "cooldown_bars": 96,
@@ -6833,6 +6800,7 @@
         "merge_gap_bars": 0,
         "min_history_bars": 288,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "rv_quantile": 0.9,
         "spread_quantile": 0.965,
         "synthetic_coverage": "covered",
@@ -6868,7 +6836,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
       "conditioning_cols": [
         "vol_regime",
@@ -6904,7 +6872,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "band_z_threshold": 3.0,
-        "canonical_family": "STATISTICAL_DISLOCATION",
         "cluster_id": "statistical_stretch",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -6921,6 +6888,7 @@
         "lookback_window": 288,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "STATISTICAL_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on band break pattern"
       },
@@ -6950,7 +6918,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -7064,7 +7032,6 @@
       "notes": "Cross-asset transition evidence via beta instability.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "REGIME_TRANSITION",
         "cluster_id": "regime_shift",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -7081,6 +7048,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "regime_window": 288,
+        "research_family": "REGIME_TRANSITION",
         "synthetic_coverage": "covered",
         "transition_z_threshold": 2.5,
         "trigger": "Detector triggers on beta spike event pattern"
@@ -7113,7 +7081,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
       "conditioning_cols": [
         "vol_regime",
@@ -7147,7 +7115,6 @@
       "notes": "Compression-release bridge event; not a standalone canonical regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "trend_momentum",
         "compression_ratio_max": 0.8,
         "compression_window": 6,
@@ -7167,6 +7134,7 @@
         "merge_gap_bars": 0,
         "min_breakout_distance": 0.0015,
         "min_occurrences": 0,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on breakout trigger pattern",
         "vol_lookback_window": 96
@@ -7238,7 +7206,6 @@
       "notes": "Transition from choppy to directional conditions.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "REGIME_TRANSITION",
         "cluster_id": "regime_shift",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -7255,6 +7222,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "regime_window": 288,
+        "research_family": "REGIME_TRANSITION",
         "synthetic_coverage": "covered",
         "transition_z_threshold": 2.5,
         "trigger": "Detector triggers on chop to trend shift pattern"
@@ -7288,7 +7256,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -7322,7 +7290,6 @@
       "notes": "Exhaustion marker rather than standalone family.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cascade_window_bars": 12,
         "cluster_id": "exhaustion",
         "confirmation": "Post-detection price action confirms signal validity",
@@ -7341,6 +7308,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "range_quantile": 0.995,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "ret_quantile": 0.998,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on climax volume bar pattern",
@@ -7357,14 +7325,7 @@
         "exhaustion",
         "high_urgency"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "cascade_window_bars": 12,
         "cooldown_bars": 48,
@@ -7379,7 +7340,7 @@
     },
     {
       "asset_scope": "cross_asset",
-      "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
       "conditioning_cols": [
         "vol_regime",
@@ -7416,7 +7377,6 @@
         "alpha1": 0.05,
         "alpha2": 0.95,
         "anchor_rule": "max_intensity",
-        "canonical_family": "STATISTICAL_DISLOCATION",
         "cluster_id": "basis_dislocation",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -7433,6 +7393,7 @@
         "lookback_window": 288,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "STATISTICAL_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on copula pairs trading pattern"
       },
@@ -7495,7 +7456,6 @@
       "notes": "Cross-asset regime transition via correlation instability.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "REGIME_TRANSITION",
         "cluster_id": "regime_shift",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -7512,6 +7472,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "regime_window": 288,
+        "research_family": "REGIME_TRANSITION",
         "synthetic_coverage": "covered",
         "transition_z_threshold": 2.5,
         "trigger": "Detector triggers on correlation breakdown event pattern"
@@ -7544,7 +7505,7 @@
     },
     {
       "asset_scope": "cross_asset",
-      "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+      "canonical_family": "INFORMATION_DESYNC",
       "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
       "conditioning_cols": [
         "vol_regime",
@@ -7603,7 +7564,6 @@
           ],
           "stability_requirement": "Threshold must remain within one z-score step across calibration splits for the same pair universe."
         },
-        "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
         "causal_mechanism": "When two historically linked assets stop moving together, one leg may be lagging price discovery or absorbing flow asymmetrically. The contract only fires when the divergence is observed on paired data; it never degrades into a single-asset anomaly label.",
         "cooldown_bars": 24,
         "detector": {
@@ -7652,6 +7612,7 @@
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "min_pair_observations": 96,
+        "research_family": "CROSS_ASSET_DESYNCHRONIZATION",
         "synthetic_coverage": "covered",
         "threshold_z": 3.0
       },
@@ -7684,7 +7645,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "INFORMATION_DESYNC",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -7746,7 +7707,6 @@
           ],
           "stability_requirement": "anchor_quantile consistent across BTC/ETH spot-perp pairs within 0.01. Hit rate of reversion within window_end > 55% on both halves.\n"
         },
-        "canonical_family": "INFORMATION_DESYNC",
         "cluster_id": "desync",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -7806,6 +7766,7 @@
         "min_basis_bps": 35.0,
         "min_occurrences": 0,
         "persistence_bars": 2,
+        "research_family": "INFORMATION_DESYNC",
         "revert_z": 0.5,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on cross venue desync pattern",
@@ -7843,7 +7804,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
       "conditioning_cols": [
         "vol_regime",
@@ -7878,7 +7839,6 @@
       "notes": "Positioning unwind regime with explicit deleveraging dynamics.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "forced_liquidation",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -7896,6 +7856,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "oi_change_z_threshold": 3.0,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on deleveraging wave pattern"
       },
@@ -7931,7 +7892,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -7965,7 +7926,6 @@
       "notes": "Direct depth failure evidence for liquidity stress.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -7985,6 +7945,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "rv_weight": 0.35,
         "spread_weight": 0.45,
         "synthetic_coverage": "covered",
@@ -8021,7 +7982,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -8052,7 +8013,6 @@
       "notes": "Hybrid liquidity-stress evidence: direct micro-depth depletion combined with spread and RV stress.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Spread and realized-volatility stress remain elevated around the depth-collapse impulse.",
         "cooldown_bars": 96,
@@ -8072,6 +8032,7 @@
         "merge_gap_bars": 0,
         "min_history_bars": 288,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "rv_quantile": 0.9,
         "rv_weight": 0.35,
         "spread_quantile": 0.99,
@@ -8110,7 +8071,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -8146,7 +8107,6 @@
         "anchor_rule": "max_intensity",
         "breakout_strength_min": 0.003,
         "breakout_window": 48,
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cluster_id": "exhaustion",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -8162,6 +8122,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "reversal_window": 12,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on failed continuation pattern"
@@ -8176,14 +8137,7 @@
       "tags": [
         "exhaustion"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "breakout_strength_min": 0.003,
         "breakout_window": 48,
@@ -8196,7 +8150,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -8232,7 +8186,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -8249,6 +8202,7 @@
         "max_range_ratio": 8.0,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 288,
         "trigger": "Detector triggers on false breakout pattern"
@@ -8319,7 +8273,6 @@
       "notes": "Execution-cost regime shift.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "EXECUTION_FRICTION",
         "cluster_id": "execution_cost",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -8335,6 +8288,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "EXECUTION_FRICTION",
         "slippage_z_threshold": 3.0,
         "spread_z_threshold": 3.0,
         "synthetic_coverage": "covered",
@@ -8365,7 +8319,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -8396,7 +8350,6 @@
       "notes": "Hybrid exhaustion evidence: liquidation and OI unwind confirmation combined with price and volatility exhaustion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cluster_id": "exhaustion",
         "confirmation": "Price reversal and volatility-cooldown behavior confirm the exhaustion signal.",
         "cooldown_bars": 12,
@@ -8421,6 +8374,7 @@
         "oi_drop_abs_min": 5.0,
         "oi_drop_quantile": 0.8,
         "rebound_window": 6,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "return_abs_min": 0.0025,
         "return_quantile": 0.75,
         "reversal_quantile": 0.65,
@@ -8441,14 +8395,7 @@
       "strategy_only": false,
       "subtype": "flow_exhaustion",
       "tags": [],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "cooldown_bars": 12,
         "liquidation_abs_min": 25.0,
@@ -8475,7 +8422,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -8560,7 +8507,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -8596,7 +8543,6 @@
         "anchor_mode": "taker_imbalance",
         "anchor_quantile": 0.99,
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cluster_id": "exhaustion",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -8620,6 +8566,7 @@
         "oi_drop_abs_min": 5.0,
         "oi_drop_quantile": 0.88,
         "rebound_window": 6,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "return_abs_min": 0.0025,
         "return_quantile": 0.8,
         "reversal_quantile": 0.65,
@@ -8643,14 +8590,7 @@
         "exhaustion",
         "forced_liquidation"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "anchor_quantile": 0.99,
         "cooldown_bars": 0,
@@ -8677,7 +8617,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -8744,7 +8684,6 @@
           ],
           "stability_requirement": "Threshold must produce >= 30 events on both first-half and second-half of in-sample period. Threshold deviation across assets < 5 percentile points.\n"
         },
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "funding_crowding",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -8820,6 +8759,7 @@
         "phase_tolerance_bars": 16,
         "post_window": 96,
         "pre_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding extreme onset pattern",
         "vol_auc_horizon": 8,
@@ -8843,6 +8783,8 @@
         "convexity_capture",
         "only_if_funding",
         "only_if_oi",
+        "only_if_regime",
+        "only_if_highvol",
         "tail_risk_avoid"
       ],
       "threshold_parameters": {
@@ -8871,7 +8813,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -8906,7 +8848,6 @@
       "notes": "Funding sign inversion as subtype metadata.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "funding_crowding",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -8927,6 +8868,7 @@
         "min_spacing": 24,
         "oi_change_z_threshold": 3.0,
         "persistence_bars": 2,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding flip pattern"
       },
@@ -8965,7 +8907,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -9000,14 +8942,13 @@
       "parameters": {
         "accel_lookback": 32,
         "accel_near_zero_cutoff": 5,
-        "accel_pct": 95.0,
+        "accel_pct": 85.0,
         "accel_persistence_intervals": 2,
         "accel_quantile": 0.995,
         "anchor_rule": "max_intensity",
         "auc_bootstrap_iters": 2000,
         "baseline_samples_per_event": 3,
         "baseline_seed": 7,
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "funding_crowding",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -9024,7 +8965,7 @@
             "Funding reverses sign"
           ]
         },
-        "extreme_pct": 95.0,
+        "extreme_pct": 85.0,
         "funding_pct_window": 2880,
         "htf_lookback": 96,
         "htf_window": 384,
@@ -9044,6 +8985,7 @@
         "phase_tolerance_bars": 16,
         "post_window": 96,
         "pre_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding normalization trigger pattern",
         "vol_auc_horizon": 8,
@@ -9095,7 +9037,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -9138,7 +9080,6 @@
         "auc_bootstrap_iters": 2000,
         "baseline_samples_per_event": 3,
         "baseline_seed": 7,
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "funding_crowding",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -9163,10 +9104,11 @@
         "liq_auc_horizon": 96,
         "liquidation_abs_return": 0.03,
         "merge_gap_bars": 1,
-        "min_event_spacing": 96,
+        "min_event_spacing": 576,
         "min_hazard_events": 50,
         "min_occurrences": 0,
         "min_prior_extreme_abs": 0.0004,
+        "min_spacing": 576,
         "normalization_lookback": 96,
         "normalization_pct": 50.0,
         "persistence_bars": 12,
@@ -9175,6 +9117,7 @@
         "phase_tolerance_bars": 16,
         "post_window": 96,
         "pre_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding persistence trigger pattern",
         "vol_auc_horizon": 8,
@@ -9198,7 +9141,8 @@
         "convexity_capture",
         "only_if_funding",
         "only_if_oi",
-        "tail_risk_avoid"
+        "tail_risk_avoid",
+        "only_if_regime"
       ],
       "threshold_parameters": {
         "accel_lookback": 32,
@@ -9211,10 +9155,11 @@
         "htf_window": 384,
         "interaction_min_rows_per_year": 150,
         "merge_gap_bars": 1,
-        "min_event_spacing": 96,
+        "min_event_spacing": 576,
         "min_hazard_events": 50,
         "min_occurrences": 0,
         "min_prior_extreme_abs": 0.0004,
+        "min_spacing": 576,
         "normalization_lookback": 96,
         "persistence_bars": 12,
         "phase_tolerance_bars": 16,
@@ -9226,7 +9171,7 @@
     },
     {
       "asset_scope": "multi_asset",
-      "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+      "canonical_family": "TEMPORAL_STRUCTURE",
       "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
       "conditioning_cols": [
         "vol_regime",
@@ -9261,7 +9206,6 @@
       "notes": "Mechanical funding window context; not a canonical regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "TEMPORAL_STRUCTURE",
         "cluster_id": "temporal_anchor",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -9278,6 +9222,7 @@
         "funding_abs_quantile": 0.0,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TEMPORAL_STRUCTURE",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on funding timestamp event pattern"
       },
@@ -9307,7 +9252,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
       "conditioning_cols": [
         "vol_regime",
@@ -9343,7 +9288,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "band_z_threshold": 3.0,
-        "canonical_family": "STATISTICAL_DISLOCATION",
         "cluster_id": "statistical_stretch",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -9360,6 +9304,7 @@
         "lookback_window": 288,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "STATISTICAL_DISLOCATION",
         "return_quantile": 0.995,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on gap overshoot pattern"
@@ -9391,7 +9336,7 @@
     },
     {
       "asset_scope": "cross_asset",
-      "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+      "canonical_family": "INFORMATION_DESYNC",
       "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
       "conditioning_cols": [
         "vol_regime",
@@ -9427,7 +9372,6 @@
       "notes": "Cross-asset divergence between index and components.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "INFORMATION_DESYNC",
         "cluster_id": "desync",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -9445,6 +9389,7 @@
         "lead_lag_window": 60,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "INFORMATION_DESYNC",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on index component divergence pattern"
       },
@@ -9476,7 +9421,7 @@
     },
     {
       "asset_scope": "cross_asset",
-      "canonical_family": "CROSS_ASSET_DESYNCHRONIZATION",
+      "canonical_family": "INFORMATION_DESYNC",
       "canonical_regime": "CROSS_ASSET_DESYNCHRONIZATION",
       "conditioning_cols": [
         "vol_regime",
@@ -9512,7 +9457,6 @@
       "notes": "Lead/lag structure break.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "INFORMATION_DESYNC",
         "cluster_id": "desync",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -9530,6 +9474,7 @@
         "lead_lag_window": 60,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "INFORMATION_DESYNC",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on lead lag break pattern"
       },
@@ -9561,7 +9506,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDATION_CASCADE",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "LIQUIDATION_CASCADE",
       "conditioning_cols": [
         "vol_regime",
@@ -9593,7 +9538,7 @@
       "is_strategy_construct": false,
       "layer": "canonical",
       "legacy_family": "POSITIONING_EXTREMES",
-      "max_candidates_per_run": 300,
+      "max_candidates_per_run": 1000,
       "notes": "Structurally distinct canonical cascade regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
@@ -9648,8 +9593,8 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
-      "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
+      "canonical_family": "POSITIONING_EXTREMES",
+      "canonical_regime": "LIQUIDATION_CASCADE",
       "conditioning_cols": [
         "vol_regime",
         "carry_state",
@@ -9680,7 +9625,7 @@
       "is_strategy_construct": false,
       "layer": "canonical",
       "legacy_family": "POSITIONING_EXTREMES",
-      "max_candidates_per_run": 1000,
+      "max_candidates_per_run": 300,
       "notes": "Use when liquidation_notional data is unavailable (e.g., Bybit native data without cross-exchange liquidation feed). Expected to have lower precision than LIQUIDATION_CASCADE but comparable recall for large cascade events.",
       "parameters": {
         "anchor_rule": "max_intensity",
@@ -9706,7 +9651,6 @@
             0.99
           ]
         },
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "oi_dynamic",
         "confirmation": "Post-detection price recovery confirms forced-selling exhaustion",
         "cooldown_bars": 0,
@@ -9730,6 +9674,14 @@
         },
         "detector_contract": true,
         "expected_behavior": {
+          "disabled_regimes": [
+            {
+              "DELEVERAGING_WAVE active and unresolved": "cascade already captured"
+            },
+            {
+              "LOW_LIQUIDITY_STATE active": "oi_delta_1h noise inflates pct drop signal"
+            }
+          ],
           "expected_overlap": [
             {
               "OI_FLUSH": "high co-occurrence (OI_FLUSH is a subset without volume/price confirmation)"
@@ -9755,9 +9707,10 @@
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "min_periods": 24,
-        "oi_drop_quantile": 0.95,
+        "oi_drop_quantile": 0.98,
         "oi_window": 288,
         "price_drop_th": 0.003,
+        "research_family": "POSITIONING_EXTREMES",
         "ret_window": 3,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on OI drop + volume surge + price drop coincidence",
@@ -9791,7 +9744,7 @@
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "min_periods": 24,
-        "oi_drop_quantile": 0.95,
+        "oi_drop_quantile": 0.98,
         "oi_window": 288,
         "ret_window": 3,
         "vol_surge_quantile": 0.9,
@@ -9801,7 +9754,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -9835,7 +9788,6 @@
       "notes": "Reversal after forced liquidation exhaustion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cluster_id": "forced_liquidation",
         "cluster_window": 12,
         "confirmation": "Post-detection price action confirms signal validity",
@@ -9867,6 +9819,7 @@
         "rebound_return_min": 0.001,
         "rebound_window": 6,
         "rebound_window_bars": 12,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "return_abs_min": 0.0025,
         "return_quantile": 0.75,
         "reversal_quantile": 0.65,
@@ -9890,14 +9843,7 @@
       "tags": [
         "forced_liquidation"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "cluster_window": 12,
         "cooldown_bars": 24,
@@ -9930,7 +9876,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -9949,7 +9895,9 @@
       "events_file": "liquidity_dislocation_events.parquet",
       "evidence_mode": "direct",
       "horizons": [
-        "15m"
+        "12b",
+        "24b",
+        "48b"
       ],
       "instrument_classes": [
         "crypto",
@@ -9964,7 +9912,6 @@
       "notes": "Gap print inside liquidity-stress regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -9982,6 +9929,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on liquidity gap print pattern",
         "z_threshold": 3.0
@@ -10016,7 +9964,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -10050,7 +9998,6 @@
       "notes": "High-level liquidity stress onset.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -10068,6 +10015,7 @@
         "median_window": 288,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "spread_spike_th": 3.0,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on liquidity shock pattern"
@@ -10101,7 +10049,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -10132,7 +10080,6 @@
       "notes": "Direct evidence mode for liquidity stress.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -10150,6 +10097,7 @@
         "median_window": 288,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "spread_spike_th": 3.0,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on liquidity stress direct pattern"
@@ -10180,7 +10128,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -10211,7 +10159,6 @@
       "notes": "Hybrid liquidity-stress evidence: direct book stress when available plus bar-range expansion and optional trade-flow collapse confirmation.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "confirmation": "Spread stress should remain elevated briefly while proxy range expansion or trade-flow weakness confirms the shock.",
         "cooldown_bars": 0,
         "depth_collapse_th": 0.5,
@@ -10229,6 +10176,7 @@
         "median_window": 288,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "spread_spike_th": 3.0,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers when direct liquidity stress and proxy range-stress confirmation align."
@@ -10259,7 +10207,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -10319,7 +10267,6 @@
           ],
           "stability_requirement": "Selected threshold must yield >= min_events_calibration events on both in-sample and the most recent 12-month rolling window.\n"
         },
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -10384,6 +10331,7 @@
         "range_expansion_threshold": 0.02,
         "range_multiplier": 1.05,
         "range_window": 24,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "shock_quantile": 0.99,
         "shock_quantiles": "0.5,0.6,0.7",
         "shock_threshold_mode": "rolling",
@@ -10433,7 +10381,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -10467,7 +10415,6 @@
       "notes": "Divergence-based exhaustion signal.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cascade_window_bars": 12,
         "cluster_id": "exhaustion",
         "confirmation": "Post-detection price action confirms signal validity",
@@ -10486,6 +10433,7 @@
         "max_trend_persistence_bars": 72,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "slow_trend_quantile": 0.7,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on momentum divergence trigger pattern"
@@ -10500,14 +10448,7 @@
       "tags": [
         "exhaustion"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "cascade_window_bars": 12,
         "cooldown_bars": 96,
@@ -10521,7 +10462,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
       "conditioning_cols": [
         "vol_regime",
@@ -10556,7 +10497,6 @@
       "notes": "OI flush folded into unwind/deleveraging regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "oi_dynamic",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -10570,10 +10510,11 @@
             "Funding reverses sign"
           ]
         },
-        "flush_pct_th": -0.005,
+        "flush_pct_th": -0.02,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "oi_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "spike_z_th": 2.5,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on oi flush pattern"
@@ -10597,6 +10538,8 @@
         "convexity_capture",
         "only_if_funding",
         "only_if_oi",
+        "only_if_regime",
+        "only_if_highvol",
         "tail_risk_avoid"
       ],
       "threshold_parameters": {
@@ -10610,7 +10553,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_EXPANSION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "POSITIONING_EXPANSION",
       "conditioning_cols": [
         "vol_regime",
@@ -10645,7 +10588,6 @@
       "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "oi_dynamic",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -10663,6 +10605,7 @@
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "oi_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "spike_z_th": 2.5,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on oi spike negative pattern"
@@ -10698,7 +10641,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_EXPANSION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "POSITIONING_EXPANSION",
       "conditioning_cols": [
         "vol_regime",
@@ -10732,7 +10675,6 @@
       "notes": "Direction stays in subtype; canonical regime is positioning expansion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "oi_dynamic",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -10750,6 +10692,7 @@
         "merge_gap_bars": 1,
         "min_occurrences": 0,
         "oi_window": 96,
+        "research_family": "POSITIONING_EXTREMES",
         "spike_z_th": 2.5,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on oi spike positive pattern"
@@ -10785,7 +10728,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -10819,7 +10762,6 @@
       "notes": "Orderflow imbalance is treated as a liquidity-stress subtype.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "orderflow_imbalance",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -10839,6 +10781,7 @@
         "min_history_bars": 288,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "ret_quantile": 0.998,
         "ret_window": 288,
         "rv_quantile": 0.92,
@@ -10886,7 +10829,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
       "conditioning_cols": [
         "vol_regime",
@@ -10922,7 +10865,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "band_z_threshold": 3.0,
-        "canonical_family": "STATISTICAL_DISLOCATION",
         "cluster_id": "statistical_stretch",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -10940,6 +10882,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "price_quantile": 0.95,
+        "research_family": "STATISTICAL_DISLOCATION",
         "rv_quantile": 0.95,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on overshoot after shock pattern"
@@ -10972,7 +10915,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_UNWIND_DELEVERAGING",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "POSITIONING_UNWIND_DELEVERAGING",
       "conditioning_cols": [
         "vol_regime",
@@ -11003,7 +10946,6 @@
       "notes": "Recovery phase following deleveraging wave.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cluster_window": 12,
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -11031,6 +10973,7 @@
         "rebound_return_min": 0.001,
         "rebound_window": 6,
         "rebound_window_bars": 12,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "return_abs_min": 0.0025,
         "return_quantile": 0.75,
         "reversal_quantile": 0.65,
@@ -11085,7 +11028,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -11116,7 +11059,6 @@
       "notes": "Hybrid liquidity-stress evidence via synchronized return, realized-volatility, volume, and flow-pressure imbalance.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "orderflow_imbalance",
         "confirmation": "The synchronized stress cluster persists long enough to confirm a liquidity-stress shock rather than an isolated print.",
         "cooldown_bars": 24,
@@ -11135,6 +11077,7 @@
         "min_history_bars": 288,
         "min_occurrences": 0,
         "min_spacing": 24,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "ret_quantile": 0.995,
         "ret_window": 288,
         "rv_quantile": 0.9,
@@ -11177,7 +11120,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_CONTINUATION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_CONTINUATION",
       "conditioning_cols": [
         "vol_regime",
@@ -11213,7 +11156,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -11229,6 +11171,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 288,
         "trigger": "Detector triggers on pullback pivot pattern"
@@ -11262,7 +11205,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_CONTINUATION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_CONTINUATION",
       "conditioning_cols": [
         "vol_regime",
@@ -11298,7 +11241,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -11314,6 +11256,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 288,
         "trigger": "Detector triggers on range breakout pattern"
@@ -11347,7 +11290,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
       "conditioning_cols": [
         "vol_regime",
@@ -11381,7 +11324,6 @@
       "notes": "Compression-release subtype rather than standalone family.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "vol_regime",
         "compression_quantile": 0.1,
         "confirmation": "Post-detection price action confirms signal validity",
@@ -11399,6 +11341,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on range compression end pattern",
         "vol_lookback_window": 288
@@ -11433,7 +11376,7 @@
     },
     {
       "asset_scope": "multi_asset",
-      "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+      "canonical_family": "TEMPORAL_STRUCTURE",
       "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
       "conditioning_cols": [
         "vol_regime",
@@ -11468,7 +11411,6 @@
       "notes": "Context gate for scheduled news windows.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "TEMPORAL_STRUCTURE",
         "cluster_id": "temporal_anchor",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -11484,6 +11426,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TEMPORAL_STRUCTURE",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on scheduled news window event pattern"
       },
@@ -11511,7 +11454,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -11546,7 +11489,6 @@
       "notes": "Composite research hypothesis, not a canonical event.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "funding_crowding",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -11563,6 +11505,7 @@
         "max_gap_bars": 96,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on seq fnd extreme then breakout pattern"
       },
@@ -11588,7 +11531,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -11622,7 +11565,6 @@
       "notes": "Composite liquidity repair motif.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -11639,6 +11581,7 @@
         "max_gap_bars": 48,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on seq liq vacuum then depth recovery pattern"
       },
@@ -11665,7 +11608,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "POSITIONING_EXPANSION",
+      "canonical_family": "POSITIONING_EXTREMES",
       "canonical_regime": "POSITIONING_EXPANSION",
       "conditioning_cols": [
         "vol_regime",
@@ -11700,7 +11643,6 @@
       "notes": "Composite positioning/volatility hypothesis.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "POSITIONING_EXTREMES",
         "cluster_id": "oi_dynamic",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -11717,6 +11659,7 @@
         "max_gap_bars": 48,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "POSITIONING_EXTREMES",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on seq oi spikepos then vol spike pattern"
       },
@@ -11742,7 +11685,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
       "conditioning_cols": [
         "vol_regime",
@@ -11776,7 +11719,6 @@
       "notes": "Composite compression-release hypothesis.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "vol_regime",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 24,
@@ -11793,6 +11735,7 @@
         "max_gap_bars": 48,
         "merge_gap_bars": 1,
         "min_occurrences": 0,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on seq vol comp then breakout pattern"
       },
@@ -11818,7 +11761,7 @@
     },
     {
       "asset_scope": "multi_asset",
-      "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+      "canonical_family": "TEMPORAL_STRUCTURE",
       "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
       "conditioning_cols": [
         "vol_regime",
@@ -11853,7 +11796,6 @@
       "notes": "Session close context tag.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "TEMPORAL_STRUCTURE",
         "cluster_id": "temporal_anchor",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -11876,6 +11818,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "minute_close_start": 55,
+        "research_family": "TEMPORAL_STRUCTURE",
         "session_range_quantile": 0.0,
         "session_vol_z_min": null,
         "synthetic_coverage": "covered",
@@ -11907,7 +11850,7 @@
     },
     {
       "asset_scope": "multi_asset",
-      "canonical_family": "SCHEDULED_TEMPORAL_WINDOW",
+      "canonical_family": "TEMPORAL_STRUCTURE",
       "canonical_regime": "SCHEDULED_TEMPORAL_WINDOW",
       "conditioning_cols": [
         "vol_regime",
@@ -11942,7 +11885,6 @@
       "notes": "Session open context tag.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "TEMPORAL_STRUCTURE",
         "cluster_id": "temporal_anchor",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -11965,6 +11907,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "minute_open": 0,
+        "research_family": "TEMPORAL_STRUCTURE",
         "session_range_quantile": 0.0,
         "session_vol_z_min": null,
         "synthetic_coverage": "covered",
@@ -12031,7 +11974,6 @@
       "notes": "Execution friction shock.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "EXECUTION_FRICTION",
         "cluster_id": "execution_cost",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12047,6 +11989,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "EXECUTION_FRICTION",
         "slippage_z_threshold": 3.0,
         "spread_z_threshold": 3.0,
         "synthetic_coverage": "covered",
@@ -12078,7 +12021,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "BASIS_FUNDING_DISLOCATION",
+      "canonical_family": "INFORMATION_DESYNC",
       "canonical_regime": "BASIS_FUNDING_DISLOCATION",
       "conditioning_cols": [
         "vol_regime",
@@ -12114,7 +12057,6 @@
       "notes": "Spot/perp basis shock is a basis/funding subtype.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "INFORMATION_DESYNC",
         "cluster_id": "desync",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12132,6 +12074,7 @@
         "merge_gap_bars": 0,
         "min_basis_bps": 15.0,
         "min_occurrences": 0,
+        "research_family": "INFORMATION_DESYNC",
         "shock_change_quantile": 0.95,
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on spot perp basis shock pattern",
@@ -12169,7 +12112,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -12203,7 +12146,6 @@
       "notes": "Spread blowout retained as liquidity-stress subtype.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "liquidity_stress",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12221,6 +12163,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on spread blowout pattern",
         "z_threshold": 3.0
@@ -12291,7 +12234,6 @@
       "notes": "Persistent execution-friction regime widening.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "EXECUTION_FRICTION",
         "cluster_id": "execution_cost",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -12311,6 +12253,7 @@
         "min_occurrences": 0,
         "min_periods": 288,
         "min_spacing": 48,
+        "research_family": "EXECUTION_FRICTION",
         "synthetic_coverage": "covered",
         "trend_window": 24,
         "trigger": "Detector triggers on spread regime widening event pattern"
@@ -12344,7 +12287,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_CONTINUATION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_CONTINUATION",
       "conditioning_cols": [
         "vol_regime",
@@ -12380,7 +12323,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12396,6 +12338,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 288,
         "trigger": "Detector triggers on support resistance break pattern"
@@ -12429,7 +12372,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -12463,7 +12406,6 @@
       "notes": "Stop-run style liquidity stress.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "cluster_id": "orderflow_imbalance",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12482,6 +12424,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on sweep stoprun pattern",
         "z_threshold": 3.0
@@ -12517,7 +12460,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_CONTINUATION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_CONTINUATION",
       "conditioning_cols": [
         "vol_regime",
@@ -12553,7 +12496,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 0,
@@ -12570,6 +12512,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_spacing": 192,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 96,
         "trigger": "Detector triggers on trend acceleration pattern"
@@ -12604,7 +12547,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "TREND_STRUCTURE",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -12640,7 +12583,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "breakout_z_threshold": 2.5,
-        "canonical_family": "TREND_STRUCTURE",
         "cluster_id": "trend_momentum",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -12656,6 +12598,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "TREND_STRUCTURE",
         "synthetic_coverage": "covered",
         "trend_window": 288,
         "trigger": "Detector triggers on trend deceleration pattern"
@@ -12689,7 +12632,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "TREND_FAILURE_EXHAUSTION",
+      "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
       "canonical_regime": "TREND_FAILURE_EXHAUSTION",
       "conditioning_cols": [
         "vol_regime",
@@ -12723,7 +12666,6 @@
       "notes": "Canonical exhaustion onset.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "FORCED_FLOW_AND_EXHAUSTION",
         "cascade_window_bars": 12,
         "cluster_id": "exhaustion",
         "confirmation": "Post-detection price action confirms signal validity",
@@ -12748,6 +12690,7 @@
         "min_trend_duration_bars": 72,
         "pullback_quantile": 0.7,
         "pullback_window": 96,
+        "research_family": "FORCED_FLOW_AND_EXHAUSTION",
         "reversal_alignment_window": 3,
         "reversal_quantile": 0.65,
         "reversal_window": 3,
@@ -12773,14 +12716,7 @@
         "exhaustion",
         "trend_momentum"
       ],
-      "templates": [
-        "mean_reversion",
-        "exhaustion_reversal",
-        "momentum_fade",
-        "range_reversion",
-        "only_if_trend",
-        "drawdown_filter"
-      ],
+      "templates": [],
       "threshold_parameters": {
         "cascade_window_bars": 12,
         "context_max_entropy": 0.9,
@@ -12844,7 +12780,6 @@
       "notes": "Transition from directional to choppy conditions.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "REGIME_TRANSITION",
         "cluster_id": "regime_shift",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -12861,6 +12796,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "regime_window": 288,
+        "research_family": "REGIME_TRANSITION",
         "synthetic_coverage": "covered",
         "transition_z_threshold": 2.5,
         "trigger": "Detector triggers on trend to chop shift pattern"
@@ -12894,7 +12830,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_EXPANSION",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_EXPANSION",
       "conditioning_cols": [
         "vol_regime",
@@ -12928,7 +12864,6 @@
       "notes": "Volatility cluster migration under expansion regime.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "vol_regime",
         "compression_quantile": 0.1,
         "confirmation": "Post-detection price action confirms signal validity",
@@ -12946,6 +12881,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on vol cluster shift pattern",
         "vol_lookback_window": 288
@@ -13014,7 +12950,6 @@
       "notes": "Regime transition expressed through volatility-state change.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "REGIME_TRANSITION",
         "cluster_id": "regime_shift",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 48,
@@ -13031,6 +12966,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "regime_window": 288,
+        "research_family": "REGIME_TRANSITION",
         "synthetic_coverage": "covered",
         "transition_z_threshold": 2.5,
         "trigger": "Detector triggers on vol regime shift event pattern"
@@ -13064,7 +13000,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_RELAXATION_COMPRESSION_RELEASE",
       "conditioning_cols": [
         "vol_regime",
@@ -13098,7 +13034,6 @@
       "notes": "Start of volatility normalization after expansion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "vol_regime",
         "compression_quantile": 0.1,
         "confirmation": "Post-detection price action confirms signal validity",
@@ -13116,6 +13051,7 @@
         },
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on vol relaxation start pattern",
         "vol_lookback_window": 288
@@ -13287,7 +13223,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "VOLATILITY_EXPANSION",
+      "canonical_family": "VOLATILITY_TRANSITION",
       "canonical_regime": "VOLATILITY_EXPANSION",
       "conditioning_cols": [
         "vol_regime",
@@ -13321,7 +13257,6 @@
       "notes": "Canonical realized-volatility expansion onset.",
       "parameters": {
         "anchor_rule": "first",
-        "canonical_family": "VOLATILITY_TRANSITION",
         "cluster_id": "vol_regime",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 6,
@@ -13337,6 +13272,7 @@
         },
         "merge_gap_bars": 1,
         "min_occurrences": 5,
+        "research_family": "VOLATILITY_TRANSITION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on vol spike pattern"
       },
@@ -13368,7 +13304,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "LIQUIDITY_STRESS",
+      "canonical_family": "LIQUIDITY_DISLOCATION",
       "canonical_regime": "LIQUIDITY_STRESS",
       "conditioning_cols": [
         "vol_regime",
@@ -13399,7 +13335,6 @@
       "notes": "Hybrid liquidity-stress recovery evidence: wick and reclaim structure confirmed by realized-volume expansion.",
       "parameters": {
         "anchor_rule": "max_intensity",
-        "canonical_family": "LIQUIDITY_DISLOCATION",
         "confirmation": "Follow-through should hold the reclaimed range while realized volume remains elevated versus baseline.",
         "cooldown_bars": 12,
         "expected_behavior": {
@@ -13417,6 +13352,7 @@
         "merge_gap_bars": 0,
         "min_occurrences": 0,
         "min_volume_quantile": 0.2,
+        "research_family": "LIQUIDITY_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers when wick-dominance and reclaim structure align with abnormal realized volume.",
         "z_threshold": 3.0
@@ -13448,7 +13384,7 @@
     },
     {
       "asset_scope": "single_asset",
-      "canonical_family": "STATISTICAL_STRETCH_OVERSHOOT",
+      "canonical_family": "STATISTICAL_DISLOCATION",
       "canonical_regime": "STATISTICAL_STRETCH_OVERSHOOT",
       "conditioning_cols": [
         "vol_regime",
@@ -13484,7 +13420,6 @@
       "parameters": {
         "anchor_rule": "max_intensity",
         "band_z_threshold": 3.0,
-        "canonical_family": "STATISTICAL_DISLOCATION",
         "cluster_id": "statistical_stretch",
         "confirmation": "Post-detection price action confirms signal validity",
         "cooldown_bars": 12,
@@ -13501,6 +13436,7 @@
         "lookback_window": 288,
         "merge_gap_bars": 0,
         "min_occurrences": 0,
+        "research_family": "STATISTICAL_DISLOCATION",
         "synthetic_coverage": "covered",
         "trigger": "Detector triggers on zscore stretch pattern",
         "zscore_quantile": 0.96

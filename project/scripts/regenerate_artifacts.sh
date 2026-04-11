@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # This script is an internal maintenance tool, not part of canonical runtime pipelines.
+# It regenerates the approved tracked docs/generated contract and reference outputs.
 THESIS_RUN_ID="${THESIS_RUN_ID:-}"
 
 echo "Regenerating repository artifacts..."
@@ -69,4 +70,4 @@ else
 fi
 
 echo "Artifact regeneration complete."
-echo "Please review changes and commit them."
+echo "Review drift only in the approved tracked docs/generated outputs before landing changes."

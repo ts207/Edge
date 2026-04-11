@@ -18,6 +18,7 @@ For day-to-day lifecycle work, prefer:
 - `make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT,ETHUSDT`
 - `make export RUN_ID=<run_id>`
 - `make deploy-paper RUN_ID=<run_id>`
+- `make check-hygiene`
 
 Direct CLI equivalents:
 
@@ -128,10 +129,15 @@ This is a compatibility orchestration command, not the canonical lifecycle front
 - `export`
 - `deploy-paper`
 
-### Review and maintenance wrappers
+### Maintenance and hygiene wrappers
 
-- `review`
-- `legacy-validate`
+- `check-hygiene`
+- `clean`
+- `clean-runtime`
+- `clean-all-data`
+- `clean-run-data`
+- `clean-hygiene`
+- `debloat`
 - `governance`
 - `minimum-green-gate`
 - `test`
@@ -141,37 +147,39 @@ This is a compatibility orchestration command, not the canonical lifecycle front
 - `format-check`
 - `style`
 - `pre-commit`
+- `legacy-validate`
 
-### Advanced workflow bundles
+### Supported workflow bundles
 
 - `run`
 - `baseline`
-- `discover-blueprints`
-- `discover-edges`
-- `discover-edges-from-raw`
 - `discover-target`
 - `discover-concept`
 - `golden-workflow`
 - `golden-synthetic-discovery`
 - `golden-certification`
 - `synthetic-demo`
-- `package`
 
-### Benchmark and hygiene targets
+### Legacy compatibility and benchmark targets
 
+- `discover-blueprints`
+- `discover-edges`
+- `discover-edges-from-raw`
+- `discover-hybrid`
 - `benchmark-maintenance-smoke`
 - `benchmark-maintenance`
 - `benchmark-m0`
+- `benchmark-core`
+- `benchmark-review`
+- `benchmark-certify`
 - `bench-pipeline`
-- `check-hygiene`
-- `clean`
-- `clean-all-data`
-- `clean-hygiene`
-- `clean-repo`
-- `clean-run-data`
-- `clean-runtime`
-- `debloat`
 - `compile`
+
+## Repo Hygiene Policy
+
+- `project/tests/` is the only supported pytest root.
+- `tmp/`, `.tmp/`, `live/persist/`, `artifacts/`, and `logs/` are local-only scratch paths and should not be tracked.
+- `make check-hygiene` is the canonical debloat gate before landing maintenance changes.
 
 ## Maintenance Script Inventory
 

@@ -7,12 +7,12 @@ Repo-local Codex/plugin surface for the Edge repository.
 Provide guided wrappers around the canonical bounded workflow without creating a parallel operator model.
 The plugin should track the repo's current front door and maintenance loop:
 
-`proposal -> lint/explain/preflight -> plan/run -> diagnose/report -> promote -> export thesis batch -> deploy`
+`discover -> validate -> promote -> export -> deploy`, plus compatibility proposal helpers and repo hygiene enforcement.
 
 ## What is included
 
 - skills for repo orientation, maintenance, ChatGPT-app development, coordination, analysis, and compiler flow
-- thin wrappers around the canonical `make discover|promote|export|deploy-paper`, `edge operator ...`, and contract-validation surfaces
+- thin wrappers around the canonical `make discover|validate|promote|export|deploy-paper|check-hygiene`, `edge operator ...`, and contract-validation surfaces
 - hook definitions for contract-sensitive edits and recent-run awareness
 
 ## Important scripts
@@ -39,12 +39,11 @@ The plugin should track the repo's current front door and maintenance loop:
 
 These wrappers should remain thin around:
 
-- `make discover|promote|export|deploy-paper`
+- `make discover|validate|promote|export|deploy-paper|check-hygiene`
 - `edge operator lint|explain|preflight|plan|run|diagnose|regime-report|compare`
 - `edge validate report`
-- `python -m project.research.export_promoted_theses`
 - `python -m project.scripts.run_researcher_verification`
-- generated run and thesis artifacts
+- the approved `docs/generated/` contract/reference outputs
 
 They are convenience surfaces, not policy owners.
 
@@ -55,6 +54,7 @@ The plugin now helps route common developer change types:
 - operator or proposal-surface changes -> contract verification plus current operator-doc review
 - event, ontology, or registry changes -> contract verification plus event-contract and system-map regeneration
 - runtime-thesis or overlap changes -> explicit run export plus overlap regeneration
+- repo hygiene changes -> `make check-hygiene` plus root/test/scratch-path policy review
 - ChatGPT app changes -> `edge-chatgpt-app` inspection/serve helpers plus canonical operator surfaces
 - plugin changes -> plugin-cache target discovery plus sync and sync checks
 

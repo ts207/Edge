@@ -74,6 +74,10 @@ gha-creds-*.json
 /out.log
 /verify_hydra.py
 /artifacts/
+/logs/
+/tmp/
+/.tmp/
+/live/persist/
 
 /outputs/
 

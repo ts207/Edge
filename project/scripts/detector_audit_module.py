@@ -2,7 +2,7 @@
 Shared measurement logic for detector precision/recall auditing.
 
 Imported by both audit_detector_precision_recall.py (CLI) and
-tests/events/test_detector_precision_recall.py (regression tests).
+project/tests/events/test_detector_precision_recall.py (regression tests).
 
 Placement in project/scripts/ (not project/events/) avoids circular import risk:
 some family modules import from project.research at module level.

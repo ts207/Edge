@@ -20,6 +20,7 @@ Use this skill for developer maintenance and repo-upkeep work in `/home/irene/Ed
 - Prefer canonical repo entrypoints over ad hoc script sequences.
 - Regenerate generated docs instead of editing them by hand.
 - Keep plugin maintenance thin and repo-aligned.
+- Treat `project/tests/` as the only pytest root; `tmp/`, `.tmp/`, `live/persist/`, `artifacts/`, and `logs/` are local-only scratch.
 
 ## Primary routing table
 
@@ -28,6 +29,7 @@ Use this skill for developer maintenance and repo-upkeep work in `/home/irene/Ed
 Use:
 
 ```bash
+make check-hygiene
 ./plugins/edge-agents/scripts/edge_verify_contracts.sh
 ./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green
 ```
@@ -44,6 +46,7 @@ Then inspect:
 Use:
 
 ```bash
+make check-hygiene
 ./plugins/edge-agents/scripts/edge_verify_contracts.sh
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_event_contract_artifacts
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map
@@ -61,6 +64,7 @@ Then inspect:
 Use:
 
 ```bash
+make check-hygiene
 ./plugins/edge-agents/scripts/edge_verify_contracts.sh
 ./plugins/edge-agents/scripts/edge_export_theses.sh <run_id>
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_thesis_overlap_artifacts --run_id <run_id>
@@ -79,6 +83,7 @@ Then inspect:
 Use:
 
 ```bash
+make check-hygiene
 ./plugins/edge-agents/scripts/edge_verify_contracts.sh
 PYTHONPATH=. ./.venv/bin/python -m project.scripts.build_system_map
 ```
@@ -125,6 +130,7 @@ Use:
 Use:
 
 ```bash
+make check-hygiene
 ./plugins/edge-agents/scripts/edge_validate_repo.sh contracts
 ./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green
 ./plugins/edge-agents/scripts/edge_governance.sh
@@ -146,6 +152,6 @@ Treat this as an interface layer around canonical operator surfaces, not a separ
 ## Hard rules
 
 - Do not teach wrappers as if they own repo policy.
-- Do not manually edit `docs/generated/*` when a generator exists.
+- Do not manually edit `docs/generated/*` when a generator exists; use `project/scripts/regenerate_artifacts.sh`.
 - Do not stop at `make validate` if the change type implies additional regeneration.
 - If plugin source changes, remember that the installed plugin cache may still be stale until synced.

@@ -1,4 +1,4 @@
-# tests/test_run_event_quality_analysis.py
+# project/tests/test_run_event_quality_analysis.py
 import pandas as pd
 import numpy as np
 import json

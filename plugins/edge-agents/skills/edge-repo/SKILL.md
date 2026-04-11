@@ -27,6 +27,9 @@ Use this as the default project skill for `/home/irene/Edge`.
   - Only `live_enabled` theses may trade; requires a `DeploymentApprovalRecord` with `status='approved'`
   - Deployment lifecycle: `promoted -> paper_enabled -> paper_approved -> live_eligible -> live_enabled`
   - `deployment_state` is the first field to inspect for runtime permission
+- Repository hygiene is explicit:
+  - `project/tests/` is the only supported pytest root
+  - `tmp/`, `.tmp/`, `live/persist/`, `artifacts/`, and `logs/` are local-only scratch paths
 
 ## Hard guardrails
 
@@ -76,6 +79,7 @@ edge validate report --run_id <run_id>
 
 ## Verification default
 
+- Run `make check-hygiene` after repo-structure, docs, or maintenance changes.
 - After code, plugin, hook, or config changes, run `./plugins/edge-agents/scripts/edge_verify_contracts.sh`.
 - Use `./plugins/edge-agents/scripts/edge_validate_repo.sh minimum-green` before landing broader control-plane or architecture changes.
 - Keep verification targeted to the surface changed unless the repo contract requires more.

@@ -16,47 +16,59 @@ ENABLE_CROSS_VENUE_SPOT_PIPELINE ?= 0
 CHANGED_BASE ?= origin/main
 CHANGED_HEAD ?= HEAD
 
-.PHONY: help discover export package validate review run baseline discover-blueprints discover-edges discover-edges-from-raw discover-hybrid golden-workflow golden-certification test test-fast lint format format-check style compile clean clean-runtime clean-all-data clean-repo debloat check-hygiene clean-hygiene governance pre-commit bench-pipeline benchmark-m0 minimum-green-gate benchmark-maintenance-smoke benchmark-maintenance \
-	advanced-discover-triggers-parameter advanced-discover-triggers-cluster
+.PHONY: help \
+	discover validate promote export deploy-paper \
+	check-hygiene test test-fast lint format-check format style governance pre-commit minimum-green-gate \
+	clean clean-runtime clean-all-data clean-repo clean-run-data clean-hygiene debloat compile \
+	run baseline discover-concept discover-target discover-blueprints discover-edges discover-edges-from-raw discover-hybrid \
+	golden-workflow golden-synthetic-discovery golden-certification synthetic-demo \
+	advanced-discover-triggers-parameter advanced-discover-triggers-cluster \
+	legacy-validate bench-pipeline benchmark-maintenance-smoke benchmark-maintenance benchmark-core benchmark-review benchmark-certify benchmark-m0 monitor
 
 help:
-	@echo "Operator actions:"
+	@echo "Canonical lifecycle:"
 	@echo "  discover           - Canonical bounded research entry. Usage: make discover PROPOSAL=spec/proposals/canonical_event_hypothesis_h24.yaml DISCOVER_ACTION=plan|run"
 	@echo "  validate           - Canonical validation surface. Usage: make validate RUN_ID=<run_id>"
 	@echo "  promote            - Canonical promotion surface. Usage: make promote RUN_ID=<run_id> SYMBOLS=BTCUSDT"
 	@echo "  export             - Canonical runtime-batch export. Usage: make export RUN_ID=<run_id>"
 	@echo "  deploy-paper       - Canonical deployment (Paper). Usage: make deploy-paper RUN_ID=<run_id>"
-	@echo "  review             - Post-run review. Usage: make review RUN_ID=<run_id> REVIEW_ACTION=diagnose|report or make review REVIEW_ACTION=compare RUN_IDS=run_a,run_b"
-	@echo "  legacy-validate    - Legacy: contracts + minimum green gate"
-	@echo "  package            - Advanced maintenance: bootstrap packaging lane, not the canonical runtime-batch path"
 	@echo ""
-	@echo "Advanced workflow bundles:"
-	@echo "  discover-blueprints - Full research pipeline: Ingest -> Discovery -> Blueprints"
-	@echo "  discover-edges      - Phase 2 discovery for all events"
-	@echo "  discover-target     - Targeted discovery for specific symbols/events"
-	@echo "                        Usage: make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK"
-	@echo "  run                 - Ingest + Clean + Features (Preparation only)"
-	@echo "  baseline            - Full discovery + profitable strategy packaging"
-	@echo "  golden-workflow     - Canonical end-to-end smoke workflow"
-	@echo "  golden-certification - Golden workflow plus runtime certification manifest"
-	@echo ""
-	@echo "Maintenance and quality:"
-	@echo "  test-fast          - Run fast research test profile"
+	@echo "Maintenance and hygiene:"
+	@echo "  check-hygiene      - Enforce tracked-file, root-clutter, and test-root policy"
+	@echo "  test               - Run the default pytest suite"
+	@echo "  test-fast          - Run the fast pytest profile"
 	@echo "  lint               - Ruff lint on changed Python files"
 	@echo "  format-check       - Ruff formatter check on changed Python files"
 	@echo "  format             - Ruff format changed Python files in-place"
 	@echo "  style              - Run lint + format-check on changed Python files"
 	@echo "  governance         - Audit specs and sync schemas"
-	@echo "  benchmark-m0       - Emit (or execute) frozen M0 benchmark run matrix"
-	@echo "  benchmark-maintenance-smoke - End-to-end dry-run of the benchmark governance cycle"
-	@echo "  benchmark-maintenance - Full production execution of the benchmark governance cycle"
-	@echo "  clean-all-data     - Wipe all data/lake and reports"
 	@echo "  minimum-green-gate - Required baseline for platform stabilization"
+	@echo "  clean              - Remove repo caches and local temp files"
+	@echo "  clean-runtime      - Remove local runtime outputs"
+	@echo "  clean-all-data     - Wipe local data roots"
+	@echo "  debloat            - Run repo cleanup then enforce hygiene"
+	@echo ""
+	@echo "Supported workflow bundles:"
+	@echo "  run                - Ingest + Clean + Features (Preparation only)"
+	@echo "  baseline           - Full discovery + profitable strategy packaging"
+	@echo "  discover-concept   - Run concept-driven discovery against the pipeline planner"
+	@echo "  discover-target    - Targeted discovery for specific symbols/events"
+	@echo "                       Usage: make discover-target SYMBOLS=BTCUSDT EVENT=VOL_SHOCK"
+	@echo "  golden-workflow    - Canonical end-to-end smoke workflow"
+	@echo "  golden-certification - Golden workflow plus runtime certification manifest"
 	@echo ""
 	@echo "Advanced/Internal trigger discovery (Proposal-only):"
 	@echo "  advanced-discover-triggers-parameter - Run parameter sweep over detector family"
 	@echo "  advanced-discover-triggers-cluster   - Mine recurring feature excursions"
+	@echo ""
+	@echo "Legacy compatibility and benchmarks:"
+	@echo "  legacy-validate    - Legacy contract verification wrapper"
+	@echo "  discover-blueprints, discover-edges, discover-edges-from-raw, discover-hybrid"
+	@echo "  benchmark-maintenance-smoke, benchmark-maintenance, benchmark-core, benchmark-review, benchmark-certify"
 
+#
+# Maintenance and benchmark targets
+#
 benchmark-maintenance-smoke:
 	@echo "Running benchmark maintenance dry-run..."
 	PYTHONPATH=. $(PYTHON) project/scripts/run_benchmark_maintenance_cycle.py --preset core_v1 --execute 0
@@ -97,6 +109,9 @@ RUN_ID ?=
 PY_CACHE_PREFIX ?= /tmp/edge-pyc
 GOLDEN_WORKFLOW_ROOT ?= /tmp/edge-golden-workflow
 
+#
+# Canonical lifecycle
+#
 discover:
 	@if [ -z "$(PROPOSAL)" ]; then echo "Usage: make discover PROPOSAL=path/to/proposal.yaml DISCOVER_ACTION=plan|run"; exit 2; fi
 	@if [ "$(DISCOVER_ACTION)" != "plan" ] && [ "$(DISCOVER_ACTION)" != "run" ]; then echo "DISCOVER_ACTION must be one of: plan, run"; exit 2; fi
@@ -132,7 +147,9 @@ advanced-discover-triggers-cluster:
 TIMEFRAMES ?= 5m
 CONCEPT ?= 
 
-.PHONY: discover-target
+#
+# Supported workflow bundles
+#
 discover-target:
 	$(PYTHON) $(RUN_ALL) \
 		--run_id $(if $(RUN_ID),$(RUN_ID),discovery_$(shell date +%Y%m%d_%H%M%S)) \
@@ -316,6 +333,9 @@ style: lint format-check
 monitor:
 	$(PYTHON) project/scripts/monitor_data_freshness.py --symbols $(or $(SYMBOLS),BTCUSDT,ETHUSDT) --timeframe 5m --max_staleness_bars 3
 
+#
+# Legacy compatibility, quality, and cleanup
+#
 bench-pipeline:
 	$(PYTHON) project/scripts/benchmark_pipeline.py
 
@@ -339,7 +359,7 @@ clean-all-data:
 
 clean-repo: clean
 
-debloat: clean-repo
+debloat: clean-repo check-hygiene
 
 clean-run-data:
 	$(CLEAN_SCRIPT) data

@@ -53,7 +53,13 @@ for path in "${changed_files[@]}"; do
   esac
 
   case "$path" in
-    project/*|spec/*|tests/*|pyproject.toml|pytest.ini|Makefile|requirements-dev.txt)
+    project/*|spec/*|pyproject.toml|pytest.ini|Makefile|requirements-dev.txt)
+      contract_hits+=("$path")
+      ;;
+  esac
+
+  case "$path" in
+    project/tests/*)
       contract_hits+=("$path")
       ;;
   esac
@@ -214,7 +220,7 @@ fi
 
 if [ "${#generated_doc_hits[@]}" -gt 0 ]; then
   echo "[edge-hook] Generated-doc files changed."
-  echo "[edge-hook] Prefer regeneration over manual edits:"
+  echo "[edge-hook] Prefer regeneration over manual edits for the approved tracked docs/generated set:"
   echo "  ./project/scripts/regenerate_artifacts.sh"
 fi
 
