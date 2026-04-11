@@ -1,5 +1,0 @@
-context_dimensions:
-  session:
-    allowed_values:
-    - open
-    - close

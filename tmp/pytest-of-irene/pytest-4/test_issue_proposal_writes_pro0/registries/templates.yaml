@@ -1,5 +1,0 @@
-templates:
-  continuation:
-    enabled: true
-    supports_trigger_types:
-    - EVENT

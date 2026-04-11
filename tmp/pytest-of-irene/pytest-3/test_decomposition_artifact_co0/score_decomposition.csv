@@ -1,3 +1,0 @@
-candidate_id,comp_key,legacy_rank,v2_rank,discovery_quality_score,significance_component,support_component,falsification_component,tradability_component,novelty_component,fold_stability_component,rank_primary_reason,ledger_rank,rank_delta_legacy_to_v2,rank_delta_v2_to_ledger,overlap_penalty,fragility_penalty,ledger_penalty,demotion_reason_codes,falsification_reason,tradability_reason,overlap_reason,fold_reason,ledger_reason
-c2,K2,2,1,0.8,0.9,1.0,1.0,1.0,1.0,1.0,stable,0,1,1,0,0,0,,,,,,
-c1,K1,1,2,0.5,0.6,1.0,1.0,1.0,1.0,1.0,stable,0,-1,2,0,0,0,,,,,,

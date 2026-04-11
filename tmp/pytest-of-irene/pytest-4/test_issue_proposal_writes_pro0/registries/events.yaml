@@ -1,7 +1,0 @@
-events:
-  BASIS_DISLOC:
-    enabled: true
-    instrument_classes:
-    - crypto
-    requires_features: []
-    sequence_eligible: true
