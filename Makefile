@@ -70,22 +70,22 @@ benchmark-maintenance:
 
 minimum-green-gate:
 	@echo "Running minimum green gate checks..."
-	PYTHONPATH=. $(PYTHON) -m compileall -q project project/tests
-	PYTHONPATH=. $(PYTHON) -m pytest project/tests/architecture
-	PYTHONPATH=. $(PYTHON) project/scripts/spec_qa_linter.py
-	PYTHONPATH=. $(PYTHON) project/scripts/detector_coverage_audit.py --md-out docs/generated/detector_coverage.md --json-out docs/generated/detector_coverage.json --check
-	PYTHONPATH=. $(PYTHON) project/scripts/ontology_consistency_audit.py --output docs/generated/ontology_audit.json --check
-	PYTHONPATH=. $(PYTHON) project/scripts/build_event_contract_artifacts.py --check
-	PYTHONPATH=. $(PYTHON) project/scripts/event_ontology_audit.py --check
-	PYTHONPATH=. $(PYTHON) project/scripts/build_event_ontology_artifacts.py --check
-	PYTHONPATH=. $(PYTHON) project/scripts/build_system_map.py --check
-	PYTHONPATH=. $(PYTHON) project/scripts/build_architecture_metrics.py --check
-	PYTHONPATH=. $(PYTHON) -m pytest -q \
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) -m compileall -q project project/tests
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) -m pytest project/tests/architecture
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/spec_qa_linter.py
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/detector_coverage_audit.py --md-out docs/generated/detector_coverage.md --json-out docs/generated/detector_coverage.json --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/ontology_consistency_audit.py --output docs/generated/ontology_audit.json --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/build_event_contract_artifacts.py --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/event_ontology_audit.py --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/build_event_ontology_artifacts.py --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/build_system_map.py --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/build_architecture_metrics.py --check
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) -m pytest -q \
 		project/tests/regressions/test_monitor_only_venue_immutability.py \
 		project/tests/regressions/test_run_success_requires_outputs.py \
 		project/tests/regressions/test_stage_registry_path_validity.py
-	PYTHONPATH=. $(PYTHON) project/scripts/run_golden_regression.py --run_id smoke_run
-	PYTHONPATH=. $(PYTHON) project/scripts/run_golden_workflow.py
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/run_golden_regression.py --run_id smoke_run
+	PYTHONPATH=. PYTHONPYCACHEPREFIX=$(PY_CACHE_PREFIX) $(PYTHON) project/scripts/run_golden_workflow.py --root $(GOLDEN_WORKFLOW_ROOT)
 	@echo "Minimum green gate PASSED."
 
 
@@ -94,6 +94,8 @@ REVIEW_ACTION ?= diagnose
 PROPOSAL ?=
 RUN_IDS ?=
 RUN_ID ?=
+PY_CACHE_PREFIX ?= /tmp/edge-pyc
+GOLDEN_WORKFLOW_ROOT ?= /tmp/edge-golden-workflow
 
 discover:
 	@if [ -z "$(PROPOSAL)" ]; then echo "Usage: make discover PROPOSAL=path/to/proposal.yaml DISCOVER_ACTION=plan|run"; exit 2; fi
