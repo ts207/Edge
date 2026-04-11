@@ -173,7 +173,12 @@ def evaluate_row(
             ]
         )
         
-        values_for_effective_q = [v for v in [q_value, q_value_program, q_value_scope] if np.isfinite(v)]
+        upstream_effective_q_value = coerce_numeric_nan(row.get("effective_q_value"))
+        values_for_effective_q = [
+            v
+            for v in [q_value, q_value_program, q_value_scope, upstream_effective_q_value]
+            if np.isfinite(v)
+        ]
         if values_for_effective_q:
             effective_q_value = max(values_for_effective_q)
         else:

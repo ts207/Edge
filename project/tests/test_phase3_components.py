@@ -25,6 +25,30 @@ def test_execution_estimate():
     assert est["expected_slippage_bps"] > 1.0
 
 
+def test_execution_estimate_uses_absolute_order_size_for_cost_math():
+    market_data = {"spread_bps": 2.0, "liquidity_available": 1000000.0, "vol_regime_bps": 10.0}
+    long_est = get_comprehensive_execution_estimate(
+        order_size=1000.0,
+        base_price=100.0,
+        is_buy=True,
+        market_data=market_data,
+        urgency="aggressive",
+        profile="base",
+    )
+    short_est = get_comprehensive_execution_estimate(
+        order_size=-1000.0,
+        base_price=100.0,
+        is_buy=False,
+        market_data=market_data,
+        urgency="aggressive",
+        profile="base",
+    )
+
+    assert short_est["fill_probability"] == pytest.approx(long_est["fill_probability"])
+    assert short_est["expected_slippage_bps"] == pytest.approx(long_est["expected_slippage_bps"])
+    assert short_est["residual_unfilled_quantity"] >= 0.0
+
+
 def test_sizing():
     portfolio_state = {
         "portfolio_value": 1000000.0,

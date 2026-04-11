@@ -23,7 +23,7 @@ def calculate_portfolio_risk_multiplier(
     # Hard leverage gate: stay fully sized until the soft-cap region is reached,
     # then stop adding risk instead of linearly tapering to zero.
     soft_cap_ratio = 0.90
-    exposure_ratio = max(0.0, gross_exposure / max_gross_leverage)
+    exposure_ratio = max(0.0, abs(float(gross_exposure)) / max_gross_leverage)
     leverage_cap = 1.0 if exposure_ratio <= soft_cap_ratio else 0.0
 
     # Volatility scaling
@@ -41,7 +41,7 @@ def get_asset_correlation_adjustment(
     """
     Reduce sizing if correlated exposure is already high.
     """
-    current_bucket_exposure = bucket_exposures.get(asset_bucket, 0.0)
+    current_bucket_exposure = abs(float(bucket_exposures.get(asset_bucket, 0.0)))
     if current_bucket_exposure > correlation_limit:
         return 0.5  # Simple 50% reduction
     return 1.0
@@ -58,7 +58,7 @@ def calculate_cluster_risk_multiplier(
     This enforces the 'Portfolio Matrix' gating logic where redundant alphas
     (identified by PnL/Trigger clustering) share a total risk budget.
     """
-    count = active_cluster_counts.get(cluster_id, 0)
+    count = active_cluster_counts.get(cluster_id, active_cluster_counts.get(str(cluster_id), 0))
     if count <= 1:
         return 1.0
         

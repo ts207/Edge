@@ -33,7 +33,10 @@ def calculate_regime_metrics(
         sharpe = (mean_pnl / std_pnl) if std_pnl > 0 and not np.isnan(std_pnl) else 0.0
 
         # Calculate Max Drawdown
-        cum_pnl = pnl.cumsum()
+        cum_pnl = pd.concat(
+            [pd.Series([0.0], dtype=float), pnl.cumsum().reset_index(drop=True)],
+            ignore_index=True,
+        )
         running_max = cum_pnl.cummax()
         drawdown = running_max - cum_pnl
         max_drawdown = drawdown.max()

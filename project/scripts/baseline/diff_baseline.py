@@ -11,7 +11,7 @@ import argparse
 import json
 from pathlib import Path
 
-from scripts.baseline._common import BASELINE_ROOT, compare_snapshot_dirs
+from project.scripts.baseline._common import BASELINE_ROOT, compare_snapshot_dirs
 
 
 def main() -> None:

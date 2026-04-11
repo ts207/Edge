@@ -216,6 +216,18 @@ def test_evaluate_row_characterization_can_disable_effective_q_check_when_reques
     assert result["gate_promo_statistical"] == "pass"
 
 
+def test_evaluate_row_characterization_uses_upstream_effective_q_value():
+    row = _passing_row()
+    row["q_value"] = 0.01
+    row["q_value_program"] = 0.05
+    row["effective_q_value"] = 0.90
+
+    result = evaluate_row(row=row, **_base_kwargs())
+
+    assert result["promotion_decision"] == "rejected"
+    assert result["gate_promo_statistical"] == "fail"
+
+
 def test_evaluate_row_characterization_respects_upstream_oos_gate_when_present():
     row = _passing_row()
     row["validation_samples"] = 25

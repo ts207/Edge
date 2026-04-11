@@ -36,10 +36,8 @@ class TestMaxDrawdownGate:
         """All negative returns: drawdown equals total loss, ratio computed correctly."""
         returns = [-0.01] * 20
         result = max_drawdown_gate(returns, max_dd_ratio=3.0)
-        # All negative: max_dd = 0 because the cumulative always drops, running_max starts at first value
-        # Actually: cumsum = [-0.01, -0.02, ...], running_max = [-0.01, -0.01, ...]
-        # dd = running_max - cumsum = [0, 0.01, 0.02, ...]
-        # max_dd = 0.19, mean = -0.01, abs_mean = 0.01, ratio = 19.0
+        # Include the initial zero-equity point so the first loss is counted.
+        assert result["max_drawdown"] == pytest.approx(0.20)
         assert result["gate_max_drawdown"] is False
 
     def test_custom_max_dd_ratio(self):

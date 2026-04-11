@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import subprocess
 
@@ -16,8 +15,9 @@ def test_makefile_exports_canonical_targets():
 
 import sys
 
-def test_deprecated_cli_commands():
-    """Verify deprecated operator facade is still technically reachable but explicitly warns."""
+
+def test_removed_pipeline_alias_hidden_from_cli_help():
+    """Verify the old pipeline alias is no longer part of the public CLI."""
     repo_root = Path(__file__).parent.parent.parent.parent
     result = subprocess.run(
         [sys.executable, "-m", "project.cli", "-h"],
@@ -25,5 +25,6 @@ def test_deprecated_cli_commands():
         capture_output=True,
         text=True
     )
-    # The help block should announce deprecation prominently
-    assert "DEPRECATED" in result.stdout or "DEPRECATED" in result.stderr
+    assert result.returncode == 0
+    assert "pipeline" not in result.stdout
+    assert "run-all" not in result.stdout

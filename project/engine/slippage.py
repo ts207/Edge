@@ -55,7 +55,7 @@ def calculate_slippage_bps(
         impact_sqrt_mult = 10.0
 
     # Impact calculation (Square root model)
-    participation_rate = order_size / max(1.0, liquidity_available)
+    participation_rate = abs(float(order_size)) / max(1.0, float(liquidity_available))
     impact_bps = np.sqrt(participation_rate) * impact_sqrt_mult
 
     # Volatility impact (higher vol -> wider uncertainty / slippage)

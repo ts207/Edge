@@ -9,7 +9,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import argparse
 
-from scripts.baseline._common import snapshot_event_outputs
+from project.scripts.baseline._common import snapshot_event_outputs
 
 
 def main() -> None:

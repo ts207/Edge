@@ -396,10 +396,17 @@ def evaluate_promotion_bundle(bundle: Dict[str, Any], policy: PromotionPolicy) -
     q_value_scope = safe_float(
         bundle.get("multiplicity_adjustment", {}).get("q_value_scope", np.nan), np.nan
     )
+    upstream_effective_q_value = safe_float(
+        bundle.get("multiplicity_adjustment", {}).get("effective_q_value", np.nan), np.nan
+    )
     q_value_by = safe_float(uncertainty.get("q_value_by", np.nan), np.nan)
     q_value_cluster = safe_float(uncertainty.get("q_value_cluster", np.nan), np.nan)
     
-    values_for_effective_q = [v for v in [q_value, q_value_program, q_value_scope] if np.isfinite(v)]
+    values_for_effective_q = [
+        v
+        for v in [q_value, q_value_program, q_value_scope, upstream_effective_q_value]
+        if np.isfinite(v)
+    ]
     if values_for_effective_q:
         effective_q_value = max(values_for_effective_q)
     else:

@@ -1,5 +1,12 @@
 """Tests that sizing limits are not hardcoded and can be overridden."""
 
+import pytest
+
+from project.portfolio.risk_budget import (
+    calculate_cluster_risk_multiplier,
+    calculate_portfolio_risk_multiplier,
+    get_asset_correlation_adjustment,
+)
 from project.portfolio.sizing import calculate_target_notional
 
 
@@ -55,3 +62,46 @@ def test_kelly_clip_is_overridable():
         clipped_lower["target_notional"] < base["target_notional"]
         or clipped_lower["target_notional"] <= base["target_notional"]
     ), "Lower kelly clip must reduce or equal the position size."
+
+
+def test_sizing_clips_negative_capacity_inputs():
+    result = calculate_target_notional(
+        event_score=1.0,
+        expected_return_bps=100.0,
+        expected_adverse_bps=10.0,
+        vol_regime=0.2,
+        liquidity_usd=-10_000_000.0,
+        portfolio_state={"portfolio_value": -100_000.0},
+        symbol="BTC",
+    )
+
+    assert result["target_notional"] == pytest.approx(0.0)
+    assert result["liquidity_cap"] == pytest.approx(0.0)
+    assert result["concentration_cap"] == pytest.approx(0.0)
+
+
+def test_risk_budget_uses_absolute_exposure_values():
+    risk_mult = calculate_portfolio_risk_multiplier(
+        gross_exposure=-0.95,
+        max_gross_leverage=1.0,
+        target_vol=0.1,
+        current_vol=0.1,
+    )
+    corr_adj = get_asset_correlation_adjustment(
+        asset_bucket="btc",
+        bucket_exposures={"btc": -0.75},
+        correlation_limit=0.5,
+    )
+
+    assert risk_mult == pytest.approx(0.0)
+    assert corr_adj == pytest.approx(0.5)
+
+
+def test_cluster_risk_multiplier_accepts_string_cluster_keys():
+    result = calculate_cluster_risk_multiplier(
+        cluster_id=7,
+        active_cluster_counts={"7": 4},
+        max_strategies_per_cluster=3,
+    )
+
+    assert result < 1.0

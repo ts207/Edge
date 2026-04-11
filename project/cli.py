@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 
 from project import PROJECT_ROOT
-from project.pipelines import run_all
 
 
 def _log_legacy_usage(context: str):
@@ -35,7 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(
         dest="command",
-        metavar="{discover,validate,promote,deploy,pipeline,ingest,catalog}",
+        metavar="{discover,validate,promote,deploy,ingest,catalog}",
     )
 
     # --- CANONICAL STAGES ---
@@ -272,10 +271,6 @@ def _build_parser() -> argparse.ArgumentParser:
     campaign_start.add_argument("campaign_spec")
     campaign_start.add_argument("--data_root", default=None)
     campaign_start.add_argument("--plan_only", type=int, default=0)
-
-    pipeline_parser = subparsers.add_parser("pipeline", help="DEPRECATED: Use staged commands.")
-    pipeline_sub = pipeline_parser.add_subparsers(dest="pipeline_command")
-    pipeline_sub.add_parser("run-all", help="Run full pipeline")
 
     ingest_parser = subparsers.add_parser("ingest", help="Ingest raw data from external exchanges")
     ingest_parser.add_argument("--run_id", required=True, help="Unique identifier for this run")
@@ -697,11 +692,6 @@ def main() -> int:
             )
             print(json.dumps(result, indent=2, sort_keys=True))
             return 0
-
-    if args.command == "pipeline" and args.pipeline_command == "run-all":
-        _deprecation_warning("pipeline run-all", "discover run (with full pipeline enabled)")
-        sys.argv = ["pipelines/run_all.py"] + unknown
-        return int(run_all.main())
 
     if args.command == "ingest":
         if args.exchange == "binance":

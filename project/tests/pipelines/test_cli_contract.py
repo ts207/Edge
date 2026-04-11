@@ -47,18 +47,16 @@ def test_cli_help_hides_operator_compatibility_surface(monkeypatch, capsys):
     assert "operator" not in out
 
 
-def test_cli_pipeline_run_all_delegates(monkeypatch):
+def test_cli_rejects_removed_pipeline_run_all_alias(monkeypatch, capsys):
     cli = _load_cli_module()
-    captured = {"argv": None}
-
-    def _fake_main():
-        captured["argv"] = list(sys.argv)
-        return 0
-
-    monkeypatch.setattr(cli.run_all, "main", _fake_main)
     monkeypatch.setattr(sys, "argv", ["backtest", "pipeline", "run-all", "--run_id", "unit"])
-    assert cli.main() == 0
-    assert captured["argv"] == ["pipelines/run_all.py", "--run_id", "unit"]
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+
+    assert int(exc.value.code) == 2
+    err = capsys.readouterr().err.lower()
+    assert "invalid choice: 'pipeline'" in err
 
 
 def test_cli_discover_plan_delegates_without_legacy_compatibility(monkeypatch):

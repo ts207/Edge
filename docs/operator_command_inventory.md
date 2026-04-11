@@ -111,14 +111,6 @@ Current conceptual mapping:
 | `operator diagnose` | `validate diagnose` |
 | `operator compare` | `catalog compare` or validation/report review depending on need |
 
-## Deprecated Pipeline Command
-
-Still present:
-
-- `edge pipeline run-all`
-
-This is a compatibility orchestration command, not the canonical lifecycle front door.
-
 ## Make Targets
 
 ### Canonical lifecycle wrappers
@@ -147,7 +139,6 @@ This is a compatibility orchestration command, not the canonical lifecycle front
 - `format-check`
 - `style`
 - `pre-commit`
-- `legacy-validate`
 
 ### Supported workflow bundles
 
@@ -168,7 +159,6 @@ This is a compatibility orchestration command, not the canonical lifecycle front
 - `discover-hybrid`
 - `benchmark-maintenance-smoke`
 - `benchmark-maintenance`
-- `benchmark-m0`
 - `benchmark-core`
 - `benchmark-review`
 - `benchmark-certify`

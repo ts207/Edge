@@ -38,9 +38,13 @@ def summarize_portfolio_ledger(frame: pd.DataFrame) -> Dict[str, float]:
     ).fillna(0.0)
     turnover = pd.to_numeric(frame.get("portfolio_turnover", 0.0), errors="coerce").fillna(0.0)
 
-    running_peak = equity.cummax().replace(0.0, np.nan)
-    drawdown = ((equity / running_peak) - 1.0).replace([np.inf, -np.inf], np.nan).fillna(0.0)
     starting_equity = float(equity.iloc[0] - net_pnl.iloc[0]) if len(equity) else 0.0
+    equity_path = pd.concat(
+        [pd.Series([starting_equity], dtype=float), equity.reset_index(drop=True)],
+        ignore_index=True,
+    )
+    running_peak = equity_path.cummax().replace(0.0, np.nan)
+    drawdown = ((equity_path / running_peak) - 1.0).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
     return {
         "total_pnl": float(net_pnl.sum()),

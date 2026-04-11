@@ -186,6 +186,28 @@ class TestRiskAllocator:
         # Bar 2: 20% DD / 25% limit -> factor = 5/25 = 0.2
         assert scales["s1"].iloc[2] == pytest.approx(0.2)
 
+    def test_max_drawdown_limit_counts_first_bar_loss(self):
+        idx = _ts(2)
+        pos = {"s1": pd.Series([1, 1], index=idx)}
+        pnl = pd.Series([-0.10, 0.0], index=idx)
+
+        limits = RiskLimits(max_drawdown_limit=0.25, pnl_mode="return")
+        scales, _ = allocate_position_scales(pos, {}, limits, portfolio_pnl_series=pnl)
+
+        assert scales["s1"].iloc[0] == pytest.approx(0.6)
+        assert scales["s1"].iloc[1] == pytest.approx(0.6)
+
+    def test_portfolio_max_drawdown_counts_first_bar_loss(self):
+        idx = _ts(2)
+        pos = {"s1": pd.Series([1, 1], index=idx)}
+        pnl = pd.Series([-0.30, 0.0], index=idx)
+
+        limits = RiskLimits(portfolio_max_drawdown=0.25, pnl_mode="return")
+        scales, _ = allocate_position_scales(pos, {}, limits, portfolio_pnl_series=pnl)
+
+        assert scales["s1"].iloc[0] == pytest.approx(0.0)
+        assert scales["s1"].iloc[1] == pytest.approx(0.0)
+
     def test_target_annual_vol_respects_configured_bars_per_year(self):
         idx = pd.date_range("2024-01-01", periods=400, freq="1h", tz="UTC")
         pos = {"s1": pd.Series(1.0, index=idx)}

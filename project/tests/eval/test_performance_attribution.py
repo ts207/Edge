@@ -48,6 +48,11 @@ class TestPerformanceAttribution:
         assert "max_drawdown" in metrics.columns
         assert metrics.loc["high", "max_drawdown"] == 1.0
 
+    def test_calculate_regime_metrics_drawdown_includes_initial_equity(self):
+        df = pd.DataFrame({"vol_regime": ["high"] * 3, "pnl": [-1.0, -1.0, 0.5]})
+        metrics = calculate_regime_metrics(df)
+        assert metrics.loc["high", "max_drawdown"] == 2.0
+
     def test_missing_columns(self):
         """Should raise ValueError if pnl or regime column missing."""
         df = pd.DataFrame({"pnl": [0.01]})

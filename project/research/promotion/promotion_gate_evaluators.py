@@ -392,8 +392,8 @@ def _evaluate_control_audit_and_dsr(
 
     dsr_value = 0.0
     dsr_pass = True
-    if float(min_dsr) > 0.0:
-        returns_oos = _parse_returns_oos(row.get("returns_oos_combined"))
+    returns_oos = _parse_returns_oos(row.get("returns_oos_combined"))
+    if len(returns_oos) >= 10:
         # Fallback order for DSR trials: broader effective multiplicity count
         raw_n_trials = 0
         used_col = "none"
@@ -415,15 +415,14 @@ def _evaluate_control_audit_and_dsr(
                 "_evaluate_control_audit_and_dsr: DSR using n_trials=%d from '%s'",
                 raw_n_trials, used_col
             )
-        
-        n_trials = max(1, raw_n_trials)
-        if len(returns_oos) >= 10:
-            dsr_value = float(_deflated_sharpe_ratio(pd.Series(returns_oos), n_trials=n_trials))
-        else:
-            dsr_pass = False
-            reasons.add_reject("missing_realized_oos_path", category="dsr")
-            dsr_value = 0.0
 
+        n_trials = max(1, raw_n_trials)
+        dsr_value = float(_deflated_sharpe_ratio(pd.Series(returns_oos), n_trials=n_trials))
+    elif float(min_dsr) > 0.0:
+        dsr_pass = False
+        reasons.add_reject("missing_realized_oos_path", category="dsr")
+
+    if float(min_dsr) > 0.0:
         dsr_pass = dsr_pass and (dsr_value >= float(min_dsr))
         if not dsr_pass:
             if "missing_realized_oos_path" not in reasons.reject_reasons:

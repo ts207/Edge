@@ -27,6 +27,19 @@ except Exception:
 
 _LOG = logging.getLogger(__name__)
 
+
+def _drawdown_from_pnl(pnl: pd.Series, *, pnl_mode: Literal["dollar", "return"]) -> pd.Series:
+    equity = _equity_curve_from_pnl(pnl, pnl_mode=pnl_mode)
+    if equity.empty:
+        return pd.Series(dtype=float)
+    equity_path = pd.concat(
+        [pd.Series([1.0], dtype=float), equity.reset_index(drop=True)],
+        ignore_index=True,
+    )
+    peak = equity_path.cummax().replace(0.0, np.nan)
+    drawdown_path = ((peak - equity_path) / peak).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    return pd.Series(drawdown_path.iloc[1:].to_numpy(dtype=float), index=pnl.index)
+
 @dataclass(frozen=True)
 class RiskLimits:
     max_portfolio_gross: float = 1.0
@@ -767,9 +780,7 @@ def allocate_position_details(
     dd_scale_series = pd.Series(1.0, index=aligned_index)
     if limits.max_drawdown_limit is not None and portfolio_pnl_series is not None:
         pnl = portfolio_pnl_series.reindex(aligned_index).fillna(0.0)
-        equity = _equity_curve_from_pnl(pnl, pnl_mode=limits.pnl_mode)
-        peak = equity.cummax().replace(0.0, np.nan)
-        drawdown = ((peak - equity) / peak).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        drawdown = _drawdown_from_pnl(pnl, pnl_mode=limits.pnl_mode)
         dd_factor = (limits.max_drawdown_limit - drawdown) / limits.max_drawdown_limit
         dd_scale_series = dd_factor.clip(lower=0.0, upper=1.0)
         _flag("max_drawdown_limit", dd_scale_series < 0.999999)
@@ -780,9 +791,7 @@ def allocate_position_details(
 
     if limits.portfolio_max_drawdown is not None and portfolio_pnl_series is not None:
         pnl = portfolio_pnl_series.reindex(aligned_index).fillna(0.0)
-        equity = _equity_curve_from_pnl(pnl, pnl_mode=limits.pnl_mode)
-        peak = equity.cummax().replace(0.0, np.nan)
-        drawdown = ((peak - equity) / peak).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        drawdown = _drawdown_from_pnl(pnl, pnl_mode=limits.pnl_mode)
         reject_mask = drawdown > limits.portfolio_max_drawdown
         _flag("portfolio_max_drawdown", reject_mask)
         for key in ordered:

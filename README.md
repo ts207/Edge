@@ -9,7 +9,7 @@ The canonical operating model is:
 That four-stage story is the public front door, but the repository now includes a broader control plane around it:
 
 - a canonical stage CLI in `project/cli.py`
-- a planner-owned orchestration layer in `project/pipelines/run_all.py` for legacy bundle flows
+- a planner-owned orchestration layer in `project/pipelines/run_all.py` for internal bundle flows
 - a compatibility `operator` surface for older bounded-research workflows
 - an explicit thesis export step that writes runtime inventory under `data/live/theses/`
 - a gated live runtime with thesis-state validation, approval metadata, kill switches, and reconciliation
@@ -88,7 +88,7 @@ The current repo update that older docs did not explain clearly is:
 
 - `discover`, `validate`, `promote`, and `deploy` are the canonical lifecycle verbs
 - `operator` still exists, but it is a deprecated compatibility façade
-- `pipeline run-all` still exists, but it is not the preferred public surface
+- the old `pipeline run-all` CLI alias has been removed; use `discover run` or explicit Make wrappers
 - `promote export` is the bridge into runtime inventory and writes `data/live/theses/<run_id>/`
 - thesis lifecycle and runtime permissioning are now explicit through `deployment_state`, approval metadata, and `DeploymentGate`
 - advanced trigger discovery exists under `discover triggers ...`, but it is proposal-generating research, not a shortcut into live inventory
@@ -144,9 +144,8 @@ Then use:
 
 ## Compatibility Note
 
-Legacy commands remain available for migration support:
+Legacy operator commands remain available for migration support:
 
 - `edge operator ...`
-- `edge pipeline run-all`
 
 They are wrappers around the current model. New documentation and maintenance work should teach the stage verbs and the export/runtime boundary first.

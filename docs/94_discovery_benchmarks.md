@@ -13,7 +13,7 @@ The benchmark control plane currently lives behind the Make targets and scripts 
 - `make benchmark-maintenance-smoke`
 - `make benchmark-maintenance`
 
-`make benchmark-m0` is retained only as a deprecated stub that exits with guidance to use `benchmark-core`.
+The old `make benchmark-m0` stub has been removed; use `benchmark-core`.
 
 ## Ownership model
 

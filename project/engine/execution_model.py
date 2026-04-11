@@ -33,8 +33,10 @@ def get_comprehensive_execution_estimate(
     liquidity_available = float(market_data.get("liquidity_available", 1e6))
     vol_regime_bps = float(market_data.get("vol_regime_bps", 10.0))
 
+    order_size_abs = abs(float(order_size))
+
     fill_prob = calculate_fill_probability(
-        order_size=order_size,
+        order_size=order_size_abs,
         liquidity_available=liquidity_available,
         spread_bps=spread_bps,
         vol_regime=vol_regime_bps / 10000.0,  # scaled for fills.py
@@ -43,7 +45,7 @@ def get_comprehensive_execution_estimate(
     )
 
     slippage_bps = calculate_slippage_bps(
-        order_size=order_size,
+        order_size=order_size_abs,
         spread_bps=spread_bps,
         liquidity_available=liquidity_available,
         vol_regime_bps=vol_regime_bps,
@@ -61,7 +63,7 @@ def get_comprehensive_execution_estimate(
         "expected_fill_price": expected_fill_price,
         "fill_probability": fill_prob,
         "expected_slippage_bps": slippage_bps,
-        "residual_unfilled_quantity": order_size * (1.0 - fill_prob),
+        "residual_unfilled_quantity": order_size_abs * (1.0 - fill_prob),
     }
 
 

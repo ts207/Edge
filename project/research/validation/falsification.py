@@ -77,7 +77,8 @@ def run_permutation_test(
             "empirical_exceedance": 1.0,
         }
     null_arr = np.asarray(null, dtype=float)
-    exceed = float(np.mean(np.abs(null_arr) >= abs(observed)))
+    exceedances = int(np.count_nonzero(np.abs(null_arr) >= abs(observed)))
+    exceed = (exceedances + 1.0) / (len(null_arr) + 1.0)
     return {
         "observed": observed,
         "null_mean": float(np.mean(null_arr)),

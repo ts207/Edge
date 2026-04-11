@@ -90,3 +90,20 @@ def test_summarize_portfolio_ledger_uses_equity_curve() -> None:
     assert summary["ending_equity"] == pytest.approx(2.09)
     assert summary["total_pnl"] == pytest.approx(0.09)
     assert summary["max_drawdown"] == pytest.approx((2.08 / 2.10) - 1.0)
+
+
+def test_summarize_portfolio_ledger_drawdown_includes_starting_equity() -> None:
+    frame = pd.DataFrame(
+        {
+            "portfolio_net_pnl": [-0.10, -0.10, 0.05],
+            "portfolio_equity": [0.90, 0.80, 0.85],
+            "portfolio_equity_return": [-0.10, -0.111111, 0.0625],
+            "portfolio_gross_exposure": [0.0, 0.0, 0.0],
+            "portfolio_turnover": [0.0, 0.0, 0.0],
+        }
+    )
+
+    summary = summarize_portfolio_ledger(frame)
+
+    assert summary["starting_equity"] == pytest.approx(1.0)
+    assert summary["max_drawdown"] == pytest.approx(-0.20)

@@ -149,7 +149,6 @@ Architecturally, these are shells around the repo. They are not the source of tr
 Compatibility still matters. The repo intentionally keeps:
 
 - `edge operator ...`
-- `edge pipeline run-all`
 
 But the architecture should be documented as:
 

@@ -31,7 +31,6 @@ These surfaces are functional but scheduled for migration or consolidation.
 |---|---|---|---|
 | Binance ingest | `project/pipelines/ingest/ingest_binance_*.py` | Active, secondary venue | Bybit-first migration |
 | `build_cleaned_bars.py` | `project/pipelines/clean/` | Active, Binance-era naming | To be venue-agnostic |
-| Legacy CLI `pipeline run-all` | `project/cli.py` | Deprecated | Use `discover run` |
 | Vendorless raw paths | `data/lake/raw/{market}/...` | Fallback only | Migrate to vendor-qualified |
 
 ---
@@ -42,6 +41,7 @@ These surfaces have been removed and must not be referenced in new code.
 
 | Surface | Removed in | Replacement |
 |---|---|---|
+| Legacy CLI `pipeline run-all` | Cleanup batch | `discover run` or explicit Make wrappers |
 | `phase2_candidate_discovery.py` | Sprint 6 | `phase2_search_engine.py` |
 | `load_latest_theses` runtime flag | Sprint 7 | `thesis_path` or `thesis_run_id` |
 | Legacy proposal format (`trigger_space` / `horizons_bars`) | Sprint 6.6 | StructuredHypothesis format |

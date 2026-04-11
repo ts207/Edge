@@ -53,7 +53,7 @@ def calculate_fill_probability(
         profile_mult = 1.0
 
     # Participation rate impact
-    participation_rate = order_size / max(1.0, liquidity_available)
+    participation_rate = abs(float(order_size)) / max(1.0, float(liquidity_available))
     participation_impact = np.exp(-participation_rate * 5.0)
 
     # Volatility impact (higher vol -> lower fill prob for passive)

@@ -52,7 +52,7 @@ Important clarifications:
 - `promote export` is the runtime handoff into `data/live/theses/`
 - `catalog` and `ingest` are support planes, not extra lifecycle stages
 - `operator` is compatibility-only even though it still exists
-- `pipeline run-all` is legacy orchestration, not the recommended front door
+- the old `pipeline run-all` CLI alias has been removed; use `discover run` or explicit Make wrappers
 
 ## If You Need...
 

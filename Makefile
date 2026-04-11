@@ -23,7 +23,7 @@ CHANGED_HEAD ?= HEAD
 	run baseline discover-concept discover-target discover-blueprints discover-edges discover-edges-from-raw discover-hybrid \
 	golden-workflow golden-synthetic-discovery golden-certification synthetic-demo \
 	advanced-discover-triggers-parameter advanced-discover-triggers-cluster \
-	legacy-validate bench-pipeline benchmark-maintenance-smoke benchmark-maintenance benchmark-core benchmark-review benchmark-certify benchmark-m0 monitor
+	bench-pipeline benchmark-maintenance-smoke benchmark-maintenance benchmark-core benchmark-review benchmark-certify monitor
 
 help:
 	@echo "Canonical lifecycle:"
@@ -61,8 +61,7 @@ help:
 	@echo "  advanced-discover-triggers-parameter - Run parameter sweep over detector family"
 	@echo "  advanced-discover-triggers-cluster   - Mine recurring feature excursions"
 	@echo ""
-	@echo "Legacy compatibility and benchmarks:"
-	@echo "  legacy-validate    - Legacy contract verification wrapper"
+	@echo "Benchmarks:"
 	@echo "  discover-blueprints, discover-edges, discover-edges-from-raw, discover-hybrid"
 	@echo "  benchmark-maintenance-smoke, benchmark-maintenance, benchmark-core, benchmark-review, benchmark-certify"
 
@@ -132,10 +131,6 @@ export:
 deploy-paper:
 	@if [ -z "$(RUN_ID)" ]; then echo "Usage: make deploy-paper RUN_ID=<run_id>"; exit 2; fi
 	PYTHONPATH=. $(PYTHON) -m project.cli deploy paper --run_id $(RUN_ID)
-
-legacy-validate:
-	PYTHONPATH=. $(PYTHON) -m project.scripts.run_researcher_verification --mode contracts
-	$(MAKE) minimum-green-gate
 
 # Advanced/Internal trigger discovery (Proposal-generating only)
 # Manual review required before registry adoption.
@@ -334,15 +329,10 @@ monitor:
 	$(PYTHON) project/scripts/monitor_data_freshness.py --symbols $(or $(SYMBOLS),BTCUSDT,ETHUSDT) --timeframe 5m --max_staleness_bars 3
 
 #
-# Legacy compatibility, quality, and cleanup
+# Quality and cleanup
 #
 bench-pipeline:
 	$(PYTHON) project/scripts/benchmark_pipeline.py
-
-benchmark-m0:
-	@echo "benchmark-m0 is deprecated; the retail_m0_matrix.yaml no longer exists."
-	@echo "Use 'make benchmark-core' (preset core_v1) instead."
-	@exit 1
 
 
 compile:

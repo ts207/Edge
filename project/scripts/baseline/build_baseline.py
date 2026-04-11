@@ -10,7 +10,7 @@ if str(REPO_ROOT) not in sys.path:
 import argparse
 import json
 
-from scripts.baseline._common import build_baseline
+from project.scripts.baseline._common import build_baseline
 
 
 def main() -> None:

@@ -64,6 +64,11 @@ def calculate_target_notional(
     """
     Calculate target notional based on trade edge and portfolio constraints.
     """
+    portfolio_value = max(0.0, float(portfolio_state.get("portfolio_value", 1000000.0) or 0.0))
+    liquidity_usd = max(0.0, float(liquidity_usd or 0.0))
+    concentration_cap_pct = max(0.0, float(concentration_cap_pct))
+    max_kelly_multiplier = max(0.0, float(max_kelly_multiplier))
+
     # 1. Base Sizing from Edge (Kelly-ish / Risk-Adjusted)
     # Convert bps-like inputs to decimal returns so the multiplier is unit invariant.
     vol_decimal = abs(_to_decimal_return(vol_regime))
@@ -83,7 +88,6 @@ def calculate_target_notional(
     confidence_multiplier = np.clip(edge / risk_scale, 0.0, max_kelly_multiplier)
 
     # Base position size (e.g. 0.1% of portfolio per unit of confidence)
-    portfolio_value = portfolio_state.get("portfolio_value", 1000000.0)
     base_notional = portfolio_value * 0.001 * confidence_multiplier
 
     # 2. Constraints
@@ -120,8 +124,8 @@ def calculate_target_notional(
     # Final target
     target_notional = min(
         base_notional * risk_mult * corr_adj * vol_adj * cluster_adj,
-        liquidity_cap,
-        concentration_cap,
+        max(0.0, liquidity_cap),
+        max(0.0, concentration_cap),
     )
 
     return {

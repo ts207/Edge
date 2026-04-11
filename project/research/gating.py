@@ -1017,7 +1017,7 @@ def max_drawdown_gate(returns: List[float], *, max_dd_ratio: float = 3.0) -> dic
     arr = arr[np.isfinite(arr)]
     if arr.size < 2:
         return {"max_drawdown": 0.0, "dd_to_expectancy_ratio": 0.0, "gate_max_drawdown": True}
-    cumulative = np.cumsum(arr)
+    cumulative = np.concatenate([[0.0], np.cumsum(arr)])
     max_dd = float(np.max(np.maximum.accumulate(cumulative) - cumulative))
     abs_mean = abs(float(np.mean(arr)))
     ratio = max_dd / abs_mean if abs_mean > 1e-12 else 0.0

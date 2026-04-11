@@ -23,7 +23,10 @@ def _resolve_order_quantity(
     available_balance: float,
     max_notional_fraction: float,
 ) -> float:
-    notional = max(0.0, float(available_balance) * float(max_notional_fraction) * float(size_fraction))
+    balance = max(0.0, float(available_balance))
+    cap_fraction = max(0.0, float(max_notional_fraction))
+    size = max(0.0, float(size_fraction))
+    notional = balance * cap_fraction * size
     if entry_price <= 0.0 or notional <= 0.0:
         return 0.0
     return notional / entry_price
