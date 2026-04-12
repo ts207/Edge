@@ -36,6 +36,8 @@ SMOKE_RUN_ID = "smoke_run"
 SMOKE_SYMBOLS = ("BTCUSDT", "ETHUSDT")
 SMOKE_EVENT_TYPE = "VOL_SHOCK"
 SMOKE_HORIZON_BARS = 24
+SMOKE_BAR_PERIODS = 288
+SMOKE_EVENT_PERIODS = 96
 
 
 @dataclass(frozen=True)
@@ -58,7 +60,7 @@ def _write_df(df: pd.DataFrame, path: Path) -> Path:
 
 
 def build_smoke_bars(
-    symbol: str, *, periods: int = 96, freq: str = "5min", seed: int = 0
+    symbol: str, *, periods: int = SMOKE_BAR_PERIODS, freq: str = "5min", seed: int = 0
 ) -> pd.DataFrame:
     rng = _rng(seed + abs(hash(symbol)) % 1000)
     ts = pd.date_range("2024-01-01", periods=periods, freq=freq, tz="UTC")
@@ -87,7 +89,7 @@ def build_smoke_bars(
 
 
 def build_smoke_events(
-    symbol: str, *, periods: int = 48, freq: str = "15min", seed: int = 0
+    symbol: str, *, periods: int = SMOKE_EVENT_PERIODS, freq: str = "15min", seed: int = 0
 ) -> pd.DataFrame:
     rng = _rng(seed + abs(hash(symbol)) % 1000)
     ts = pd.date_range("2024-01-01", periods=periods, freq=freq, tz="UTC")
@@ -268,6 +270,7 @@ def run_research_smoke(dataset: SmokeDatasetInfo) -> Dict[str, Any]:
     frames: List[pd.DataFrame] = []
     for symbol in dataset.symbols:
         events = build_smoke_events(symbol, seed=dataset.seed)
+        features = build_smoke_bars(symbol, seed=dataset.seed)
         candidates = _synthesize_registry_candidates(
             run_id=dataset.run_id,
             symbol=symbol,
@@ -282,6 +285,7 @@ def run_research_smoke(dataset: SmokeDatasetInfo) -> Dict[str, Any]:
         scored = _split_and_score_candidates(
             candidates,
             events,
+            features_df=features,
             horizon_bars=SMOKE_HORIZON_BARS,
             split_scheme_id="smoke_tvt",
             purge_bars=1,

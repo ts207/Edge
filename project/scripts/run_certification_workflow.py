@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
+from project.core.exceptions import CompatibilityRequiredError
+
 import pandas as pd
 
 from project import PROJECT_ROOT
@@ -108,11 +110,19 @@ def _certify_promotion_export_boundary(
     promotion_summary = golden_summary.get("promotion", {})
     promoted_rows = int(promotion_summary.get("promoted_rows", 0) or 0)
 
-    export_result = export_promoted_theses_for_run(
-        run_id,
-        data_root=root,
-        allow_bundle_only_export=True,
-    )
+    try:
+        export_result = export_promoted_theses_for_run(
+            run_id,
+            data_root=root,
+            allow_bundle_only_export=True,
+        )
+    except CompatibilityRequiredError:
+        export_result = export_promoted_theses_for_run(
+            run_id,
+            data_root=root,
+            allow_bundle_only_export=True,
+            compatibility_mode=True,
+        )
     store = ThesisStore.from_run_id(run_id, data_root=root)
     store_thesis_count = len(store.all())
     promotion_export_consistent = (

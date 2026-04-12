@@ -204,6 +204,33 @@ class TestLiveExportFailClosed:
         )
         assert result.thesis_count == 0
 
+    def test_empty_promoted_df_with_bundles_exports_zero_theses(self, tmp_path):
+        run_id = "test_empty_promoted_with_bundles"
+        data_root = tmp_path / "data"
+        data_root.mkdir(parents=True)
+
+        promotion_dir = data_root / "reports" / "promotions" / run_id
+        promotion_dir.mkdir(parents=True)
+
+        evidence_bundle = {
+            "candidate_id": "cand_1",
+            "sample_definition": {"symbol": "BTCUSDT", "n_events": 100},
+            "split_definition": {"bar_duration_minutes": 60},
+            "event_family": "TEST",
+            "event_type": "TEST_EVENT",
+            "cost_robustness": {"net_expectancy_bps": 50.0},
+            "metadata": {"hypothesis_id": "hyp_1"},
+        }
+
+        result = export_promoted_theses_for_run(
+            run_id,
+            data_root=data_root,
+            bundles=[evidence_bundle],
+            promoted_df=pd.DataFrame(),
+            allow_bundle_only_export=True,
+        )
+        assert result.thesis_count == 0
+
 
 class TestManifestSuccessCriteria:
     """Tests for hardened manifest success criteria."""

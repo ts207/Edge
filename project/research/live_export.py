@@ -1287,6 +1287,8 @@ def export_promoted_theses_for_run(
     effective_blueprints = (
         list(blueprints) if blueprints is not None else _load_blueprints(run_id, resolved_root)
     )
+    if allow_bundle_only_export and effective_promoted.empty:
+        effective_bundles = []
     skip_validation_lineage = (
         allow_bundle_only_export and effective_promoted.empty and not effective_bundles
     )
