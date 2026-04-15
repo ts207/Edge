@@ -134,16 +134,17 @@ class ValidationService:
         # This is a basic mapping, can be expanded
         reasons = []
         
-        # Check for common failure gates
-        gates_to_check = {
-            "gate_oos_validation": ValidationReasonCodes.INCONCLUSIVE_VALIDATION,
-            "gate_after_cost_positive": ValidationReasonCodes.FAILED_COST_SURVIVAL,
-            "gate_after_cost_stressed_positive": ValidationReasonCodes.FAILED_COST_SURVIVAL,
-            "gate_c_regime_stable": ValidationReasonCodes.FAILED_REGIME_SUPPORT,
-            "gate_multiplicity": ValidationReasonCodes.FAILED_MULTIPLICITY_THRESHOLD,
-        }
+        # Check for common failure gates. OOS failure is a definite validation
+        # failure, not an inconclusive state; reserve inconclusive for missing data.
+        gates_to_check = (
+            ("gate_oos_validation", ValidationReasonCodes.FAILED_OOS_VALIDATION),
+            ("gate_after_cost_positive", ValidationReasonCodes.FAILED_COST_SURVIVAL),
+            ("gate_after_cost_stressed_positive", ValidationReasonCodes.FAILED_COST_SURVIVAL),
+            ("gate_c_regime_stable", ValidationReasonCodes.FAILED_REGIME_SUPPORT),
+            ("gate_multiplicity", ValidationReasonCodes.FAILED_MULTIPLICITY_THRESHOLD),
+        )
         
-        for gate, code in gates_to_check.items():
+        for gate, code in gates_to_check:
             val = row.get(gate)
             if val is not None:
                 if not bool(val):
@@ -166,7 +167,7 @@ class ValidationService:
             candidate_id=candidate_id,
             run_id=run_id,
             program_id=program_id,
-            reason_codes=list(set(reasons)),
+            reason_codes=list(dict.fromkeys(reasons)),
             summary=""
         )
         
@@ -225,32 +226,5 @@ class ValidationService:
             }
         )
         manifest.persist(base_dir)
-        
-        return bundle
-
-    def build_validation_bundle_from_legacy_run(
-        self, 
-        run_id: str, 
-        program_id: Optional[str] = None
-    ) -> Optional[ValidationBundle]:
-        """
-        Compatibility bridge: creates a temporary validation bundle from legacy outputs.
-        """
-        tables = self.load_candidate_tables(run_id)
-        candidates_df = pd.DataFrame()
-        for source in ("edge_candidates", "promotion_audit", "phase2_candidates"):
-            if not tables[source].empty:
-                candidates_df = tables[source]
-                break
-        
-        if candidates_df.empty:
-            return None
-            
-        bundle = self.create_validation_bundle(run_id, candidates_df, program_id)
-        # Mark as compatibility-generated
-        bundle.summary_stats["validation_stage_version"] = "compat_legacy_bridge_v1"
-        
-        # Persist it
-        write_validation_bundle(bundle, base_dir=self.data_root / "reports" / "validation" / run_id)
         
         return bundle

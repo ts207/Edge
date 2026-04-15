@@ -69,6 +69,7 @@ def test_validation_bundle_serialization(tmp_path):
 
 
 def test_validation_reason_codes():
+    assert ValidationReasonCodes.FAILED_OOS_VALIDATION == "failed_oos_validation"
     assert ValidationReasonCodes.FAILED_STABILITY == "failed_stability"
     
     decision = ValidationDecision(

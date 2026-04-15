@@ -128,6 +128,26 @@ def test_proxy_oi_reduction_and_price_drawdown_enrichment():
     assert events.iloc[0]["price_drawdown"] == pytest.approx(0.1, abs=1e-6)
 
 
+def test_proxy_can_require_min_episode_oi_reduction():
+    df = _base_df(n=60)
+    trigger = 50
+
+    df.loc[trigger, "oi_notional"] = 995.0  # net episode reduction only 0.5%
+    df.loc[trigger, "oi_delta_1h"] = -200.0
+    df.loc[trigger, "volume"] = 500.0
+    df.loc[trigger, "low"] = 90.0
+
+    detector = LiquidationCascadeProxyDetector()
+    events = detector.detect(
+        df,
+        symbol="BTCUSDT",
+        min_episode_oi_reduction_pct=0.01,
+        **_SMALL_PARAMS,
+    )
+
+    assert len(events) == 0
+
+
 def test_proxy_multi_bar_episode():
     df = _base_df(n=70)
 
@@ -142,6 +162,23 @@ def test_proxy_multi_bar_episode():
 
     assert len(events) == 1
     assert events.iloc[0]["duration_bars"] >= 2
+
+
+def test_proxy_accepts_first_anchor_rule_alias():
+    df = _base_df(n=70)
+
+    for i in range(50, 53):
+        df.loc[i, "oi_delta_1h"] = -200.0
+        df.loc[i, "volume"] = 500.0
+        df.loc[i, "low"] = 90.0
+
+    detector = LiquidationCascadeProxyDetector()
+    events = detector.detect(df, symbol="BTCUSDT", anchor_rule="first", **_SMALL_PARAMS)
+
+    assert len(events) == 1
+    assert int(events.iloc[0]["event_idx"]) == 50
+    assert events.iloc[0]["eval_bar_ts"] == df.loc[50, "timestamp"]
+    assert events.iloc[0]["anchor_ts"] == df.loc[50, "timestamp"]
 
 
 def test_proxy_two_separate_episodes():

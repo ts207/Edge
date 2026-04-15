@@ -233,7 +233,7 @@ def load_validation_bundle(
         if strict and not compatibility_mode:
             raise MissingArtifactError(
                 f"Missing required validation artifact {bundle_path}. "
-                "Enable compatibility_mode=True for legacy callers."
+                "Run canonical validation before reusing this run."
             )
         return None
 

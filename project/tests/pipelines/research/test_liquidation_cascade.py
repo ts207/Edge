@@ -91,3 +91,86 @@ def test_detect_cascades_no_trigger_on_positive_oi():
         df, "BTCUSDT", liq_median_window=20, liq_multiplier=3.0, liq_vol_th=0.0, oi_drop_th=-10.0
     )
     assert len(events) == 0
+
+
+def test_detect_cascades_honors_spec_aliases_and_absolute_floors():
+    ts = pd.date_range("2024-09-01", periods=100, freq="5min", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "timestamp": ts,
+            "liquidation_notional": [10.0] * 100,
+            "oi_delta_1h": [0.0] * 100,
+            "oi_notional": [1000.0] * 100,
+            "close": [100.0] * 100,
+            "high": [101.0] * 100,
+            "low": [99.0] * 100,
+        }
+    )
+
+    df.loc[50, "liquidation_notional"] = 100.0
+    df.loc[50, "oi_delta_1h"] = -50.0
+    df.loc[50, "oi_notional"] = 950.0
+
+    # Legacy/spec aliases: median_window and oi_drop_th.
+    events = detect_cascades(
+        df,
+        "BTCUSDT",
+        median_window=20,
+        liq_multiplier=3.0,
+        liq_vol_th=50.0,
+        oi_drop_th=-10.0,
+    )
+
+    assert len(events) == 1
+
+    # Tighten the absolute liquidation floor beyond the observed notional.
+    no_events = detect_cascades(
+        df,
+        "BTCUSDT",
+        median_window=20,
+        liq_multiplier=3.0,
+        liq_vol_th=150.0,
+        oi_drop_th=-10.0,
+    )
+
+    assert len(no_events) == 0
+
+
+def test_detect_cascades_supports_absolute_oi_drop_floor():
+    ts = pd.date_range("2024-09-01", periods=100, freq="5min", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "timestamp": ts,
+            "liquidation_notional": [10.0] * 100,
+            "oi_delta_1h": [0.0] * 100,
+            "oi_notional": [1000.0] * 100,
+            "close": [100.0] * 100,
+            "high": [101.0] * 100,
+            "low": [99.0] * 100,
+        }
+    )
+
+    df.loc[50, "liquidation_notional"] = 100.0
+    df.loc[50, "oi_delta_1h"] = -20.0
+    df.loc[50, "oi_notional"] = 950.0
+
+    # Relative threshold passes: 20 / 950 ~= 2.1%.
+    relative_only = detect_cascades(
+        df,
+        "BTCUSDT",
+        liq_median_window=20,
+        liq_multiplier=3.0,
+        oi_drop_pct_th=0.005,
+    )
+    assert len(relative_only) == 1
+
+    # Absolute floor blocks the event when the OI drop is too small in notional terms.
+    blocked = detect_cascades(
+        df,
+        "BTCUSDT",
+        liq_median_window=20,
+        liq_multiplier=3.0,
+        oi_drop_pct_th=0.005,
+        oi_drop_abs_th=-50.0,
+    )
+    assert len(blocked) == 0

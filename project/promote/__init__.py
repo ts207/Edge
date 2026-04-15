@@ -8,13 +8,11 @@ def run(
     symbols: str, 
     retail_profile: str = "capital_constrained", 
     out_dir: Path | None = None,
-    use_compatibility_bridge: bool = False
 ):
     config = build_promotion_config(
         run_id=run_id,
         symbols=symbols,
         out_dir=out_dir,
         retail_profile=retail_profile,
-        use_compatibility_bridge=use_compatibility_bridge,
     )
     return execute_promotion(config)

@@ -11,25 +11,6 @@ if __package__ in {None, ""}:
 from project import PROJECT_ROOT
 
 
-def _log_legacy_usage(context: str):
-    log_dir = Path("data/logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "legacy_usage.log"
-    import datetime
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write(f"[{timestamp}] LEGACY USAGE: {context}\n")
-
-
-def _deprecation_warning(old_cmd: str, new_cmd: str):
-    _log_legacy_usage(f"Command: {old_cmd}")
-    print(
-        f"WARNING: '{old_cmd}' is deprecated and will be removed in a future version.\n"
-        f"Please use canonical verb: '{new_cmd}'\n",
-        file=sys.stderr,
-    )
-
-
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edge",

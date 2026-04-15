@@ -108,6 +108,7 @@ class ValidationBundle:
 class ValidationReasonCodes:
     INSUFFICIENT_SAMPLE_SUPPORT = "insufficient_sample_support"
     INSUFFICIENT_EFFECTIVE_SAMPLE_SIZE = "insufficient_effective_sample_size"
+    FAILED_OOS_VALIDATION = "failed_oos_validation"
     FAILED_COST_SURVIVAL = "failed_cost_survival"
     FAILED_STABILITY = "failed_stability"
     FAILED_TIME_SLICE_SUPPORT = "failed_time_slice_support"

@@ -150,6 +150,33 @@ def _parse_mapping_from_row(row: dict[str, Any], key: str) -> dict[str, Any]:
     return {}
 
 
+def _first_present(row: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = row.get(key)
+        try:
+            if pd.isna(value):
+                continue
+        except TypeError:
+            pass
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _candidate_template_label(row: dict[str, Any]) -> str:
+    return str(
+        _first_present(
+            row,
+            "template_id",
+            "rule_template",
+            "template_verb",
+            "template",
+            "template_family",
+        )
+        or "unknown_template"
+    )
+
+
 def build_regime_split_report(*, run_id: str, data_root: Path | None = None) -> dict[str, Any]:
     resolved = _resolved_root(data_root)
     from project.research.reports.operator_reporting import build_operator_summary
@@ -165,7 +192,7 @@ def build_regime_split_report(*, run_id: str, data_root: Path | None = None) -> 
                     "label": " / ".join(
                         [
                             str(row.get("event_type", row.get("trigger_type", "unknown_event"))),
-                            str(row.get("template_id", row.get("template", "unknown_template"))),
+                            _candidate_template_label(dict(row)),
                             str(row.get("direction", "?")),
                             str(row.get("horizon", row.get("horizon_bars", row.get("horizon_label", "?")))),
                         ]

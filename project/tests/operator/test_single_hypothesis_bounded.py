@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 from project.operator.bounded import validate_bounded_proposal
@@ -36,7 +37,9 @@ def _single_hypothesis_payload(end: str, *, bounded: bool = False) -> dict:
     return payload
 
 
-def test_bounded_validation_normalizes_single_hypothesis_proposals(tmp_path: Path) -> None:
+def test_bounded_validation_rejects_single_hypothesis_baseline_on_canonical_path(
+    tmp_path: Path,
+) -> None:
     data_root = tmp_path / "data"
     paths = ensure_memory_store("prog_single", data_root=data_root)
     baseline_path = paths.proposals_dir / "base_run" / "proposal.yaml"
@@ -61,11 +64,13 @@ def test_bounded_validation_normalizes_single_hypothesis_proposals(tmp_path: Pat
         data_root=data_root,
     )
 
-    current = load_operator_proposal(_single_hypothesis_payload("2022-12-31", bounded=True))
-    result = validate_bounded_proposal(current, data_root=data_root)
+    current = load_operator_proposal(
+        _single_hypothesis_payload("2022-12-31", bounded=True),
+        legacy_compatibility=True,
+    )
+    with pytest.raises(ValueError, match="legacy_compatibility=False"):
+        validate_bounded_proposal(current, data_root=data_root)
 
-    assert result is not None
-    assert result.changed_fields == ["end"]
 
 
 def test_bounded_validation_normalizes_structured_proposals(tmp_path: Path) -> None:

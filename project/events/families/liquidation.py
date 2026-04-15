@@ -11,6 +11,15 @@ from project.events.shared import EVENT_COLUMNS, emit_event, format_event_id
 from project.research.analyzers import run_analyzer_suite
 
 
+def _episode_anchor_idx(episode, anchor_rule: Any, default: str) -> int:
+    rule = str(anchor_rule or default).strip().lower()
+    if rule in {"start", "first"}:
+        return int(episode.start_idx)
+    if rule in {"end", "last"}:
+        return int(episode.end_idx)
+    return int(episode.peak_idx)
+
+
 class LiquidationCascadeDetector(EpisodeDetector):
     event_type = "LIQUIDATION_CASCADE"
     required_columns = (
@@ -31,8 +40,38 @@ class LiquidationCascadeDetector(EpisodeDetector):
     default_liq_multiplier = 3.0
     default_oi_drop_pct_threshold = 0.005
 
+    @staticmethod
+    def _resolve_liq_window(params: dict[str, Any]) -> int:
+        return int(params.get("liq_median_window", params.get("median_window", 288)))
+
+    @staticmethod
+    def _resolve_liq_abs_floor(params: dict[str, Any]) -> float:
+        return float(params.get("liq_vol_th", 0.0) or 0.0)
+
+    @staticmethod
+    def _resolve_oi_thresholds(params: dict[str, Any]) -> tuple[float | None, float | None]:
+        pct_value = params.get("oi_drop_pct_th")
+        abs_value = params.get("oi_drop_abs_th")
+        legacy = params.get("oi_drop_th")
+        if pct_value is None and legacy is not None:
+            try:
+                legacy_f = float(legacy)
+            except (TypeError, ValueError):
+                legacy_f = 0.0
+            if abs(legacy_f) < 1.0:
+                pct_value = abs(legacy_f)
+            else:
+                abs_value = legacy_f
+        pct_threshold = (
+            float(pct_value)
+            if pct_value is not None
+            else LiquidationCascadeDetector.default_oi_drop_pct_threshold
+        )
+        abs_threshold = float(abs_value) if abs_value is not None else None
+        return pct_threshold, abs_threshold
+
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
-        liq_window = int(params.get("liq_median_window", 288))
+        liq_window = self._resolve_liq_window(params)
         min_periods = int(params.get("min_periods", min(liq_window, 24)))
         liq = pd.to_numeric(df["liquidation_notional"], errors="coerce").astype(float)
         liq_median = (
@@ -63,12 +102,18 @@ class LiquidationCascadeDetector(EpisodeDetector):
         liq_th = features["liq_th"]
         oi_delta = features["oi_delta_1h"]
         oi_notional = features["oi_notional"]
+        liq_abs_floor = self._resolve_liq_abs_floor(params)
+        oi_drop_pct_th, oi_drop_abs_th = self._resolve_oi_thresholds(params)
 
-        oi_drop_pct_th = float(params.get("oi_drop_pct_th", self.default_oi_drop_pct_threshold))
+        liq_mask = (liq > liq_th) & (liq > 0)
+        if liq_abs_floor > 0:
+            liq_mask = liq_mask & (liq >= liq_abs_floor)
 
-        mask = ((liq > liq_th) & (liq > 0) & (oi_delta < -(oi_notional * oi_drop_pct_th))).fillna(
-            False
-        )
+        oi_mask = oi_delta < -(oi_notional * oi_drop_pct_th)
+        if oi_drop_abs_th is not None:
+            oi_mask = oi_mask & (oi_delta <= oi_drop_abs_th)
+
+        mask = (liq_mask & oi_mask).fillna(False)
         return mask
 
     def compute_intensity(
@@ -90,11 +135,7 @@ class LiquidationCascadeDetector(EpisodeDetector):
         )
         rows = []
         for sub_idx, episode in enumerate(episodes):
-            idx = int(
-                episode.peak_idx
-                if str(params.get("anchor_rule", self.anchor_rule)).lower() == "peak"
-                else episode.start_idx
-            )
+            idx = _episode_anchor_idx(episode, params.get("anchor_rule"), self.anchor_rule)
             ts = pd.to_datetime(df.at[idx, "timestamp"], utc=True, errors="coerce")
             if pd.isna(ts):
                 continue
@@ -173,6 +214,10 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
     max_gap = 3
     anchor_rule = "peak"
     default_severity = "major"
+
+    @staticmethod
+    def _resolve_min_episode_oi_reduction(params: dict[str, Any]) -> float:
+        return float(params.get("min_episode_oi_reduction_pct", 0.0) or 0.0)
 
     def prepare_features(self, df: pd.DataFrame, **params: Any) -> dict[str, pd.Series]:
         oi_window = int(params.get("oi_window", 288))
@@ -263,6 +308,7 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
         self.check_required_columns(df)
         if df.empty:
             return pd.DataFrame(columns=EVENT_COLUMNS)
+        min_episode_oi_reduction = self._resolve_min_episode_oi_reduction(params)
         features = self.prepare_features(df, **params)
         mask = self.compute_raw_mask(df, features=features, **params)
         intensity = self.compute_intensity(df, features=features, **params)
@@ -271,11 +317,7 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
         )
         rows = []
         for sub_idx, episode in enumerate(episodes):
-            idx = int(
-                episode.peak_idx
-                if str(params.get("anchor_rule", self.anchor_rule)).lower() == "peak"
-                else episode.start_idx
-            )
+            idx = _episode_anchor_idx(episode, params.get("anchor_rule"), self.anchor_rule)
             ts = pd.to_datetime(df.at[idx, "timestamp"], utc=True, errors="coerce")
             if pd.isna(ts):
                 continue
@@ -309,6 +351,8 @@ class LiquidationCascadeProxyDetector(EpisodeDetector):
             p_start = float(df["close"].iloc[max(0, int(start) - 1)])
             p_low = float(subset["low"].min())
             row["price_drawdown"] = (p_start - p_low) / p_start if p_start > 0 else 0.0
+            if min_episode_oi_reduction > 0.0 and row["oi_reduction_pct"] < min_episode_oi_reduction:
+                continue
             rows.append(row)
 
         return pd.DataFrame(rows) if rows else pd.DataFrame(columns=EVENT_COLUMNS)

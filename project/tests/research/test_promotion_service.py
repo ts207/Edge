@@ -7,6 +7,43 @@ from types import SimpleNamespace
 import pandas as pd
 
 from project.research.services import promotion_service as svc
+from project.research.services import evaluation_service
+from project.research.validation import result_writer
+
+PromotionConfig = svc.PromotionConfig
+
+
+def _patch_canonical_validation_inputs(
+    monkeypatch,
+    config: svc.PromotionConfig,
+    candidates_df: pd.DataFrame,
+    candidate_ids: list[str],
+) -> None:
+    canonical_dir = config.resolved_out_dir().parent.parent / "validation" / config.run_id
+    canonical_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"candidate_id": candidate_ids}).to_csv(
+        canonical_dir / "promotion_ready_candidates.csv",
+        index=False,
+    )
+    monkeypatch.setattr(
+        result_writer,
+        "load_validation_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            validated_candidates=[
+                SimpleNamespace(candidate_id=candidate_id) for candidate_id in candidate_ids
+            ],
+            rejected_candidates=[],
+        ),
+    )
+    monkeypatch.setattr(
+        evaluation_service.ValidationService,
+        "load_candidate_tables",
+        lambda self, run_id: {
+            "edge_candidates": candidates_df.copy(),
+            "promotion_audit": pd.DataFrame(),
+            "phase2_candidates": pd.DataFrame(),
+        },
+    )
 
 
 def test_promotion_rejection_classification_and_annotations() -> None:
@@ -52,7 +89,7 @@ def test_resolve_promotion_policy_switches_by_profile(monkeypatch, tmp_path: Pat
         require_low_capital_contract=True,
         min_trade_count=20,
     )
-    config = PromotionConfig(
+    base_config = PromotionConfig(
         run_id="test_run",
         symbols="BTC",
         out_dir=tmp_path,
@@ -76,7 +113,6 @@ def test_resolve_promotion_policy_switches_by_profile(monkeypatch, tmp_path: Pat
         objective_spec=None,
         retail_profiles_spec=None,
         promotion_profile="auto",
-        use_compatibility_bridge=True,
     )
 
 
@@ -206,9 +242,9 @@ def test_execute_promotion_success_path(monkeypatch, tmp_path: Path) -> None:
         objective_spec=None,
         retail_profiles_spec=None,
         promotion_profile="auto",
-        use_compatibility_bridge=True,
     )
 
+    _patch_canonical_validation_inputs(monkeypatch, config, candidates_df, ["cand-1"])
 
     result = svc.execute_promotion(config)
     assert result.exit_code == 0
@@ -305,9 +341,9 @@ def test_execute_promotion_allows_research_run_mode(monkeypatch, tmp_path: Path)
         objective_spec=None,
         retail_profiles_spec=None,
         promotion_profile="auto",
-        use_compatibility_bridge=True,
     )
 
+    _patch_canonical_validation_inputs(monkeypatch, config, candidates_df, ["cand-1"])
 
     result = svc.execute_promotion(config)
 
@@ -399,9 +435,9 @@ def test_execute_promotion_normalizes_empty_bundle_outputs(monkeypatch, tmp_path
         objective_spec=None,
         retail_profiles_spec=None,
         promotion_profile="auto",
-        use_compatibility_bridge=True,
     )
 
+    _patch_canonical_validation_inputs(monkeypatch, config, candidates_df, ["cand-1"])
 
     result = svc.execute_promotion(config)
 

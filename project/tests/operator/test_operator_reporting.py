@@ -91,11 +91,8 @@ def test_write_operator_outputs_for_run_writes_summary_and_ledger(monkeypatch, t
         ]
     ).to_parquet(phase2_dir / "phase2_candidates.parquet", index=False)
 
-    import project.research.reports.operator_reporting as reporting
-
     monkeypatch.setattr(
-        reporting,
-        "build_run_reflection",
+        "project.research.reports.operator_reporting.build_run_reflection",
         lambda run_id, data_root=None: {
             "candidate_count": 1,
             "promoted_count": 0,
@@ -119,3 +116,45 @@ def test_write_operator_outputs_for_run_writes_summary_and_ledger(monkeypatch, t
     assert len(ledger) == 1
     assert ledger.iloc[0]["run_id"] == run_id
     assert ledger.iloc[0]["verdict"] == "KEEP_RESEARCH"
+
+
+def test_operator_summary_labels_rule_template_without_unknown(monkeypatch, tmp_path):
+    data_root = tmp_path / "data"
+    run_id = "rule_template_run"
+    run_dir = data_root / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run_manifest.json").write_text(
+        json.dumps({"run_id": run_id, "status": "success", "terminal_status": "completed"}),
+        encoding="utf-8",
+    )
+
+    phase2_dir = data_root / "reports" / "phase2" / run_id
+    phase2_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "event_type": "VOL_SPIKE",
+                "rule_template": "mean_reversion",
+                "direction": "long",
+                "horizon": "12b",
+                "t_stat": 3.1,
+            }
+        ]
+    ).to_parquet(phase2_dir / "phase2_candidates.parquet", index=False)
+
+    import project.research.reports.operator_reporting as reporting
+
+    monkeypatch.setattr(
+        reporting,
+        "build_run_reflection",
+        lambda run_id, data_root=None: {
+            "candidate_count": 1,
+            "promoted_count": 0,
+            "mechanical_outcome": "success",
+            "statistical_outcome": "weak_signal",
+        },
+    )
+
+    summary = write_operator_outputs_for_run(run_id=run_id, data_root=data_root)
+
+    assert summary["top_candidate"]["label"].startswith("VOL_SPIKE / mean_reversion")

@@ -792,7 +792,10 @@ def _log_legacy_usage(context: str):
         pass
 
 
-def load_operator_proposal(path_or_payload: str | Path | Dict[str, Any], legacy_compatibility: bool = True) -> AgentProposal:
+def load_operator_proposal(
+    path_or_payload: str | Path | Dict[str, Any],
+    legacy_compatibility: bool = False,
+) -> AgentProposal:
     raw = _load_proposal_payload(path_or_payload)
     fmt = detect_operator_proposal_format(raw)
 

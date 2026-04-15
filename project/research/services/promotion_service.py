@@ -76,7 +76,6 @@ class PromotionConfig:
     objective_spec: Optional[str]
     retail_profiles_spec: Optional[str]
     promotion_profile: str = "auto"
-    use_compatibility_bridge: bool = False
 
     def resolved_out_dir(self) -> Path:
         data_root = get_data_root()
@@ -111,7 +110,6 @@ class PromotionConfig:
             "objective_spec": self.objective_spec,
             "retail_profiles_spec": self.retail_profiles_spec,
             "promotion_profile": self.promotion_profile,
-            "use_compatibility_bridge": int(self.use_compatibility_bridge),
         }
 
 
@@ -136,7 +134,6 @@ PROMOTION_CONFIG_DEFAULTS: Dict[str, Any] = {
     "objective_spec": None,
     "retail_profiles_spec": None,
     "promotion_profile": "auto",
-    "use_compatibility_bridge": False,
 }
 
 
@@ -1006,6 +1003,111 @@ REQUIRED_PROMOTION_FIELDS = frozenset({
     })
 
 
+def _missing_or_blank_mask(series: pd.Series) -> pd.Series:
+    mask = series.isna()
+    if pd.api.types.is_object_dtype(series) or pd.api.types.is_string_dtype(series):
+        normalized = series.astype(str).str.strip().str.lower()
+        mask = mask | normalized.isin({"", "nan", "none", "null", "<na>"})
+    return mask
+
+
+def _coalesce_column(out: pd.DataFrame, target: str, sources: list[str]) -> None:
+    if target not in out.columns:
+        out[target] = pd.NA
+    target_missing = _missing_or_blank_mask(out[target])
+    for source in sources:
+        if source not in out.columns:
+            continue
+        source_values = out[source]
+        source_present = ~_missing_or_blank_mask(source_values)
+        fill_mask = target_missing & source_present
+        if bool(fill_mask.any()):
+            out.loc[fill_mask, target] = source_values.loc[fill_mask]
+            target_missing = _missing_or_blank_mask(out[target])
+        if not bool(target_missing.any()):
+            break
+
+
+def _fill_numeric_column_from_scaled_sources(
+    out: pd.DataFrame,
+    target: str,
+    sources: list[tuple[str, float]],
+) -> None:
+    if target not in out.columns:
+        out[target] = pd.NA
+    target_numeric = pd.to_numeric(out[target], errors="coerce")
+    target_missing = target_numeric.isna()
+    for source, scale in sources:
+        if source not in out.columns:
+            continue
+        source_numeric = pd.to_numeric(out[source], errors="coerce") * float(scale)
+        fill_mask = target_missing & source_numeric.notna()
+        if bool(fill_mask.any()):
+            out.loc[fill_mask, target] = source_numeric.loc[fill_mask]
+            target_numeric = pd.to_numeric(out[target], errors="coerce")
+            target_missing = target_numeric.isna()
+        if not bool(target_missing.any()):
+            break
+
+
+def _derive_cost_survival_ratio_from_bridge_flags(out: pd.DataFrame) -> pd.Series:
+    scenario_keys = [
+        "gate_after_cost_positive",
+        "gate_after_cost_stressed_positive",
+        "gate_bridge_after_cost_positive_validation",
+        "gate_bridge_after_cost_stressed_positive_validation",
+    ]
+    present = pd.Series(0, index=out.index, dtype="int64")
+    passed = pd.Series(0, index=out.index, dtype="int64")
+    for key in scenario_keys:
+        if key not in out.columns:
+            continue
+        values = out[key]
+        key_present = ~_missing_or_blank_mask(values)
+        normalized = values.astype(str).str.strip().str.lower()
+        key_passed = key_present & (
+            values.eq(True) | normalized.isin({"pass", "true", "1", "passed"})
+        )
+        present = present + key_present.astype("int64")
+        passed = passed + key_passed.astype("int64")
+    return passed.where(present > 0).astype("float64") / present.where(present > 0)
+
+
+def _hydrate_canonical_promotion_aliases(candidates_df: pd.DataFrame) -> pd.DataFrame:
+    """Map current validated edge-candidate columns onto canonical promotion inputs."""
+    if candidates_df.empty:
+        return candidates_df.copy()
+
+    out = candidates_df.copy()
+    _coalesce_column(
+        out,
+        "family",
+        ["family_id", "event_family", "research_family", "canonical_family"],
+    )
+    _fill_numeric_column_from_scaled_sources(
+        out,
+        "net_expectancy_bps",
+        [
+            ("bridge_validation_stressed_after_cost_bps", 1.0),
+            ("bridge_validation_after_cost_bps", 1.0),
+            ("stressed_after_cost_expectancy_bps", 1.0),
+            ("after_cost_expectancy_bps", 1.0),
+            ("stressed_after_cost_expectancy_per_trade", 10_000.0),
+            ("after_cost_expectancy_per_trade", 10_000.0),
+        ],
+    )
+
+    if "cost_survival_ratio" not in out.columns:
+        out["cost_survival_ratio"] = pd.NA
+    cost_missing = pd.to_numeric(out["cost_survival_ratio"], errors="coerce").isna()
+    if bool(cost_missing.any()):
+        derived = _derive_cost_survival_ratio_from_bridge_flags(out)
+        fill_mask = cost_missing & derived.notna()
+        if bool(fill_mask.any()):
+            out.loc[fill_mask, "cost_survival_ratio"] = derived.loc[fill_mask]
+    return out
+
+
 def _diagnose_missing_fields(df: pd.DataFrame) -> list[str]:
     """Return list of missing required fields for promotion."""
     if df.empty:
@@ -1030,8 +1132,7 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
     promotion_input_mode = "canonical"
 
     try:
-        # Sprint 4: Require validation bundle or use compatibility bridge
-        # We do this FIRST to fail fast.
+        # Require canonical validation before promotion.
         from project.research.validation.result_writer import load_validation_bundle
         from project.research.services.evaluation_service import ValidationService
         from project.research.validation.contracts import PromotionReasonCodes
@@ -1044,30 +1145,15 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
 
         val_bundle = load_validation_bundle(
             config.run_id,
-            strict=not config.use_compatibility_bridge,
-            compatibility_mode=config.use_compatibility_bridge,
+            strict=True,
+            compatibility_mode=False,
         )
         if val_bundle is None:
-            if config.use_compatibility_bridge:
-                # Fallback to compatibility bridge only if explicitly requested
-                val_svc = ValidationService(data_root=data_root)
-                val_bundle = val_svc.build_validation_bundle_from_legacy_run(config.run_id)
-                if val_bundle:
-                    diagnostics["compat_mode_used"] = True
-                    diagnostics["compat_reason"] = "legacy_validation_bundle_bridge"
-                    diagnostics["compat_source_artifacts"] = ["legacy_validation_tables"]
-                    diagnostics["canonical_contract_bypassed"] = True
-                    logging.info(
-                        "Using compatibility bridge for validation bundle for run %s", 
-                        config.run_id
-                    )
-            
-            if val_bundle is None:
-                raise MissingArtifactError(
-                    f"Promotion rejected for {config.run_id}: "
-                    f"missing validation bundle. {PromotionReasonCodes.NOT_VALIDATED}. "
-                    "Canonical validation is mandatory in Sprint 4."
-                )
+            raise MissingArtifactError(
+                f"Promotion rejected for {config.run_id}: "
+                f"missing validation bundle. {PromotionReasonCodes.NOT_VALIDATED}. "
+                "Canonical validation is mandatory."
+            )
 
         canonical_candidate_path = (
             out_dir.parent.parent / "validation" / config.run_id / "promotion_ready_candidates.parquet"
@@ -1076,11 +1162,10 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
         if (
             not canonical_candidate_path.exists()
             and not canonical_candidate_csv_path.exists()
-            and not config.use_compatibility_bridge
         ):
             raise MissingArtifactError(
                 f"Canonical promotion-ready candidates not found at {canonical_candidate_path}. "
-                "Set use_compatibility_bridge=True to fall back to legacy table loading."
+                "Run canonical validation before promotion."
             )
 
         if not val_bundle.validated_candidates:
@@ -1203,7 +1288,18 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
                     )
             
             if not candidates_df.empty:
+                missing_before_hydration = _diagnose_missing_fields(candidates_df)
+                candidates_df = _hydrate_canonical_promotion_aliases(candidates_df)
                 missing_fields = _diagnose_missing_fields(candidates_df)
+                if missing_before_hydration:
+                    diagnostics["canonical_missing_fields_before_alias_hydration"] = (
+                        missing_before_hydration
+                    )
+                    diagnostics["canonical_alias_hydrated_fields"] = [
+                        field
+                        for field in missing_before_hydration
+                        if field not in missing_fields
+                    ]
                 if missing_fields:
                     diagnostics["canonical_missing_fields"] = missing_fields
                     raise SchemaMismatchError(
@@ -1216,41 +1312,10 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
                     config.run_id
                 )
         else:
-            if not config.use_compatibility_bridge:
-                raise CompatibilityRequiredError(
-                    f"Canonical promotion-ready candidates not found at {canonical_candidate_path}. "
-                    "Set use_compatibility_bridge=True to fall back to legacy table loading."
-                )
-            promotion_input_mode = "compatibility_fallback"
-            diagnostics["compat_mode_used"] = True
-            diagnostics["compat_reason"] = "legacy_candidate_table_fallback"
-            diagnostics["compat_source_artifacts"] = [
-                "edge_candidates",
-                "promotion_audit",
-                "phase2_candidates",
-            ]
-            diagnostics["canonical_contract_bypassed"] = True
-            logging.warning(
-                "Canonical promotion-ready candidates not found for run %s; falling back to legacy table loading",
-                config.run_id
+            raise CompatibilityRequiredError(
+                f"Canonical promotion-ready candidates not found at {canonical_candidate_path}. "
+                "Run canonical validation before promotion."
             )
-            val_svc = ValidationService(data_root=data_root)
-            tables = val_svc.load_candidate_tables(config.run_id)
-            for source in ("edge_candidates", "promotion_audit", "phase2_candidates"):
-                if not tables[source].empty:
-                    candidates_df = tables[source]
-                    break
-            
-            if candidates_df.empty:
-                 raise MissingArtifactError(f"Missing required candidates tables for run {config.run_id}")
-
-            validated_ids = {c.candidate_id for c in val_bundle.validated_candidates}
-            candidates_df = candidates_df[candidates_df["candidate_id"].isin(validated_ids)].copy()
-            
-            if candidates_df.empty and val_bundle.validated_candidates:
-                 raise IncompleteLineageError(
-                     f"No validated candidates from bundle found in source tables for run {config.run_id}"
-                 )
         
         diagnostics["promotion_input_mode"] = promotion_input_mode
 
@@ -1261,7 +1326,18 @@ def execute_promotion(config: PromotionConfig) -> PromotionServiceResult:
             merge_search_burden_columns,
         )
         
-        search_burden = load_search_burden_summary(data_root / "runs" / config.run_id)
+        search_burden = None
+        search_burden_paths = [
+            data_root / "reports" / "phase2" / config.run_id,
+            data_root / "runs" / config.run_id,
+        ]
+        for search_burden_dir in search_burden_paths:
+            search_burden = load_search_burden_summary(search_burden_dir)
+            if search_burden is not None:
+                diagnostics["search_burden_summary_path"] = str(
+                    search_burden_dir / "search_burden_summary.json"
+                )
+                break
         if search_burden is None:
             logging.warning(
                 "No search-burden summary found for run %s; using defaults (estimated mode)",

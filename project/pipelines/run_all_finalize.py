@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from project.operator.run_semantics import classify_terminal_status
 from project.research.reports import write_operator_outputs_for_run
 

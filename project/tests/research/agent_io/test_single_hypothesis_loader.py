@@ -52,19 +52,20 @@ def _canonical_event_h24_payload() -> dict:
         "end": "2026-01-31",
         "instrument_classes": ["crypto"],
         "hypothesis": {
-            "trigger": {
+            "anchor": {
                 "type": "event",
                 "event_id": "VOL_SHOCK",
             },
-            "template": "continuation",
+            "filters": {},
+            "sampling_policy": {"entry_lag_bars": 1},
+            "template": {"id": "continuation"},
             "direction": "long",
             "horizon_bars": 24,
-            "entry_lag_bars": 1,
         },
     }
 
 
-def test_load_operator_proposal_accepts_legacy_and_single_hypothesis_formats() -> None:
+def test_load_operator_proposal_rejects_legacy_and_single_hypothesis_by_default() -> None:
     legacy_payload = {
         "program_id": "legacy_campaign",
         "start": "2026-01-01",
@@ -77,8 +78,27 @@ def test_load_operator_proposal_accepts_legacy_and_single_hypothesis_formats() -
         "entry_lags": [1],
     }
 
-    legacy = load_operator_proposal(legacy_payload)
-    single = load_operator_proposal(_single_hypothesis_payload())
+    with pytest.raises(ValueError, match="legacy_compatibility=False"):
+        load_operator_proposal(legacy_payload)
+    with pytest.raises(ValueError, match="legacy_compatibility=False"):
+        load_operator_proposal(_single_hypothesis_payload())
+
+
+def test_load_operator_proposal_accepts_legacy_and_single_hypothesis_for_migration() -> None:
+    legacy_payload = {
+        "program_id": "legacy_campaign",
+        "start": "2026-01-01",
+        "end": "2026-01-31",
+        "symbols": ["BTCUSDT"],
+        "trigger_space": {"allowed_trigger_types": ["EVENT"], "events": {"include": ["VOL_SHOCK"]}},
+        "templates": ["continuation"],
+        "horizons_bars": [12],
+        "directions": ["long"],
+        "entry_lags": [1],
+    }
+
+    legacy = load_operator_proposal(legacy_payload, legacy_compatibility=True)
+    single = load_operator_proposal(_single_hypothesis_payload(), legacy_compatibility=True)
 
     assert legacy.templates == ["continuation"]
     assert single.templates == ["continuation"]
@@ -123,7 +143,7 @@ def test_single_hypothesis_loader_rejects_multi_value_fields(
     cursor[field_path[-1]] = value
 
     with pytest.raises(ValueError, match=match):
-        load_operator_proposal(payload)
+        load_operator_proposal(payload, legacy_compatibility=True)
 
 
 def test_single_hypothesis_loader_requires_event_id_for_event_trigger() -> None:
@@ -131,7 +151,7 @@ def test_single_hypothesis_loader_requires_event_id_for_event_trigger() -> None:
     payload["hypothesis"]["trigger"] = {"type": "event"}
 
     with pytest.raises(ValueError, match="event triggers require"):
-        load_operator_proposal(payload)
+        load_operator_proposal(payload, legacy_compatibility=True)
 
 
 def test_single_hypothesis_loader_rejects_mixed_legacy_fields() -> None:
@@ -142,7 +162,7 @@ def test_single_hypothesis_loader_rejects_mixed_legacy_fields() -> None:
     }
 
     with pytest.raises(ValueError, match="must not include legacy AgentProposal fields"):
-        load_operator_proposal(payload)
+        load_operator_proposal(payload, legacy_compatibility=True)
 
 
 def test_single_hypothesis_trigger_compilation_supports_state_and_feature_predicate() -> None:
@@ -159,8 +179,8 @@ def test_single_hypothesis_trigger_compilation_supports_state_and_feature_predic
         "threshold": 2.0,
     }
 
-    state = load_operator_proposal(state_payload)
-    feature = load_operator_proposal(feature_payload)
+    state = load_operator_proposal(state_payload, legacy_compatibility=True)
+    feature = load_operator_proposal(feature_payload, legacy_compatibility=True)
 
     assert state.trigger_space["allowed_trigger_types"] == ["STATE"]
     assert state.trigger_space["states"]["include"] == ["HIGH_VOL_REGIME"]
@@ -234,7 +254,7 @@ def test_load_operator_proposal_accepts_structured_hypothesis_format() -> None:
     assert proposal.entry_lags == [1]
 
 
-def test_canonical_event_h24_example_loads_as_single_hypothesis_front_door() -> None:
+def test_canonical_event_h24_example_loads_as_structured_front_door() -> None:
     proposal = load_operator_proposal(_canonical_event_h24_payload())
 
     assert proposal.program_id == "volshock_btc_long_12b"
@@ -270,7 +290,6 @@ def test_canonical_event_h24_example_translates_through_existing_experiment_path
         _canonical_event_h24_payload(),
         registry_root=Path("project/configs/registries"),
         out_dir=tmp_path / "bundle",
-        legacy_compatibility=True,
     )
 
     assert result["proposal"]["templates"] == ["continuation"]

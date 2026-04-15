@@ -91,11 +91,8 @@ def test_write_time_slice_report_classifies_concentrated(monkeypatch, tmp_path):
     _write_summary_seed(data_root=data_root, program_id=program_id, run_id="run_2021", start="2021-01-01", end="2021-12-31", metric=-3.8)
     _write_summary_seed(data_root=data_root, program_id=program_id, run_id="run_2022", start="2022-01-01", end="2022-12-31", metric=-0.4)
 
-    import project.research.reports.operator_reporting as reporting
-
     monkeypatch.setattr(
-        reporting,
-        "build_run_reflection",
+        "project.research.reports.operator_reporting.build_run_reflection",
         lambda run_id, data_root=None: {
             "candidate_count": 1,
             "promoted_count": 0,
@@ -149,6 +146,43 @@ def test_negative_result_diagnostics_detect_regime_instability(monkeypatch, tmp_
     assert diagnostics["diagnosis"] == "regime_instability"
     assert regime["classification"] == "regime_instability"
     assert Path(diagnostics["report_json_path"]).exists()
+
+
+def test_regime_split_report_labels_rule_template_without_unknown(monkeypatch, tmp_path):
+    data_root = tmp_path / "data"
+    program_id = "btc_campaign"
+    run_id = "run_rule_template"
+    _write_summary_seed(data_root=data_root, program_id=program_id, run_id=run_id, start="2021-01-01", end="2021-12-31", metric=2.4)
+    phase2 = data_root / "reports" / "phase2" / run_id / "phase2_candidates.parquet"
+    pd.DataFrame(
+        [
+            {
+                "event_type": "VOL_SPIKE",
+                "rule_template": "mean_reversion",
+                "direction": "long",
+                "horizon": "12b",
+                "t_stat": 2.4,
+                "train_n_obs": 120,
+            }
+        ]
+    ).to_parquet(phase2, index=False)
+
+    import project.research.reports.operator_reporting as reporting
+
+    monkeypatch.setattr(
+        reporting,
+        "build_run_reflection",
+        lambda run_id, data_root=None: {
+            "candidate_count": 1,
+            "promoted_count": 0,
+            "mechanical_outcome": "success",
+            "statistical_outcome": "weak_signal",
+        },
+    )
+
+    regime = write_regime_split_report(run_id=run_id, data_root=data_root)
+
+    assert regime["candidate_regime_diagnostics"][0]["label"].startswith("VOL_SPIKE / mean_reversion")
 
 
 def test_negative_result_diagnostics_warning_only_run_is_not_mechanical_gap(monkeypatch, tmp_path):

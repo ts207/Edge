@@ -708,7 +708,6 @@ class TestCanonicalPromotionArtifactConsumption:
             objective_spec=None,
             retail_profiles_spec=None,
             promotion_profile="research",
-            use_compatibility_bridge=False,
         )
 
         with pytest.raises((ValueError, FileNotFoundError)):
@@ -778,7 +777,6 @@ class TestCanonicalPromotionArtifactConsumption:
             objective_spec=None,
             retail_profiles_spec=None,
             promotion_profile="research",
-            use_compatibility_bridge=False,
         )
 
         result = execute_promotion(config)

@@ -45,16 +45,19 @@ parameters:
   oi_window: 288
   vol_window: 288
   min_periods: 24
-  oi_drop_quantile: 0.98
+  oi_drop_quantile: 0.997
   vol_surge_quantile: 0.90
   ret_window: 3
-  price_drop_th: 0.003
-  max_gap: 3
+  price_drop_th: 0.025
+  min_episode_oi_reduction_pct: 0.0
+  max_gap: 1
+  anchor_rule: max_intensity
 semantics:
   summary: >
     OI-native proxy for liquidation cascade. Detects simultaneous OI pct drop above
-    rolling 95th percentile, volume surge above rolling 90th percentile, and short-window
-    price drawdown >= 0.3%. Does not require liquidation_notional feed.
+    rolling 99.7th percentile, volume surge above rolling 90th percentile, and short-window
+    price drawdown >= 2.5% over a 3-bar lookback, then anchors the peak-intensity bar
+    of each cascade-like episode. Does not require liquidation_notional feed.
   cluster_id: oi_dynamic
   overlap_group: liquidation_proxy
   notes: >
@@ -69,14 +72,17 @@ detector:
     Detects liquidation-cascade-like conditions using only native exchange data.
     Fires when OI pct drop >= rolling_quantile(oi_pct_drop, oi_drop_quantile) AND
     taker_base_volume >= rolling_quantile(volume, vol_surge_quantile) AND
-    min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th.
+    min(low[i-ret_window:i]) / close[i-ret_window] - 1 <= -price_drop_th,
+    then retains only episodes whose net OI reduction exceeds min_episode_oi_reduction_pct.
   formula: |
     oi_pct_drop[i]  = -(oi_delta_1h[i] / oi_notional[i])
     oi_drop_th[i]   = quantile(oi_pct_drop[1..i-1], oi_drop_quantile, window=oi_window)
     vol_th[i]       = quantile(taker_base_volume[1..i-1], vol_surge_quantile, window=vol_window)
     price_drop[i]   = -(min(low[i-ret_window:i]) / close[i-ret_window] - 1)
     mask[i]         = (oi_pct_drop >= oi_drop_th) AND (volume >= vol_th) AND (price_drop >= price_drop_th)
-    event           = peak bar of episode built from contiguous mask (max_gap=3)
+    episode         = contiguous mask episode with max_gap=1
+    keep_episode    = oi_reduction_pct(episode) >= min_episode_oi_reduction_pct
+    event           = peak-intensity bar of kept episode
   required_columns:
   - timestamp
   - oi_notional
@@ -88,16 +94,17 @@ detector:
   lookback_bars: 288
   warmup_bars: 288
   bar_type: bar_close
-  timestamp_alignment: Event anchored at peak intensity bar within episode.
+  timestamp_alignment: Event anchored at peak-intensity bar within episode.
   minimum_sample_size: 50
 calibration:
-  default_threshold: 0.95
+  default_threshold: 0.995
   search_range:
   - 0.90
   - 0.92
   - 0.95
   - 0.97
   - 0.99
+  - 0.995
   calibration_target: >
     Maximize AUC of forward return (price recovery) vs oi_reduction_pct.
     Require at least 30 events over calibration window.
@@ -106,7 +113,7 @@ calibration:
   - Trending OI regime (perpetual growth): baseline quantile inflates, events suppressed
   - Volume regime change: vol_th must be recalibrated per-regime
 expected_behavior:
-  holding_horizon_bars: 12-96
+  holding_horizon_bars: 1-96
   invalidation_conditions:
   - OI recovers within 12 bars (false flush, not cascade)
   - Volume spike without directional price move (block trade, not forced selling)

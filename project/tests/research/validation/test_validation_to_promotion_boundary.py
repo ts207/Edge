@@ -8,7 +8,7 @@ from project.research.validation.contracts import (
     ValidatedCandidateRecord,
     ValidationDecision,
     ValidationMetrics,
-    PromotionReasonCodes,
+    ValidationReasonCodes,
 )
 from project.research.services.evaluation_service import ValidationService
 from project.research.services.promotion_service import execute_promotion, PromotionConfig
@@ -59,6 +59,31 @@ def _create_mock_candidates_table(mock_data_root, run_id, candidate_ids):
     )
 
 
+def test_validation_maps_oos_gate_failure_to_explicit_reason(mock_data_root):
+    service = ValidationService(data_root=mock_data_root)
+    row = {
+        "candidate_id": "cand_oos_fail",
+        "rule_template": "mean_reversion",
+        "direction": "long",
+        "horizon": "12b",
+        "n_events": 100,
+        "expectancy": 0.01,
+        "p_value": 0.01,
+        "q_value": 0.02,
+        "stability_score": 0.69,
+        "gate_oos_validation": False,
+        "gate_after_cost_positive": True,
+        "gate_after_cost_stressed_positive": True,
+        "gate_c_regime_stable": True,
+        "gate_multiplicity": True,
+    }
+
+    record = service._map_row_to_validated_record(row, "test_run")
+
+    assert record.decision.status == "rejected"
+    assert record.decision.reason_codes == [ValidationReasonCodes.FAILED_OOS_VALIDATION]
+
+
 def test_promotion_fails_without_bundle_by_default(mock_data_root):
     run_id = "test_run"
     _create_mock_candidates_table(mock_data_root, run_id, ["cand_1"])
@@ -72,7 +97,6 @@ def test_promotion_fails_without_bundle_by_default(mock_data_root):
         max_profile_correlation=1.0, allow_discovery_promotion=True,
         program_id="test_program", retail_profile="default", objective_name="default",
         objective_spec=None, retail_profiles_spec=None,
-        use_compatibility_bridge=False # Explicitly off
     )
     
     with patch("project.research.services.promotion_service.get_data_root", return_value=mock_data_root):
@@ -83,7 +107,7 @@ def test_promotion_fails_without_bundle_by_default(mock_data_root):
                     assert "Missing required validation artifact" in result.diagnostics.get("error", "")
 
 
-def test_promotion_opt_in_compatibility_bridge(mock_data_root):
+def test_promotion_rejects_legacy_candidate_tables_without_canonical_validation(mock_data_root):
     run_id = "test_run"
     _create_mock_candidates_table(mock_data_root, run_id, ["cand_1"])
     
@@ -96,18 +120,14 @@ def test_promotion_opt_in_compatibility_bridge(mock_data_root):
         max_profile_correlation=1.0, allow_discovery_promotion=True,
         program_id="test_program", retail_profile="default", objective_name="default",
         objective_spec=None, retail_profiles_spec=None,
-        use_compatibility_bridge=True # Explicitly on
     )
     
     with patch("project.research.services.promotion_service.get_data_root", return_value=mock_data_root):
         with patch("project.research.validation.result_writer.get_data_root", return_value=mock_data_root):
             with patch("project.research.services.promotion_service.load_run_manifest", return_value={"run_mode": "confirmatory"}):
-                with patch("project.research.services.promotion_service.resolve_objective_profile_contract") as mock_contract:
-                    mock_contract.return_value = MagicMock()
-                    with patch("project.research.services.promotion_service.promote_candidates") as mock_promote:
-                        mock_promote.return_value = (pd.DataFrame([{"candidate_id": "cand_1"}]), pd.DataFrame([{"candidate_id": "cand_1"}]), {})
-                        result = execute_promotion(config)
-                        assert len(result.promoted_df) == 1
+                result = execute_promotion(config)
+                assert result.exit_code != 0
+                assert "Missing required validation artifact" in result.diagnostics.get("error", "")
 
 
 def test_promotion_uses_canonical_validated_candidates(mock_data_root):

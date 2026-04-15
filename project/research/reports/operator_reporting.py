@@ -87,6 +87,16 @@ def _first_present(row: pd.Series, columns: list[str]) -> Any:
     return None
 
 
+def _candidate_template_label(row: pd.Series) -> str:
+    return str(
+        _first_present(
+            row,
+            ["template_id", "rule_template", "template_verb", "template", "template_family"],
+        )
+        or "unknown_template"
+    )
+
+
 def _normalize_csv_scope(raw: Any) -> list[str]:
     if raw in (None, ""):
         return []
@@ -142,7 +152,7 @@ def _choose_best_candidate(tables: dict[str, pd.DataFrame]) -> dict[str, Any]:
         label = " / ".join(
             [
                 str(_first_present(row, ["event_type", "trigger_type"]) or "unknown_event"),
-                str(_first_present(row, ["template_id", "template"]) or "unknown_template"),
+                _candidate_template_label(row),
                 str(_first_present(row, ["direction"]) or "?"),
                 str(_first_present(row, ["horizon", "horizon_bars", "horizon_label"]) or "?"),
             ]

@@ -218,6 +218,22 @@ def test_run_promotion_service_smoke(monkeypatch, tmp_path):
             }
         ]
     ).to_parquet(cand_path / "edge_candidates_normalized.parquet", index=False)
+    burden_path = tmp_path / "reports" / "phase2" / "r1"
+    burden_path.mkdir(parents=True, exist_ok=True)
+    (burden_path / "search_burden_summary.json").write_text(
+        json.dumps(
+            {
+                "search_burden_estimated": False,
+                "search_candidates_generated": 10,
+                "search_candidates_eligible": 5,
+                "search_mutations_attempted": 0,
+                "search_family_count": 4,
+                "search_lineage_count": 5,
+                "search_scope_version": "phase1_v1",
+            }
+        ),
+        encoding="utf-8",
+    )
     _write_validated_candidate_artifacts(tmp_path, "r1", "cand_1")
 
     audit_df = pd.DataFrame(
@@ -263,6 +279,119 @@ def test_run_promotion_service_smoke(monkeypatch, tmp_path):
     assert result.diagnostics["live_thesis_export"]["contract_md_path"].endswith(
         "promoted_thesis_contracts.md"
     )
+
+
+def test_run_promotion_service_hydrates_modern_edge_candidate_aliases(monkeypatch, tmp_path):
+    monkeypatch.setattr(svc, "get_data_root", lambda: tmp_path)
+    monkeypatch.setattr(validation_writer, "get_data_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "load_run_manifest",
+        lambda run_id: {"run_mode": "confirmatory", "discovery_profile": "standard"},
+    )
+    monkeypatch.setattr(
+        svc,
+        "resolve_objective_profile_contract",
+        lambda **kwargs: SimpleNamespace(
+            min_net_expectancy_bps=5.0,
+            max_fee_plus_slippage_bps=10.0,
+            max_daily_turnover_multiple=5.0,
+            require_retail_viability=False,
+            require_low_capital_contract=False,
+        ),
+    )
+    monkeypatch.setattr(svc, "ontology_spec_hash", lambda root: "hash")
+    monkeypatch.setattr(svc, "_load_gates_spec", lambda root: {"promotion_confirmatory_gates": {}})
+    monkeypatch.setattr(svc, "_load_negative_control_summary", lambda run_id: {})
+    monkeypatch.setattr(svc, "_load_dynamic_min_events_by_event", lambda run_id: {})
+
+    cand_path = tmp_path / "reports" / "edge_candidates" / "r1"
+    cand_path.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "candidate_id": "cand_1",
+                "event_type": "LIQUIDATION_CASCADE_PROXY",
+                "event_family": "POSITIONING_EXTREMES",
+                "n_events": 100,
+                "stability_score": 0.8,
+                "sign_consistency": 0.8,
+                "q_value": 0.01,
+                "after_cost_expectancy_per_trade": 0.0049,
+                "stressed_after_cost_expectancy_per_trade": 0.0047,
+                "gate_after_cost_positive": True,
+                "gate_after_cost_stressed_positive": True,
+                "confirmatory_locked": True,
+                "frozen_spec_hash": "hash",
+            }
+        ]
+    ).to_parquet(cand_path / "edge_candidates_normalized.parquet", index=False)
+    burden_path = tmp_path / "reports" / "phase2" / "r1"
+    burden_path.mkdir(parents=True, exist_ok=True)
+    (burden_path / "search_burden_summary.json").write_text(
+        json.dumps(
+            {
+                "search_burden_estimated": False,
+                "search_candidates_generated": 10,
+                "search_candidates_eligible": 5,
+                "search_mutations_attempted": 0,
+                "search_family_count": 4,
+                "search_lineage_count": 5,
+                "search_scope_version": "phase1_v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_validated_candidate_artifacts(tmp_path, "r1", "cand_1")
+
+    captured: dict[str, pd.DataFrame] = {}
+
+    def _promote_candidates(**kwargs):
+        captured["candidates_df"] = kwargs["candidates_df"].copy()
+        audit_df = pd.DataFrame(
+            [
+                {
+                    "candidate_id": "cand_1",
+                    "event_type": "LIQUIDATION_CASCADE_PROXY",
+                    "promotion_decision": "promoted",
+                    "promotion_track": "standard",
+                    "promotion_metrics_trace": "{}",
+                    "evidence_bundle_json": _valid_evidence_bundle_json(
+                        run_id="r1",
+                        candidate_id="cand_1",
+                        event_type="LIQUIDATION_CASCADE_PROXY",
+                    ),
+                }
+            ]
+        )
+        promoted_df = pd.DataFrame(
+            [
+                {
+                    "candidate_id": "cand_1",
+                    "event_type": "LIQUIDATION_CASCADE_PROXY",
+                    "status": "PROMOTED",
+                }
+            ]
+        )
+        return audit_df, promoted_df, {"promoted": 1}
+
+    monkeypatch.setattr(svc, "promote_candidates", _promote_candidates)
+    monkeypatch.setattr(svc, "build_promotion_statistical_audit", lambda **kwargs: kwargs["audit_df"])
+    monkeypatch.setattr(
+        svc, "stabilize_promoted_output_schema", lambda promoted_df, audit_df: promoted_df.copy()
+    )
+
+    result = _run_promotion(tmp_path)
+
+    assert result.exit_code == 0
+    hydrated = captured["candidates_df"].iloc[0]
+    assert hydrated["family"] == "POSITIONING_EXTREMES"
+    assert hydrated["net_expectancy_bps"] == pytest.approx(47.0)
+    assert hydrated["cost_survival_ratio"] == pytest.approx(1.0)
+    assert bool(hydrated["search_burden_estimated"]) is False
+    assert hydrated["search_candidates_generated"] == 10
+    assert hydrated["search_candidates_eligible"] == 5
+    assert svc._diagnose_missing_fields(captured["candidates_df"]) == []
 
 
 def test_run_promotion_service_fails_closed_when_promoted_row_lacks_evidence_bundle(

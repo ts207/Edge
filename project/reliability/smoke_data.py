@@ -493,8 +493,6 @@ def run_promotion_smoke(
             "0",
             "--require_multiplicity_diagnostics",
             "1",
-            "--use_compatibility_bridge",
-            "1",
         ]
     )
     return {"service_result": result, "output_dir": result.output_dir}

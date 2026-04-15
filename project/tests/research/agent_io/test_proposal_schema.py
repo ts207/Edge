@@ -30,19 +30,19 @@ def test_proposal_validation_warns_on_proxy_tier_events():
 
     payload = {
         "program_id": "test_proxy",
-        "objective": "test",
+        "objective_name": "test",
         "symbols": ["BTCUSDT"],
         "timeframe": "5m",
         "start": "2024-01-01",
         "end": "2024-06-01",
-        "trigger_space": {
-            "allowed_trigger_types": ["EVENT"],
-            "events": {"include": ["ABSORPTION_EVENT"]},
+        "hypothesis": {
+            "anchor": {"type": "event", "event_id": "ABSORPTION_EVENT"},
+            "filters": {},
+            "sampling_policy": {"entry_lag_bars": 1},
+            "template": {"id": "continuation"},
+            "direction": "long",
+            "horizon_bars": 12,
         },
-        "templates": ["continuation"],
-        "horizons_bars": [12],
-        "directions": ["long"],
-        "entry_lags": [1],
     }
     warnings = validate_proposal_with_warnings(payload)
     proxy_warnings = [w for w in warnings if "proxy" in w.lower() and "ABSORPTION_EVENT" in w]
